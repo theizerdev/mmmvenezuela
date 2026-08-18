@@ -600,15 +600,24 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                             </div>
                                                         </div>
 
-                                                        {pastor.nombre_conyuge && (
-                                                            <div className="flex items-center justify-between text-[11px]">
-                                                                <span className="text-muted-foreground font-medium">{__('Cónyuge')}:</span>
-                                                                <span className="font-semibold text-rose-600 dark:text-rose-400 truncate max-w-[130px] flex items-center gap-1">
-                                                                    <Heart className="size-3 fill-rose-500 text-rose-500 shrink-0" />
-                                                                    {pastor.nombre_conyuge}
-                                                                </span>
-                                                            </div>
-                                                        )}
+                                                        {(() => {
+                                                            const nombreConyuge = pastor.conyuge
+                                                                ? `${pastor.conyuge.nombres} ${pastor.conyuge.apellidos}`
+                                                                : pastor.nombre_conyuge;
+                                                            if (!nombreConyuge) return null;
+                                                            return (
+                                                                <div className="flex items-center justify-between text-[11px] gap-2 pt-1 border-t border-dashed border-border/40">
+                                                                    <span className="text-muted-foreground font-medium shrink-0">{__('Cónyuge')}:</span>
+                                                                    <span
+                                                                        className="font-semibold text-rose-600 dark:text-rose-400 truncate text-right flex items-center justify-end gap-1 min-w-0 flex-1"
+                                                                        title={nombreConyuge}
+                                                                    >
+                                                                        <Heart className="size-3 fill-rose-500 text-rose-500 shrink-0" />
+                                                                        <span className="truncate">{nombreConyuge}</span>
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
 
