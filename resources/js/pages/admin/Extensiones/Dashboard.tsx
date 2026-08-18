@@ -297,78 +297,69 @@ export default function ExtensionesDashboard({
                     </SectionCard>
                 </div>
 
-                {/* SECCIÓN INFERIOR: MAPA DE VENEZUELA Y LÍNEA DE TIEMPO RECIENTE */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Mapa Interactivo de Venezuela */}
-                    <SectionCard
-                        title={__('Distribución Geográfica de Extensiones (Venezuela)')}
-                        description={__('Pines interactivos por estado. Haga clic en los estados o pines para explorar.')}
-                    >
-                        <ExtensionesMapView pines={pinesMapa} estadosCount={extensionesPorEstado} />
-                    </SectionCard>
+                {/* SECCIÓN 3: MAPA INTERACTIVO DE VENEZUELA A TODO ANCHO (100% WIDE) */}
+                <SectionCard
+                    title={__('Distribución Geográfica de Extensiones en Venezuela')}
+                    description={__('Exploración interactiva en mapa Mapbox. Seleccione un estado para enfocar y ver sus extensiones.')}
+                >
+                    <ExtensionesMapView pines={pinesMapa} estadosCount={extensionesPorEstado} />
+                </SectionCard>
 
-                    {/* Línea de Tiempo de Extensiones Recientes */}
-                    <SectionCard
-                        title={__('Extensiones Recientes (Línea de Tiempo)')}
-                        description={__('Últimos registros ingresados al sistema.')}
-                        headerAction={
-                            <Link href="/admin/extensiones">
-                                <Button variant="ghost" size="sm" className="text-xs gap-1">
-                                    {__('Ver todas')}
-                                    <ArrowUpRight className="size-3.5" />
-                                </Button>
-                            </Link>
-                        }
-                    >
-                        {extensionesRecientes.length > 0 ? (
-                            <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
-                                {extensionesRecientes.map((item) => (
-                                    <div key={item.id} className="relative group">
-                                        {/* Bolita de la línea de tiempo */}
-                                        <span
-                                            className={`absolute -left-6 top-1.5 size-3 rounded-full border-2 border-background ${
-                                                item.activa ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-rose-500 ring-2 ring-rose-500/20'
-                                            }`}
-                                        />
+                {/* SECCIÓN 4: LÍNEA DE TIEMPO DE EXTENSIONES RECIENTES */}
+                <SectionCard
+                    title={__('Extensiones Recientes (Línea de Tiempo)')}
+                    description={__('Últimos registros de iglesias y extensiones ingresados al sistema.')}
+                    headerAction={
+                        <Link href="/admin/extensiones">
+                            <Button variant="ghost" size="sm" className="text-xs gap-1">
+                                {__('Ver todas')}
+                                <ArrowUpRight className="size-3.5" />
+                            </Button>
+                        </Link>
+                    }
+                >
+                    {extensionesRecientes.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {extensionesRecientes.map((item) => (
+                                <div key={item.id} className="relative group">
+                                    <div className="bg-card border rounded-lg p-3.5 hover:border-indigo-300 transition-colors shadow-2xs">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <Link
+                                                href={`/admin/extensiones/${item.id}/edit`}
+                                                className="font-bold text-sm text-foreground hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                                            >
+                                                <Building2 className="size-4 text-indigo-600" />
+                                                {item.nombre}
+                                            </Link>
+                                            <Badge variant={item.activa ? 'default' : 'secondary'} className="text-[10px] h-5">
+                                                {item.activa ? __('ACTIVA') : __('INACTIVA')}
+                                            </Badge>
+                                        </div>
 
-                                        <div className="bg-card border rounded-lg p-3 hover:border-indigo-300 transition-colors shadow-2xs">
-                                            <div className="flex items-center justify-between">
-                                                <Link
-                                                    href={`/admin/extensiones/${item.id}/edit`}
-                                                    className="font-bold text-sm text-foreground hover:text-indigo-600 transition-colors"
-                                                >
-                                                    {item.nombre}
-                                                </Link>
-                                                <Badge variant={item.activa ? 'default' : 'secondary'} className="text-[10px] h-5">
-                                                    {item.activa ? __('ACTIVA') : __('INACTIVA')}
-                                                </Badge>
+                                        <div className="text-xs text-muted-foreground grid grid-cols-2 gap-1.5 pt-1 border-t">
+                                            <div>
+                                                <strong>{__('Pastor:')}</strong> {item.pastor_nombre}
                                             </div>
-
-                                            <div className="text-xs text-muted-foreground mt-1 grid grid-cols-2 gap-1">
-                                                <div>
-                                                    <strong>{__('Pastor:')}</strong> {item.pastor_nombre}
-                                                </div>
-                                                <div>
-                                                    <strong>{__('Ubicación:')}</strong> {item.estado_nombre}
-                                                </div>
-                                                <div>
-                                                    <strong>{__('Local:')}</strong> {item.tipo_local}
-                                                </div>
-                                                <div className="text-[11px] text-muted-foreground/80 font-mono">
-                                                    {item.fecha_humana}
-                                                </div>
+                                            <div>
+                                                <strong>{__('Ubicación:')}</strong> {item.estado_nombre}
+                                            </div>
+                                            <div>
+                                                <strong>{__('Local:')}</strong> {item.tipo_local}
+                                            </div>
+                                            <div className="text-[11px] text-muted-foreground/80 font-mono text-right">
+                                                {item.fecha_humana}
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="py-12 text-center text-xs text-muted-foreground">
-                                {__('No hay extensiones registradas recientemente.')}
-                            </div>
-                        )}
-                    </SectionCard>
-                </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center text-xs text-muted-foreground">
+                            {__('No hay extensiones registradas recientemente.')}
+                        </div>
+                    )}
+                </SectionCard>
             </div>
         </>
     );

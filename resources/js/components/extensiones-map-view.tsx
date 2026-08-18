@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Building2, Layers, MapPin, ShieldAlert } from 'lucide-react';
+import { Building2, Layers, MapPin, CheckCircle2, XCircle } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,9 @@ export interface PinExtension {
     id: number;
     nombre: string;
     pastor: string;
+    estado_id?: number | null;
+    estado_nombre?: string;
+    municipio_nombre?: string;
     ubicacion: string;
     tipo_local: string;
     lat: number | null;
@@ -63,10 +66,19 @@ const MAPBOX_ESTADOS_COORDS: Record<string, [number, number]> = {
     'Zulia': [-71.6333, 10.2167],
 };
 
+const cleanText = (str?: string) => {
+    if (!str) return '';
+    return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+};
+
 export function ExtensionesMapView({
     pines,
     estadosCount,
-    className = 'h-[480px] w-full rounded-xl overflow-hidden border shadow-xs',
+    className = 'h-[520px] w-full rounded-xl overflow-hidden border shadow-xs',
 }: ExtensionesMapViewProps) {
     const { __ } = useTranslate();
     const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -84,12 +96,12 @@ export function ExtensionesMapView({
     const mapboxApiKey = pageProps.mapbox_api_key || pageProps.auth?.user?.empresa?.mapbox_api_key;
     const mapboxActive = pageProps.mapbox_active !== undefined ? pageProps.mapbox_active : pageProps.auth?.user?.empresa?.mapbox_active;
 
-    // Pines válidos con coordenadas
+    // Pines válidos con coordenadas numéricas
     const pinesConCoordenadas = pines.filter(
-        (p) => p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng)
+        (p) => p.lat !== null && p.lng !== null && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng))
     );
 
-    // Inicialización del Mapa (Mapbox GL JS con fallback a Leaflet)
+    // Inicialización del Mapa
     useEffect(() => {
         if (!mapContainerRef.current) return;
 
@@ -116,7 +128,8 @@ export function ExtensionesMapView({
                 zoom: 5.5,
             });
 
-            map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+            // Controles de navegación Mapbox en la esquina superior derecha
+            map.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
             mapboxMapRef.current = map;
         } else {
             // Fallback Leaflet / OpenStreetMap
@@ -149,25 +162,98 @@ export function ExtensionesMapView({
         };
     }, [mapboxApiKey, mapboxActive]);
 
-    // Renderizar Pines y Manejar Zoom/FlyTo en Mapbox GL
-    useEffect(() => {
-        const pinesFiltrados = selectedEstadoFilter === 'todos'
-            ? pinesConCoordenadas
-            : pinesConCoordenadas.filter((p) => p.ubicacion.toLowerCase().includes(selectedEstadoFilter.toLowerCase()));
+    // Función para hacer Zoom / FlyTo directo hacia el Estado seleccionado
+    const zoomToState = (stateName: string) => {
+        const normTarget = cleanText(stateName);
+
+        if (normTarget === 'todos') {
+            if (useMapbox && mapboxMapRef.current) {
+                mapboxMapRef.current.flyTo({
+                    center: [-69.8371, 9.0820],
+                    zoom: 5.5,
+                    duration: 1400,
+                });
+            } else if (leafletMapRef.current) {
+                leafletMapRef.current.setView([9.0820, -69.8371], 6);
+            }
+            return;
+        }
+
+        // Buscar pines pertenecientes a ese estado
+        const pinsInState = pinesConCoordenadas.filter((p) => {
+            const normEst = cleanText(p.estado_nombre);
+            const normUbi = cleanText(p.ubicacion);
+            return (normEst && (normTarget.includes(normEst) || normEst.includes(normTarget))) ||
+                   (normUbi && normUbi.includes(normTarget));
+        });
 
         if (useMapbox && mapboxMapRef.current) {
-            // Limpiar marcadores anteriores de Mapbox
+            if (pinsInState.length > 0) {
+                const bounds = new mapboxgl.LngLatBounds();
+                pinsInState.forEach((p) => {
+                    if (p.lng !== null && p.lat !== null) {
+                        bounds.extend([p.lng, p.lat]);
+                    }
+                });
+                mapboxMapRef.current.fitBounds(bounds, {
+                    padding: 100,
+                    maxZoom: 12,
+                    duration: 1600,
+                });
+            } else {
+                // Si no hay pines con lat/lng en ese estado, buscar en coordenadas predefinidas
+                const matchedKey = Object.keys(MAPBOX_ESTADOS_COORDS).find((k) => cleanText(k) === normTarget);
+                if (matchedKey && MAPBOX_ESTADOS_COORDS[matchedKey]) {
+                    const [eLng, eLat] = MAPBOX_ESTADOS_COORDS[matchedKey];
+                    mapboxMapRef.current.flyTo({
+                        center: [eLng, eLat],
+                        zoom: 10,
+                        duration: 1600,
+                    });
+                }
+            }
+        } else if (!useMapbox && leafletMapRef.current) {
+            if (pinsInState.length > 0) {
+                const markersGroup = pinsInState
+                    .filter((p) => p.lat !== null && p.lng !== null)
+                    .map((p) => L.marker([p.lat!, p.lng!]));
+                if (markersGroup.length > 0) {
+                    const group = L.featureGroup(markersGroup);
+                    leafletMapRef.current.fitBounds(group.getBounds().pad(0.2));
+                }
+            }
+        }
+    };
+
+    // Manejar el clic en un botón de Estado
+    const handleEstadoClick = (stateName: string) => {
+        setSelectedEstadoFilter(stateName);
+        zoomToState(stateName);
+    };
+
+    // Renderizar Pines cuando cambia la lista de pines o el filtro
+    useEffect(() => {
+        const normTarget = cleanText(selectedEstadoFilter);
+        const pinesFiltrados = normTarget === 'todos'
+            ? pinesConCoordenadas
+            : pinesConCoordenadas.filter((p) => {
+                const normEst = cleanText(p.estado_nombre);
+                const normUbi = cleanText(p.ubicacion);
+                return (normEst && (normTarget.includes(normEst) || normEst.includes(normTarget))) ||
+                       (normUbi && normUbi.includes(normTarget));
+            });
+
+        if (useMapbox && mapboxMapRef.current) {
             mapboxMarkersRef.current.forEach((m) => m.remove());
             mapboxMarkersRef.current = [];
 
             pinesFiltrados.forEach((pin) => {
                 if (pin.lat === null || pin.lng === null) return;
 
-                // Crear elemento HTML personalizado para el marcador Mapbox
                 const el = document.createElement('div');
-                el.className = 'custom-mapbox-marker cursor-pointer transition-transform hover:scale-110';
+                el.className = 'custom-mapbox-marker cursor-pointer transition-transform hover:scale-115';
                 el.innerHTML = `
-                    <div style="background-color: ${pin.activa ? '#10b981' : '#f43f5e'}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);">
+                    <div style="background-color: ${pin.activa ? '#10b981' : '#f43f5e'}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid #ffffff; box-shadow: 0 4px 8px -1px rgba(0,0,0,0.3);">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
                             <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
@@ -177,7 +263,7 @@ export function ExtensionesMapView({
                 `;
 
                 const popupHtml = `
-                    <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 210px;">
+                    <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 220px;">
                         <div style="font-weight: 800; font-size: 14px; color: #0f172a; margin-bottom: 4px;">
                             ${pin.nombre}
                         </div>
@@ -212,25 +298,7 @@ export function ExtensionesMapView({
 
                 mapboxMarkersRef.current.push(marker);
             });
-
-            // Animación flyTo de Mapbox GL según estado seleccionado
-            if (selectedEstadoFilter !== 'todos' && MAPBOX_ESTADOS_COORDS[selectedEstadoFilter]) {
-                const [eLng, eLat] = MAPBOX_ESTADOS_COORDS[selectedEstadoFilter];
-                mapboxMapRef.current.flyTo({
-                    center: [eLng, eLat],
-                    zoom: 10,
-                    essential: true,
-                    duration: 1600,
-                });
-            } else {
-                mapboxMapRef.current.flyTo({
-                    center: [-69.8371, 9.0820],
-                    zoom: 5.5,
-                    duration: 1200,
-                });
-            }
         } else if (!useMapbox && leafletMapRef.current && leafletLayerRef.current) {
-            // Manejo Fallback Leaflet
             leafletLayerRef.current.clearLayers();
             pinesFiltrados.forEach((pin) => {
                 if (pin.lat === null || pin.lng === null) return;
@@ -238,12 +306,6 @@ export function ExtensionesMapView({
                 marker.bindPopup(`<b>${pin.nombre}</b><br>${pin.ubicacion}<br>Pastor: ${pin.pastor}`);
                 leafletLayerRef.current?.addLayer(marker);
             });
-            if (selectedEstadoFilter !== 'todos' && MAPBOX_ESTADOS_COORDS[selectedEstadoFilter]) {
-                const [eLng, eLat] = MAPBOX_ESTADOS_COORDS[selectedEstadoFilter];
-                leafletMapRef.current.setView([eLat, eLng], 10);
-            } else {
-                leafletMapRef.current.setView([9.0820, -69.8371], 6);
-            }
         }
     }, [useMapbox, pinesConCoordenadas, selectedEstadoFilter]);
 
@@ -255,8 +317,8 @@ export function ExtensionesMapView({
                     type="button"
                     variant={selectedEstadoFilter === 'todos' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setSelectedEstadoFilter('todos')}
-                    className="h-7 text-xs rounded-full shrink-0"
+                    onClick={() => handleEstadoClick('todos')}
+                    className="h-7 text-xs rounded-full shrink-0 font-medium"
                 >
                     <Layers className="size-3.5 mr-1" />
                     {__('Todos los Estados')} ({pinesConCoordenadas.length})
@@ -270,8 +332,8 @@ export function ExtensionesMapView({
                             type="button"
                             variant={selectedEstadoFilter === est.estado_nombre ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() => setSelectedEstadoFilter(est.estado_nombre)}
-                            className="h-7 text-xs rounded-full shrink-0"
+                            onClick={() => handleEstadoClick(est.estado_nombre)}
+                            className="h-7 text-xs rounded-full shrink-0 font-medium"
                         >
                             {est.estado_nombre} ({est.cantidad})
                         </Button>
@@ -282,20 +344,24 @@ export function ExtensionesMapView({
             <div className="relative">
                 <div ref={mapContainerRef} className={className} />
 
-                {/* Overlays de leyenda Mapbox */}
-                <div className="absolute top-3 left-3 bg-card/90 backdrop-blur-md border rounded-lg px-3 py-1.5 shadow-md z-[10] flex items-center gap-2 text-xs font-semibold">
-                    <MapPin className="size-4 text-indigo-600" />
-                    <span>{useMapbox ? __('Mapbox GL Venezuela') : __('Mapa de Venezuela')}</span>
-                </div>
-
-                <div className="absolute top-3 right-3 bg-card/90 backdrop-blur-md border rounded-lg px-3 py-1.5 shadow-md z-[10] flex items-center gap-3 text-xs font-semibold">
-                    <div className="flex items-center gap-1 text-emerald-600">
-                        <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>{pinesConCoordenadas.filter((p) => p.activa).length} {__('Activas')}</span>
+                {/* Insignia / Leyenda colocada en la parte INFERIOR IZQUIERDA para NO solapar los botones de zoom (+/-) */}
+                <div className="absolute bottom-3 left-3 bg-card/95 backdrop-blur-md border rounded-xl p-2.5 shadow-lg z-[10] flex items-center gap-4 text-xs font-semibold">
+                    <div className="flex items-center gap-1.5 text-foreground">
+                        <MapPin className="size-4 text-indigo-600" />
+                        <span>{useMapbox ? __('Mapbox GL Venezuela') : __('Mapa de Venezuela')}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-rose-600">
-                        <span className="size-2.5 rounded-full bg-rose-500" />
-                        <span>{pinesConCoordenadas.filter((p) => !p.activa).length} {__('Inactivas')}</span>
+
+                    <div className="h-4 w-px bg-border" />
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                            <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>{pinesConCoordenadas.filter((p) => p.activa).length} {__('Activas')}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+                            <span className="size-2.5 rounded-full bg-rose-500" />
+                            <span>{pinesConCoordenadas.filter((p) => !p.activa).length} {__('Inactivas')}</span>
+                        </div>
                     </div>
                 </div>
             </div>
