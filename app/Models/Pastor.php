@@ -80,20 +80,27 @@ class Pastor extends Model
     protected $appends = ['nombre_completo'];
 
     /**
-     * Generar código numérico de 8 dígitos (5 dígitos de la cédula + 3 dígitos consecutivos).
+     * Generar código de pastor (11 a 15 dígitos):
+     * Cédula (sólo números) + Zona (sólo números) + Distrito (sólo números) + ID rellenado a 4 dígitos.
+     * Ejemplo: 25212293 + 1 + 1 + 0824 => 25212293110824
      */
-    public static function generateCodigo(string $documento, ?int $excludeId = null): string
+    public static function generateCodigo(string $documento, ?string $zona = null, ?string $distrito = null, ?int $id = null): string
     {
-        $numeric = preg_replace('/\D/', '', $documento);
-        $prefix = str_pad(substr($numeric, 0, 5), 5, '0', STR_PAD_LEFT);
+        $numericDoc = preg_replace('/\D/', '', $documento);
+        if (empty($numericDoc)) {
+            $numericDoc = '00000000';
+        }
 
-        $count = self::where('codigo', 'like', "{$prefix}%")
-            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
-            ->count();
+        $numericZona = preg_replace('/\D/', '', (string)$zona) ?: '0';
+        $numericDist = preg_replace('/\D/', '', (string)$distrito) ?: '0';
 
-        $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        if (!$id) {
+            $id = (int) self::max('id') + 1;
+        }
 
-        return $prefix . $sequence;
+        $idFormatted = sprintf('%04d', $id);
+
+        return $numericDoc . $numericZona . $numericDist . $idFormatted;
     }
 
     /**

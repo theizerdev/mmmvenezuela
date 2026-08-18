@@ -98,11 +98,11 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [nivelFilter, setNivelFilter] = useState(filters.nivel_ministerial || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
-    const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
+    const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '15');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isTableLoading, setIsTableLoading] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+    const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
 
     const getPastorPhotoUrl = (foto?: string | null) => {
         if (!foto) return null;

@@ -55,7 +55,7 @@ class PastorController extends Controller
         }
 
         // Ordenamiento
-        $perPage = (int) $request->input('perPage', 10);
+        $perPage = (int) $request->input('perPage', 15);
         $sortBy = $request->input('sortBy', 'created_at');
         $sortDir = strtolower($request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
@@ -121,13 +121,19 @@ class PastorController extends Controller
     public function store(Request $request): RedirectResponse
     {
         if (empty($request->input('codigo')) && ! empty($request->input('documento'))) {
+            $nextId = (int) Pastor::max('id') + 1;
             $request->merge([
-                'codigo' => Pastor::generateCodigo($request->input('documento')),
+                'codigo' => Pastor::generateCodigo(
+                    $request->input('documento'),
+                    $request->input('zona'),
+                    $request->input('distrito'),
+                    $nextId
+                ),
             ]);
         }
 
         $validated = $request->validate([
-            'codigo' => ['required', 'numeric', 'digits:8', 'unique:pastores,codigo'],
+            'codigo' => ['required', 'numeric', 'min_digits:6', 'max_digits:25', 'unique:pastores,codigo'],
             'nombres' => ['required', 'string', 'max:191'],
             'apellidos' => ['required', 'string', 'max:191'],
             'documento' => ['required', 'string', 'max:50', 'unique:pastores,documento'],
@@ -272,12 +278,17 @@ class PastorController extends Controller
     {
         if (empty($request->input('codigo')) && ! empty($request->input('documento'))) {
             $request->merge([
-                'codigo' => Pastor::generateCodigo($request->input('documento'), $pastore->id),
+                'codigo' => Pastor::generateCodigo(
+                    $request->input('documento'),
+                    $request->input('zona'),
+                    $request->input('distrito'),
+                    $pastore->id
+                ),
             ]);
         }
 
         $validated = $request->validate([
-            'codigo' => ['required', 'numeric', 'digits:8', 'unique:pastores,codigo,'.$pastore->id],
+            'codigo' => ['required', 'numeric', 'min_digits:6', 'max_digits:25', 'unique:pastores,codigo,'.$pastore->id],
             'nombres' => ['required', 'string', 'max:191'],
             'apellidos' => ['required', 'string', 'max:191'],
             'documento' => ['required', 'string', 'max:50', 'unique:pastores,documento,'.$pastore->id],

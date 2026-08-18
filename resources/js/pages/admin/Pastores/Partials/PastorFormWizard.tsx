@@ -649,11 +649,14 @@ export default function PastorFormWizard({
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         setData((prev) => {
-                                            const numeric = val.replace(/\D/g, '');
                                             let autoCode = prev.codigo;
-                                            if (!isEditing && numeric.length >= 5 && (!prev.codigo || prev.codigo.length === 8)) {
-                                                const prefix = numeric.slice(0, 5).padStart(5, '0');
-                                                autoCode = `${prefix}001`;
+                                            if (!isEditing) {
+                                                const numDoc = val.replace(/\D/g, '');
+                                                if (numDoc) {
+                                                    const numZ = prev.zona.replace(/\D/g, '') || '1';
+                                                    const numD = prev.distrito.replace(/\D/g, '') || '1';
+                                                    autoCode = `${numDoc}${numZ}${numD}0001`;
+                                                }
                                             }
                                             return {
                                                 ...prev,
@@ -662,7 +665,7 @@ export default function PastorFormWizard({
                                             };
                                         });
                                     }}
-                                    placeholder="V-25212345"
+                                    placeholder="V-25212293"
                                     className="mt-1"
                                 />
                                 {errors.documento && <p className="text-xs text-destructive mt-1">{errors.documento}</p>}
@@ -1119,8 +1122,22 @@ export default function PastorFormWizard({
                                 <Input
                                     id="zona"
                                     value={data.zona}
-                                    onChange={(e) => setData('zona', e.target.value)}
-                                    placeholder="Ej. Zona 1 Central"
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setData((prev) => {
+                                            let autoCode = prev.codigo;
+                                            if (!isEditing) {
+                                                const numDoc = prev.documento.replace(/\D/g, '');
+                                                if (numDoc) {
+                                                    const numZ = val.replace(/\D/g, '') || '1';
+                                                    const numD = prev.distrito.replace(/\D/g, '') || '1';
+                                                    autoCode = `${numDoc}${numZ}${numD}0001`;
+                                                }
+                                            }
+                                            return { ...prev, zona: val, codigo: autoCode };
+                                        });
+                                    }}
+                                    placeholder="Ej. 1"
                                     className="mt-1"
                                 />
                             </div>
@@ -1132,8 +1149,22 @@ export default function PastorFormWizard({
                                 <Input
                                     id="distrito"
                                     value={data.distrito}
-                                    onChange={(e) => setData('distrito', e.target.value)}
-                                    placeholder="Ej. Distrito Capital"
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setData((prev) => {
+                                            let autoCode = prev.codigo;
+                                            if (!isEditing) {
+                                                const numDoc = prev.documento.replace(/\D/g, '');
+                                                if (numDoc) {
+                                                    const numZ = prev.zona.replace(/\D/g, '') || '1';
+                                                    const numD = val.replace(/\D/g, '') || '1';
+                                                    autoCode = `${numDoc}${numZ}${numD}0001`;
+                                                }
+                                            }
+                                            return { ...prev, distrito: val, codigo: autoCode };
+                                        });
+                                    }}
+                                    placeholder="Ej. 1"
                                     className="mt-1"
                                 />
                             </div>

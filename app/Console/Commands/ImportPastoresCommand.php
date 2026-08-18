@@ -70,6 +70,8 @@ class ImportPastoresCommand extends Command
         // Deshabilitar temporalmente la verificación de llaves foráneas para spousal relationships
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
+        $prefixCounters = [];
+
         foreach ($tuples as $tupleStr) {
             $values = $this->parseTupleValues($tupleStr);
 
@@ -122,8 +124,18 @@ class ImportPastoresCommand extends Command
             $createdAt = $this->cleanString($values[44] ?? null) ?: now();
             $updatedAt = $this->cleanString($values[45] ?? null) ?: now();
 
-            // Normalización del código
-            $codigo = $rawCodigo ?: ($id ? sprintf('%08d', $id) : null);
+            // Normalización del código (Cédula completa + 2 dígitos consecutivos)
+            $numericDoc = preg_replace('/\D/', '', $documento);
+            if (empty($numericDoc)) {
+                $numericDoc = sprintf('%08d', $id ?: 1);
+            }
+            if (!isset($prefixCounters[$numericDoc])) {
+                $prefixCounters[$numericDoc] = 1;
+            } else {
+                $prefixCounters[$numericDoc]++;
+            }
+            $sequence = str_pad($prefixCounters[$numericDoc], 2, '0', STR_PAD_LEFT);
+            $codigo = $numericDoc . $sequence;
 
             $data = [
                 'codigo' => $codigo,
