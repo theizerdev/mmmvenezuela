@@ -51,6 +51,7 @@ import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { index as paisesIndex } from '@/routes/admin/paises';
 import { index as estadosIndex } from '@/routes/admin/estados';
+import { index as municipiosIndex } from '@/routes/admin/municipios';
 import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
@@ -436,6 +437,11 @@ export default function AdminSaasLayout({
                                     title: 'States',
                                     href: estadosIndex.url(),
                                     permission: 'estados.view',
+                                },
+                                {
+                                    title: 'Municipalities',
+                                    href: municipiosIndex(),
+                                    permission: 'municipios.view',
                                 },
 
                                 {

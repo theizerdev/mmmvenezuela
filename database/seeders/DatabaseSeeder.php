@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PaisSeeder::class,
             EstadoSeeder::class,
+            MunicipioSeeder::class,
             PermissionSeeder::class,
             RoleSeeder::class,
             EmpresaSucursalSeeder::class,

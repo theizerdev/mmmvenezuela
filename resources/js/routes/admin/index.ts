@@ -7,6 +7,7 @@ import empleados from './empleados'
 import empresas from './empresas'
 import integrations from './integrations'
 import estados from './estados'
+import municipios from './municipios'
 import paises from './paises'
 import productores from './productores'
 import proveedores from './proveedores'
@@ -26,6 +27,7 @@ empleados: Object.assign(empleados, empleados),
 empresas: Object.assign(empresas, empresas),
 integrations: Object.assign(integrations, integrations),
 estados: Object.assign(estados, estados),
+municipios: Object.assign(municipios, municipios),
 paises: Object.assign(paises, paises),
 productores: Object.assign(productores, productores),
 proveedores: Object.assign(proveedores, proveedores),

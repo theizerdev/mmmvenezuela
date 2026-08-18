@@ -46,6 +46,12 @@ class PermissionSeeder extends Seeder
                 'estados.edit' => 'Editar Estado',
                 'estados.delete' => 'Eliminar Estado',
 
+                // Módulo: Municipios
+                'municipios.view' => 'Ver Municipios',
+                'municipios.create' => 'Crear Municipio',
+                'municipios.edit' => 'Editar Municipio',
+                'municipios.delete' => 'Eliminar Municipio',
+
                 // Módulo: Empresas
                 'empresas.view' => 'Ver Empresas',
                 'empresas.create' => 'Crear Empresa',
