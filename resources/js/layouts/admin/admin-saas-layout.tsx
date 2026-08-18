@@ -452,6 +452,11 @@ export default function AdminSaasLayout({
                         {(() => {
                             const extensionItems = [
                                 {
+                                    title: 'Dashboard',
+                                    href: '/admin/extensiones/dashboard',
+                                    permission: 'extensiones.view',
+                                },
+                                {
                                     title: 'General List',
                                     href: '/admin/extensiones',
                                     permission: 'extensiones.view',

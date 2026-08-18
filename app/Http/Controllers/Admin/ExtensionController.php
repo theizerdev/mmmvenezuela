@@ -15,6 +15,150 @@ use Illuminate\Support\Facades\Auth;
 class ExtensionController extends Controller
 {
     /**
+     * Dashboard de Extensiones / Iglesias
+     */
+    public function dashboard(Request $request)
+    {
+        $range = $request->query('range', '3m'); // 7d, 1m, 3m, 1y, all
+
+        // 1. KPI Stats
+        $totalExtensiones = Iglesia::count();
+        $extensionesActivas = Iglesia::where('activa', true)->count();
+        $extensionesInactivas = $totalExtensiones - $extensionesActivas;
+        $totalMiembros = (int) Iglesia::sum('miembros_activos');
+        $totalCamposBlancos = (int) Iglesia::sum('cantidad_campos_blancos');
+        $totalFundadas = (int) Iglesia::sum('iglesias_fundadas');
+        $totalMedios = Iglesia::where('posee_medio_comunicacion', true)->count();
+
+        // 2. ApexCharts Time Series Registros por rango
+        $categories = [];
+        $seriesData = [];
+
+        if ($range === '7d') {
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $dateStr = $date->format('Y-m-d');
+                $label = $date->format('d/m');
+                $count = Iglesia::whereDate('created_at', $dateStr)->count();
+                $categories[] = $label;
+                $seriesData[] = $count;
+            }
+        } elseif ($range === '1m') {
+            for ($i = 29; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $dateStr = $date->format('Y-m-d');
+                $label = $date->format('d/m');
+                $count = Iglesia::whereDate('created_at', $dateStr)->count();
+                $categories[] = $label;
+                $seriesData[] = $count;
+            }
+        } elseif ($range === '3m') {
+            for ($i = 11; $i >= 0; $i--) {
+                $startOfWeek = now()->subWeeks($i)->startOfWeek();
+                $endOfWeek = now()->subWeeks($i)->endOfWeek();
+                $label = 'Sem ' . $startOfWeek->format('d/m');
+                $count = Iglesia::whereBetween('created_at', [$startOfWeek, $endOfWeek])->count();
+                $categories[] = $label;
+                $seriesData[] = $count;
+            }
+        } elseif ($range === '1y') {
+            for ($i = 11; $i >= 0; $i--) {
+                $month = now()->subMonths($i);
+                $label = mb_convert_case($month->translatedFormat('M Y'), MB_CASE_TITLE);
+                $count = Iglesia::whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+                $categories[] = $label;
+                $seriesData[] = $count;
+            }
+        } else {
+            $firstRecord = Iglesia::min('created_at');
+            $startDate = $firstRecord ? \Carbon\Carbon::parse($firstRecord)->startOfMonth() : now()->subYear()->startOfMonth();
+            $currentMonth = $startDate->copy();
+            while ($currentMonth <= now()->endOfMonth()) {
+                $label = mb_convert_case($currentMonth->translatedFormat('M Y'), MB_CASE_TITLE);
+                $count = Iglesia::whereYear('created_at', $currentMonth->year)
+                    ->whereMonth('created_at', $currentMonth->month)
+                    ->count();
+                $categories[] = $label;
+                $seriesData[] = $count;
+                $currentMonth->addMonth();
+            }
+        }
+
+        $registrosChart = [
+            'categories' => $categories,
+            'series' => $seriesData,
+        ];
+
+        // 3. ApexCharts Donut por Tipo de Local
+        $donutData = Iglesia::leftJoin('tipo_locales', 'iglesias.tipo_local_id', '=', 'tipo_locales.id')
+            ->selectRaw("COALESCE(tipo_locales.nombre, 'No asignado') as label, COUNT(iglesias.id) as value")
+            ->groupBy('label')
+            ->get();
+
+        // 4. Extensiones Recientes (Timeline)
+        $extensionesRecientes = Iglesia::with(['pastor', 'estado', 'municipio', 'tipoLocal'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(fn($e) => [
+                'id' => $e->id,
+                'nombre' => $e->nombre,
+                'created_at' => $e->created_at ? $e->created_at->format('d/m/Y h:i A') : '',
+                'fecha_humana' => $e->created_at ? $e->created_at->diffForHumans() : '',
+                'pastor_nombre' => $e->pastor ? "{$e->pastor->nombres} {$e->pastor->apellidos}" : 'Sin pastor',
+                'estado_nombre' => $e->estado?->nombre ?: 'Sin estado',
+                'municipio_nombre' => $e->municipio?->nombre ?: '',
+                'tipo_local' => $e->tipoLocal?->nombre ?: 'N/A',
+                'activa' => (bool) $e->activa,
+            ]);
+
+        // 5. Datos para Mapa de Venezuela y Marcadores
+        $extensionesPorEstado = Iglesia::leftJoin('estados', 'iglesias.estado_id', '=', 'estados.id')
+            ->selectRaw("estados.id as estado_id, COALESCE(estados.nombre, 'Sin Estado') as estado_nombre, COUNT(iglesias.id) as cantidad")
+            ->groupBy('estados.id', 'estados.nombre')
+            ->get();
+
+        $pinesMapa = Iglesia::with(['pastor', 'estado', 'municipio', 'tipoLocal'])
+            ->select('id', 'nombre', 'pastor_id', 'estado_id', 'municipio_id', 'tipo_local_id', 'latitud', 'longitud', 'activa', 'miembros_activos', 'direccion')
+            ->get()
+            ->map(fn($e) => [
+                'id' => $e->id,
+                'nombre' => $e->nombre,
+                'pastor' => $e->pastor ? "{$e->pastor->nombres} {$e->pastor->apellidos}" : 'Sin pastor',
+                'estado_id' => $e->estado_id,
+                'estado_nombre' => $e->estado?->nombre ?: '',
+                'municipio_nombre' => $e->municipio?->nombre ?: '',
+                'ubicacion' => implode(', ', array_filter([$e->municipio?->nombre, $e->estado?->nombre])),
+                'tipo_local' => $e->tipoLocal?->nombre ?: 'N/A',
+                'lat' => $e->latitud ? (float) $e->latitud : null,
+                'lng' => $e->longitud ? (float) $e->longitud : null,
+                'activa' => (bool) $e->activa,
+                'miembros' => (int) $e->miembros_activos,
+                'direccion' => $e->direccion ?: '',
+            ]);
+
+        return inertia('admin/Extensiones/Dashboard', [
+            'range' => $range,
+            'stats' => [
+                'total_extensiones' => $totalExtensiones,
+                'extensiones_activas' => $extensionesActivas,
+                'extensiones_inactivas' => $extensionesInactivas,
+                'total_miembros' => $totalMiembros,
+                'total_campos_blancos' => $totalCamposBlancos,
+                'total_fundadas' => $totalFundadas,
+                'total_medios' => $totalMedios,
+            ],
+            'registrosChart' => $registrosChart,
+            'donutData' => $donutData,
+            'extensionesRecientes' => $extensionesRecientes,
+            'extensionesPorEstado' => $extensionesPorEstado,
+            'pinesMapa' => $pinesMapa,
+        ]);
+    }
+
+    /**
      * Listado General de Extensiones / Iglesias
      */
     public function index(Request $request)
