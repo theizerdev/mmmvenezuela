@@ -27,7 +27,14 @@ import {
     Upload,
     Trash2,
     Video,
-    RefreshCw
+    RefreshCw,
+    Stethoscope,
+    Activity,
+    Pill,
+    AlertCircle,
+    PhoneCall,
+    Plus,
+    ShoppingBag
 } from 'lucide-react';
 import pastoresRoutes from '@/routes/admin/pastores';
 
@@ -98,6 +105,18 @@ export default function PastorFormWizard({
         telefono_tlf: pastor?.telefono_tlf || '',
         telefono_otro: pastor?.telefono_otro || '',
         status: pastor ? Boolean(pastor.status) : true,
+
+        // Salud y Emergencia
+        grupo_sanguineo: pastor?.grupo_sanguineo || 'O+',
+        condicion_salud: pastor?.condicion_salud || 'Buena',
+        padece_enfermedad: pastor ? Boolean(pastor.padece_enfermedad) : false,
+        enfermedades_cronicas: pastor?.enfermedades_cronicas || '',
+        toma_medicamentos: pastor ? Boolean(pastor.toma_medicamentos) : false,
+        medicamentos_recetados: pastor?.medicamentos_recetados || '',
+        alergias: pastor?.alergias || '',
+        contacto_emergencia_nombre: pastor?.contacto_emergencia_nombre || '',
+        contacto_emergencia_telefono: pastor?.contacto_emergencia_telefono || '',
+        observaciones_salud: pastor?.observaciones_salud || '',
     });
 
     const [conyugePerteneceMinisterio, setConyugePerteneceMinisterio] = useState<boolean>(
@@ -205,6 +224,40 @@ export default function PastorFormWizard({
             parroquia_id: '',
             municipio: munFound ? munFound.nombre : prev.municipio,
         }));
+    const [nuevoMedicamentoNombre, setNuevoMedicamentoNombre] = useState('');
+    const [nuevoMedicamentoDosis, setNuevoMedicamentoDosis] = useState('');
+
+    const medicamentosList = useMemo(() => {
+        const raw = data.medicamentos_recetados;
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'string') {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+            } catch (e) {}
+            return raw.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean).map((nombre) => ({ nombre, dosis: '' }));
+        }
+        return [];
+    }, [data.medicamentos_recetados]);
+
+    const handleAgregarMedicamento = () => {
+        if (!nuevoMedicamentoNombre.trim()) {
+            alert(__('Por favor ingrese el nombre del medicamento.'));
+            return;
+        }
+        const updated = [
+            ...medicamentosList,
+            { nombre: nuevoMedicamentoNombre.trim(), dosis: nuevoMedicamentoDosis.trim() },
+        ];
+        setData('medicamentos_recetados', updated);
+        setNuevoMedicamentoNombre('');
+        setNuevoMedicamentoDosis('');
+    };
+
+    const handleEliminarMedicamento = (index: number) => {
+        const updated = medicamentosList.filter((_, i) => i !== index);
+        setData('medicamentos_recetados', updated);
     };
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -361,7 +414,8 @@ export default function PastorFormWizard({
         { id: 1, title: __('Datos Personales'), icon: User, desc: __('Información básica y contacto') },
         { id: 2, title: __('Datos Académicos'), icon: GraduationCap, desc: __('Estudios y formación teológica') },
         { id: 3, title: __('Datos Eclesiásticos'), icon: Cross, desc: __('Grado ministerial y cargos') },
-        { id: 4, title: __('Fotografía Pastor'), icon: Camera, desc: __('Subir o tomar foto del obrero') },
+        { id: 4, title: __('Estado de Salud'), icon: Stethoscope, desc: __('Antecedentes médicos y emergencias') },
+        { id: 5, title: __('Fotografía Pastor'), icon: Camera, desc: __('Subir o tomar foto del obrero') },
     ];
 
     return (
@@ -405,7 +459,7 @@ export default function PastorFormWizard({
             </div>
 
             {/* Stepper Tabs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 {steps.map((step) => {
                     const Icon = step.icon;
                     const isActive = activeTab === step.id;
@@ -1121,13 +1175,277 @@ export default function PastorFormWizard({
                 </Card>
             )}
 
-            {/* PASO 4: FOTOGRAFÍA DEL PASTOR (TIPO CARNET COMPACTO) */}
+            {/* PASO 4: ESTADO DE SALUD Y ANTECEDENTES MÉDICOS */}
             {activeTab === 4 && (
+                <Card className="border shadow-sm">
+                    <CardHeader className="border-b bg-muted/20">
+                        <div className="flex items-center gap-2 text-primary font-semibold text-base">
+                            <Stethoscope className="h-5 w-5" />
+                            <span>{__('Paso 4: Estado de Salud')}</span>
+                        </div>
+                        <CardDescription className="text-xs">
+                            {__('Registre la información médica del pastor, grupo sanguíneo, alergias y contacto en caso de emergencia.')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <Label htmlFor="grupo_sanguineo" className="text-xs font-semibold uppercase tracking-wider">
+                                    {__('Grupo Sanguíneo')}
+                                </Label>
+                                <Select2
+                                    id="grupo_sanguineo"
+                                    value={data.grupo_sanguineo}
+                                    onChange={(val) => setData('grupo_sanguineo', val)}
+                                    options={[
+                                        { value: 'O+', label: 'O Positivo (O+)' },
+                                        { value: 'O-', label: 'O Negativo (O-)' },
+                                        { value: 'A+', label: 'A Positivo (A+)' },
+                                        { value: 'A-', label: 'A Negativo (A-)' },
+                                        { value: 'B+', label: 'B Positivo (B+)' },
+                                        { value: 'B-', label: 'B Negativo (B-)' },
+                                        { value: 'AB+', label: 'AB Positivo (AB+)' },
+                                        { value: 'AB-', label: 'AB Negativo (AB-)' },
+                                    ]}
+                                    className="mt-1"
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="condicion_salud" className="text-xs font-semibold uppercase tracking-wider">
+                                    {__('Condición General de Salud')}
+                                </Label>
+                                <Select2
+                                    id="condicion_salud"
+                                    value={data.condicion_salud}
+                                    onChange={(val) => setData('condicion_salud', val)}
+                                    options={[
+                                        { value: 'Excelente', label: __('Excelente') },
+                                        { value: 'Buena', label: __('Buena / Estable') },
+                                        { value: 'Regular', label: __('Regular') },
+                                        { value: 'Delicada', label: __('Delicada / Bajo Tratamiento') },
+                                    ]}
+                                    className="mt-1"
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="alergias" className="text-xs font-semibold uppercase tracking-wider">
+                                    {__('Alergias Conocidas')}
+                                </Label>
+                                <Input
+                                    id="alergias"
+                                    value={data.alergias}
+                                    onChange={(e) => setData('alergias', e.target.value)}
+                                    placeholder="Ej. Penicilina, Polvo, Mariscos..."
+                                    className="mt-1"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Diagnósticos y Medicamentos de Uso Continuo */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 p-4 rounded-xl border">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="padece_enfermedad" className="text-xs font-semibold cursor-pointer flex items-center gap-2">
+                                        <Activity className="h-4 w-4 text-primary" />
+                                        {__('¿Padece alguna enfermedad o condición crónica?')}
+                                    </Label>
+                                    <Switch
+                                        id="padece_enfermedad"
+                                        checked={data.padece_enfermedad}
+                                        onCheckedChange={(val) => setData('padece_enfermedad', val)}
+                                    />
+                                </div>
+
+                                {data.padece_enfermedad && (
+                                    <Textarea
+                                        id="enfermedades_cronicas"
+                                        rows={2}
+                                        value={data.enfermedades_cronicas}
+                                        onChange={(e) => setData('enfermedades_cronicas', e.target.value)}
+                                        placeholder="Detalle los diagnósticos (ej. Hipertensión arterial, Diabetes tipo 2...)"
+                                        className="mt-1 bg-background"
+                                    />
+                                )}
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="toma_medicamentos" className="text-xs font-semibold cursor-pointer flex items-center gap-2">
+                                        <Pill className="h-4 w-4 text-primary" />
+                                        {__('¿Toma medicamentos de tratamiento continuo?')}
+                                    </Label>
+                                    <Switch
+                                        id="toma_medicamentos"
+                                        checked={data.toma_medicamentos}
+                                        onCheckedChange={(val) => setData('toma_medicamentos', val)}
+                                    />
+                                </div>
+
+                                {data.toma_medicamentos && (
+                                    <div className="space-y-4 pt-2">
+                                        {/* Formulario de Agregar Medicamento (Carrito) */}
+                                        <div className="p-3 bg-background rounded-lg border space-y-3 shadow-xs">
+                                            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                                                {__('Añadir Medicamento a la Ficha Médica')}
+                                            </span>
+                                            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 items-center">
+                                                <div className="sm:col-span-2">
+                                                    <Input
+                                                        value={nuevoMedicamentoNombre}
+                                                        onChange={(e) => setNuevoMedicamentoNombre(e.target.value)}
+                                                        placeholder="Nombre (ej. Losartán, Metformina)..."
+                                                        className="h-8 text-xs"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                handleAgregarMedicamento();
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="sm:col-span-2">
+                                                    <Input
+                                                        value={nuevoMedicamentoDosis}
+                                                        onChange={(e) => setNuevoMedicamentoDosis(e.target.value)}
+                                                        placeholder="Dosis/Frecuencia (ej. 50mg c/12h)..."
+                                                        className="h-8 text-xs"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                handleAgregarMedicamento();
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="sm:col-span-1">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={handleAgregarMedicamento}
+                                                        className="w-full h-8 text-xs gap-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow"
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                        {__('Añadir')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Listado de Medicamentos Registrados (Carrito) */}
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                                                    <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                                                    {__('Medicamentos Registrados')}
+                                                </span>
+                                                <Badge variant="outline" className="text-[10px]">
+                                                    {medicamentosList.length} {__('medicamento(s)')}
+                                                </Badge>
+                                            </div>
+
+                                            {medicamentosList.length > 0 ? (
+                                                <div className="divide-y border rounded-lg overflow-hidden bg-background max-h-48 overflow-y-auto">
+                                                    {medicamentosList.map((med, index) => (
+                                                        <div key={index} className="flex items-center justify-between p-2 hover:bg-accent/30 text-xs">
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <div className="p-1 rounded-full bg-primary/10 text-primary shrink-0">
+                                                                    <Pill className="h-3.5 w-3.5" />
+                                                                </div>
+                                                                <div className="truncate">
+                                                                    <span className="font-semibold text-foreground">{med.nombre}</span>
+                                                                    {med.dosis && (
+                                                                        <span className="text-muted-foreground ml-2">
+                                                                            — {med.dosis}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleEliminarMedicamento(index)}
+                                                                className="h-6 w-6 text-destructive hover:bg-destructive/10 shrink-0"
+                                                                title={__('Quitar medicamento')}
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="p-3 border border-dashed rounded-lg text-center text-xs text-muted-foreground bg-background/50">
+                                                    {__('No ha añadido medicamentos. Ingrese el nombre y la dosis arriba y haga clic en "Añadir".')}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Contacto de Emergencia */}
+                        <div className="space-y-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b pb-2">
+                                <PhoneCall className="h-4 w-4 text-rose-500" />
+                                {__('Contacto Familiar / Emergencia Médica')}
+                            </h4>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="contacto_emergencia_nombre" className="text-xs font-semibold uppercase tracking-wider">
+                                        {__('Nombre del Contacto de Emergencia')}
+                                    </Label>
+                                    <Input
+                                        id="contacto_emergencia_nombre"
+                                        value={data.contacto_emergencia_nombre}
+                                        onChange={(e) => setData('contacto_emergencia_nombre', e.target.value)}
+                                        placeholder="Nombre y relación (ej. María Pérez - Esposa / Hijo)"
+                                        className="mt-1"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="contacto_emergencia_telefono" className="text-xs font-semibold uppercase tracking-wider">
+                                        {__('Teléfono de Contacto directo')}
+                                    </Label>
+                                    <Input
+                                        id="contacto_emergencia_telefono"
+                                        value={data.contacto_emergencia_telefono}
+                                        onChange={(e) => setData('contacto_emergencia_telefono', e.target.value)}
+                                        placeholder="0414-1234567 / 0212-9876543"
+                                        className="mt-1"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label htmlFor="observaciones_salud" className="text-xs font-semibold uppercase tracking-wider">
+                                {__('Observaciones Médicas / Recomendaciones')}
+                            </Label>
+                            <Textarea
+                                id="observaciones_salud"
+                                rows={2}
+                                value={data.observaciones_salud}
+                                onChange={(e) => setData('observaciones_salud', e.target.value)}
+                                placeholder="Indicaciones médicas especiales, centro clínico preferido o tipo de seguro..."
+                                className="mt-1"
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* PASO 5: FOTOGRAFÍA DEL PASTOR (TIPO CARNET COMPACTO) */}
+            {activeTab === 5 && (
                 <Card className="border shadow-sm max-w-xl mx-auto">
                     <CardHeader className="border-b bg-muted/20 py-3 px-5">
                         <div className="flex items-center gap-2 text-primary font-semibold text-sm">
                             <Camera className="h-4 w-4" />
-                            <span>{__('Paso 4: Fotografía Tipo Carnet del Pastor')}</span>
+                            <span>{__('Paso 5: Fotografía Tipo Carnet del Pastor')}</span>
                         </div>
                         <CardDescription className="text-xs">
                             {__('Suba una foto o tome una captura con su cámara web. Las fotos se redimensionan y comprimen automáticamente en tamaño (KB).')}
@@ -1269,10 +1587,10 @@ export default function PastorFormWizard({
                     {__('Paso Anterior')}
                 </Button>
 
-                {activeTab < 4 ? (
+                {activeTab < 5 ? (
                     <Button
                         type="button"
-                        onClick={() => setActiveTab((prev) => Math.min(prev + 1, 4))}
+                        onClick={() => setActiveTab((prev) => Math.min(prev + 1, 5))}
                         className="gap-2"
                     >
                         {__('Siguiente Paso')}

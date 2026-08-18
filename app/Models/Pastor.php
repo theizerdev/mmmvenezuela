@@ -53,6 +53,16 @@ class Pastor extends Model
         'telefono_tlf',
         'telefono_otro',
         'status',
+        'grupo_sanguineo',
+        'condicion_salud',
+        'padece_enfermedad',
+        'enfermedades_cronicas',
+        'toma_medicamentos',
+        'medicamentos_recetados',
+        'alergias',
+        'contacto_emergencia_nombre',
+        'contacto_emergencia_telefono',
+        'observaciones_salud',
     ];
 
     protected $casts = [
@@ -60,6 +70,9 @@ class Pastor extends Model
         'batizado_espiritu_santo' => 'boolean',
         'pertenece_ministerio' => 'boolean',
         'estudio_teologico' => 'boolean',
+        'padece_enfermedad' => 'boolean',
+        'toma_medicamentos' => 'boolean',
+        'medicamentos_recetados' => 'array',
         'fe_nacimiento' => 'date',
         'edad' => 'integer',
     ];

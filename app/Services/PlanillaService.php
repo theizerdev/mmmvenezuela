@@ -385,9 +385,83 @@ class PlanillaService
                 $fpdf->Cell(65, 7, utf8_decode($telefono_conyuge), 1, 1, 'L', true);
             }
 
-            $fpdf->Ln(38);
+            $fpdf->Ln(8);
         }
-         $fpdf->Ln(16);
+
+        // DATOS DE SALUD
+        $fpdf->SetFillColor($headerColor[0], $headerColor[1], $headerColor[2]);
+        $fpdf->SetTextColor(255, 255, 255);
+        $fpdf->SetFont('Arial', 'B', 12);
+        $fpdf->Cell(0, 8, utf8_decode('DATOS DE SALUD'), 1, 1, 'C', true);
+
+        $fpdf->SetTextColor(0, 0, 0);
+        $fpdf->SetFont('Arial', '', 10);
+
+        // Fila 1: Grupo Sanguíneo, Condición de Salud y Alergias
+        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+        $fpdf->Cell(35, 7, utf8_decode('G. Sanguíneo:'), 1, 0, 'L', true);
+        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+        $fpdf->Cell(25, 7, utf8_decode($pastor->grupo_sanguineo ?? 'No especificado'), 1, 0, 'L', true);
+
+        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+        $fpdf->Cell(30, 7, utf8_decode('Condición:'), 1, 0, 'L', true);
+        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+        $fpdf->Cell(35, 7, utf8_decode($pastor->condicion_salud ?? 'Buena'), 1, 0, 'L', true);
+
+        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+        $fpdf->Cell(25, 7, utf8_decode('Alergias:'), 1, 0, 'L', true);
+        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+        $fpdf->Cell(40, 7, utf8_decode($pastor->alergias ?? 'Ninguna'), 1, 1, 'L', true);
+
+        // Fila 2: Padece Enfermedad / Diagnóstico
+        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+        $fpdf->Cell(35, 7, utf8_decode('Enfermedades:'), 1, 0, 'L', true);
+        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+        $enfText = $pastor->padece_enfermedad ? ($pastor->enfermedades_cronicas ?: 'Sí (sin detalle)') : 'Ninguna declarada';
+        $fpdf->Cell(155, 7, utf8_decode($enfText), 1, 1, 'L', true);
+
+        // Fila 3: Medicamentos Recetados
+        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+        $fpdf->Cell(35, 7, utf8_decode('Medicamentos:'), 1, 0, 'L', true);
+        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+
+        $medList = [];
+        if ($pastor->toma_medicamentos && !empty($pastor->medicamentos_recetados)) {
+            $raw = $pastor->medicamentos_recetados;
+            if (is_array($raw)) {
+                foreach ($raw as $m) {
+                    $name = is_array($m) ? ($m['nombre'] ?? '') : (is_object($m) ? ($m->nombre ?? '') : (string)$m);
+                    $dosis = is_array($m) ? ($m['dosis'] ?? '') : (is_object($m) ? ($m->dosis ?? '') : '');
+                    if ($name) {
+                        $medList[] = $name . ($dosis ? " ({$dosis})" : '');
+                    }
+                }
+            } elseif (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $m) {
+                        $name = is_array($m) ? ($m['nombre'] ?? '') : (string)$m;
+                        $dosis = is_array($m) ? ($m['dosis'] ?? '') : '';
+                        if ($name) {
+                            $medList[] = $name . ($dosis ? " ({$dosis})" : '');
+                        }
+                    }
+                } else {
+                    $medList[] = $raw;
+                }
+            }
+        }
+
+        $medText = !empty($medList) ? implode('; ', $medList) : ($pastor->toma_medicamentos ? 'Sí (sin medicamentos registrados)' : 'Ninguno de uso continuo');
+        $fpdf->Cell(155, 7, utf8_decode($medText), 1, 1, 'L', true);
+
+        // Fila 4: Contacto de Emergencia
+        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+        $fpdf->Cell(35, 7, utf8_decode('C. Emergencia:'), 1, 0, 'L', true);
+        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+        $contactoStr = ($pastor->contacto_emergencia_nombre ?? 'No especificado') . ($pastor->contacto_emergencia_telefono ? ' (' . $pastor->contacto_emergencia_telefono . ')' : '');
+        $fpdf->Cell(155, 7, utf8_decode($contactoStr), 1, 1, 'L', true);
+
         // Iglesias asociadas
         if ($iglesias->count() > 0) {
             $fpdf->SetFillColor($headerColor[0], $headerColor[1], $headerColor[2]);

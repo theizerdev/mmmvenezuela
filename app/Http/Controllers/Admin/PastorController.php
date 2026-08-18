@@ -173,6 +173,18 @@ class PastorController extends Controller
             'telefono_tlf' => ['nullable', 'string', 'max:50'],
             'telefono_otro' => ['nullable', 'string', 'max:50'],
             'status' => ['boolean'],
+
+            // Estado de Salud
+            'grupo_sanguineo' => ['nullable', 'string', 'max:10'],
+            'condicion_salud' => ['nullable', 'string', 'max:50'],
+            'padece_enfermedad' => ['boolean'],
+            'enfermedades_cronicas' => ['nullable', 'string'],
+            'toma_medicamentos' => ['boolean'],
+            'medicamentos_recetados' => ['nullable'],
+            'alergias' => ['nullable', 'string', 'max:191'],
+            'contacto_emergencia_nombre' => ['nullable', 'string', 'max:191'],
+            'contacto_emergencia_telefono' => ['nullable', 'string', 'max:50'],
+            'observaciones_salud' => ['nullable', 'string'],
         ]);
 
         if (! empty($validated['fe_nacimiento'])) {
@@ -311,6 +323,18 @@ class PastorController extends Controller
             'telefono_tlf' => ['nullable', 'string', 'max:50'],
             'telefono_otro' => ['nullable', 'string', 'max:50'],
             'status' => ['boolean'],
+
+            // Estado de Salud
+            'grupo_sanguineo' => ['nullable', 'string', 'max:10'],
+            'condicion_salud' => ['nullable', 'string', 'max:50'],
+            'padece_enfermedad' => ['boolean'],
+            'enfermedades_cronicas' => ['nullable', 'string'],
+            'toma_medicamentos' => ['boolean'],
+            'medicamentos_recetados' => ['nullable'],
+            'alergias' => ['nullable', 'string', 'max:191'],
+            'contacto_emergencia_nombre' => ['nullable', 'string', 'max:191'],
+            'contacto_emergencia_telefono' => ['nullable', 'string', 'max:50'],
+            'observaciones_salud' => ['nullable', 'string'],
         ]);
 
         if (! empty($validated['fe_nacimiento'])) {
