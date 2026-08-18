@@ -285,25 +285,25 @@ export default function PastorFormWizard({
                 canvas.height = targetH;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
-                    // Recorte inteligente de aspecto proporcional (object-fit: cover)
                     const imgRatio = img.width / img.height;
                     const targetRatio = targetW / targetH;
-                    let renderW = targetW;
-                    let renderH = targetH;
-                    let offsetX = 0;
-                    let offsetY = 0;
+
+                    let sourceW = img.width;
+                    let sourceH = img.height;
+                    let sourceX = 0;
+                    let sourceY = 0;
 
                     if (imgRatio > targetRatio) {
-                        renderW = targetH * imgRatio;
-                        offsetX = (targetW - renderW) / 2;
+                        sourceW = img.height * targetRatio;
+                        sourceX = (img.width - sourceW) / 2;
                     } else {
-                        renderH = targetW / imgRatio;
-                        offsetY = (targetH - renderH) / 2;
+                        sourceH = img.width / targetRatio;
+                        sourceY = (img.height - sourceH) / 2;
                     }
 
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(0, 0, targetW, targetH);
-                    ctx.drawImage(img, offsetX, offsetY, renderW, renderH);
+                    ctx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, targetW, targetH);
 
                     const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
                     resolve(compressedDataUrl);
@@ -324,7 +324,7 @@ export default function PastorFormWizard({
         }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: mode },
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: mode },
             });
             setMediaStream(stream);
             setIsCameraActive(true);
@@ -353,17 +353,44 @@ export default function PastorFormWizard({
     };
 
     const capturePhoto = async () => {
-        if (videoRef.current && canvasRef.current) {
+        if (videoRef.current) {
             const video = videoRef.current;
-            const canvas = canvasRef.current;
-            canvas.width = 350;
-            canvas.height = 420;
+            const vw = video.videoWidth || 640;
+            const vh = video.videoHeight || 480;
+
+            const targetW = 350;
+            const targetH = 420;
+
+            const videoRatio = vw / vh;
+            const targetRatio = targetW / targetH;
+
+            let sourceW = vw;
+            let sourceH = vh;
+            let sourceX = 0;
+            let sourceY = 0;
+
+            if (videoRatio > targetRatio) {
+                // El video es más ancho que la tarjeta vertical carnet: recortar laterales sobrantes
+                sourceW = vh * targetRatio;
+                sourceX = (vw - sourceW) / 2;
+            } else {
+                // El video es más alto: recortar arriba/abajo sobrante
+                sourceH = vw / targetRatio;
+                sourceY = (vh - sourceH) / 2;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
             const ctx = canvas.getContext('2d');
+
             if (ctx) {
-                ctx.drawImage(video, 0, 0, 350, 420);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                const compressed = await resizeAndCompressImage(dataUrl, 350, 420, 0.8);
-                setData('foto', compressed);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, targetW, targetH);
+                ctx.drawImage(video, sourceX, sourceY, sourceW, sourceH, 0, 0, targetW, targetH);
+
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                setData('foto', compressedDataUrl);
                 stopCamera();
             }
         }
