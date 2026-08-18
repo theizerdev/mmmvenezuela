@@ -20,6 +20,7 @@ import {
     X,
     Activity,
     Link2,
+    UserCheck,
 } from 'lucide-react';
 import { Building2, GitBranch, Briefcase, Calendar, Fingerprint } from 'lucide-react';
 import * as React from 'react';
@@ -31,6 +32,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -53,6 +55,7 @@ import { index as paisesIndex } from '@/routes/admin/paises';
 import { index as estadosIndex } from '@/routes/admin/estados';
 import { index as municipiosIndex } from '@/routes/admin/municipios';
 import { index as parroquiasIndex } from '@/routes/admin/parroquias';
+import { index as pastoresIndex, create as pastoresCreate } from '@/routes/admin/pastores';
 import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
@@ -416,10 +419,34 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
+                        {/* Pastors Group */}
+                        {(() => {
+                            const pastorItems = [
+                                {
+                                    title: 'General List',
+                                    href: pastoresIndex(),
+                                    permission: 'pastores.view',
+                                },
+                                {
+                                    title: 'New Pastor',
+                                    href: pastoresCreate(),
+                                    permission: 'pastores.create',
+                                },
+                            ].filter(item => hasPermission(item.permission));
 
+                            if (pastorItems.length === 0) return null;
 
-
-
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Pastors"
+                                        icon={UserCheck}
+                                        collapsed={collapsed}
+                                        items={pastorItems}
+                                    />
+                                </div>
+                            );
+                        })()}
 
                         {/* Settings Group */}
                         {(() => {

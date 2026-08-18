@@ -1733,5 +1733,9 @@
   "Enable or disable this parish in application dropdowns.": "Habilitar o deshabilitar esta parroquia en los desplegables de la aplicación.",
   "Create Parish": "Crear Parroquia",
   "This action will permanently delete the selected parish.": "Esta acción eliminará la parroquia seleccionada permanentemente.",
-  "This action will permanently delete the :count selected parishes.": "Esta acción eliminará las :count parroquias seleccionadas permanentemente."
+  "This action will permanently delete the :count selected parishes.": "Esta acción eliminará las :count parroquias seleccionadas permanentemente.",
+  "Pastors": "Pastores",
+  "General List": "Listado general",
+  "New Pastor": "Nuevo registro",
+  "Pastor": "Pastor"
 }

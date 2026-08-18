@@ -58,6 +58,12 @@ class PermissionSeeder extends Seeder
                 'parroquias.edit' => 'Editar Parroquia',
                 'parroquias.delete' => 'Eliminar Parroquia',
 
+                // Módulo: Pastores
+                'pastores.view' => 'Ver Pastores',
+                'pastores.create' => 'Crear Pastor',
+                'pastores.edit' => 'Editar Pastor',
+                'pastores.delete' => 'Eliminar Pastor',
+
                 // Módulo: Empresas
                 'empresas.view' => 'Ver Empresas',
                 'empresas.create' => 'Crear Empresa',

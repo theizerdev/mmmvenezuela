@@ -1170,5 +1170,9 @@
   "Enable or disable this parish in application dropdowns.": "Enable or disable this parish in application dropdowns.",
   "Create Parish": "Create Parish",
   "This action will permanently delete the selected parish.": "This action will permanently delete the selected parish.",
-  "This action will permanently delete the :count selected parishes.": "This action will permanently delete the :count selected parishes."
+  "This action will permanently delete the :count selected parishes.": "This action will permanently delete the :count selected parishes.",
+  "Pastors": "Pastors",
+  "General List": "General List",
+  "New Pastor": "New Pastor",
+  "Pastor": "Pastor"
 }

@@ -9,6 +9,7 @@ import integrations from './integrations'
 import estados from './estados'
 import municipios from './municipios'
 import parroquias from './parroquias'
+import pastores from './pastores'
 import paises from './paises'
 import productores from './productores'
 import proveedores from './proveedores'
@@ -30,6 +31,7 @@ integrations: Object.assign(integrations, integrations),
 estados: Object.assign(estados, estados),
 municipios: Object.assign(municipios, municipios),
 parroquias: Object.assign(parroquias, parroquias),
+pastores: Object.assign(pastores, pastores),
 paises: Object.assign(paises, paises),
 productores: Object.assign(productores, productores),
 proveedores: Object.assign(proveedores, proveedores),
