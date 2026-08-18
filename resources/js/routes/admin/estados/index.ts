@@ -1,8 +1,8 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 
 /**
  * @see \App\Http\Controllers\Admin\EstadoController::index
- * @route '/estados'
+ * @route '/admin/estados'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -11,7 +11,7 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ["get", "head"],
-    url: '/estados',
+    url: '/admin/estados',
 } satisfies RouteDefinition<["get", "head"]>
 
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
  * @see \App\Http\Controllers\Admin\EstadoController::store
- * @route '/estados'
+ * @route '/admin/estados'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -34,7 +34,7 @@ export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
 store.definition = {
     methods: ["post"],
-    url: '/estados',
+    url: '/admin/estados',
 } satisfies RouteDefinition<["post"]>
 
 store.url = (options?: RouteQueryOptions) => {
@@ -48,7 +48,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
  * @see \App\Http\Controllers\Admin\EstadoController::update
- * @route '/estados/{estado}'
+ * @route '/admin/estados/{estado}'
  */
 export const update = (args: { estado: number | { id: number } } | [estado: number | { id: number }] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
@@ -57,7 +57,7 @@ export const update = (args: { estado: number | { id: number } } | [estado: numb
 
 update.definition = {
     methods: ["put"],
-    url: '/estados/{estado}',
+    url: '/admin/estados/{estado}',
 } satisfies RouteDefinition<["put"]>
 
 update.url = (args: { estado: number | { id: number } } | [estado: number | { id: number }] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -91,7 +91,7 @@ update.put = (args: { estado: number | { id: number } } | [estado: number | { id
 
 /**
  * @see \App\Http\Controllers\Admin\EstadoController::toggleStatus
- * @route '/estados/{estado}/toggle-status'
+ * @route '/admin/estados/{estado}/toggle-status'
  */
 export const toggleStatus = (args: { estado: number | { id: number } } | [estado: number | { id: number }] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
@@ -100,7 +100,7 @@ export const toggleStatus = (args: { estado: number | { id: number } } | [estado
 
 toggleStatus.definition = {
     methods: ["post"],
-    url: '/estados/{estado}/toggle-status',
+    url: '/admin/estados/{estado}/toggle-status',
 } satisfies RouteDefinition<["post"]>
 
 toggleStatus.url = (args: { estado: number | { id: number } } | [estado: number | { id: number }] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -129,7 +129,7 @@ toggleStatus.url = (args: { estado: number | { id: number } } | [estado: number 
 
 /**
  * @see \App\Http\Controllers\Admin\EstadoController::bulkDestroy
- * @route '/estados/bulk-destroy'
+ * @route '/admin/estados/bulk-destroy'
  */
 export const bulkDestroy = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: bulkDestroy.url(options),
@@ -138,7 +138,7 @@ export const bulkDestroy = (options?: RouteQueryOptions): RouteDefinition<'post'
 
 bulkDestroy.definition = {
     methods: ["post"],
-    url: '/estados/bulk-destroy',
+    url: '/admin/estados/bulk-destroy',
 } satisfies RouteDefinition<["post"]>
 
 bulkDestroy.url = (options?: RouteQueryOptions) => {

@@ -1,6 +1,7 @@
 import { Head, useForm, router } from '@inertiajs/react';
 import { Map, Plus, MapPin, CheckCircle, XCircle, Trash2, MoreVertical, Pencil, ToggleRight, Building } from 'lucide-react';
 import React, { useState, Suspense, lazy } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
@@ -25,9 +26,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select2 } from '@/components/ui/select2';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import AdminSaasLayout from '@/layouts/admin/admin-saas-layout';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
@@ -79,7 +80,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/dashboard' },
-        { title: __('Estados'), href: '/estados' },
+        { title: __('States'), href: '/admin/estados' },
     ];
 
     const userPermissions = (auth as any)?.user?.permissions || [];
@@ -173,7 +174,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
         e.preventDefault();
 
         if (editingEstado) {
-            put(`/estados/${editingEstado.id}`, {
+            put(`/admin/estados/${editingEstado.id}`, {
                 onSuccess: () => {
                     setIsModalOpen(false);
                     setEditingEstado(null);
@@ -181,7 +182,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                 },
             });
         } else {
-            post('/estados', {
+            post('/admin/estados', {
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
@@ -191,13 +192,13 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
     };
 
     const handleToggleStatus = (estado: Estado) => {
-        router.post(`/estados/${estado.id}/toggle-status`, {}, {
+        router.post(`/admin/estados/${estado.id}/toggle-status`, {}, {
             preserveScroll: true,
         });
     };
 
     const handleConfirmBulkDelete = () => {
-        router.post('/estados/bulk-destroy', { ids: selectedIds }, {
+        router.post('/admin/estados/bulk-destroy', { ids: selectedIds }, {
             onSuccess: () => {
                 setSelectedIds([]);
                 setIsDeleteDialogOpen(false);
@@ -205,24 +206,9 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
         });
     };
 
-    const handleSortChange = (columnId: string, direction: 'asc' | 'desc') => {
-        router.get(
-            window.location.pathname,
-            cleanParams({
-                search: searchTerm,
-                status: statusFilter,
-                pais_id: paisFilter,
-                perPage: perPageFilter,
-                sortBy: columnId,
-                sortDir: direction,
-            }),
-            { preserveState: true, preserveScroll: true }
-        );
-    };
-
     const columns: ColumnDef<Estado>[] = [
         {
-            id: 'nombre',
+            accessorKey: 'nombre',
             header: __('State'),
             cell: (row) => (
                 <div className="flex flex-col">
@@ -237,7 +223,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
             sortable: true,
         },
         {
-            id: 'codigo',
+            accessorKey: 'codigo',
             header: __('Code'),
             cell: (row) => (
                 <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
@@ -247,13 +233,13 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
             sortable: true,
         },
         {
-            id: 'capital',
+            accessorKey: 'capital',
             header: __('Capital'),
             cell: (row) => row.capital || '—',
             sortable: true,
         },
         {
-            id: 'coordenadas',
+            accessorKey: 'latitud',
             header: __('Geographic Location'),
             cell: (row) => (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -263,13 +249,13 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                             {Number(row.latitud).toFixed(4)}, {Number(row.longitud).toFixed(4)}
                         </span>
                     ) : (
-                        <span className="italic text-slate-400">Sin ubicación</span>
+                        <span className="italic text-slate-400">{__('No location set')}</span>
                     )}
                 </div>
             ),
         },
         {
-            id: 'activo',
+            accessorKey: 'activo',
             header: __('Status'),
             cell: (row) => (
                 <span
@@ -292,7 +278,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
             sortable: true,
         },
         {
-            id: 'actions',
+            accessorKey: 'id',
             header: __('Actions'),
             cell: (row) => (
                 <DropdownMenu>
@@ -333,44 +319,45 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
     ];
 
     return (
-        <AdminSaasLayout breadcrumbs={breadcrumbs}>
-            <Head title={__('Estados de Venezuela')} />
+        <>
+            <Head title={__('States of Venezuela')} />
 
-            <div className="space-y-6 p-6">
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
+
                 <ModuleHeader
-                    title={__('Estados de Venezuela')}
-                    subtitle={__('Gestión de estados, capitales y coordenadas geográficas')}
-                    actionButton={
-                        hasPermission('estados.create') ? (
-                            <Button onClick={handleCreateClick} className="gap-2">
-                                <Plus className="size-4" />
-                                {__('Nuevo Estado')}
-                            </Button>
-                        ) : undefined
-                    }
-                />
+                    icon={<MapPin className="size-6 text-white" />}
+                    title={__('States of Venezuela')}
+                    description={__('Management of states, capitals and geographic coordinates')}
+                    colorClassName="bg-emerald-600"
+                >
+                    {hasPermission('estados.create') && (
+                        <Button onClick={handleCreateClick} variant="secondary" className="gap-2 bg-white text-emerald-700 hover:bg-emerald-50 font-semibold shadow-sm">
+                            <Plus className="size-4" />
+                            {__('New State')}
+                        </Button>
+                    )}
+                </ModuleHeader>
 
                 {/* Stat Cards */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <StatCard
-                        title={__('Total Estados')}
+                        title={__('TOTAL STATES')}
                         value={stats.total}
-                        icon={MapPin}
-                        description={__('Entidades geográficas registradas')}
+                        icon={<MapPin className="size-5" />}
+                        colorClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                     />
                     <StatCard
-                        title={__('Estados Activos')}
+                        title={__('ACTIVE STATES')}
                         value={stats.activos}
-                        icon={CheckCircle}
-                        className="border-emerald-200 dark:border-emerald-900/50"
-                        description={__('Disponibles en la plataforma')}
+                        icon={<CheckCircle className="size-5" />}
+                        colorClassName="bg-green-100 text-green-600 dark:bg-green-950/50 dark:text-green-400"
                     />
                     <StatCard
-                        title={__('Estados Inactivos')}
+                        title={__('INACTIVE STATES')}
                         value={stats.inactivos}
-                        icon={XCircle}
-                        className="border-slate-200 dark:border-slate-800"
-                        description={__('Desactivados temporalmente')}
+                        icon={<XCircle className="size-5" />}
+                        colorClassName="bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400"
                     />
                 </div>
 
@@ -380,11 +367,11 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                         <TabsList>
                             <TabsTrigger value="tabla" className="gap-2">
                                 <Building className="size-4" />
-                                {__('Tabla de Estados')}
+                                {__('States Table')}
                             </TabsTrigger>
                             <TabsTrigger value="mapa" className="gap-2">
                                 <Map className="size-4" />
-                                {__('Mapa Geográfico')}
+                                {__('Geographic Map')}
                             </TabsTrigger>
                         </TabsList>
 
@@ -396,7 +383,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                                 className="gap-2"
                             >
                                 <Trash2 className="size-4" />
-                                {__('Eliminar seleccionados')} ({selectedIds.length})
+                                {__('Delete selected')} ({selectedIds.length})
                             </Button>
                         )}
                     </div>
@@ -406,44 +393,41 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                             <div className="flex flex-wrap items-end gap-4 w-full">
                                 <FilterField label={__('Search')}>
                                     <Input
-                                        placeholder={__('Buscar por nombre, código, capital...')}
+                                        placeholder={__('Search by name, code, capital...')}
                                         className="w-full md:w-80"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </FilterField>
                                 <FilterField label={__('Status')}>
-                                    <Select
+                                    <Select2
+                                        options={[
+                                            { value: '', label: __('All statuses') },
+                                            { value: '1', label: __('Active') },
+                                            { value: '0', label: __('Inactive') },
+                                        ]}
                                         value={statusFilter}
-                                        onValueChange={(val) => setStatusFilter(val)}
-                                    >
-                                        <SelectTrigger className="w-full md:w-44">
-                                            <SelectValue placeholder={__('All statuses')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="">{__('All statuses')}</SelectItem>
-                                            <SelectItem value="1">{__('Active')}</SelectItem>
-                                            <SelectItem value="0">{__('Inactive')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                        onChange={(val) => setStatusFilter(String(val))}
+                                        placeholder={__('All statuses')}
+                                        className="w-full md:w-44"
+                                    />
                                 </FilterField>
                                 <FilterField label={__('Country')}>
-                                    <Select
+                                    <Select2
+                                        options={[
+                                            { value: '', label: __('All countries') },
+                                            ...paises.map((p) => ({
+                                                value: String(p.id),
+                                                label: p.nombre,
+                                                sublabel: p.codigo_iso2,
+                                            })),
+                                        ]}
                                         value={paisFilter}
-                                        onValueChange={(val) => setPaisFilter(val)}
-                                    >
-                                        <SelectTrigger className="w-full md:w-48">
-                                            <SelectValue placeholder={__('All countries')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="">{__('All countries')}</SelectItem>
-                                            {paises.map((p) => (
-                                                <SelectItem key={p.id} value={String(p.id)}>
-                                                    {p.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                        onChange={(val) => setPaisFilter(String(val))}
+                                        placeholder={__('All countries')}
+                                        searchPlaceholder={__('Search country...')}
+                                        className="w-full md:w-52"
+                                    />
                                 </FilterField>
                                 <FilterField label={__('Records per page')}>
                                     <Select
@@ -465,15 +449,15 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                         </FilterBar>
 
                         <DataTable
-                            data={estados.data}
+                            data={estados}
                             columns={columns}
-                            pagination={estados}
-                            onSort={handleSortChange}
-                            sortBy={filters.sortBy}
-                            sortDir={filters.sortDir as 'asc' | 'desc'}
-                            selectable={hasPermission('estados.delete')}
+                            selectedIds={selectedIds}
                             onSelectionChange={setSelectedIds}
-                            loading={isTableLoading}
+                            isLoading={isTableLoading}
+                            filters={{
+                                sortBy: filters.sortBy,
+                                sortDir: filters.sortDir,
+                            }}
                         />
                     </TabsContent>
 
@@ -481,7 +465,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                         <Suspense
                             fallback={
                                 <div className="flex h-96 items-center justify-center rounded-lg border bg-muted/20">
-                                    <span className="text-sm text-muted-foreground">{__('Cargando mapa interactivo...')}</span>
+                                    <span className="text-sm text-muted-foreground">{__('Loading interactive map...')}</span>
                                 </div>
                             }
                         >
@@ -493,40 +477,39 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
 
             {/* Modal para Crear / Editar Estado */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-6 sm:p-8">
                     <DialogHeader>
-                        <DialogTitle>
-                            {editingEstado ? __('Editar Estado') : __('Nuevo Estado')}
+                        <DialogTitle className="text-xl">
+                            {editingEstado ? __('Edit State') : __('New State')}
                         </DialogTitle>
                         <DialogDescription>
-                            {__('Ingrese los detalles geográficos y administrativos del estado.')}
+                            {__('Enter the geographic and administrative details of the state.')}
                         </DialogDescription>
                     </DialogHeader>
 
-                    <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                    <form onSubmit={handleSubmit} className="space-y-5 py-2">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="pais_id">{__('País')}</Label>
-                                <Select
-                                    value={String(data.pais_id)}
-                                    onValueChange={(val) => setData('pais_id', Number(val))}
-                                >
-                                    <SelectTrigger id="pais_id">
-                                        <SelectValue placeholder={__('Seleccione un país')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {paises.map((p) => (
-                                            <SelectItem key={p.id} value={String(p.id)}>
-                                                {p.nombre} ({p.codigo_iso2})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Label htmlFor="pais_id">{__('Country')} *</Label>
+                                <Select2
+                                    id="pais_id"
+                                    options={paises.map((p) => ({
+                                        value: p.id,
+                                        label: p.nombre,
+                                        sublabel: p.codigo_iso2,
+                                    }))}
+                                    value={data.pais_id}
+                                    onChange={(val) => setData('pais_id', Number(val))}
+                                    placeholder={__('Select a country')}
+                                    searchPlaceholder={__('Search by country or code...')}
+                                    emptyText={__('No country found')}
+                                    className="w-full"
+                                />
                                 {errors.pais_id && <p className="text-xs text-destructive">{errors.pais_id}</p>}
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="nombre">{__('Nombre del Estado')} *</Label>
+                                <Label htmlFor="nombre">{__('State Name')} *</Label>
                                 <Input
                                     id="nombre"
                                     value={data.nombre}
@@ -538,7 +521,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="codigo">{__('Código / ISO')}</Label>
+                                <Label htmlFor="codigo">{__('Code / ISO')}</Label>
                                 <Input
                                     id="codigo"
                                     value={data.codigo}
@@ -561,19 +544,19 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                         </div>
 
                         <div className="border-t pt-4 space-y-3">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
                                 <Label className="text-sm font-semibold flex items-center gap-2">
                                     <MapPin className="size-4 text-primary" />
-                                    {__('Ubicación Geográfica (Latitud / Longitud)')}
+                                    {__('Geographic Location (Latitude / Longitude)')}
                                 </Label>
                                 <span className="text-xs text-muted-foreground">
-                                    {__('Puedes arrastrar el pin o hacer clic en el mapa para ajustar.')}
+                                    {__('You can drag the pin or click on the map to adjust.')}
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="latitud">{__('Latitud')}</Label>
+                                    <Label htmlFor="latitud">{__('Latitude')}</Label>
                                     <Input
                                         id="latitud"
                                         type="number"
@@ -586,7 +569,7 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="longitud">{__('Longitud')}</Label>
+                                    <Label htmlFor="longitud">{__('Longitude')}</Label>
                                     <Input
                                         id="longitud"
                                         type="number"
@@ -613,16 +596,16 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                                             longitud: Number(newLng.toFixed(7))
                                         }));
                                     }}
-                                    className="h-60 w-full rounded-md border"
+                                    className="h-80 w-full rounded-lg border shadow-inner"
                                 />
                             </div>
                         </div>
 
                         <div className="flex items-center justify-between border-t pt-4">
                             <Label htmlFor="activo" className="flex flex-col gap-1 cursor-pointer">
-                                <span>{__('Estado Activo')}</span>
+                                <span>{__('Active State')}</span>
                                 <span className="text-xs font-normal text-muted-foreground">
-                                    {__('Habilitar o deshabilitar este estado en los desplegables de la aplicación.')}
+                                    {__('Enable or disable this state in application dropdowns.')}
                                 </span>
                             </Label>
                             <Switch
@@ -638,10 +621,10 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                                 variant="outline"
                                 onClick={() => setIsModalOpen(false)}
                             >
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                             <Button type="submit" disabled={processing}>
-                                {editingEstado ? __('Guardar Cambios') : __('Crear Estado')}
+                                {editingEstado ? __('Save Changes') : __('Create State')}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -653,13 +636,13 @@ export default function EstadosIndexPage({ auth, estados, paises, stats, filters
                 isOpen={isDeleteDialogOpen}
                 onClose={() => setIsDeleteDialogOpen(false)}
                 onConfirm={handleConfirmBulkDelete}
-                title={__('¿Confirmar eliminación?')}
+                title={__('Confirm deletion?')}
                 description={
                     selectedIds.length > 1
-                        ? __('Esta acción eliminará los :count estados seleccionados permanentemente.', { count: selectedIds.length })
-                        : __('Esta acción eliminará el estado seleccionado permanentemente.')
+                        ? __('This action will permanently delete the :count selected states.', { count: String(selectedIds.length) })
+                        : __('This action will permanently delete the selected state.')
                 }
             />
-        </AdminSaasLayout>
+        </>
     );
 }
