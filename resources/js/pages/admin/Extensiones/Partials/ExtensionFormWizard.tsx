@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select2, Select2Option } from '@/components/ui/select2';
 import { Badge } from '@/components/ui/badge';
+import LocationMapPicker, { GeocodedAddressDetails } from '@/components/location-map-picker';
 import { useTranslate } from '@/hooks/use-translate';
 
 interface Pastor {
@@ -205,6 +206,151 @@ export default function ExtensionFormWizard({
         }));
     };
 
+    const handleFechaFundacionChange = (val: string) => {
+        if (!val) {
+            setData((prev) => ({
+                ...prev,
+                fecha_fundacion: '',
+            }));
+            return;
+        }
+
+        const start = new Date(val);
+        const today = new Date();
+
+        if (!isNaN(start.getTime()) && start <= today) {
+            let years = today.getFullYear() - start.getFullYear();
+            let months = today.getMonth() - start.getMonth();
+
+            if (today.getDate() < start.getDate()) {
+                months--;
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            const yearsText = years > 0 ? `${years} ${years === 1 ? 'año' : 'años'}` : '';
+            const monthsText = months > 0 ? `${months} ${months === 1 ? 'mes' : 'meses'}` : '';
+
+            let tiempoTrabajoText = '';
+            if (yearsText && monthsText) {
+                tiempoTrabajoText = `${yearsText} y ${monthsText}`;
+            } else if (yearsText) {
+                tiempoTrabajoText = yearsText;
+            } else if (monthsText) {
+                tiempoTrabajoText = monthsText;
+            } else {
+                tiempoTrabajoText = 'Menos de 1 mes';
+            }
+
+            setData((prev) => ({
+                ...prev,
+                fecha_fundacion: val,
+                anios_activa: String(years),
+                tiempo_trabajo: tiempoTrabajoText,
+            }));
+        } else {
+            setData((prev) => ({
+                ...prev,
+                fecha_fundacion: val,
+            }));
+        }
+    };
+
+    const selectedEstadoNombre = useMemo(() => {
+        if (!data.estado_id) return undefined;
+        const found = estados.find((e) => String(e.id) === String(data.estado_id));
+        return found?.nombre;
+    }, [data.estado_id, estados]);
+
+    const cleanText = (str?: string) => {
+        if (!str) return '';
+        return str
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+    };
+
+    const handleMapLocationSelect = (newLat: number, newLng: number, details?: GeocodedAddressDetails) => {
+        let matchedEstadoId = data.estado_id;
+        let matchedMunicipioId = data.municipio_id;
+        let matchedParroquiaId = data.parroquia_id;
+
+        const fullText = cleanText(
+            `${details?.estado || ''} ${details?.municipio || ''} ${details?.parroquia || ''} ${details?.direccion || ''}`
+        );
+
+        // 1. Coincidir Estado
+        const foundState = estados.find((e) => {
+            const normE = cleanText(e.nombre);
+            if (!normE) return false;
+
+            // Alias conocidos en Venezuela
+            if (normE === 'distrito capital' && (fullText.includes('distrito capital') || fullText.includes('caracas') || fullText.includes('distrito federal'))) {
+                return true;
+            }
+            if ((normE === 'la guaira' || normE === 'vargas') && (fullText.includes('la guaira') || fullText.includes('vargas'))) {
+                return true;
+            }
+
+            return fullText.includes(normE);
+        });
+
+        if (foundState) {
+            matchedEstadoId = String(foundState.id);
+        }
+
+        // 2. Coincidir Municipio
+        if (matchedEstadoId) {
+            const munsOfState = municipios.filter((m) => String(m.estado_id) === String(matchedEstadoId));
+            const foundMun = munsOfState.find((m) => {
+                const normM = cleanText(m.nombre);
+                if (!normM) return false;
+                const cleanMunName = normM.replace(/^municipio\s+/, '').replace(/^autonomo\s+/, '');
+                return fullText.includes(normM) || (cleanMunName.length >= 3 && fullText.includes(cleanMunName));
+            });
+
+            if (foundMun) {
+                matchedMunicipioId = String(foundMun.id);
+            } else {
+                matchedMunicipioId = '';
+                matchedParroquiaId = '';
+            }
+        }
+
+        // 3. Coincidir Parroquia
+        if (matchedMunicipioId) {
+            const parrsOfMun = parroquias.filter((p) => String(p.municipio_id) === String(matchedMunicipioId));
+            const foundParr = parrsOfMun.find((p) => {
+                const normP = cleanText(p.nombre);
+                if (!normP) return false;
+                const cleanParrName = normP.replace(/^parroquia\s+/, '');
+                return fullText.includes(normP) || (cleanParrName.length >= 3 && fullText.includes(cleanParrName));
+            });
+
+            if (foundParr) {
+                matchedParroquiaId = String(foundParr.id);
+            } else {
+                matchedParroquiaId = '';
+            }
+        }
+
+        setData((prev) => ({
+            ...prev,
+            latitud: String(newLat),
+            longitud: String(newLng),
+            estado_id: matchedEstadoId,
+            municipio_id: matchedMunicipioId,
+            parroquia_id: matchedParroquiaId,
+            direccion: details?.direccion ? details.direccion : prev.direccion,
+            sector: details?.sector ? details.sector : prev.sector,
+            calle: details?.calle ? details.calle : prev.calle,
+        }));
+    };
+
     // Funciones del Carrito de Medios de Comunicación
     const handleAddMedio = () => {
         if (!nuevoMedioCual.trim()) return;
@@ -355,7 +501,7 @@ export default function ExtensionFormWizard({
                                 id="fecha_fundacion"
                                 type="date"
                                 value={data.fecha_fundacion}
-                                onChange={(e) => setData('fecha_fundacion', e.target.value)}
+                                onChange={(e) => handleFechaFundacionChange(e.target.value)}
                                 className="h-10 text-sm"
                             />
                         </div>
@@ -538,6 +684,16 @@ export default function ExtensionFormWizard({
                             placeholder="Describa detalladamente la ubicación del templo..."
                             className="text-sm"
                             rows={2}
+                        />
+                    </div>
+
+                    {/* Mapa Interactivo de Ubicación */}
+                    <div className="pt-3 border-t">
+                        <LocationMapPicker
+                            lat={data.latitud}
+                            lng={data.longitud}
+                            onLocationSelect={handleMapLocationSelect}
+                            estadoNombre={selectedEstadoNombre}
                         />
                     </div>
                 </div>

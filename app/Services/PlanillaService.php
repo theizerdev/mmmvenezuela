@@ -684,9 +684,9 @@ class PlanillaService
 
                 // Posee medio de comunicación
                 $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                $fpdf->Cell(35, 7, utf8_decode('Tiene Medio Com.:'), 1, 0, 'L', true);
+                $fpdf->Cell(45, 7, utf8_decode('Tiene Medio Com.:'), 1, 0, 'L', true);
                 $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                $fpdf->Cell(55, 7, utf8_decode($iglesia->posee_medio_comunicacion ? 'Sí' : 'No'), 1, 0, 'L', true);
+                $fpdf->Cell(145, 7, utf8_decode($iglesia->posee_medio_comunicacion ? 'Sí' : 'No'), 1, 1, 'L', true);
 
                 if ($iglesia->posee_medio_comunicacion) {
                     $mediosList = [];
@@ -700,29 +700,28 @@ class PlanillaService
                     }
 
                     if (count($mediosList) > 0) {
-                        $fpdf->Ln(7);
+                        // Cabecera de la tabla de Medios
+                        $fpdf->SetFont('Arial', 'B', 9);
+                        $fpdf->SetFillColor(230, 235, 242);
+                        $fpdf->Cell(60, 6, utf8_decode('MEDIO / TIPO'), 1, 0, 'C', true);
+                        $fpdf->Cell(65, 6, utf8_decode('PLATAFORMA / UBICACIÓN'), 1, 0, 'C', true);
+                        $fpdf->Cell(65, 6, utf8_decode('OBSERVACIÓN / NOTA'), 1, 1, 'C', true);
+
+                        $fpdf->SetFont('Arial', '', 9);
                         foreach ($mediosList as $mIdx => $mItem) {
-                            $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                            $fpdf->Cell(35, 7, utf8_decode('Medio #' . ($mIdx + 1) . ':'), 1, 0, 'L', true);
-                            $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                            $txt = ($mItem['cual'] ?? '') . (!empty($mItem['donde']) ? ' [' . $mItem['donde'] . ']' : '') . (!empty($mItem['nota']) ? ' - ' . $mItem['nota'] : '');
-                            $fpdf->Cell(155, 7, utf8_decode($txt), 1, 1, 'L', true);
+                            $rowColor = ($mIdx % 2 == 0) ? $cellColor2 : $cellColor1;
+                            $fpdf->SetFillColor($rowColor[0], $rowColor[1], $rowColor[2]);
+                            $fpdf->Cell(60, 6, utf8_decode($mItem['cual'] ?? 'N/A'), 1, 0, 'L', true);
+                            $fpdf->Cell(65, 6, utf8_decode($mItem['donde'] ?? 'N/A'), 1, 0, 'L', true);
+                            $fpdf->Cell(65, 6, utf8_decode($mItem['nota'] ?? 'Sin observaciones'), 1, 1, 'L', true);
                         }
                     } else {
-                        // Tipo de medio
+                        // Legacy single item format
                         $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                        $fpdf->Cell(35, 7, utf8_decode('Tipo Medio:'), 1, 0, 'L', true);
+                        $fpdf->Cell(45, 7, utf8_decode('Tipo / Nombre Medio:'), 1, 0, 'L', true);
                         $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                        $fpdf->Cell(65, 7, utf8_decode($iglesia->medio_comunicacion ?? 'No especificado'), 1, 1, 'L', true);
-
-                        // Nombre del medio
-                        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                        $fpdf->Cell(35, 7, utf8_decode('Nombre Medio:'), 1, 0, 'L', true);
-                        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                        $fpdf->Cell(155, 7, utf8_decode($iglesia->nombre_medio_comunicacion ?? 'No especificado'), 1, 1, 'L', true);
+                        $fpdf->Cell(145, 7, utf8_decode($iglesia->nombre_medio_comunicacion ?: ($iglesia->medio_comunicacion ?? 'No especificado')), 1, 1, 'L', true);
                     }
-                } else {
-                    $fpdf->Ln(7);
                 }
 
                 // REGISTRO
