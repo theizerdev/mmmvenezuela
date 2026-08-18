@@ -223,9 +223,15 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
             accessorKey: 'zona',
             header: __('Zone / District'),
             cell: (row) => (
-                <div className="flex flex-col text-xs">
-                    <span className="font-medium text-foreground">{row.distrito || '—'}</span>
-                    <span className="text-muted-foreground">{row.zona || '—'}</span>
+                <div className="flex flex-col gap-1 text-xs">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
+                            {__('Zona')} {row.zona || '—'}
+                        </span>
+                        <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
+                            {__('Dist.')} {row.distrito || '—'}
+                        </span>
+                    </div>
                 </div>
             ),
         },

@@ -34,7 +34,11 @@ import {
     AlertCircle,
     PhoneCall,
     Plus,
-    ShoppingBag
+    ShoppingBag,
+    SwitchCamera,
+    HelpCircle,
+    Lightbulb,
+    UserCheck
 } from 'lucide-react';
 import pastoresRoutes from '@/routes/admin/pastores';
 
@@ -224,6 +228,8 @@ export default function PastorFormWizard({
             parroquia_id: '',
             municipio: munFound ? munFound.nombre : prev.municipio,
         }));
+    };
+
     const [nuevoMedicamentoNombre, setNuevoMedicamentoNombre] = useState('');
     const [nuevoMedicamentoDosis, setNuevoMedicamentoDosis] = useState('');
 
@@ -309,10 +315,16 @@ export default function PastorFormWizard({
         });
     };
 
-    const startCamera = async () => {
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+
+    const startCamera = async (overrideFacingMode?: 'user' | 'environment') => {
+        const mode = overrideFacingMode || facingMode;
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.stop());
+        }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: mode },
             });
             setMediaStream(stream);
             setIsCameraActive(true);
@@ -324,6 +336,12 @@ export default function PastorFormWizard({
         } catch (err) {
             alert(__('No se pudo acceder a la cámara web. Verifique los permisos de su navegador.'));
         }
+    };
+
+    const toggleCameraFacingMode = () => {
+        const nextMode = facingMode === 'user' ? 'environment' : 'user';
+        setFacingMode(nextMode);
+        startCamera(nextMode);
     };
 
     const stopCamera = () => {
@@ -421,22 +439,22 @@ export default function PastorFormWizard({
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {/* Header del Formulario */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border rounded-xl p-5 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-card border rounded-xl p-4 sm:p-5 shadow-xs">
                 <div>
-                    <h2 className="text-xl font-bold tracking-tight text-foreground">
+                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
                         {isEditing ? `${__('Editar Pastor')}: ${pastor.nombres} ${pastor.apellidos}` : __('Nuevo Registro de Pastor')}
                     </h2>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                         {__('Complete la información requerida en cada uno de los módulos del formulario wizard.')}
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     {isEditing && pastor && (
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => window.open(`/admin/pastores/${pastor.id}/planilla`, '_blank')}
-                            className="gap-2 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                            className="gap-2 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-xs sm:text-sm flex-1 md:flex-initial"
                         >
                             <FileText className="h-4 w-4" />
                             {__('Planilla PDF')}
@@ -446,62 +464,91 @@ export default function PastorFormWizard({
                         type="button"
                         variant="outline"
                         onClick={() => router.get(pastoresRoutes.index())}
-                        className="gap-2"
+                        className="gap-2 text-xs sm:text-sm flex-1 md:flex-initial"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         {__('Cancelar')}
                     </Button>
-                    <Button type="submit" disabled={processing} className="gap-2 shadow">
+                    <Button type="submit" disabled={processing} className="gap-2 shadow text-xs sm:text-sm w-full sm:w-auto">
                         <Save className="h-4 w-4" />
                         {isEditing ? __('Actualizar Pastor') : __('Guardar Pastor')}
                     </Button>
                 </div>
             </div>
 
-            {/* Stepper Tabs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                {steps.map((step) => {
-                    const Icon = step.icon;
-                    const isActive = activeTab === step.id;
-                    const isCompleted = activeTab > step.id;
+            {/* Stepper Tabs - Responsive para Móvil, Tablet y Escritorio */}
+            <div className="space-y-3">
+                {/* Barra de progreso visual únicamente para pantallas móviles */}
+                <div className="block sm:hidden space-y-1.5 bg-card p-3 border rounded-xl shadow-xs">
+                    <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-primary flex items-center gap-1.5 truncate">
+                            {__('Paso')} {activeTab} {__('de')} 5: {steps[activeTab - 1].title}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                            {Math.round((activeTab / 5) * 100)}%
+                        </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                        <div
+                            className="bg-primary h-full transition-all duration-300 rounded-full"
+                            style={{ width: `${(activeTab / 5) * 100}%` }}
+                        />
+                    </div>
+                </div>
 
-                    return (
-                        <button
-                            key={step.id}
-                            type="button"
-                            onClick={() => setActiveTab(step.id)}
-                            className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left ${
-                                isActive
-                                    ? 'bg-primary/5 border-primary ring-2 ring-primary/20 shadow-sm'
-                                    : isCompleted
-                                    ? 'bg-card border-emerald-500/30 hover:border-emerald-500/50'
-                                    : 'bg-card border-border hover:bg-accent/50'
-                            }`}
-                        >
-                            <div
-                                className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 font-semibold text-sm transition-colors ${
+                {/* Grid adaptable / Tira deslizable horizontal en pantallas pequeñas */}
+                <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-5 scrollbar-thin">
+                    {steps.map((step) => {
+                        const Icon = step.icon;
+                        const isActive = activeTab === step.id;
+                        const isCompleted = activeTab > step.id;
+
+                        return (
+                            <button
+                                key={step.id}
+                                type="button"
+                                onClick={() => setActiveTab(step.id)}
+                                className={`flex items-center gap-2.5 p-3 sm:p-4 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${
                                     isActive
-                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                        ? 'bg-primary/5 border-primary ring-2 ring-primary/20 shadow-xs'
                                         : isCompleted
-                                        ? 'bg-emerald-500 text-white'
-                                        : 'bg-muted text-muted-foreground'
+                                        ? 'bg-card border-emerald-500/30 hover:border-emerald-500/50'
+                                        : 'bg-card border-border hover:bg-accent/50'
                                 }`}
                             >
-                                {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                        {__('Paso')} {step.id}
-                                    </span>
-                                    {isActive && <Badge variant="secondary" className="text-[10px] py-0 px-1.5">{__('Actual')}</Badge>}
+                                <div
+                                    className={`flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-lg shrink-0 font-semibold text-xs sm:text-sm transition-colors ${
+                                        isActive
+                                            ? 'bg-primary text-primary-foreground shadow-xs'
+                                            : isCompleted
+                                            ? 'bg-emerald-500 text-white'
+                                            : 'bg-muted text-muted-foreground'
+                                    }`}
+                                >
+                                    {isCompleted ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : <Icon className="h-4 w-4 sm:h-5 sm:w-5" />}
                                 </div>
-                                <h3 className="font-semibold text-sm truncate text-foreground">{step.title}</h3>
-                                <p className="text-xs text-muted-foreground truncate">{step.desc}</p>
-                            </div>
-                        </button>
-                    );
-                })}
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                            {__('Paso')} {step.id}
+                                        </span>
+                                        {isActive && (
+                                            <Badge variant="secondary" className="text-[9px] py-0 px-1 font-normal hidden xs:inline-flex">
+                                                {__('Actual')}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <h3 className="font-semibold text-xs sm:text-sm truncate text-foreground leading-snug">
+                                        {step.title}
+                                    </h3>
+                                    <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
+                                        {step.desc}
+                                    </p>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* PASO 1: DATOS PERSONALES */}
@@ -1451,7 +1498,29 @@ export default function PastorFormWizard({
                             {__('Suba una foto o tome una captura con su cámara web. Las fotos se redimensionan y comprimen automáticamente en tamaño (KB).')}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="p-5 flex flex-col items-center gap-4">
+                    <CardContent className="p-5 flex flex-col items-center gap-5">
+                        {/* Guía de Ayuda y Recomendaciones */}
+                        <div className="w-full bg-muted/30 border rounded-lg p-3 space-y-2 text-xs">
+                            <div className="flex items-center gap-1.5 text-primary font-semibold text-xs border-b pb-1">
+                                <HelpCircle className="h-4 w-4" />
+                                <span>{__('Recomendaciones para una buena foto tipo carnet')}</span>
+                            </div>
+                            <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+                                <li className="flex items-start gap-1.5">
+                                    <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                    <span>{__('Buena iluminación frontal sin sombras.')}</span>
+                                </li>
+                                <li className="flex items-start gap-1.5">
+                                    <UserCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                    <span>{__('Rostro centrado mirando a la cámara.')}</span>
+                                </li>
+                                <li className="flex items-start gap-1.5">
+                                    <Camera className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                                    <span>{__('Fondo liso preferiblemente claro.')}</span>
+                                </li>
+                            </ul>
+                        </div>
+
                         {/* Acciones principales */}
                         <div className="flex flex-wrap items-center justify-center gap-2">
                             {!isCameraActive ? (
@@ -1459,23 +1528,37 @@ export default function PastorFormWizard({
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={startCamera}
+                                    onClick={() => startCamera()}
                                     className="gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/5"
                                 >
                                     <Camera className="h-3.5 w-3.5" />
                                     {__('Tomar Foto con Cámara')}
                                 </Button>
                             ) : (
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={stopCamera}
-                                    className="gap-1.5 text-xs"
-                                >
-                                    <Video className="h-3.5 w-3.5" />
-                                    {__('Detener Cámara')}
-                                </Button>
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={toggleCameraFacingMode}
+                                        className="gap-1.5 text-xs border-emerald-500/50 text-emerald-700 hover:bg-emerald-50"
+                                        title={__('Cambiar entre cámara frontal y trasera')}
+                                    >
+                                        <SwitchCamera className="h-3.5 w-3.5 text-emerald-600" />
+                                        {facingMode === 'user' ? __('Usar Cámara Trasera') : __('Usar Cámara Frontal')}
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={stopCamera}
+                                        className="gap-1.5 text-xs"
+                                    >
+                                        <Video className="h-3.5 w-3.5" />
+                                        {__('Detener Cámara')}
+                                    </Button>
+                                </>
                             )}
 
                             <Button
@@ -1511,7 +1594,7 @@ export default function PastorFormWizard({
                             />
                         </div>
 
-                        {/* Recuadro Tipo Carnet Exacto (175px x 210px) */}
+                        {/* Recuadro Tipo Carnet Exacto (175px x 210px) con Guía Visual */}
                         <div className="relative flex flex-col items-center">
                             {isCameraActive ? (
                                 <div className="relative w-[175px] h-[210px] rounded-lg overflow-hidden border-2 border-primary bg-black shadow-md flex items-center justify-center">
@@ -1521,11 +1604,21 @@ export default function PastorFormWizard({
                                         playsInline
                                         className="w-full h-full object-cover"
                                     />
+
+                                    {/* Mascara Ovalada / Silueta Guía de Alineación de Rostro */}
+                                    <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center pb-6">
+                                        <div className="w-[105px] h-[130px] border-2 border-dashed border-emerald-400/90 rounded-[50%] shadow-[0_0_0_9999px_rgba(0,0,0,0.3)] flex items-center justify-center">
+                                            <span className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest text-center px-1 drop-shadow">
+                                                {__('Rostro')}
+                                            </span>
+                                        </div>
+                                    </div>
+
                                     <Button
                                         type="button"
                                         size="sm"
                                         onClick={capturePhoto}
-                                        className="absolute bottom-2 left-1/2 -translate-x-1/2 gap-1 text-[11px] h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow"
+                                        className="absolute bottom-2 left-1/2 -translate-x-1/2 gap-1 text-[11px] h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow z-10"
                                     >
                                         <Camera className="h-3 w-3" />
                                         {__('Capturar Foto')}
@@ -1575,13 +1668,13 @@ export default function PastorFormWizard({
             )}
 
             {/* Footer Navegación entre pasos */}
-            <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t">
                 <Button
                     type="button"
                     variant="outline"
                     onClick={() => setActiveTab((prev) => Math.max(prev - 1, 1))}
                     disabled={activeTab === 1}
-                    className="gap-2"
+                    className="gap-2 w-full sm:w-auto text-xs sm:text-sm"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     {__('Paso Anterior')}
@@ -1591,13 +1684,13 @@ export default function PastorFormWizard({
                     <Button
                         type="button"
                         onClick={() => setActiveTab((prev) => Math.min(prev + 1, 5))}
-                        className="gap-2"
+                        className="gap-2 w-full sm:w-auto text-xs sm:text-sm"
                     >
                         {__('Siguiente Paso')}
                         <ArrowRight className="h-4 w-4" />
                     </Button>
                 ) : (
-                    <Button type="submit" disabled={processing} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow">
+                    <Button type="submit" disabled={processing} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow w-full sm:w-auto text-xs sm:text-sm">
                         <Save className="h-4 w-4" />
                         {isEditing ? __('Guardar Cambios') : __('Finalizar y Registrar Pastor')}
                     </Button>
