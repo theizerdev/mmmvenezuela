@@ -52,6 +52,7 @@ import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { index as paisesIndex } from '@/routes/admin/paises';
 import { index as estadosIndex } from '@/routes/admin/estados';
 import { index as municipiosIndex } from '@/routes/admin/municipios';
+import { index as parroquiasIndex } from '@/routes/admin/parroquias';
 import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
@@ -442,6 +443,11 @@ export default function AdminSaasLayout({
                                     title: 'Municipalities',
                                     href: municipiosIndex(),
                                     permission: 'municipios.view',
+                                },
+                                {
+                                    title: 'Parishes',
+                                    href: parroquiasIndex(),
+                                    permission: 'parroquias.view',
                                 },
 
                                 {

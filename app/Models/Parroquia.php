@@ -5,16 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Municipio extends Model
+class Parroquia extends Model
 {
     use HasFactory;
 
-    protected $table = 'municipios';
+    protected $table = 'parroquias';
 
     protected $fillable = [
-        'estado_id',
+        'municipio_id',
         'nombre',
         'codigo',
         'capital',
@@ -30,18 +29,10 @@ class Municipio extends Model
     ];
 
     /**
-     * Get the estado that owns the municipio.
+     * Get the municipio that owns the parroquia.
      */
-    public function estado(): BelongsTo
+    public function municipio(): BelongsTo
     {
-        return $this->belongsTo(Estado::class, 'estado_id');
-    }
-
-    /**
-     * Get the parroquias for the municipio.
-     */
-    public function parroquias(): HasMany
-    {
-        return $this->hasMany(Parroquia::class, 'municipio_id');
+        return $this->belongsTo(Municipio::class, 'municipio_id');
     }
 }

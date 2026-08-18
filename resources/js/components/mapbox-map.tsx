@@ -77,6 +77,16 @@ export default function MapboxMap({
 
         mapboxgl.accessToken = mapboxApiKey;
 
+        // Desactivar la telemetría de Mapbox para evitar el bloqueo net::ERR_BLOCKED_BY_CLIENT en events.mapbox.com por bloqueadores de anuncios
+        try {
+            if (typeof (mapboxgl as any).setTelemetryEnabled === 'function') {
+                (mapboxgl as any).setTelemetryEnabled(false);
+            }
+            (mapboxgl as any).telemetry = false;
+        } catch {
+            // Ignore telemetry disable errors
+        }
+
         if (!mapContainerRef.current) {
             return;
         }

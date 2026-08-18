@@ -52,6 +52,12 @@ class PermissionSeeder extends Seeder
                 'municipios.edit' => 'Editar Municipio',
                 'municipios.delete' => 'Eliminar Municipio',
 
+                // Módulo: Parroquias
+                'parroquias.view' => 'Ver Parroquias',
+                'parroquias.create' => 'Crear Parroquia',
+                'parroquias.edit' => 'Editar Parroquia',
+                'parroquias.delete' => 'Eliminar Parroquia',
+
                 // Módulo: Empresas
                 'empresas.view' => 'Ver Empresas',
                 'empresas.create' => 'Crear Empresa',

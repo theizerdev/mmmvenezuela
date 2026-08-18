@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             PaisSeeder::class,
             EstadoSeeder::class,
             MunicipioSeeder::class,
+            ParroquiaSeeder::class,
             PermissionSeeder::class,
             RoleSeeder::class,
             EmpresaSucursalSeeder::class,
