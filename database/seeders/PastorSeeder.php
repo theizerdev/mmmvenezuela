@@ -24,11 +24,11 @@ class PastorSeeder extends Seeder
 
         // Pastor 1: Carlos Mendoza (Ministro Ordenado)
         $pastor1 = Pastor::updateOrCreate(
-            ['codigo' => 'PAS-001'],
+            ['documento' => 'V-12345678'],
             [
+                'codigo' => '12345001',
                 'nombres' => 'Carlos Alberto',
                 'apellidos' => 'Mendoza Silva',
-                'documento' => 'V-12345678',
                 'genero' => 'M',
                 'edad' => 48,
                 'fe_nacimiento' => '1978-05-14',
@@ -65,11 +65,11 @@ class PastorSeeder extends Seeder
 
         // Pastor 2: Elena María (Ministra Licenciada - Cónyuge del Pastor 1)
         $pastor2 = Pastor::updateOrCreate(
-            ['codigo' => 'PAS-002'],
+            ['documento' => 'V-14567890'],
             [
+                'codigo' => '14567002',
                 'nombres' => 'Elena María',
                 'apellidos' => 'Ríos de Mendoza',
-                'documento' => 'V-14567890',
                 'genero' => 'F',
                 'edad' => 45,
                 'fe_nacimiento' => '1981-09-20',
@@ -109,11 +109,11 @@ class PastorSeeder extends Seeder
 
         // Pastor 3: José Luis Paredes (Laico / Aragua)
         Pastor::updateOrCreate(
-            ['codigo' => 'PAS-003'],
+            ['documento' => 'V-16890123'],
             [
+                'codigo' => '16890003',
                 'nombres' => 'José Luis',
                 'apellidos' => 'Paredes Gómez',
-                'documento' => 'V-16890123',
                 'genero' => 'M',
                 'edad' => 39,
                 'fe_nacimiento' => '1987-11-03',

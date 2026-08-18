@@ -120,8 +120,14 @@ class PastorController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (empty($request->input('codigo')) && ! empty($request->input('documento'))) {
+            $request->merge([
+                'codigo' => Pastor::generateCodigo($request->input('documento')),
+            ]);
+        }
+
         $validated = $request->validate([
-            'codigo' => ['required', 'string', 'max:50', 'unique:pastores,codigo'],
+            'codigo' => ['required', 'numeric', 'digits:8', 'unique:pastores,codigo'],
             'nombres' => ['required', 'string', 'max:191'],
             'apellidos' => ['required', 'string', 'max:191'],
             'documento' => ['required', 'string', 'max:50', 'unique:pastores,documento'],
@@ -229,8 +235,14 @@ class PastorController extends Controller
      */
     public function update(Request $request, Pastor $pastore): RedirectResponse
     {
+        if (empty($request->input('codigo')) && ! empty($request->input('documento'))) {
+            $request->merge([
+                'codigo' => Pastor::generateCodigo($request->input('documento'), $pastore->id),
+            ]);
+        }
+
         $validated = $request->validate([
-            'codigo' => ['required', 'string', 'max:50', 'unique:pastores,codigo,'.$pastore->id],
+            'codigo' => ['required', 'numeric', 'digits:8', 'unique:pastores,codigo,'.$pastore->id],
             'nombres' => ['required', 'string', 'max:191'],
             'apellidos' => ['required', 'string', 'max:191'],
             'documento' => ['required', 'string', 'max:50', 'unique:pastores,documento,'.$pastore->id],

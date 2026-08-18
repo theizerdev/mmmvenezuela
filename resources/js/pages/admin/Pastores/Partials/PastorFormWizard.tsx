@@ -21,7 +21,8 @@ import {
     Phone, 
     Heart, 
     Award, 
-    MapPin 
+    MapPin,
+    FileText
 } from 'lucide-react';
 import pastoresRoutes from '@/routes/admin/pastores';
 
@@ -229,6 +230,17 @@ export default function PastorFormWizard({
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    {isEditing && pastor && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => window.open(`/admin/pastores/${pastor.id}/planilla`, '_blank')}
+                            className="gap-2 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        >
+                            <FileText className="h-4 w-4" />
+                            {__('Planilla PDF')}
+                        </Button>
+                    )}
                     <Button
                         type="button"
                         variant="outline"
@@ -305,15 +317,22 @@ export default function PastorFormWizard({
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <Label htmlFor="codigo" className="text-xs font-semibold uppercase tracking-wider">
-                                    {__('Código Pastor')} <span className="text-destructive">*</span>
+                                    {__('Código (8 Dígitos)')} <span className="text-destructive">*</span>
                                 </Label>
                                 <Input
                                     id="codigo"
                                     value={data.codigo}
-                                    onChange={(e) => setData('codigo', e.target.value)}
-                                    placeholder="PAS-001"
-                                    className="mt-1"
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                                        setData('codigo', val);
+                                    }}
+                                    placeholder="25212001"
+                                    maxLength={8}
+                                    className="mt-1 font-mono tracking-wider"
                                 />
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {__('5 dígitos de cédula + 001')}
+                                </p>
                                 {errors.codigo && <p className="text-xs text-destructive mt-1">{errors.codigo}</p>}
                             </div>
 
@@ -352,8 +371,23 @@ export default function PastorFormWizard({
                                 <Input
                                     id="documento"
                                     value={data.documento}
-                                    onChange={(e) => setData('documento', e.target.value)}
-                                    placeholder="V-12345678"
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setData((prev) => {
+                                            const numeric = val.replace(/\D/g, '');
+                                            let autoCode = prev.codigo;
+                                            if (!isEditing && numeric.length >= 5 && (!prev.codigo || prev.codigo.length === 8)) {
+                                                const prefix = numeric.slice(0, 5).padStart(5, '0');
+                                                autoCode = `${prefix}001`;
+                                            }
+                                            return {
+                                                ...prev,
+                                                documento: val,
+                                                codigo: autoCode,
+                                            };
+                                        });
+                                    }}
+                                    placeholder="V-25212345"
                                     className="mt-1"
                                 />
                                 {errors.documento && <p className="text-xs text-destructive mt-1">{errors.documento}</p>}

@@ -12,6 +12,8 @@ export const store = () => `/admin/pastores`;
 
 export const edit = (id: number | string) => `/admin/pastores/${id}/edit`;
 
+export const planilla = (id: number | string) => `/admin/pastores/${id}/planilla`;
+
 export const update = (id: number | string) => `/admin/pastores/${id}`;
 
 export const toggleStatus = (id: number | string) => `/admin/pastores/${id}/toggle-status`;
@@ -23,6 +25,7 @@ export default {
     create,
     store,
     edit,
+    planilla,
     update,
     toggleStatus,
     bulkDestroy,

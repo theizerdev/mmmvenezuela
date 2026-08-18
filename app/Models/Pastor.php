@@ -67,6 +67,23 @@ class Pastor extends Model
     protected $appends = ['nombre_completo'];
 
     /**
+     * Generar código numérico de 8 dígitos (5 dígitos de la cédula + 3 dígitos consecutivos).
+     */
+    public static function generateCodigo(string $documento, ?int $excludeId = null): string
+    {
+        $numeric = preg_replace('/\D/', '', $documento);
+        $prefix = str_pad(substr($numeric, 0, 5), 5, '0', STR_PAD_LEFT);
+
+        $count = self::where('codigo', 'like', "{$prefix}%")
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->count();
+
+        $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+
+        return $prefix . $sequence;
+    }
+
+    /**
      * Obtenedor del nombre completo.
      */
     public function getNombreCompletoAttribute(): string
@@ -80,6 +97,21 @@ class Pastor extends Model
     public function conyuge(): BelongsTo
     {
         return $this->belongsTo(Pastor::class, 'conyuge_id');
+    }
+
+    public function esConyuge(): bool
+    {
+        return ! empty($this->conyuge_id);
+    }
+
+    public function pastorPrincipal(): BelongsTo
+    {
+        return $this->belongsTo(Pastor::class, 'conyuge_id');
+    }
+
+    public function municipio(): BelongsTo
+    {
+        return $this->belongsTo(Municipio::class, 'municipio_id');
     }
 
     /**

@@ -12,7 +12,8 @@ import {
     Award, 
     Heart, 
     Phone, 
-    MapPin 
+    MapPin,
+    FileText
 } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -291,6 +292,12 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     <DropdownMenuContent align="end">
                         {hasPermission('pastores.edit') && (
                             <>
+                                <DropdownMenuItem asChild>
+                                    <a href={`/admin/pastores/${row.id}/planilla`} target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
+                                        <FileText className="mr-2 size-4 text-emerald-500" />
+                                        {__('Planilla PDF')}
+                                    </a>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <Link href={`/admin/pastores/${row.id}/edit`} className="flex items-center cursor-pointer">
                                         <Pencil className="mr-2 size-4 text-blue-500" />

@@ -34,10 +34,15 @@ class PlanillaService
         return $direccion ?: 'No especificada';
     }
 
-    public function generarPdfParaPastor(Pastor $pastor, $fpdf = null) { if (!$fpdf) { $fpdf = app('fpdf'); }
+    public function generarPdfParaPastor(Pastor $pastor, $fpdf = null)
+    {
+        if (! $fpdf) {
+            $fpdf = app('fpdf');
+        }
+
         // Si el pastor es cónyuge, también cargar las iglesias del pastor principal
-        $iglesias = $pastor->iglesias;
-        if ($pastor->esConyuge() && $pastor->pastorPrincipal) {
+        $iglesias = (method_exists($pastor, 'iglesias') && $pastor->relationLoaded('iglesias') && $pastor->iglesias) ? $pastor->iglesias : collect();
+        if ($pastor->esConyuge() && $pastor->pastorPrincipal && method_exists($pastor->pastorPrincipal, 'iglesias') && $pastor->pastorPrincipal->relationLoaded('iglesias') && $pastor->pastorPrincipal->iglesias) {
             $iglesias = $iglesias->merge($pastor->pastorPrincipal->iglesias);
         }
 
