@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { 
-    UserCheck, 
-    Plus, 
-    CheckCircle, 
-    XCircle, 
-    Trash2, 
-    MoreVertical, 
-    Pencil, 
-    ToggleRight, 
-    Award, 
-    Heart, 
-    Phone, 
+import {
+    UserCheck,
+    Plus,
+    CheckCircle,
+    XCircle,
+    Trash2,
+    MoreVertical,
+    Pencil,
+    ToggleRight,
+    Award,
+    Heart,
+    Phone,
     MapPin,
     FileText,
     LayoutGrid,
@@ -500,6 +500,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                 <Select2
                                     options={[
                                         { value: '10', label: '10' },
+                                        { value: '15', label: '15' },
                                         { value: '25', label: '25' },
                                         { value: '50', label: '50' },
                                         { value: '100', label: '100' },
@@ -523,29 +524,29 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                         return (
                                             <div
                                                 key={pastor.id}
-                                                className="group flex flex-col bg-card border rounded-xl p-4 shadow-xs hover:shadow-md hover:border-primary/40 transition-all relative overflow-hidden"
+                                                className="group flex flex-col bg-card border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
                                             >
-                                                {/* Top Header Card: Code & Status */}
-                                                <div className="flex items-center justify-between gap-2 mb-3">
-                                                    <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+                                                {/* Material Banner Header */}
+                                                <div className="h-16 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 p-3 flex items-start justify-between relative">
+                                                    <span className="inline-flex items-center rounded-full bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-mono font-bold text-white shadow-2xs border border-white/20">
                                                         {pastor.codigo}
                                                     </span>
                                                     <span
                                                         className={cn(
-                                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-2xs backdrop-blur-md',
                                                             pastor.status
-                                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                                                ? 'bg-emerald-500/90 text-white'
+                                                                : 'bg-slate-700/90 text-slate-200'
                                                         )}
                                                     >
-                                                        <span className={cn('size-1.5 rounded-full', pastor.status ? 'bg-emerald-500' : 'bg-slate-400')} />
+                                                        <span className="size-1.5 rounded-full bg-white animate-pulse" />
                                                         {pastor.status ? __('Active') : __('Inactive')}
                                                     </span>
                                                 </div>
 
-                                                {/* Foto Carnet o Avatar Iniciales */}
-                                                <div className="flex flex-col items-center text-center my-1">
-                                                    <div className="relative w-24 h-28 rounded-lg border-2 border-primary/20 overflow-hidden bg-muted shadow-sm mb-3 group-hover:border-primary/50 transition-colors shrink-0">
+                                                {/* Material Avatar Overlap */}
+                                                <div className="-mt-10 mx-auto relative z-10">
+                                                    <div className="size-20 rounded-2xl ring-4 ring-card shadow-lg overflow-hidden bg-muted flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
                                                         {photoUrl ? (
                                                             <img
                                                                 src={photoUrl}
@@ -557,62 +558,68 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                             />
                                                         ) : null}
                                                         <div className={cn(
-                                                            "w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-2xl flex flex-col items-center justify-center shadow-inner",
+                                                            "w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white font-bold text-xl flex flex-col items-center justify-center shadow-inner",
                                                             photoUrl ? "hidden" : "flex"
                                                         )}>
                                                             <span>{initials}</span>
-                                                            <span className="text-[9px] font-normal uppercase tracking-wider opacity-80 mt-0.5">
+                                                            <span className="text-[8px] font-semibold uppercase tracking-wider opacity-75">
                                                                 {__('Sin Foto')}
                                                             </span>
                                                         </div>
                                                     </div>
+                                                </div>
 
-                                                    <h3 className="font-bold text-sm text-foreground leading-snug line-clamp-1">
+                                                {/* Material Card Body */}
+                                                <div className="p-4 pt-2 flex-1 flex flex-col items-center text-center">
+                                                    <h3 className="font-bold text-base text-foreground tracking-tight line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                                         {pastor.nombres} {pastor.apellidos}
                                                     </h3>
-                                                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                                    <p className="text-xs text-muted-foreground font-medium line-clamp-1 mt-0.5">
                                                         {pastor.documento} {pastor.cargo_nacional ? `• ${pastor.cargo_nacional}` : ''}
                                                     </p>
+
+                                                    {/* Divider */}
+                                                    <div className="w-full h-px bg-border/60 my-3" />
+
+                                                    {/* MUI Chips / Meta details */}
+                                                    <div className="w-full space-y-2 text-xs">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-muted-foreground text-[11px] font-medium">{__('Grado')}:</span>
+                                                            {getNivelBadge(pastor.nivel_ministerial)}
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-muted-foreground text-[11px] font-medium">{__('Ubicación')}:</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80">
+                                                                    {__('Zona')} {pastor.zona || '—'}
+                                                                </span>
+                                                                <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80">
+                                                                    {__('Dist.')} {pastor.distrito || '—'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {pastor.nombre_conyuge && (
+                                                            <div className="flex items-center justify-between text-[11px]">
+                                                                <span className="text-muted-foreground font-medium">{__('Cónyuge')}:</span>
+                                                                <span className="font-semibold text-rose-600 dark:text-rose-400 truncate max-w-[130px] flex items-center gap-1">
+                                                                    <Heart className="size-3 fill-rose-500 text-rose-500 shrink-0" />
+                                                                    {pastor.nombre_conyuge}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
 
-                                                {/* Badges de Grado Ministerial y Ubicación */}
-                                                <div className="flex flex-col gap-2 my-3 pt-3 border-t text-xs">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-muted-foreground text-[11px]">{__('Grado')}:</span>
-                                                        {getNivelBadge(pastor.nivel_ministerial)}
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-muted-foreground text-[11px]">{__('Ubicación')}:</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
-                                                                {__('Zona')} {pastor.zona || '—'}
-                                                            </span>
-                                                            <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
-                                                                {__('Dist.')} {pastor.distrito || '—'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {pastor.nombre_conyuge && (
-                                                        <div className="flex items-center justify-between text-[11px]">
-                                                            <span className="text-muted-foreground">{__('Cónyuge')}:</span>
-                                                            <span className="font-medium text-rose-600 dark:text-rose-400 truncate max-w-[140px] flex items-center gap-1">
-                                                                <Heart className="size-3 fill-rose-500 text-rose-500 shrink-0" />
-                                                                {pastor.nombre_conyuge}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Footer Actions */}
-                                                <div className="mt-auto pt-3 border-t flex items-center justify-between gap-1.5">
+                                                {/* Material Card Actions Footer */}
+                                                <div className="px-3 py-2 bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1">
                                                     <Button
                                                         type="button"
-                                                        variant="outline"
+                                                        variant="ghost"
                                                         size="sm"
                                                         onClick={() => window.open(`/admin/pastores/${pastor.id}/planilla`, '_blank')}
-                                                        className="h-8 px-2 text-xs gap-1 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 flex-1"
+                                                        className="h-8 px-2.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg flex-1 gap-1.5"
                                                         title={__('Ver Planilla PDF')}
                                                     >
                                                         <FileText className="size-3.5" />
@@ -621,8 +628,13 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
 
                                                     {hasPermission('pastores.edit') && (
                                                         <Link href={`/admin/pastores/${pastor.id}/edit`}>
-                                                            <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/30">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 px-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg gap-1.5"
+                                                            >
                                                                 <Pencil className="size-3.5" />
+                                                                <span>{__('Edit')}</span>
                                                             </Button>
                                                         </Link>
                                                     )}
@@ -635,7 +647,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                                 setSelectedIds([pastor.id]);
                                                                 setIsDeleteDialogOpen(true);
                                                             }}
-                                                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 shrink-0"
+                                                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
                                                             title={__('Eliminar Pastor')}
                                                         >
                                                             <Trash2 className="size-3.5" />
