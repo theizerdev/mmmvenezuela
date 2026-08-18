@@ -40,6 +40,12 @@ class PermissionSeeder extends Seeder
                 'paises.edit' => 'Editar País',
                 'paises.delete' => 'Eliminar País',
 
+                // Módulo: Estados
+                'estados.view' => 'Ver Estados',
+                'estados.create' => 'Crear Estado',
+                'estados.edit' => 'Editar Estado',
+                'estados.delete' => 'Eliminar Estado',
+
                 // Módulo: Empresas
                 'empresas.view' => 'Ver Empresas',
                 'empresas.create' => 'Crear Empresa',
@@ -159,6 +165,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'users.') => 'usuarios',
                     str_starts_with($permission, 'roles.') => 'roles',
                     str_starts_with($permission, 'paises.') => 'paises',
+                    str_starts_with($permission, 'estados.') => 'estados',
                     str_starts_with($permission, 'empresas.') => 'empresas',
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
                     str_starts_with($permission, 'departamentos.') => 'departamentos',

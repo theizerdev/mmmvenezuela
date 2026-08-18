@@ -19,11 +19,11 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             PaisSeeder::class,
+            EstadoSeeder::class,
             PermissionSeeder::class,
             RoleSeeder::class,
             EmpresaSucursalSeeder::class,
             UsersSeeder::class,
-          
         ]);
     }
 }

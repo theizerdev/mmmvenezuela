@@ -50,6 +50,7 @@ import { dashboard, home, logout } from '@/routes';
 import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { index as paisesIndex } from '@/routes/admin/paises';
+import { index as estadosIndex } from '@/routes/admin/estados';
 import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
@@ -430,6 +431,11 @@ export default function AdminSaasLayout({
                                     title: 'Countries',
                                     href: paisesIndex.url(),
                                     permission: 'paises.view',
+                                },
+                                {
+                                    title: 'States',
+                                    href: estadosIndex.url(),
+                                    permission: 'estados.view',
                                 },
 
                                 {
