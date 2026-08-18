@@ -120,7 +120,7 @@ export function Select2({
             </PopoverTrigger>
             <PopoverContent
                 align="start"
-                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100] shadow-md border rounded-md bg-popover text-popover-foreground overflow-hidden"
+                className="w-[var(--radix-popover-trigger-width)] min-w-[240px] max-w-[90vw] p-0 z-[100] shadow-md border rounded-md bg-popover text-popover-foreground overflow-hidden"
             >
                 {/* Search Header */}
                 <div className="flex items-center border-b px-3 py-2 bg-muted/20">

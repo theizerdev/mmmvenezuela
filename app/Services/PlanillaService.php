@@ -42,11 +42,25 @@ class PlanillaService
             $fpdf = app('fpdf');
         }
 
-        // Si el pastor es cónyuge, también cargar las iglesias del pastor principal
-        $iglesias = (method_exists($pastor, 'iglesias') && $pastor->relationLoaded('iglesias') && $pastor->iglesias) ? $pastor->iglesias : collect();
-        if ($pastor->esConyuge() && $pastor->pastorPrincipal && method_exists($pastor->pastorPrincipal, 'iglesias') && $pastor->pastorPrincipal->relationLoaded('iglesias') && $pastor->pastorPrincipal->iglesias) {
-            $iglesias = $iglesias->merge($pastor->pastorPrincipal->iglesias);
+        // Cargar iglesias asociadas al pastor y a su cónyuge
+        $iglesias = collect();
+        if (method_exists($pastor, 'iglesiasPrincipales') && $pastor->iglesiasPrincipales) {
+            $iglesias = $iglesias->merge($pastor->iglesiasPrincipales);
         }
+        if (method_exists($pastor, 'iglesias') && $pastor->iglesias) {
+            $iglesias = $iglesias->merge($pastor->iglesias);
+        }
+
+        if ($pastor->conyuge) {
+            if (method_exists($pastor->conyuge, 'iglesiasPrincipales') && $pastor->conyuge->iglesiasPrincipales) {
+                $iglesias = $iglesias->merge($pastor->conyuge->iglesiasPrincipales);
+            }
+            if (method_exists($pastor->conyuge, 'iglesias') && $pastor->conyuge->iglesias) {
+                $iglesias = $iglesias->merge($pastor->conyuge->iglesias);
+            }
+        }
+
+        $iglesias = $iglesias->unique('id')->values();
 
         // Crear el PDF
         $fpdf->AddPage();
@@ -675,30 +689,40 @@ class PlanillaService
                 $fpdf->Cell(55, 7, utf8_decode($iglesia->posee_medio_comunicacion ? 'Sí' : 'No'), 1, 0, 'L', true);
 
                 if ($iglesia->posee_medio_comunicacion) {
-                    // Tipo de medio
-                    $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                    $fpdf->Cell(35, 7, utf8_decode('Tipo Medio:'), 1, 0, 'L', true);
-                    $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                    $fpdf->Cell(65, 7, utf8_decode($iglesia->medio_comunicacion ?? 'No especificado'), 1, 1, 'L', true);
+                    $mediosList = [];
+                    if ($iglesia->medio_comunicacion) {
+                        try {
+                            $decoded = json_decode($iglesia->medio_comunicacion, true);
+                            if (is_array($decoded)) {
+                                $mediosList = $decoded;
+                            }
+                        } catch (\Exception $e) {}
+                    }
 
-                    // Nombre del medio
-                    $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                    $fpdf->Cell(35, 7, utf8_decode('Nombre Medio:'), 1, 0, 'L', true);
-                    $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                    $fpdf->Cell(155, 7, utf8_decode($iglesia->nombre_medio_comunicacion ?? 'No especificado'), 1, 0, 'L', true);
+                    if (count($mediosList) > 0) {
+                        $fpdf->Ln(7);
+                        foreach ($mediosList as $mIdx => $mItem) {
+                            $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+                            $fpdf->Cell(35, 7, utf8_decode('Medio #' . ($mIdx + 1) . ':'), 1, 0, 'L', true);
+                            $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+                            $txt = ($mItem['cual'] ?? '') . (!empty($mItem['donde']) ? ' [' . $mItem['donde'] . ']' : '') . (!empty($mItem['nota']) ? ' - ' . $mItem['nota'] : '');
+                            $fpdf->Cell(155, 7, utf8_decode($txt), 1, 1, 'L', true);
+                        }
+                    } else {
+                        // Tipo de medio
+                        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+                        $fpdf->Cell(35, 7, utf8_decode('Tipo Medio:'), 1, 0, 'L', true);
+                        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+                        $fpdf->Cell(65, 7, utf8_decode($iglesia->medio_comunicacion ?? 'No especificado'), 1, 1, 'L', true);
 
-                    // Dónde está el medio
-                    $fpdf->Ln(7);
-                    $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                    $fpdf->Cell(35, 7, utf8_decode('Ubicación:'), 1, 0, 'L', true);
-                    $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                    $fpdf->Cell(155, 7, utf8_decode($iglesia->donde_medio_comunicacion ?? 'No especificada'), 1, 1, 'L', true);
+                        // Nombre del medio
+                        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
+                        $fpdf->Cell(35, 7, utf8_decode('Nombre Medio:'), 1, 0, 'L', true);
+                        $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
+                        $fpdf->Cell(155, 7, utf8_decode($iglesia->nombre_medio_comunicacion ?? 'No especificado'), 1, 1, 'L', true);
+                    }
                 } else {
-                    // Relleno si no tiene medio de comunicación
-                    $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-                    $fpdf->Cell(35, 7, utf8_decode(''), 1, 0, 'L', true);
-                    $fpdf->SetFillColor($cellColor2[0], $cellColor2[1], $cellColor2[2]);
-                    $fpdf->Cell(65, 7, utf8_decode(''), 1, 1, 'L', true);
+                    $fpdf->Ln(7);
                 }
 
                 // REGISTRO

@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
-use App\Traits\Multitenantable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Iglesia extends Model
 {
-    use HasFactory, LogsActivity, Multitenantable;
+    use HasFactory;
+
+    protected $table = 'iglesias';
 
     protected $fillable = [
         'nombre',
@@ -18,8 +19,6 @@ class Iglesia extends Model
         'telefono',
         'email',
         'pastor_id',
-        'empresa_id',
-        'sucursal_id',
         'ciudad_id',
         'estado_id',
         'municipio_id',
@@ -29,9 +28,6 @@ class Iglesia extends Model
         'longitud',
         'zona',
         'distrito',
-        'sector',
-        'calle',
-        'avenida',
         'fecha_fundacion',
         'anios_activa',
         'descripcion',
@@ -41,12 +37,17 @@ class Iglesia extends Model
         'miembro_probante',
         'logros_obtenidos',
         'tiempo_trabajo',
+        'sector',
+        'calle',
+        'avenida',
         'iglesias_fundadas',
         'pastores_ministerio',
         'posee_medio_comunicacion',
         'medio_comunicacion',
         'nombre_medio_comunicacion',
         'donde_medio_comunicacion',
+        'empresa_id',
+        'sucursal_id',
         'usuario_registro_id',
     ];
 
@@ -54,146 +55,78 @@ class Iglesia extends Model
         'activa' => 'boolean',
         'posee_medio_comunicacion' => 'boolean',
         'fecha_fundacion' => 'date',
-        'latitud' => 'decimal:8',
-        'longitud' => 'decimal:8',
+        'latitud' => 'float',
+        'longitud' => 'float',
         'miembros_activos' => 'integer',
         'cantidad_campos_blancos' => 'integer',
         'miembro_probante' => 'integer',
         'iglesias_fundadas' => 'integer',
         'pastores_ministerio' => 'integer',
         'anios_activa' => 'integer',
-        'medio_comunicacion' => 'array',
     ];
 
     /**
-     * Relación con tipo de local
+     * Pastor Principal de la Iglesia / Extensión
      */
-    public function tipoLocal()
+    public function pastor(): BelongsTo
     {
-        return $this->belongsTo(TipoLocal::class);
+        return $this->belongsTo(Pastor::class, 'pastor_id');
     }
 
     /**
-     * Relación con el pastor principal
+     * Estado geográfico
      */
-    public function pastor()
+    public function estado(): BelongsTo
     {
-        return $this->belongsTo(Pastor::class);
+        return $this->belongsTo(Estado::class, 'estado_id');
     }
 
     /**
-     * Relación con empresa
+     * Municipio geográfico
      */
-    public function empresa()
+    public function municipio(): BelongsTo
     {
-        return $this->belongsTo(Empresa::class);
+        return $this->belongsTo(Municipio::class, 'municipio_id');
     }
 
     /**
-     * Relación con sucursal
+     * Parroquia geográfica
      */
-    public function sucursal()
+    public function parroquia(): BelongsTo
     {
-        return $this->belongsTo(Sucursal::class);
+        return $this->belongsTo(Parroquia::class, 'parroquia_id');
     }
 
     /**
-     * Relación con ciudad
+     * Empresa / Sede institucional
      */
-    public function ciudad()
+    public function empresa(): BelongsTo
     {
-        return $this->belongsTo(Ciudad::class);
+        return $this->belongsTo(Empresa::class, 'empresa_id');
     }
 
     /**
-     * Relación con estado
+     * Sucursal institucional
      */
-    public function estado()
+    public function sucursal(): BelongsTo
     {
-        return $this->belongsTo(Estado::class);
+        return $this->belongsTo(Sucursal::class, 'sucursal_id');
     }
 
     /**
-     * Relación con municipio
+     * Tipo de Local (Propio, Alquilado, etc.)
      */
-    public function municipio()
+    public function tipoLocal(): BelongsTo
     {
-        return $this->belongsTo(Municipio::class);
+        return $this->belongsTo(TipoLocal::class, 'tipo_local_id');
     }
 
     /**
-     * Relación con parroquia
+     * Pastores asociados a la iglesia (Relación M a M)
      */
-    public function parroquia()
+    public function pastores(): BelongsToMany
     {
-        return $this->belongsTo(Parroquia::class);
-    }
-
-    /**
-     * Relación con el usuario que registró la iglesia
-     */
-    public function usuarioRegistro()
-    {
-        return $this->belongsTo(User::class, 'usuario_registro_id');
-    }
-
-    /**
-     * Relación con documentos de la iglesia
-     */
-    public function documentos()
-    {
-        return $this->hasMany(DocumentoIglesia::class);
-    }
-
-    /**
-     * Relación con inventario de la iglesia
-     */
-    public function inventario()
-    {
-        return $this->hasMany(InventarioIglesia::class);
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logAll()
-            ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
-    }
-
-    /**
-     * Mutador para calcular automáticamente los años activa
-     * cuando se establece la fecha de fundación
-     */
-    public function setFechaFundacionAttribute($value)
-    {
-        $this->attributes['fecha_fundacion'] = $value;
-        
-        if ($value) {
-            $fechaFundacion = \Carbon\Carbon::parse($value);
-            
-            // Asegurarse de que la fecha no sea futura
-            if ($fechaFundacion->isFuture()) {
-                $this->attributes['anios_activa'] = 0;
-                return;
-            }
-            
-            $anios = (int) $fechaFundacion->diffInYears(\Carbon\Carbon::now());
-            $this->attributes['anios_activa'] = abs($anios); // Valor absoluto para asegurar positivo
-        } else {
-            $this->attributes['anios_activa'] = null;
-        }
-    }
-
-    /**
-     * Accesor para obtener los años activa con formato
-     */
-    public function getAniosActivaFormateadoAttribute()
-    {
-        if (!$this->anios_activa) {
-            return '0';
-        }
-        
-        return (string) $this->anios_activa;
+        return $this->belongsToMany(Pastor::class, 'iglesia_pastor', 'iglesia_id', 'pastor_id')
+                    ->withTimestamps();
     }
 }

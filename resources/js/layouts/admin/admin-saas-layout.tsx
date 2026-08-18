@@ -448,6 +448,35 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
+                        {/* Extensions Group */}
+                        {(() => {
+                            const extensionItems = [
+                                {
+                                    title: 'General List',
+                                    href: '/admin/extensiones',
+                                    permission: 'extensiones.view',
+                                },
+                                {
+                                    title: 'New Extension',
+                                    href: '/admin/extensiones/create',
+                                    permission: 'extensiones.create',
+                                },
+                            ].filter(item => hasPermission(item.permission) || hasPermission('iglesias.view') || hasPermission('pastores.view'));
+
+                            if (extensionItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Extensions"
+                                        icon={Building2}
+                                        collapsed={collapsed}
+                                        items={extensionItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
                         {/* Settings Group */}
                         {(() => {
                             const settingsItems = [

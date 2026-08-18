@@ -151,4 +151,21 @@ class Pastor extends Model
     {
         return $this->belongsTo(Parroquia::class, 'parroquia_id');
     }
+
+    /**
+     * Iglesias / Extensiones asociadas al pastor (o a través del pivot iglesia_pastor).
+     */
+    public function iglesias()
+    {
+        return $this->belongsToMany(Iglesia::class, 'iglesia_pastor', 'pastor_id', 'iglesia_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Iglesias donde figura como pastor principal en la tabla iglesias.
+     */
+    public function iglesiasPrincipales()
+    {
+        return $this->hasMany(Iglesia::class, 'pastor_id');
+    }
 }
