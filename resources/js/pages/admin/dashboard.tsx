@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
+    LayoutDashboard,
     UserCheck,
     Users,
     Award,
@@ -17,6 +18,9 @@ import {
 } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
+import { SectionCard } from '@/components/ui/section-card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -97,7 +101,7 @@ export default function AdminDashboard({
 }: DashboardProps) {
     const { __ } = useTranslate();
 
-    // Configuración ApexCharts: Pastores por Zona (Bar Column Chart)
+    // ApexCharts Options: Pastores por Zona
     const zonasChartOptions: ApexCharts.ApexOptions = {
         chart: {
             type: 'bar',
@@ -107,11 +111,11 @@ export default function AdminDashboard({
         plotOptions: {
             bar: {
                 borderRadius: 6,
-                columnWidth: '50%',
+                columnWidth: '55%',
                 distributed: true,
             },
         },
-        colors: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE', '#3B82F6', '#60A5FA', '#93C5FD', '#10B981', '#34D399', '#F59E0B', '#8B5CF6'],
+        colors: ['#4F46E5', '#6366F1', '#818CF8', '#3B82F6', '#60A5FA', '#10B981', '#34D399', '#F59E0B', '#8B5CF6', '#EC4899'],
         dataLabels: {
             enabled: true,
             style: { fontSize: '11px', fontWeight: 'bold' },
@@ -141,7 +145,7 @@ export default function AdminDashboard({
         },
     };
 
-    // Configuración ApexCharts: Distribución por Género (Donut Chart)
+    // ApexCharts Options: Donut Género
     const generoChartOptions: ApexCharts.ApexOptions = {
         chart: {
             type: 'donut',
@@ -174,7 +178,7 @@ export default function AdminDashboard({
         tooltip: { theme: 'dark' },
     };
 
-    // Configuración ApexCharts: Estado de Salud (Donut Chart)
+    // ApexCharts Options: Donut Salud
     const saludChartOptions: ApexCharts.ApexOptions = {
         chart: {
             type: 'donut',
@@ -220,196 +224,110 @@ export default function AdminDashboard({
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                {/* Encabezado del Dashboard */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border rounded-2xl p-5 shadow-xs">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                                {__('Dashboard Ministerial MMM Venezuela')}
-                            </h1>
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300">
-                                <CheckCircle2 className="size-3 mr-1" />
-                                {activosCount} {__('Activos')}
-                            </Badge>
-                        </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                            {__('Resumen ejecutivo de pastores, distribución geográfica por zonas, salud y registros recientes.')}
-                        </p>
-                    </div>
+                {/* ModuleHeader Estándar del Proyecto */}
+                <ModuleHeader
+                    icon={<LayoutDashboard className="size-6 text-white" />}
+                    title={__('Dashboard Ministerial')}
+                    description={__('Resumen ejecutivo de pastores, distribución geográfica por zonas, salud y registros recientes.')}
+                    colorClassName="bg-indigo-600"
+                >
+                    <Link href="/admin/pastores">
+                        <Button variant="secondary" className="gap-2 bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shadow-sm text-xs sm:text-sm">
+                            <Users className="size-4" />
+                            {__('Ver Pastores')} ({totalPastores})
+                        </Button>
+                    </Link>
+                    <Link href="/admin/pastores/create">
+                        <Button className="gap-2 bg-indigo-900 hover:bg-indigo-950 text-white font-semibold shadow-sm text-xs sm:text-sm">
+                            <Plus className="size-4" />
+                            {__('Nuevo Pastor')}
+                        </Button>
+                    </Link>
+                </ModuleHeader>
 
-                    <div className="flex items-center gap-2">
-                        <Link href="/admin/pastores">
-                            <Button variant="outline" className="gap-2 text-xs sm:text-sm">
-                                <Users className="size-4" />
-                                {__('Ver Pastores')} ({totalPastores})
-                            </Button>
-                        </Link>
-                        <Link href="/admin/pastores/create">
-                            <Button className="gap-2 shadow text-xs sm:text-sm">
-                                <Plus className="size-4" />
-                                {__('Nuevo Pastor')}
-                            </Button>
-                        </Link>
-                    </div>
+                {/* StatCards Estándar por Grado Ministerial */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatCard
+                        title={__('COLABORADORES')}
+                        value={gradosStats.colaboradores}
+                        icon={<Users className="size-5" />}
+                        colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+                    />
+                    <StatCard
+                        title={__('LAICOS')}
+                        value={gradosStats.laicos}
+                        icon={<UserCheck className="size-5" />}
+                        colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                    />
+                    <StatCard
+                        title={__('LICENCIADOS')}
+                        value={gradosStats.licenciados}
+                        icon={<BookOpen className="size-5" />}
+                        colorClassName="bg-purple-100 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
+                    />
+                    <StatCard
+                        title={__('MINISTROS ORDENADOS')}
+                        value={gradosStats.ordenados}
+                        icon={<Award className="size-5" />}
+                        colorClassName="bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                    />
                 </div>
 
-                {/* 1. Tarjetas por Grado Ministerial */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Colaboradores */}
-                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-amber-500">
-                        <div>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {__('Colaboradores')}
-                            </span>
-                            <div className="text-2xl font-bold text-foreground mt-1">
-                                {gradosStats.colaboradores}
-                            </div>
-                            <span className="text-[11px] text-muted-foreground">
-                                {totalPastores > 0 ? Math.round((gradosStats.colaboradores / totalPastores) * 100) : 0}% {__('del total')}
-                            </span>
-                        </div>
-                        <div className="size-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                            <Users className="size-6" />
-                        </div>
-                    </div>
-
-                    {/* Laicos */}
-                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-blue-500">
-                        <div>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {__('Laicos')}
-                            </span>
-                            <div className="text-2xl font-bold text-foreground mt-1">
-                                {gradosStats.laicos}
-                            </div>
-                            <span className="text-[11px] text-muted-foreground">
-                                {totalPastores > 0 ? Math.round((gradosStats.laicos / totalPastores) * 100) : 0}% {__('del total')}
-                            </span>
-                        </div>
-                        <div className="size-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                            <UserCheck className="size-6" />
-                        </div>
-                    </div>
-
-                    {/* Licenciados */}
-                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-purple-500">
-                        <div>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {__('Licenciados')}
-                            </span>
-                            <div className="text-2xl font-bold text-foreground mt-1">
-                                {gradosStats.licenciados}
-                            </div>
-                            <span className="text-[11px] text-muted-foreground">
-                                {totalPastores > 0 ? Math.round((gradosStats.licenciados / totalPastores) * 100) : 0}% {__('del total')}
-                            </span>
-                        </div>
-                        <div className="size-12 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                            <BookOpen className="size-6" />
-                        </div>
-                    </div>
-
-                    {/* Ministros Ordenados */}
-                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-indigo-600">
-                        <div>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {__('Ministros Ordenados')}
-                            </span>
-                            <div className="text-2xl font-bold text-foreground mt-1">
-                                {gradosStats.ordenados}
-                            </div>
-                            <span className="text-[11px] text-muted-foreground">
-                                {totalPastores > 0 ? Math.round((gradosStats.ordenados / totalPastores) * 100) : 0}% {__('del total')}
-                            </span>
-                        </div>
-                        <div className="size-12 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <Award className="size-6" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. Sección Gráficas ApexCharts */}
+                {/* Gráficas ApexCharts en SectionCard */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Gráfica por Zonas (Column Bar Chart) */}
-                    <div className="lg:col-span-7 bg-card border rounded-2xl p-5 shadow-xs space-y-4">
-                        <div className="flex items-center justify-between border-b pb-3">
-                            <div>
-                                <h3 className="font-bold text-base text-foreground flex items-center gap-2">
-                                    <MapPin className="size-5 text-indigo-600" />
-                                    {__('Distribución de Pastores por Zona')}
-                                </h3>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    {__('Cantidad de pastores registrados por cada zona geográfica nacional')}
-                                </p>
+                    {/* Pastores por Zona */}
+                    <div className="lg:col-span-7">
+                        <SectionCard
+                            title={__('Distribución de Pastores por Zona')}
+                            description={__('Cantidad de pastores registrados por cada zona geográfica nacional')}
+                        >
+                            <div className="pt-2">
+                                <ClientChart
+                                    options={zonasChartOptions}
+                                    series={[{ name: __('Pastores'), data: zonasChart.series }]}
+                                    type="bar"
+                                    height={320}
+                                />
                             </div>
-                        </div>
-                        <div className="pt-2">
-                            <ClientChart
-                                options={zonasChartOptions}
-                                series={[{ name: __('Pastores'), data: zonasChart.series }]}
-                                type="bar"
-                                height={300}
-                            />
-                        </div>
+                        </SectionCard>
                     </div>
 
-                    {/* Gráficas Donut (Género y Salud) */}
+                    {/* Gráficas Donut */}
                     <div className="lg:col-span-5 grid grid-cols-1 gap-6">
-                        {/* Donut Género */}
-                        <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-3">
-                            <div className="flex items-center justify-between border-b pb-2">
-                                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                                    <Users className="size-4 text-blue-500" />
-                                    {__('Distribución por Género')}
-                                </h3>
-                            </div>
+                        <SectionCard title={__('Distribución por Género')}>
                             <ClientChart
                                 options={generoChartOptions}
                                 series={[generoChart.masculino, generoChart.femenino]}
                                 type="donut"
                                 height={220}
                             />
-                        </div>
+                        </SectionCard>
 
-                        {/* Donut Salud */}
-                        <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-3">
-                            <div className="flex items-center justify-between border-b pb-2">
-                                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                                    <Activity className="size-4 text-emerald-500" />
-                                    {__('Estado de Salud')}
-                                </h3>
-                            </div>
+                        <SectionCard title={__('Estado de Salud')}>
                             <ClientChart
                                 options={saludChartOptions}
                                 series={[saludChart.sanos, saludChart.enfermos]}
                                 type="donut"
                                 height={220}
                             />
-                        </div>
+                        </SectionCard>
                     </div>
                 </div>
 
-                {/* 3. Timeline: Pastores Recientemente Agregados */}
-                <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-4">
-                    <div className="flex items-center justify-between border-b pb-3">
-                        <div>
-                            <h3 className="font-bold text-base text-foreground flex items-center gap-2">
-                                <Clock className="size-5 text-indigo-600" />
-                                {__('Pastores Recientemente Registrados')}
-                            </h3>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {__('Línea de tiempo con las últimas altas en el sistema')}
-                            </p>
-                        </div>
+                {/* Timeline en SectionCard */}
+                <SectionCard
+                    title={__('Pastores Recientemente Registrados')}
+                    description={__('Línea de tiempo con las últimas altas en el sistema')}
+                    headerAction={
                         <Link href="/admin/pastores">
                             <Button variant="ghost" size="sm" className="gap-1 text-xs text-indigo-600">
                                 {__('Ver Todos')}
                                 <ChevronRight className="size-4" />
                             </Button>
                         </Link>
-                    </div>
-
-                    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-border">
+                    }
+                >
+                    <div className="relative pl-6 space-y-5 my-2 before:absolute before:left-2.5 before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-border">
                         {recentPastores.length > 0 ? (
                             recentPastores.map((pastor) => {
                                 const initials = getPastorInitials(pastor.nombres, pastor.apellidos);
@@ -462,7 +380,7 @@ export default function AdminDashboard({
                             </div>
                         )}
                     </div>
-                </div>
+                </SectionCard>
             </div>
         </>
     );
