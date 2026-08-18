@@ -13,26 +13,26 @@ class EmpresaSucursalSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Crear o actualizar la empresa principal Driscoll's con ID 1
+        // 1. Crear o actualizar la empresa principal MMM Venezuela con ID 1
         $empresa = Empresa::updateOrCreate([
             'id' => 1,
         ], [
-            'razon_social' => "Driscoll's, Inc.",
-            'documento' => 'J-12345678-0',
-            'direccion' => "Av. Principal Driscoll's",
-            'telefono' => '+52 436 117 4564',
-            'email' => 'contacto@driscolls.com',
+            'razon_social' => 'IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA MOVIMIENTO MISIONERO MUNDIAL',
+            'documento' => 'J-301874463',
+            'direccion' => 'Av. Sucre de Catia, cruce Calle El Carmen, Local 5B, Caracas',
+            'telefono' => '0212-8600173',
+            'email' => 'contacto@mmmvenezuela.org',
             'status' => true,
         ]);
 
-        // 2. Crear o actualizar la sucursal principal con ID 1
+        // 2. Crear o actualizar la sucursal principal Sede Central Catia con ID 1
         Sucursal::updateOrCreate([
             'id' => 1,
         ], [
             'empresa_id' => $empresa->id,
-            'nombre' => 'Cooler Purépero',
-            'telefono' => '+52 436 117 4564',
-            'direccion' => "Cooler Purépero, Michoacán",
+            'nombre' => 'Sede Central Catia',
+            'telefono' => '0212-8600173',
+            'direccion' => 'Av. Sucre de Catia, cruce Calle El Carmen, Local 5B, Caracas',
             'status' => true,
         ]);
     }

@@ -179,6 +179,29 @@ class PastorController extends Controller
             $validated['edad'] = Carbon::parse($validated['fe_nacimiento'])->age;
         }
 
+        // Procesar foto si es un string base64 proveniente de la cámara web o drag & drop
+        if (! empty($validated['foto']) && str_starts_with($validated['foto'], 'data:image/')) {
+            $imageData = $validated['foto'];
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
+                $imageData = substr($imageData, strpos($imageData, ',') + 1);
+                $type = strtolower($type[1]);
+                if (! in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                    $type = 'png';
+                }
+                $imageData = base64_decode($imageData);
+
+                if ($imageData !== false) {
+                    $filename = 'pastor_' . preg_replace('/\D/', '', $validated['codigo']) . '_' . time() . '.' . $type;
+                    $destinationPath = public_path('pastores');
+                    if (! file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0755, true);
+                    }
+                    file_put_contents($destinationPath . '/' . $filename, $imageData);
+                    $validated['foto'] = $filename;
+                }
+            }
+        }
+
         $pastor = Pastor::create($validated);
 
         // Sincronizar cónyuge recíproco si fue seleccionado
@@ -292,6 +315,29 @@ class PastorController extends Controller
 
         if (! empty($validated['fe_nacimiento'])) {
             $validated['edad'] = Carbon::parse($validated['fe_nacimiento'])->age;
+        }
+
+        // Procesar foto si es un string base64 proveniente de la cámara web o drag & drop
+        if (! empty($validated['foto']) && str_starts_with($validated['foto'], 'data:image/')) {
+            $imageData = $validated['foto'];
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
+                $imageData = substr($imageData, strpos($imageData, ',') + 1);
+                $type = strtolower($type[1]);
+                if (! in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                    $type = 'png';
+                }
+                $imageData = base64_decode($imageData);
+
+                if ($imageData !== false) {
+                    $filename = 'pastor_' . preg_replace('/\D/', '', $validated['codigo']) . '_' . time() . '.' . $type;
+                    $destinationPath = public_path('pastores');
+                    if (! file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0755, true);
+                    }
+                    file_put_contents($destinationPath . '/' . $filename, $imageData);
+                    $validated['foto'] = $filename;
+                }
+            }
         }
 
         $prevConyugeId = $pastore->conyuge_id;

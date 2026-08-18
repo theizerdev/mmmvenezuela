@@ -22,7 +22,12 @@ import {
     Heart, 
     Award, 
     MapPin,
-    FileText
+    FileText,
+    Camera,
+    Upload,
+    Trash2,
+    Video,
+    RefreshCw
 } from 'lucide-react';
 import pastoresRoutes from '@/routes/admin/pastores';
 
@@ -202,6 +207,101 @@ export default function PastorFormWizard({
         }));
     };
 
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+    const [isCameraActive, setIsCameraActive] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+            });
+            setMediaStream(stream);
+            setIsCameraActive(true);
+            setTimeout(() => {
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+            }, 100);
+        } catch (err) {
+            alert(__('No se pudo acceder a la cámara web. Verifique los permisos de su navegador.'));
+        }
+    };
+
+    const stopCamera = () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.stop());
+            setMediaStream(null);
+        }
+        setIsCameraActive(false);
+    };
+
+    const capturePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = 400;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, 400, 480);
+                const dataUrl = canvas.toDataURL('image/png');
+                setData('foto', dataUrl);
+                stopCamera();
+            }
+        }
+    };
+
+    const processFile = (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            alert(__('Por favor seleccione un archivo de imagen válido (JPEG, PNG, WEBP).'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (e.target?.result) {
+                setData('foto', e.target.result as string);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            processFile(e.target.files[0]);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            processFile(e.dataTransfer.files[0]);
+        }
+    };
+
+    const photoPreviewUrl = useMemo(() => {
+        if (!data.foto) return null;
+        if (data.foto.startsWith('data:') || data.foto.startsWith('http') || data.foto.startsWith('/')) {
+            return data.foto;
+        }
+        return `/pastores/${data.foto}`;
+    }, [data.foto]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (isEditing && pastor) {
@@ -215,6 +315,7 @@ export default function PastorFormWizard({
         { id: 1, title: __('Datos Personales'), icon: User, desc: __('Información básica y contacto') },
         { id: 2, title: __('Datos Académicos'), icon: GraduationCap, desc: __('Estudios y formación teológica') },
         { id: 3, title: __('Datos Eclesiásticos'), icon: Cross, desc: __('Grado ministerial y cargos') },
+        { id: 4, title: __('Fotografía Pastor'), icon: Camera, desc: __('Subir o tomar foto del obrero') },
     ];
 
     return (
@@ -258,7 +359,7 @@ export default function PastorFormWizard({
             </div>
 
             {/* Stepper Tabs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 {steps.map((step) => {
                     const Icon = step.icon;
                     const isActive = activeTab === step.id;
@@ -974,6 +1075,146 @@ export default function PastorFormWizard({
                 </Card>
             )}
 
+            {/* PASO 4: FOTOGRAFÍA DEL PASTOR */}
+            {activeTab === 4 && (
+                <Card className="border shadow-sm">
+                    <CardHeader className="border-b bg-muted/20">
+                        <div className="flex items-center gap-2 text-primary font-semibold text-base">
+                            <Camera className="h-5 w-5" />
+                            <span>{__('Paso 4: Fotografía Oficial del Pastor / Obrero')}</span>
+                        </div>
+                        <CardDescription className="text-xs">
+                            {__('Cargue la foto oficial tipo carnet arrastrándola desde su equipo o tome una foto en directo con su cámara web.')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                            {/* Columna Izquierda: Captura por Cámara o Drag & Drop */}
+                            <div className="space-y-4">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    {!isCameraActive ? (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={startCamera}
+                                            className="gap-2 border-primary/40 text-primary hover:bg-primary/5"
+                                        >
+                                            <Camera className="h-4 w-4" />
+                                            {__('Activar Cámara Web')}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            onClick={stopCamera}
+                                            className="gap-2"
+                                        >
+                                            <Video className="h-4 w-4" />
+                                            {__('Detener Cámara')}
+                                        </Button>
+                                    )}
+
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="gap-2"
+                                    >
+                                        <Upload className="h-4 w-4" />
+                                        {__('Buscar Archivo')}
+                                    </Button>
+
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileInputChange}
+                                        className="hidden"
+                                    />
+                                </div>
+
+                                {/* Área de Cámara Activa */}
+                                {isCameraActive ? (
+                                    <div className="relative rounded-xl overflow-hidden border-2 border-primary bg-black aspect-[3.5/4.2] max-w-sm flex items-center justify-center shadow-lg">
+                                        <video
+                                            ref={videoRef}
+                                            autoPlay
+                                            playsInline
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <Button
+                                            type="button"
+                                            onClick={capturePhoto}
+                                            className="absolute bottom-4 left-1/2 -translate-x-1/2 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                                        >
+                                            <Camera className="h-4 w-4" />
+                                            {__('Capturar Foto')}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    /* Zona Drag & Drop */
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[240px] ${
+                                            isDragOver
+                                                ? 'border-primary bg-primary/10 scale-[1.01]'
+                                                : 'border-border hover:border-primary/50 hover:bg-accent/30'
+                                        }`}
+                                    >
+                                        <div className="p-4 rounded-full bg-primary/10 text-primary mb-3">
+                                            <Upload className="h-8 w-8" />
+                                        </div>
+                                        <h4 className="font-semibold text-sm text-foreground">
+                                            {__('Arrastre y suelte su foto aquí')}
+                                        </h4>
+                                        <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                                            {__('Soporta imágenes JPG, PNG o WEBP. Haga clic para explorar en sus archivos.')}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Columna Derecha: Vista Previa Tipo Carnet */}
+                            <div className="flex flex-col items-center justify-center p-6 bg-muted/20 border rounded-xl space-y-4 min-h-[280px]">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    {__('Vista Previa (Tipo Carnet)')}
+                                </span>
+
+                                {photoPreviewUrl ? (
+                                    <div className="relative group">
+                                        <img
+                                            src={photoPreviewUrl}
+                                            alt="Foto Pastor"
+                                            className="w-44 h-56 object-cover rounded-xl border-2 border-primary/40 shadow-md transition-all group-hover:brightness-95"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="icon"
+                                            onClick={() => setData('foto', '')}
+                                            title={__('Eliminar Foto')}
+                                            className="absolute -top-2 -right-2 rounded-full h-8 w-8 shadow"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="w-44 h-56 border-2 border-dashed border-muted-foreground/30 rounded-xl flex flex-col items-center justify-center text-muted-foreground bg-card p-4 text-center">
+                                        <User className="h-16 w-16 stroke-[1.5] text-muted-foreground/40 mb-2" />
+                                        <span className="text-xs font-medium italic">{__('Sin fotografía asignada')}</span>
+                                    </div>
+                                )}
+
+                                <canvas ref={canvasRef} className="hidden" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Footer Navegación entre pasos */}
             <div className="flex items-center justify-between pt-4 border-t">
                 <Button
@@ -987,10 +1228,10 @@ export default function PastorFormWizard({
                     {__('Paso Anterior')}
                 </Button>
 
-                {activeTab < 3 ? (
+                {activeTab < 4 ? (
                     <Button
                         type="button"
-                        onClick={() => setActiveTab((prev) => Math.min(prev + 1, 3))}
+                        onClick={() => setActiveTab((prev) => Math.min(prev + 1, 4))}
                         className="gap-2"
                     >
                         {__('Siguiente Paso')}

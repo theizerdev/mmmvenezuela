@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Empresa;
 use App\Models\Pastor;
+use App\Models\Sucursal;
 use Codedge\Fpdf\Facades\Fpdf;
 
 class PlanillaService
@@ -60,103 +62,99 @@ class PlanillaService
         $cellColor2 = array(255, 255, 255); // Blanco
         $borderColor = array(189, 195, 199); // Gris medio
 
-        // ENCABEZADO PROFESIONAL MEJORADO
+        // ENCABEZADO CORPORATIVO UNIFICADO (X=10 a 160, Alto=42mm)
+        $headerX = 10;
+        $headerY = 10;
+        $headerW = 150;
+        $headerH = 42;
 
-        // Título principal con fondo azul oscuro
-        $fpdf->SetFillColor(41, 128, 185); // Azul más profesional
+        // 1. Recuadro Azul Corporativo Unificado
+        $fpdf->SetXY($headerX, $headerY);
+        $fpdf->SetFillColor(41, 128, 185); // Azul profesional #2980b9
+        $fpdf->Rect($headerX, $headerY, $headerW, $headerH, 'F');
+
+        // 2. Logo dentro del Recuadro Azul (X=13, Y=13, Ancho=28, Alto=28)
+        $logoPath = public_path('icons/logo_mmm.png');
+        if (file_exists($logoPath)) {
+            // Fondo blanco para destacar el logo dentro de la barra azul
+            
+            $fpdf->Rect(13, 13, 20, 28, 'F');
+            $fpdf->Image($logoPath, 14, 20, 26, 20);
+        }
+
+        // 3. Textos Corporativos Unificados dentro de la barra azul
+        $textX = 44;
+        $textW = $headerW - 36; // 114mm
+
+        // Títulos de la institución
+        $fpdf->SetXY($textX, 12);
         $fpdf->SetTextColor(255, 255, 255);
         $fpdf->SetFont('Arial', 'B', 9);
-        $fpdf->Cell(0, 12, utf8_decode('IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA DEL MOVIMIENTO MISIONERO MUNDIAL'), 0, 1, 'C', true);
+        $fpdf->Cell($textW, 4.5, utf8_decode('IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA'), 0, 1, 'C');
 
-        // Subtítulo
-        $fpdf->SetFont('Arial', 'I', 11);
-        $fpdf->Cell(0, 6, utf8_decode('Registro de Datos de Obreros'), 0, 1, 'C', true);
-        $fpdf->Ln(3);
+        $fpdf->SetX($textX);
+        $fpdf->SetFont('Arial', 'B', 8.5);
+        $fpdf->Cell($textW, 4.5, utf8_decode('MOVIMIENTO MISIONERO MUNDIAL'), 0, 1, 'C');
 
-        // Línea decorativa
-        $fpdf->SetDrawColor(41, 128, 185);
-        $fpdf->SetLineWidth(0.5);
-        $fpdf->Line(10, $fpdf->GetY(), 200, $fpdf->GetY());
-        $fpdf->Ln(3);
+        $fpdf->SetX($textX);
+        $fpdf->SetFont('Arial', 'I', 8.5);
+        $fpdf->SetTextColor(224, 247, 250); // Celeste claro
+        $fpdf->Cell($textW, 5, utf8_decode('REGISTRO DE DATOS DE OBREROS'), 0, 1, 'C');
 
-        // Sección de datos de la empresa en formato horizontal
-        $fpdf->SetFont('Arial', 'B', 10);
-        $fpdf->SetTextColor(41, 128, 185);
-        $fpdf->Cell(30, 6, utf8_decode('Razón Social:'), 0, 0, 'L');
-        $fpdf->SetFont('Arial', 'B', 10);
-        $fpdf->SetTextColor(0, 0, 0);
-        $fpdf->Cell(80, 6, utf8_decode('IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA DEL MOVIMIENTO MISIONERO MUNDIAL'), 0, 0, 'L');
+        // Línea divisoria interna blanca
+        $fpdf->SetDrawColor(255, 255, 255);
+        $fpdf->SetLineWidth(0.3);
+        $fpdf->Line($textX, 28, $headerX + $headerW - 3, 28);
 
-        $fpdf->SetFont('Arial', 'B', 10);
-        $fpdf->SetTextColor(41, 128, 185);
-        $fpdf->Cell(20, 6, utf8_decode(''), 0, 0, 'L');
-        $fpdf->SetFont('Arial', '', 10);
-        $fpdf->SetTextColor(0, 0, 0);
-        $fpdf->Cell(50, 6, utf8_decode(''), 0, 1, 'L');
+        // Obtener datos dinámicos de la Empresa / Sucursal Sede Principal
+        $empresa = Empresa::first();
+        $sucursal = Sucursal::where('status', true)->first();
 
-        $fpdf->SetFont('Arial', 'B', 10);
-        $fpdf->SetTextColor(41, 128, 185);
-        $fpdf->Cell(30, 6, utf8_decode('Teléfono:'), 0, 0, 'L');
-        $fpdf->SetFont('Arial', '', 10);
-        $fpdf->SetTextColor(0, 0, 0);
-        $fpdf->Cell(80, 6, utf8_decode('0212-8600173'), 0, 0, 'L');
+        $rifStr = $empresa?->documento ? "RIF: {$empresa->documento}" : 'RIF: J-301874463';
+        $tlfStr = $sucursal?->telefono ?: ($empresa?->telefono ?: '0212-8600173');
+        $dirStr = $sucursal?->direccion ?: ($empresa?->direccion ?: 'Av. Sucre de Catia, cruce Calle El Carmen, Local 5B, Caracas');
+        $sedeLabel = $sucursal?->nombre ? "Sede Principal ({$sucursal->nombre})" : 'Sede Central';
 
-        $fpdf->SetFont('Arial', 'B', 10);
-        $fpdf->SetTextColor(41, 128, 185);
-        $fpdf->Cell(20, 6, utf8_decode('RIF:'), 0, 0, 'L');
-        $fpdf->SetFont('Arial', '', 10);
-        $fpdf->SetTextColor(0, 0, 0);
-        $fpdf->Cell(50, 6, utf8_decode('J-301874463'), 0, 1, 'L');
+        // Datos institucionales unificados y centrados
+        $fpdf->SetXY($textX, 29.5);
+        $fpdf->SetFont('Arial', '', 7.5);
+        $fpdf->SetTextColor(255, 255, 255);
+        $fpdf->Cell($textW, 4, utf8_decode("{$rifStr}   |   Teléfono: {$tlfStr}"), 0, 1, 'C');
 
-        $fpdf->SetFont('Arial', 'B', 10);
-        $fpdf->SetTextColor(41, 128, 185);
-        $fpdf->Cell(30, 6, utf8_decode('Sede Central:'), 0, 0, 'L');
-        $fpdf->SetFont('Arial', '', 10);
-        $fpdf->SetTextColor(0, 0, 0);
-        $fpdf->MultiCell(150, 6, utf8_decode('Av. Sucre de Catia, cruce con Calle El Carmen, Local 5B, Caracas - Venezuela'), 0, 'L');
+        $fpdf->SetX($textX);
+        $fpdf->Cell($textW, 4, utf8_decode("{$sedeLabel}: {$dirStr}"), 0, 1, 'C');
 
-        $fpdf->Ln(5);
+        // 4. FOTO DEL PASTOR TIPO CARNET A LA DERECHA (X=165, Y=10, Ancho=35, Alto=42)
+        $photoX = 165;
+        $photoY = 10;
+        $photoW = 35;
+        $photoH = 42;
 
-        // Línea decorativa inferior
-        $fpdf->SetDrawColor(41, 128, 185);
-        $fpdf->SetLineWidth(0.5);
-        $fpdf->Line(10, $fpdf->GetY(), 200, $fpdf->GetY());
-        $fpdf->Ln(5);
-
-        // Reset posición
-        $fpdf->SetXY(165, 60);
-           // Recuadro para la foto del pastor
+        $fpdf->SetXY($photoX, $photoY);
         $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-        $fpdf->SetTextColor(0, 0, 0);
-        $fpdf->SetFont('Arial', 'B', 10);
-        $fpdf->Cell(35, 40, utf8_decode('FOTO DEL OBREO'), 1, 0, 'C', true);
+        $fpdf->SetTextColor(120, 120, 120);
+        $fpdf->SetDrawColor(189, 195, 199);
+        $fpdf->SetFont('Arial', 'B', 8);
+        $fpdf->Cell($photoW, $photoH, '', 1, 0, 'C', true);
 
-
-        // Foto del pastor (si existe)
-        if ($pastor->foto && (file_exists(public_path('pastores/'.str_replace(' ', '',$pastor->foto))))) {
-            $imagePath = public_path('pastores/'.str_replace(' ', '',$pastor->foto));
-            $fpdf->Image($imagePath, 165, 60, 35, 40);
+        if ($pastor->foto && file_exists(public_path('pastores/' . str_replace(' ', '', $pastor->foto)))) {
+            $imagePath = public_path('pastores/' . str_replace(' ', '', $pastor->foto));
+            $fpdf->Image($imagePath, $photoX, $photoY, $photoW, $photoH);
         } else {
-            // Si no hay foto, mostrar texto
+            $fpdf->SetXY($photoX, $photoY + 18);
             $fpdf->SetFont('Arial', 'I', 8);
-            $fpdf->SetXY(11, 110);
-            $fpdf->MultiCell(33, 4, utf8_decode('Sin foto disponible'), 0, 'C');
+            $fpdf->Cell($photoW, 4, utf8_decode('FOTO DEL OBRERO'), 0, 0, 'C');
         }
-        // Reset posición
-        $fpdf->SetXY(10, 110);
 
-        // Reset colores
-        $fpdf->SetTextColor(0, 0, 0);
-
-        // DATOS PERSONALES
+        // 5. SECCIÓN PLANILLA DE DATOS DEL PASTOR
+        $fpdf->SetXY(10, 56);
         $fpdf->SetFillColor($headerColor[0], $headerColor[1], $headerColor[2]);
         $fpdf->SetTextColor(255, 255, 255);
-        $fpdf->SetFont('Arial', 'B', 12);
-        $fpdf->Cell(0, 10, utf8_decode('PLANILLA DE DATOS DEL PASTOR'), 0, 1, 'C', true);
+        $fpdf->SetFont('Arial', 'B', 11);
+        $fpdf->Cell(0, 8, utf8_decode('PLANILLA DE DATOS DEL PASTOR'), 0, 1, 'C', true);
 
-        // Reset colores para contenido
         $fpdf->SetTextColor(0, 0, 0);
-        $fpdf->SetFont('Arial', '', 10);
+        $fpdf->SetFont('Arial', '', 9);
 
         // Primera fila de datos personales (después del recuadro de foto)
         $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
