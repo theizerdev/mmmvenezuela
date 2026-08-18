@@ -1,483 +1,469 @@
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { format, subDays } from 'date-fns';
 import {
-    Activity,
-    ArrowRight,
-    Building2,
-    Calendar as CalendarIcon,
-    FileText,
-    KeyRound,
-    Layers,
-    MessageSquare,
-    QrCode,
-    RefreshCw,
-    ShieldCheck,
-    TrendingUp,
     UserCheck,
     Users,
+    Award,
+    BookOpen,
+    Plus,
+    Clock,
+    Activity,
+    Heart,
+    ChevronRight,
+    MapPin,
+    Building2,
+    ShieldCheck,
+    CheckCircle2
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import Chart from 'react-apexcharts';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
-import { SectionCard } from '@/components/ui/section-card';
-import { dashboard } from '@/routes';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import type { BreadcrumbItem } from '@/types';
+import { useTranslate } from '@/hooks/use-translate';
 
-let Chart: any = null;
-
-interface ModuleOverview {
-    garita?: { total_accesos: number; accesos_hoy: number; activos_dentro: number };
-    empleados?: { total: number; preregistros_pendientes: number };
-    proveedores?: { total: number };
-    productores?: { total: number };
-    visitas_temporales?: { total: number; visitas_hoy?: number };
-    organizacion?: { empresas: number; sucursales: number; departamentos: number; usuarios: number };
+interface RecentPastor {
+    id: number;
+    codigo: string;
+    nombres: string;
+    apellidos: string;
+    nivel_ministerial: string;
+    zona: string;
+    distrito: string;
+    foto?: string | null;
+    created_at_human: string;
+    created_at_date: string;
 }
 
-interface Props {
-    moduleStats?: ModuleOverview;
+interface DashboardProps {
+    totalPastores: number;
+    activosCount: number;
+    inactivosCount: number;
+    gradosStats: {
+        colaboradores: number;
+        laicos: number;
+        licenciados: number;
+        ordenados: number;
+    };
+    zonasChart: {
+        labels: string[];
+        series: number[];
+    };
+    generoChart: {
+        masculino: number;
+        femenino: number;
+    };
+    saludChart: {
+        sanos: number;
+        enfermos: number;
+    };
+    recentPastores: RecentPastor[];
 }
 
-export default function Dashboard({ moduleStats }: Props) {
-    const [chartMounted, setChartMounted] = useState(false);
-    const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
-    const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-    const [loading, setLoading] = useState(false);
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Dashboard',
+        href: '/dashboard',
+    },
+];
 
-    const [statsData, setStatsData] = useState<{
-        dates: string[];
-        accesos: number[];
-        visitas_temporales: number[];
-        overview: ModuleOverview;
-    }>({
-        dates: [],
-        accesos: [],
-        visitas_temporales: [],
-        overview: moduleStats || {},
-    });
-
+function ClientChart(props: any) {
+    const [mounted, setMounted] = useState(false);
     useEffect(() => {
-        import('react-apexcharts').then((mod) => {
-            Chart = mod.default;
-            setChartMounted(true);
-        });
+        setMounted(true);
     }, []);
 
-    const fallbackStats = (start: string, end: string) => {
-        const dates: string[] = [];
-        const accesos: number[] = [];
-        const visitas_temporales: number[] = [];
+    if (!mounted) {
+        return (
+            <div className="h-64 w-full animate-pulse bg-muted/20 rounded-xl flex items-center justify-center text-xs text-muted-foreground">
+                Cargando gráfica...
+            </div>
+        );
+    }
 
-        const s = new Date(start);
-        const e = new Date(end);
-        const diffDays = Math.max(1, Math.ceil(Math.abs(e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
+    return <Chart {...props} />;
+}
 
-        for (let i = 0; i <= diffDays; i++) {
-            const d = new Date(s);
-            d.setDate(d.getDate() + i);
-            dates.push(format(d, 'yyyy-MM-dd'));
-            accesos.push(0);
-            visitas_temporales.push(0);
-        }
+export default function Dashboard({
+    totalPastores = 0,
+    activosCount = 0,
+    inactivosCount = 0,
+    gradosStats = { colaboradores: 0, laicos: 0, licenciados: 0, ordenados: 0 },
+    zonasChart = { labels: [], series: [] },
+    generoChart = { masculino: 0, femenino: 0 },
+    saludChart = { sanos: 0, enfermos: 0 },
+    recentPastores = [],
+}: DashboardProps) {
+    const { __ } = useTranslate();
 
-        setStatsData((prev) => ({
-            ...prev,
-            dates,
-            accesos,
-            visitas_temporales,
-        }));
-    };
-
-    const fetchStats = async (start: string, end: string) => {
-        setLoading(true);
-        try {
-            const res = await fetch(`/api/dashboard/stats?start=${start}&end=${end}`);
-            if (res.ok) {
-                const data = await res.json();
-                setStatsData(data);
-            } else {
-                fallbackStats(start, end);
-            }
-        } catch (err) {
-            console.error('Error fetching stats:', err);
-            fallbackStats(start, end);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchStats(startDate, endDate);
-    }, [startDate, endDate]);
-
-    const overview = statsData.overview || moduleStats || {};
-
-    const getGaritaChartOptions = () => ({
+    // Configuración ApexCharts: Pastores por Zona (Bar Column Chart)
+    const zonasChartOptions: ApexCharts.ApexOptions = {
         chart: {
-            id: 'garita-chart',
-            type: 'area' as const,
+            type: 'bar',
             toolbar: { show: false },
-            background: 'transparent',
-            fontFamily: 'Inter, sans-serif',
-            foreColor: '#64748b',
-            sparkline: { enabled: false },
+            fontFamily: 'inherit',
         },
-        colors: ['#10b981'],
-        dataLabels: { enabled: false },
-        stroke: { curve: 'smooth' as const, width: 3 },
+        plotOptions: {
+            bar: {
+                borderRadius: 6,
+                columnWidth: '50%',
+                distributed: true,
+            },
+        },
+        colors: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE', '#3B82F6', '#60A5FA', '#93C5FD', '#10B981', '#34D399', '#F59E0B', '#8B5CF6'],
+        dataLabels: {
+            enabled: true,
+            style: { fontSize: '11px', fontWeight: 'bold' },
+            dropShadow: { enabled: false },
+        },
+        legend: { show: false },
         xaxis: {
-            categories: statsData.dates.length > 0 ? statsData.dates : [startDate, endDate],
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            labels: { style: { colors: '#64748b', fontSize: '11px' } },
+            categories: zonasChart.labels,
+            labels: {
+                style: { colors: '#64748B', fontSize: '11px' },
+            },
         },
         yaxis: {
-            min: 0,
-            forceNiceScale: true,
             labels: {
-                style: { colors: '#64748b', fontSize: '11px' },
-                formatter: (val: number) => Math.round(val).toString(),
+                style: { colors: '#64748B', fontSize: '11px' },
             },
         },
         grid: {
-            borderColor: 'rgba(148, 163, 184, 0.2)',
+            borderColor: '#E2E8F0',
             strokeDashArray: 4,
         },
         tooltip: {
-            theme: 'light',
-            x: { format: 'yyyy-MM-dd' },
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                type: 'vertical',
-                shadeIntensity: 0.3,
-                gradientToColors: ['#34d399'],
-                opacityFrom: 0.5,
-                opacityTo: 0.05,
+            theme: 'dark',
+            y: {
+                formatter: (val) => `${val} pastores`,
             },
         },
-        noData: {
-            text: 'Cargando datos...',
-            style: { color: '#64748b', fontSize: '13px' },
-        },
-    });
+    };
 
-    const getTemporalesChartOptions = () => ({
+    // Configuración ApexCharts: Distribución por Género (Donut Chart)
+    const generoChartOptions: ApexCharts.ApexOptions = {
         chart: {
-            id: 'temporales-chart',
-            type: 'area' as const,
-            toolbar: { show: false },
-            background: 'transparent',
-            fontFamily: 'Inter, sans-serif',
-            foreColor: '#64748b',
-            sparkline: { enabled: false },
+            type: 'donut',
+            fontFamily: 'inherit',
         },
-        colors: ['#6366f1'],
-        dataLabels: { enabled: false },
-        stroke: { curve: 'smooth' as const, width: 3 },
-        xaxis: {
-            categories: statsData.dates.length > 0 ? statsData.dates : [startDate, endDate],
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            labels: { style: { colors: '#64748b', fontSize: '11px' } },
+        labels: [__('Masculino'), __('Femenino')],
+        colors: ['#3B82F6', '#EC4899'],
+        legend: {
+            position: 'bottom',
+            labels: { colors: '#64748B' },
         },
-        yaxis: {
-            min: 0,
-            forceNiceScale: true,
-            labels: {
-                style: { colors: '#64748b', fontSize: '11px' },
-                formatter: (val: number) => Math.round(val).toString(),
+        dataLabels: { enabled: true },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '70%',
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: __('Total'),
+                            fontSize: '12px',
+                            color: '#64748B',
+                            formatter: () => `${totalPastores}`,
+                        },
+                    },
+                },
             },
         },
-        grid: {
-            borderColor: 'rgba(148, 163, 184, 0.2)',
-            strokeDashArray: 4,
-        },
-        tooltip: {
-            theme: 'light',
-            x: { format: 'yyyy-MM-dd' },
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                type: 'vertical',
-                shadeIntensity: 0.3,
-                gradientToColors: ['#8b5cf6'],
-                opacityFrom: 0.5,
-                opacityTo: 0.05,
-            },
-        },
-        noData: {
-            text: 'Cargando datos...',
-            style: { color: '#64748b', fontSize: '13px' },
-        },
-    });
+        tooltip: { theme: 'dark' },
+    };
 
-    const modulesList = [
-        {
-            name: 'Caseta y Accesos',
-            desc: 'Control de entrada y lectura QR',
-            icon: QrCode,
-            href: '/admin/visitas-accesos',
-            count: `${overview.garita?.accesos_hoy || 0} hoy`,
-            badgeColor: 'bg-emerald-500/10 text-emerald-500',
+    // Configuración ApexCharts: Estado de Salud (Donut Chart)
+    const saludChartOptions: ApexCharts.ApexOptions = {
+        chart: {
+            type: 'donut',
+            fontFamily: 'inherit',
         },
-        {
-            name: 'Visitas',
-            desc: 'Pases digitales e invitaciones',
-            icon: KeyRound,
-            href: '/admin/visitas-temporales',
-            count: `${overview.visitas_temporales?.total || 0} registradas`,
-            badgeColor: 'bg-rose-500/10 text-rose-500',
+        labels: [__('Pastores Sanos'), __('Con Padecimientos')],
+        colors: ['#10B981', '#F59E0B'],
+        legend: {
+            position: 'bottom',
+            labels: { colors: '#64748B' },
         },
-        {
-            name: 'Empleados',
-            desc: 'Gestión de personal y carnets',
-            icon: Users,
-            href: '/admin/empleados',
-            count: `${overview.empleados?.total || 0} registrados`,
-            badgeColor: 'bg-indigo-500/10 text-indigo-500',
+        dataLabels: { enabled: true },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '70%',
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: __('Evaluados'),
+                            fontSize: '12px',
+                            color: '#64748B',
+                            formatter: () => `${totalPastores}`,
+                        },
+                    },
+                },
+            },
         },
-        {
-            name: 'Proveedores',
-            desc: 'Proveedores y contratistas',
-            icon: Building2,
-            href: '/admin/proveedores',
-            count: `${overview.proveedores?.total || 0} empresas`,
-            badgeColor: 'bg-purple-500/10 text-purple-500',
-        },
-        {
-            name: 'Productores',
-            desc: 'Productores agrícolas y personal',
-            icon: UserCheck,
-            href: '/admin/productores',
-            count: `${overview.productores?.total || 0} activos`,
-            badgeColor: 'bg-amber-500/10 text-amber-500',
-        },
-        {
-            name: 'Estructura Organizacional',
-            desc: 'Empresas, sucursales y cargos',
-            icon: Layers,
-            href: '/admin/empresas',
-            count: `${overview.organizacion?.sucursales || 0} sucursales`,
-            badgeColor: 'bg-cyan-500/10 text-cyan-500',
-        },
-    ];
+        tooltip: { theme: 'dark' },
+    };
+
+    const getPastorInitials = (nombres?: string, apellidos?: string) => {
+        const n = nombres?.trim()?.[0] || '';
+        const a = apellidos?.trim()?.[0] || '';
+        return `${n}${a}`.toUpperCase() || 'P';
+    };
 
     return (
         <>
-            <Head title="Dashboard Principal" />
+            <Head title={__('Dashboard Ministerial')} />
 
-            <div className="flex flex-col gap-6 p-2 md:p-4">
-                {/* Page Header */}
-                <PageHeader
-                    title="Dashboard General"
-                    description="Panel de control centralizado con métricas de todos los módulos."
-                >
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 shadow-xs">
-                            <CalendarIcon className="size-4 text-muted-foreground" />
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="bg-transparent text-xs font-medium text-foreground outline-hidden"
-                            />
-                            <span className="text-xs text-muted-foreground">a</span>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="bg-transparent text-xs font-medium text-foreground outline-hidden"
-                            />
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
+
+                {/* Encabezado del Dashboard */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border rounded-2xl p-5 shadow-xs">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                                {__('Dashboard Ministerial MMM Venezuela')}
+                            </h1>
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                <CheckCircle2 className="size-3 mr-1" />
+                                {activosCount} {__('Activos')}
+                            </Badge>
                         </div>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => fetchStats(startDate, endDate)}
-                            disabled={loading}
-                        >
-                            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Actualizar</span>
-                        </Button>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                            {__('Resumen ejecutivo de pastores, distribución geográfica por zonas, salud y registros recientes.')}
+                        </p>
                     </div>
-                </PageHeader>
 
-                {/* Top Module Navigation Grid */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {modulesList.map((m) => (
-                        <Link
-                            key={m.name}
-                            href={m.href}
-                            className="group relative flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
-                        >
-                            <div className="flex items-center gap-3.5">
-                                <div className={`rounded-xl p-3 ${m.badgeColor}`}>
-                                    <m.icon className="size-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-foreground group-hover:text-primary">
-                                        {m.name}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">{m.desc}</p>
-                                    <span className="mt-1 inline-block text-[11px] font-medium text-muted-foreground">
-                                        {m.count}
-                                    </span>
-                                </div>
-                            </div>
-                            <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                    <div className="flex items-center gap-2">
+                        <Link href="/admin/pastores">
+                            <Button variant="outline" className="gap-2 text-xs sm:text-sm">
+                                <Users className="size-4" />
+                                {__('Ver Pastores')} ({totalPastores})
+                            </Button>
                         </Link>
-                    ))}
+                        <Link href="/admin/pastores/create">
+                            <Button className="gap-2 shadow text-xs sm:text-sm">
+                                <Plus className="size-4" />
+                                {__('Nuevo Pastor')}
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
-                {/* Key Metrics Summary */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <SectionCard className="relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/30 py-5 shadow-sm">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Accesos Registrados Hoy
-                                </p>
-                                <p className="mt-2 text-2xl font-bold tracking-tight">
-                                    {overview.garita?.accesos_hoy || 0}
-                                </p>
+                {/* 1. Tarjetas por Grado Ministerial */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Colaboradores */}
+                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-amber-500">
+                        <div>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                {__('Colaboradores')}
+                            </span>
+                            <div className="text-2xl font-bold text-foreground mt-1">
+                                {gradosStats.colaboradores}
                             </div>
-                            <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500">
-                                <ShieldCheck className="size-5" />
-                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                                {totalPastores > 0 ? Math.round((gradosStats.colaboradores / totalPastores) * 100) : 0}% {__('del total')}
+                            </span>
                         </div>
-                        <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-500">
-                            <TrendingUp className="size-3.5" />
-                            <span>{overview.garita?.activos_dentro || 0} dentro actualmente</span>
+                        <div className="size-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <Users className="size-6" />
                         </div>
-                    </SectionCard>
+                    </div>
 
-                    <SectionCard className="relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/30 py-5 shadow-sm">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Visitas
-                                </p>
-                                <p className="mt-2 text-2xl font-bold tracking-tight">
-                                    {overview.visitas_temporales?.total || 0}
-                                </p>
+                    {/* Laicos */}
+                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-blue-500">
+                        <div>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                {__('Laicos')}
+                            </span>
+                            <div className="text-2xl font-bold text-foreground mt-1">
+                                {gradosStats.laicos}
                             </div>
-                            <div className="rounded-xl bg-indigo-500/10 p-2.5 text-indigo-500">
-                                <KeyRound className="size-5" />
-                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                                {totalPastores > 0 ? Math.round((gradosStats.laicos / totalPastores) * 100) : 0}% {__('del total')}
+                            </span>
                         </div>
-                        <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>Pases e invitaciones temporales</span>
+                        <div className="size-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <UserCheck className="size-6" />
                         </div>
-                    </SectionCard>
+                    </div>
 
-                    <SectionCard className="relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/30 py-5 shadow-sm">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Empleados Activos
-                                </p>
-                                <p className="mt-2 text-2xl font-bold tracking-tight">
-                                    {overview.empleados?.total || 0}
-                                </p>
+                    {/* Licenciados */}
+                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-purple-500">
+                        <div>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                {__('Licenciados')}
+                            </span>
+                            <div className="text-2xl font-bold text-foreground mt-1">
+                                {gradosStats.licenciados}
                             </div>
-                            <div className="rounded-xl bg-purple-500/10 p-2.5 text-purple-500">
-                                <Users className="size-5" />
-                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                                {totalPastores > 0 ? Math.round((gradosStats.licenciados / totalPastores) * 100) : 0}% {__('del total')}
+                            </span>
                         </div>
-                        <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>{overview.empleados?.preregistros_pendientes || 0} pre-registros por aprobar</span>
+                        <div className="size-12 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                            <BookOpen className="size-6" />
                         </div>
-                    </SectionCard>
+                    </div>
 
-                    <SectionCard className="relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/30 py-5 shadow-sm">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Proveedores & Productores
-                                </p>
-                                <p className="mt-2 text-2xl font-bold tracking-tight">
-                                    {(overview.proveedores?.total || 0) + (overview.productores?.total || 0)}
-                                </p>
+                    {/* Ministros Ordenados */}
+                    <div className="bg-card border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between border-l-4 border-l-indigo-600">
+                        <div>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                {__('Ministros Ordenados')}
+                            </span>
+                            <div className="text-2xl font-bold text-foreground mt-1">
+                                {gradosStats.ordenados}
                             </div>
-                            <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-500">
-                                <Building2 className="size-5" />
-                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                                {totalPastores > 0 ? Math.round((gradosStats.ordenados / totalPastores) * 100) : 0}% {__('del total')}
+                            </span>
                         </div>
-                        <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-500">
-                            <span>{overview.proveedores?.total || 0} proveedores / {overview.productores?.total || 0} productores</span>
+                        <div className="size-12 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                            <Award className="size-6" />
                         </div>
-                    </SectionCard>
+                    </div>
                 </div>
 
-                {/* Charts Section */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Chart 1: Visitas y Accesos en Caseta */}
-                    <SectionCard
-                        title="Visitas y Accesos en Caseta"
-                        description="Frecuencia diaria de personas e ingresos registrados en caseta"
-                        className="p-4"
-                    >
-                        <div className="mt-4 h-72 w-full">
-                            {chartMounted && Chart ? (
-                                <Chart
-                                    options={getGaritaChartOptions()}
-                                    series={[
-                                        {
-                                            name: 'Accesos Registrados',
-                                            data: statsData.accesos,
-                                        },
-                                    ]}
-                                    type="area"
-                                    height="100%"
-                                />
-                            ) : (
-                                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                                    Cargando gráfico de accesos...
-                                </div>
-                            )}
+                {/* 2. Sección Gráficas ApexCharts */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Gráfica por Zonas (Column Bar Chart) */}
+                    <div className="lg:col-span-7 bg-card border rounded-2xl p-5 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between border-b pb-3">
+                            <div>
+                                <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                                    <MapPin className="size-5 text-indigo-600" />
+                                    {__('Distribución de Pastores por Zona')}
+                                </h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    {__('Cantidad de pastores registrados por cada zona geográfica nacional')}
+                                </p>
+                            </div>
                         </div>
-                    </SectionCard>
+                        <div className="pt-2">
+                            <ClientChart
+                                options={zonasChartOptions}
+                                series={[{ name: __('Pastores'), data: zonasChart.series }]}
+                                type="bar"
+                                height={300}
+                            />
+                        </div>
+                    </div>
 
-                    {/* Chart 2: Visitas */}
-                    <SectionCard
-                        title="Visitas"
-                        description="Pases de visita e invitaciones digitales creadas por día"
-                        className="p-4"
-                    >
-                        <div className="mt-4 h-72 w-full">
-                            {chartMounted && Chart ? (
-                                <Chart
-                                    options={getTemporalesChartOptions()}
-                                    series={[
-                                        {
-                                            name: 'Visitas',
-                                            data: statsData.visitas_temporales,
-                                        },
-                                    ]}
-                                    type="area"
-                                    height="100%"
-                                />
-                            ) : (
-                                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                                    Cargando gráfico de visitas...
-                                </div>
-                            )}
+                    {/* Gráficas Donut (Género y Salud) */}
+                    <div className="lg:col-span-5 grid grid-cols-1 gap-6">
+                        {/* Donut Género */}
+                        <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-3">
+                            <div className="flex items-center justify-between border-b pb-2">
+                                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                                    <Users className="size-4 text-blue-500" />
+                                    {__('Distribución por Género')}
+                                </h3>
+                            </div>
+                            <ClientChart
+                                options={generoChartOptions}
+                                series={[generoChart.masculino, generoChart.femenino]}
+                                type="donut"
+                                height={220}
+                            />
                         </div>
-                    </SectionCard>
+
+                        {/* Donut Salud */}
+                        <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-3">
+                            <div className="flex items-center justify-between border-b pb-2">
+                                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                                    <Activity className="size-4 text-emerald-500" />
+                                    {__('Estado de Salud')}
+                                </h3>
+                            </div>
+                            <ClientChart
+                                options={saludChartOptions}
+                                series={[saludChart.sanos, saludChart.enfermos]}
+                                type="donut"
+                                height={220}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Timeline: Pastores Recientemente Agregados */}
+                <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b pb-3">
+                        <div>
+                            <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                                <Clock className="size-5 text-indigo-600" />
+                                {__('Pastores Recientemente Registrados')}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                {__('Línea de tiempo con las últimas altas en el sistema')}
+                            </p>
+                        </div>
+                        <Link href="/admin/pastores">
+                            <Button variant="ghost" size="sm" className="gap-1 text-xs text-indigo-600">
+                                {__('Ver Todos')}
+                                <ChevronRight className="size-4" />
+                            </Button>
+                        </Link>
+                    </div>
+
+                    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-border">
+                        {recentPastores.length > 0 ? (
+                            recentPastores.map((pastor) => {
+                                const initials = getPastorInitials(pastor.nombres, pastor.apellidos);
+                                return (
+                                    <div key={pastor.id} className="relative flex items-center justify-between gap-4 group">
+                                        {/* Punto de tiempo */}
+                                        <div className="absolute -left-6 top-1.5 size-5 rounded-full border-2 border-background bg-indigo-600 ring-2 ring-indigo-100 dark:ring-indigo-950 flex items-center justify-center shrink-0">
+                                            <div className="size-1.5 bg-white rounded-full" />
+                                        </div>
+
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                            <Avatar className="size-10 border shrink-0">
+                                                {pastor.foto && <AvatarImage src={pastor.foto} className="object-cover" />}
+                                                <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold text-xs">
+                                                    {initials}
+                                                </AvatarFallback>
+                                            </Avatar>
+
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-bold text-sm text-foreground hover:text-indigo-600 transition-colors truncate">
+                                                        {pastor.nombres} {pastor.apellidos}
+                                                    </span>
+                                                    <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">
+                                                        {pastor.codigo}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                                                    <span>{pastor.nivel_ministerial}</span>
+                                                    <span>•</span>
+                                                    <span>Zona {pastor.zona || '—'} · Dist. {pastor.distrito || '—'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right shrink-0">
+                                            <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                                {pastor.created_at_human}
+                                            </span>
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                                                {pastor.created_at_date}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="text-xs text-muted-foreground py-4 text-center">
+                                {__('No se registran pastores recientes.')}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </>
     );
 }
-
-Dashboard.layout = {
-    breadcrumbs: [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-        },
-    ],
-};
