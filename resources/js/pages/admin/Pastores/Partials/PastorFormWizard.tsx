@@ -215,6 +215,47 @@ export default function PastorFormWizard({
     const [isDragOver, setIsDragOver] = useState(false);
     const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
+    const resizeAndCompressImage = (imageSrc: string, targetW = 350, targetH = 420, quality = 0.85): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = imageSrc;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = targetW;
+                canvas.height = targetH;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    // Recorte inteligente de aspecto proporcional (object-fit: cover)
+                    const imgRatio = img.width / img.height;
+                    const targetRatio = targetW / targetH;
+                    let renderW = targetW;
+                    let renderH = targetH;
+                    let offsetX = 0;
+                    let offsetY = 0;
+
+                    if (imgRatio > targetRatio) {
+                        renderW = targetH * imgRatio;
+                        offsetX = (targetW - renderW) / 2;
+                    } else {
+                        renderH = targetW / imgRatio;
+                        offsetY = (targetH - renderH) / 2;
+                    }
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, targetW, targetH);
+                    ctx.drawImage(img, offsetX, offsetY, renderW, renderH);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedDataUrl);
+                } else {
+                    resolve(imageSrc);
+                }
+            };
+            img.onerror = () => resolve(imageSrc);
+        });
+    };
+
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -240,31 +281,36 @@ export default function PastorFormWizard({
         setIsCameraActive(false);
     };
 
-    const capturePhoto = () => {
+    const capturePhoto = async () => {
         if (videoRef.current && canvasRef.current) {
             const video = videoRef.current;
             const canvas = canvasRef.current;
-            canvas.width = 400;
-            canvas.height = 480;
+            canvas.width = 350;
+            canvas.height = 420;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                ctx.drawImage(video, 0, 0, 400, 480);
-                const dataUrl = canvas.toDataURL('image/png');
-                setData('foto', dataUrl);
+                ctx.drawImage(video, 0, 0, 350, 420);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                const compressed = await resizeAndCompressImage(dataUrl, 350, 420, 0.8);
+                setData('foto', compressed);
                 stopCamera();
             }
         }
     };
 
-    const processFile = (file: File) => {
+    const processFile = async (file: File) => {
         if (!file.type.startsWith('image/')) {
             alert(__('Por favor seleccione un archivo de imagen válido (JPEG, PNG, WEBP).'));
             return;
         }
+
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             if (e.target?.result) {
-                setData('foto', e.target.result as string);
+                const rawBase64 = e.target.result as string;
+                // Redimensionar a formato carnet (350x420 px) y comprimir a JPG (~50KB-90KB)
+                const compressed = await resizeAndCompressImage(rawBase64, 350, 420, 0.8);
+                setData('foto', compressed);
             }
         };
         reader.readAsDataURL(file);
@@ -1075,142 +1121,137 @@ export default function PastorFormWizard({
                 </Card>
             )}
 
-            {/* PASO 4: FOTOGRAFÍA DEL PASTOR */}
+            {/* PASO 4: FOTOGRAFÍA DEL PASTOR (TIPO CARNET COMPACTO) */}
             {activeTab === 4 && (
-                <Card className="border shadow-sm">
-                    <CardHeader className="border-b bg-muted/20">
-                        <div className="flex items-center gap-2 text-primary font-semibold text-base">
-                            <Camera className="h-5 w-5" />
-                            <span>{__('Paso 4: Fotografía Oficial del Pastor / Obrero')}</span>
+                <Card className="border shadow-sm max-w-xl mx-auto">
+                    <CardHeader className="border-b bg-muted/20 py-3 px-5">
+                        <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                            <Camera className="h-4 w-4" />
+                            <span>{__('Paso 4: Fotografía Tipo Carnet del Pastor')}</span>
                         </div>
                         <CardDescription className="text-xs">
-                            {__('Cargue la foto oficial tipo carnet arrastrándola desde su equipo o tome una foto en directo con su cámara web.')}
+                            {__('Suba una foto o tome una captura con su cámara web. Las fotos se redimensionan y comprimen automáticamente en tamaño (KB).')}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                            {/* Columna Izquierda: Captura por Cámara o Drag & Drop */}
-                            <div className="space-y-4">
-                                <div className="flex flex-wrap items-center gap-3">
-                                    {!isCameraActive ? (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={startCamera}
-                                            className="gap-2 border-primary/40 text-primary hover:bg-primary/5"
-                                        >
-                                            <Camera className="h-4 w-4" />
-                                            {__('Activar Cámara Web')}
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            onClick={stopCamera}
-                                            className="gap-2"
-                                        >
-                                            <Video className="h-4 w-4" />
-                                            {__('Detener Cámara')}
-                                        </Button>
-                                    )}
+                    <CardContent className="p-5 flex flex-col items-center gap-4">
+                        {/* Acciones principales */}
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                            {!isCameraActive ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={startCamera}
+                                    className="gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/5"
+                                >
+                                    <Camera className="h-3.5 w-3.5" />
+                                    {__('Tomar Foto con Cámara')}
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={stopCamera}
+                                    className="gap-1.5 text-xs"
+                                >
+                                    <Video className="h-3.5 w-3.5" />
+                                    {__('Detener Cámara')}
+                                </Button>
+                            )}
 
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="gap-1.5 text-xs"
+                            >
+                                <Upload className="h-3.5 w-3.5" />
+                                {__('Buscar Archivo')}
+                            </Button>
+
+                            {data.foto && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setData('foto', '')}
+                                    className="gap-1.5 text-xs text-destructive hover:bg-destructive/10"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    {__('Quitar Foto')}
+                                </Button>
+                            )}
+
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileInputChange}
+                                className="hidden"
+                            />
+                        </div>
+
+                        {/* Recuadro Tipo Carnet Exacto (175px x 210px) */}
+                        <div className="relative flex flex-col items-center">
+                            {isCameraActive ? (
+                                <div className="relative w-[175px] h-[210px] rounded-lg overflow-hidden border-2 border-primary bg-black shadow-md flex items-center justify-center">
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        className="w-full h-full object-cover"
+                                    />
                                     <Button
                                         type="button"
-                                        variant="secondary"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="gap-2"
+                                        size="sm"
+                                        onClick={capturePhoto}
+                                        className="absolute bottom-2 left-1/2 -translate-x-1/2 gap-1 text-[11px] h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow"
                                     >
-                                        <Upload className="h-4 w-4" />
-                                        {__('Buscar Archivo')}
+                                        <Camera className="h-3 w-3" />
+                                        {__('Capturar Foto')}
                                     </Button>
-
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleFileInputChange}
-                                        className="hidden"
-                                    />
                                 </div>
+                            ) : photoPreviewUrl ? (
+                                <div className="relative group w-[175px] h-[210px]">
+                                    <img
+                                        src={photoPreviewUrl}
+                                        alt="Foto Pastor Carnet"
+                                        className="w-full h-full object-cover rounded-lg border-2 border-primary/40 shadow-sm"
+                                    />
+                                    <Badge variant="secondary" className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] py-0 px-1.5 bg-background/90 backdrop-blur shadow-sm">
+                                        {__('Formato Carnet (OK)')}
+                                    </Badge>
+                                </div>
+                            ) : (
+                                <div
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`w-[175px] h-[210px] border-2 border-dashed rounded-lg cursor-pointer transition-all flex flex-col items-center justify-center p-3 text-center ${
+                                        isDragOver
+                                            ? 'border-primary bg-primary/10 scale-[1.02]'
+                                            : 'border-border hover:border-primary/60 hover:bg-accent/40 bg-card'
+                                    }`}
+                                >
+                                    <Upload className="h-7 w-7 text-muted-foreground/60 mb-2" />
+                                    <span className="text-xs font-semibold text-foreground leading-tight">
+                                        {__('Arrastre la foto aquí')}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground mt-1">
+                                        {__('o clic para explorar')}
+                                    </span>
+                                </div>
+                            )}
 
-                                {/* Área de Cámara Activa */}
-                                {isCameraActive ? (
-                                    <div className="relative rounded-xl overflow-hidden border-2 border-primary bg-black aspect-[3.5/4.2] max-w-sm flex items-center justify-center shadow-lg">
-                                        <video
-                                            ref={videoRef}
-                                            autoPlay
-                                            playsInline
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <Button
-                                            type="button"
-                                            onClick={capturePhoto}
-                                            className="absolute bottom-4 left-1/2 -translate-x-1/2 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-                                        >
-                                            <Camera className="h-4 w-4" />
-                                            {__('Capturar Foto')}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    /* Zona Drag & Drop */
-                                    <div
-                                        onDragOver={handleDragOver}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={handleDrop}
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[240px] ${
-                                            isDragOver
-                                                ? 'border-primary bg-primary/10 scale-[1.01]'
-                                                : 'border-border hover:border-primary/50 hover:bg-accent/30'
-                                        }`}
-                                    >
-                                        <div className="p-4 rounded-full bg-primary/10 text-primary mb-3">
-                                            <Upload className="h-8 w-8" />
-                                        </div>
-                                        <h4 className="font-semibold text-sm text-foreground">
-                                            {__('Arrastre y suelte su foto aquí')}
-                                        </h4>
-                                        <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                                            {__('Soporta imágenes JPG, PNG o WEBP. Haga clic para explorar en sus archivos.')}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Columna Derecha: Vista Previa Tipo Carnet */}
-                            <div className="flex flex-col items-center justify-center p-6 bg-muted/20 border rounded-xl space-y-4 min-h-[280px]">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    {__('Vista Previa (Tipo Carnet)')}
-                                </span>
-
-                                {photoPreviewUrl ? (
-                                    <div className="relative group">
-                                        <img
-                                            src={photoPreviewUrl}
-                                            alt="Foto Pastor"
-                                            className="w-44 h-56 object-cover rounded-xl border-2 border-primary/40 shadow-md transition-all group-hover:brightness-95"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="icon"
-                                            onClick={() => setData('foto', '')}
-                                            title={__('Eliminar Foto')}
-                                            className="absolute -top-2 -right-2 rounded-full h-8 w-8 shadow"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="w-44 h-56 border-2 border-dashed border-muted-foreground/30 rounded-xl flex flex-col items-center justify-center text-muted-foreground bg-card p-4 text-center">
-                                        <User className="h-16 w-16 stroke-[1.5] text-muted-foreground/40 mb-2" />
-                                        <span className="text-xs font-medium italic">{__('Sin fotografía asignada')}</span>
-                                    </div>
-                                )}
-
-                                <canvas ref={canvasRef} className="hidden" />
-                            </div>
+                            <canvas ref={canvasRef} className="hidden" />
                         </div>
+
+                        <p className="text-[11px] text-muted-foreground text-center max-w-xs italic">
+                            {__('Dimensiones estándar tipo carnet (3.5 cm x 4.2 cm). Compresión automática activada.')}
+                        </p>
                     </CardContent>
                 </Card>
             )}

@@ -131,18 +131,38 @@ class PlanillaService
         $photoH = 42;
 
         $fpdf->SetXY($photoX, $photoY);
-        $fpdf->SetFillColor($cellColor1[0], $cellColor1[1], $cellColor1[2]);
-        $fpdf->SetTextColor(120, 120, 120);
+        $fpdf->SetFillColor(250, 250, 250);
         $fpdf->SetDrawColor(189, 195, 199);
-        $fpdf->SetFont('Arial', 'B', 8);
-        $fpdf->Cell($photoW, $photoH, '', 1, 0, 'C', true);
+        $fpdf->SetLineWidth(0.4);
+        $fpdf->Rect($photoX, $photoY, $photoW, $photoH, 'DF');
 
-        if ($pastor->foto && file_exists(public_path('pastores/' . str_replace(' ', '', $pastor->foto)))) {
-            $imagePath = public_path('pastores/' . str_replace(' ', '', $pastor->foto));
-            $fpdf->Image($imagePath, $photoX, $photoY, $photoW, $photoH);
+        if ($pastor->foto && file_exists(public_path('pastores/' . trim($pastor->foto)))) {
+            $imagePath = public_path('pastores/' . trim($pastor->foto));
+            $imgInfo = @getimagesize($imagePath);
+
+          
+                $origW = $imgInfo[0];
+                $origH = $imgInfo[1];
+
+                // Margen interno de 0.5mm dentro del recuadro carnet
+                $maxW = $photoW - 1; // 34mm
+                $maxH = $photoH - 1; // 41mm
+
+                // Calcular escala para mantener aspecto sin estirar
+                $scale = min($maxW / $origW, $maxH / $origH);
+                $finalW = $origW * $scale;
+                $finalH = $origH * $scale;
+
+                // Centrar dentro del recuadro carnet
+                $finalX = $photoX + 0.5 + ($maxW - $finalW) / 2;
+                $finalY = $photoY + 0.5 + ($maxH - $finalH) / 2;
+
+                $fpdf->Image($imagePath, 162, 10, 38, 42);
+       
         } else {
             $fpdf->SetXY($photoX, $photoY + 18);
             $fpdf->SetFont('Arial', 'I', 8);
+            $fpdf->SetTextColor(120, 120, 120);
             $fpdf->Cell($photoW, 4, utf8_decode('FOTO DEL OBRERO'), 0, 0, 'C');
         }
 
