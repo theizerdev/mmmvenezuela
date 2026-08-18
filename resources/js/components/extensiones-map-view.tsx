@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Building2, Layers, MapPin, CheckCircle2, XCircle } from 'lucide-react';
+import { Building2, Layers, MapPin, CheckCircle2, XCircle, Maximize2, Minimize2 } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
@@ -81,6 +81,7 @@ export function ExtensionesMapView({
     className = 'h-[520px] w-full rounded-xl overflow-hidden border shadow-xs',
 }: ExtensionesMapViewProps) {
     const { __ } = useTranslate();
+    const mapWrapperRef = useRef<HTMLDivElement>(null);
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapboxMapRef = useRef<mapboxgl.Map | null>(null);
     const mapboxMarkersRef = useRef<mapboxgl.Marker[]>([]);
@@ -90,11 +91,55 @@ export function ExtensionesMapView({
 
     const [selectedEstadoFilter, setSelectedEstadoFilter] = useState<string>('todos');
     const [useMapbox, setUseMapbox] = useState<boolean>(true);
+    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
     // Obtener clave Mapbox desde Inertia global props
     const pageProps = usePage().props as any;
     const mapboxApiKey = pageProps.mapbox_api_key || pageProps.auth?.user?.empresa?.mapbox_api_key;
     const mapboxActive = pageProps.mapbox_active !== undefined ? pageProps.mapbox_active : pageProps.auth?.user?.empresa?.mapbox_active;
+
+    // Escuchar eventos de cambio de pantalla completa (Esc o boton)
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const isFull = Boolean(document.fullscreenElement);
+            setIsFullscreen(isFull);
+            setTimeout(() => {
+                if (mapboxMapRef.current) mapboxMapRef.current.resize();
+                if (leafletMapRef.current) leafletMapRef.current.invalidateSize();
+            }, 200);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        };
+    }, []);
+
+    const toggleFullscreen = () => {
+        if (!mapWrapperRef.current) return;
+
+        if (!document.fullscreenElement) {
+            mapWrapperRef.current.requestFullscreen().then(() => {
+                setIsFullscreen(true);
+                setTimeout(() => {
+                    if (mapboxMapRef.current) mapboxMapRef.current.resize();
+                    if (leafletMapRef.current) leafletMapRef.current.invalidateSize();
+                }, 200);
+            }).catch((err) => {
+                console.error("Fullscreen error:", err);
+            });
+        } else {
+            document.exitFullscreen().then(() => {
+                setIsFullscreen(false);
+                setTimeout(() => {
+                    if (mapboxMapRef.current) mapboxMapRef.current.resize();
+                    if (leafletMapRef.current) leafletMapRef.current.invalidateSize();
+                }, 200);
+            }).catch((err) => {
+                console.error("Exit fullscreen error:", err);
+            });
+        }
+    };
 
     // Pines válidos con coordenadas numéricas
     const pinesConCoordenadas = pines.filter(
@@ -128,8 +173,9 @@ export function ExtensionesMapView({
                 zoom: 5.5,
             });
 
-            // Controles de navegación Mapbox en la esquina superior derecha
+            // Controles de navegación y pantalla completa en la esquina superior derecha
             map.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
+            map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
             mapboxMapRef.current = map;
         } else {
             // Fallback Leaflet / OpenStreetMap
@@ -310,39 +356,61 @@ export function ExtensionesMapView({
     }, [useMapbox, pinesConCoordenadas, selectedEstadoFilter]);
 
     return (
-        <div className="space-y-3">
-            {/* Chips de Selección por Estado */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+        <div ref={mapWrapperRef} className={`space-y-3 ${isFullscreen ? 'bg-background p-4 flex flex-col h-screen w-screen overflow-hidden' : ''}`}>
+            {/* Chips de Selección por Estado y Botón de Pantalla Completa */}
+            <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    <Button
+                        type="button"
+                        variant={selectedEstadoFilter === 'todos' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleEstadoClick('todos')}
+                        className="h-7 text-xs rounded-full shrink-0 font-medium"
+                    >
+                        <Layers className="size-3.5 mr-1" />
+                        {__('Todos los Estados')} ({pinesConCoordenadas.length})
+                    </Button>
+
+                    {estadosCount
+                        .filter((e) => e.cantidad > 0)
+                        .map((est) => (
+                            <Button
+                                key={est.estado_nombre}
+                                type="button"
+                                variant={selectedEstadoFilter === est.estado_nombre ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleEstadoClick(est.estado_nombre)}
+                                className="h-7 text-xs rounded-full shrink-0 font-medium"
+                            >
+                                {est.estado_nombre} ({est.cantidad})
+                            </Button>
+                        ))}
+                </div>
+
                 <Button
                     type="button"
-                    variant={selectedEstadoFilter === 'todos' ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    onClick={() => handleEstadoClick('todos')}
-                    className="h-7 text-xs rounded-full shrink-0 font-medium"
+                    onClick={toggleFullscreen}
+                    className="h-7 text-xs rounded-full shrink-0 font-semibold gap-1 bg-card shadow-2xs ml-2"
                 >
-                    <Layers className="size-3.5 mr-1" />
-                    {__('Todos los Estados')} ({pinesConCoordenadas.length})
+                    {isFullscreen ? (
+                        <>
+                            <Minimize2 className="size-3.5 text-indigo-600" />
+                            {__('Salir de Pantalla Completa')}
+                        </>
+                    ) : (
+                        <>
+                            <Maximize2 className="size-3.5 text-indigo-600" />
+                            {__('Pantalla Completa')}
+                        </>
+                    )}
                 </Button>
-
-                {estadosCount
-                    .filter((e) => e.cantidad > 0)
-                    .map((est) => (
-                        <Button
-                            key={est.estado_nombre}
-                            type="button"
-                            variant={selectedEstadoFilter === est.estado_nombre ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleEstadoClick(est.estado_nombre)}
-                            className="h-7 text-xs rounded-full shrink-0 font-medium"
-                        >
-                            {est.estado_nombre} ({est.cantidad})
-                        </Button>
-                    ))}
             </div>
 
             {/* Contenedor del Mapa Mapbox GL */}
-            <div className="relative">
-                <div ref={mapContainerRef} className={className} />
+            <div className={`relative ${isFullscreen ? 'flex-1 w-full' : ''}`}>
+                <div ref={mapContainerRef} className={isFullscreen ? 'h-full w-full rounded-xl overflow-hidden border shadow-xs min-h-[calc(100vh-80px)]' : className} />
 
                 {/* Insignia / Leyenda colocada en la parte INFERIOR IZQUIERDA para NO solapar los botones de zoom (+/-) */}
                 <div className="absolute bottom-3 left-3 bg-card/95 backdrop-blur-md border rounded-xl p-2.5 shadow-lg z-[10] flex items-center gap-4 text-xs font-semibold">
