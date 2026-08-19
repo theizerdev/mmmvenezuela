@@ -11,7 +11,10 @@ import {
     CheckCircle2,
     Filter,
     Radio,
-    Tv
+    Tv,
+    Paperclip,
+    FileText,
+    UploadCloud
 } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
@@ -22,6 +25,7 @@ import { Select2, Select2Option } from '@/components/ui/select2';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+import { ExtensionDocumentoWizardModal } from './Partials/ExtensionDocumentoWizardModal';
 import type { BreadcrumbItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
 
@@ -63,6 +67,11 @@ interface Extension {
     nombre_medio_comunicacion?: string;
     donde_medio_comunicacion?: string;
     sector?: string;
+    documento_path?: string;
+    documento_nombre?: string;
+    documento_size?: number;
+    documento_mime?: string;
+    documento_url?: string;
 }
 
 interface PageProps {
@@ -106,6 +115,9 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<number | null>(null);
+
+    const [isWizardOpen, setIsWizardOpen] = useState(false);
+    const [selectedDocExtension, setSelectedDocExtension] = useState<Extension | null>(null);
 
     const zonaOptions: Select2Option[] = useMemo(() => [
         { value: '', label: __('Todas las Zonas') },
@@ -263,6 +275,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                                     <th className="px-4 py-3 text-center">{__('Miembros')}</th>
                                     <th className="px-4 py-3 text-center">{__('Campos Blancos')}</th>
                                     <th className="px-4 py-3 text-center">{__('Medios de Com.')}</th>
+                                    <th className="px-4 py-3 text-center">{__('Documento')}</th>
                                     <th className="px-4 py-3 text-center">{__('Estado')}</th>
                                     <th className="px-4 py-3 text-right">{__('Acciones')}</th>
                                 </tr>
@@ -392,6 +405,55 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                                             </td>
 
                                             <td className="px-4 py-3.5 text-center">
+                                                {ext.documento_url ? (
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <a
+                                                            href={ext.documento_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex"
+                                                        >
+                                                            <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 gap-1 text-[11px] cursor-pointer">
+                                                                <FileText className="size-3 text-indigo-600" />
+                                                                <span className="max-w-[90px] truncate">{ext.documento_nombre || __('Ver Doc')}</span>
+                                                            </Badge>
+                                                        </a>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => {
+                                                                        setSelectedDocExtension(ext);
+                                                                        setIsWizardOpen(true);
+                                                                    }}
+                                                                    className="size-7 text-muted-foreground hover:text-indigo-600"
+                                                                >
+                                                                    <UploadCloud className="size-3.5" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="text-xs">
+                                                                {__('Reemplazar o Actualizar Documento')}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedDocExtension(ext);
+                                                            setIsWizardOpen(true);
+                                                        }}
+                                                        className="h-7 px-2.5 text-[11px] gap-1 border-dashed text-muted-foreground hover:text-indigo-600 hover:border-indigo-400"
+                                                    >
+                                                        <Paperclip className="size-3" />
+                                                        {__('Adjuntar')}
+                                                    </Button>
+                                                )}
+                                            </td>
+
+                                            <td className="px-4 py-3.5 text-center">
                                                 {ext.activa ? (
                                                     <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-100">
                                                         {__('Activa')}
@@ -405,6 +467,25 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
 
                                             <td className="px-4 py-3.5 text-right">
                                                 <div className="flex items-center justify-end gap-1">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => {
+                                                                    setSelectedDocExtension(ext);
+                                                                    setIsWizardOpen(true);
+                                                                }}
+                                                                className="size-8 text-muted-foreground hover:text-indigo-600"
+                                                            >
+                                                                <Paperclip className="size-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="text-xs">
+                                                            {__('Wizard Adjuntar Documento')}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+
                                                     <Link href={`/admin/extensiones/${ext.id}/edit`}>
                                                         <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-indigo-600">
                                                             <Edit3 className="size-4" />
@@ -427,7 +508,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={9} className="px-4 py-8 text-center text-xs text-muted-foreground">
+                                        <td colSpan={10} className="px-4 py-8 text-center text-xs text-muted-foreground">
                                             {__('No se encontraron extensiones registradas.')}
                                         </td>
                                     </tr>
@@ -445,6 +526,13 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                 onConfirm={handleDelete}
                 title={__('Eliminar Extensión')}
                 description={__('¿Está seguro de que desea eliminar esta extensión de la base de datos? Esta acción no se puede deshacer.')}
+            />
+
+            {/* Modal Wizard de Adjuntar Documento */}
+            <ExtensionDocumentoWizardModal
+                isOpen={isWizardOpen}
+                onClose={() => setIsWizardOpen(false)}
+                extension={selectedDocExtension}
             />
         </TooltipProvider>
     );

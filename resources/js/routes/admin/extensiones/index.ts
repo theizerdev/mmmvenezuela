@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::dashboard
- * @see app/Http/Controllers/Admin/ExtensionController.php:20
+ * @see app/Http/Controllers/Admin/ExtensionController.php:22
  * @route '/admin/extensiones/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::dashboard
- * @see app/Http/Controllers/Admin/ExtensionController.php:20
+ * @see app/Http/Controllers/Admin/ExtensionController.php:22
  * @route '/admin/extensiones/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::dashboard
- * @see app/Http/Controllers/Admin/ExtensionController.php:20
+ * @see app/Http/Controllers/Admin/ExtensionController.php:22
  * @route '/admin/extensiones/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::dashboard
- * @see app/Http/Controllers/Admin/ExtensionController.php:20
+ * @see app/Http/Controllers/Admin/ExtensionController.php:22
  * @route '/admin/extensiones/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::dashboard
- * @see app/Http/Controllers/Admin/ExtensionController.php:20
+ * @see app/Http/Controllers/Admin/ExtensionController.php:22
  * @route '/admin/extensiones/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::dashboard
- * @see app/Http/Controllers/Admin/ExtensionController.php:20
+ * @see app/Http/Controllers/Admin/ExtensionController.php:22
  * @route '/admin/extensiones/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::dashboard
- * @see app/Http/Controllers/Admin/ExtensionController.php:20
+ * @see app/Http/Controllers/Admin/ExtensionController.php:22
  * @route '/admin/extensiones/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/extensiones'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/extensiones'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/extensiones'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/extensiones'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/extensiones'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/extensiones'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/extensiones'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/extensiones/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -172,7 +172,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/extensiones/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/extensiones/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -190,7 +190,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/extensiones/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -200,7 +200,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/extensiones/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -210,7 +210,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/extensiones/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -219,7 +219,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/extensiones/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -235,7 +235,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::store
- * @see app/Http/Controllers/Admin/ExtensionController.php:249
+ * @see app/Http/Controllers/Admin/ExtensionController.php:251
  * @route '/admin/extensiones'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -250,7 +250,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::store
- * @see app/Http/Controllers/Admin/ExtensionController.php:249
+ * @see app/Http/Controllers/Admin/ExtensionController.php:251
  * @route '/admin/extensiones'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -259,7 +259,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::store
- * @see app/Http/Controllers/Admin/ExtensionController.php:249
+ * @see app/Http/Controllers/Admin/ExtensionController.php:251
  * @route '/admin/extensiones'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -269,7 +269,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::store
- * @see app/Http/Controllers/Admin/ExtensionController.php:249
+ * @see app/Http/Controllers/Admin/ExtensionController.php:251
  * @route '/admin/extensiones'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -279,7 +279,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::store
- * @see app/Http/Controllers/Admin/ExtensionController.php:249
+ * @see app/Http/Controllers/Admin/ExtensionController.php:251
  * @route '/admin/extensiones'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -290,7 +290,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::edit
- * @see app/Http/Controllers/Admin/ExtensionController.php:317
+ * @see app/Http/Controllers/Admin/ExtensionController.php:319
  * @route '/admin/extensiones/{extension}/edit'
  */
 export const edit = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -305,7 +305,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::edit
- * @see app/Http/Controllers/Admin/ExtensionController.php:317
+ * @see app/Http/Controllers/Admin/ExtensionController.php:319
  * @route '/admin/extensiones/{extension}/edit'
  */
 edit.url = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -333,7 +333,7 @@ edit.url = (args: { extension: string | number } | [extension: string | number ]
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::edit
- * @see app/Http/Controllers/Admin/ExtensionController.php:317
+ * @see app/Http/Controllers/Admin/ExtensionController.php:319
  * @route '/admin/extensiones/{extension}/edit'
  */
 edit.get = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -342,7 +342,7 @@ edit.get = (args: { extension: string | number } | [extension: string | number ]
 })
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::edit
- * @see app/Http/Controllers/Admin/ExtensionController.php:317
+ * @see app/Http/Controllers/Admin/ExtensionController.php:319
  * @route '/admin/extensiones/{extension}/edit'
  */
 edit.head = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -352,7 +352,7 @@ edit.head = (args: { extension: string | number } | [extension: string | number 
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::edit
- * @see app/Http/Controllers/Admin/ExtensionController.php:317
+ * @see app/Http/Controllers/Admin/ExtensionController.php:319
  * @route '/admin/extensiones/{extension}/edit'
  */
     const editForm = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -362,7 +362,7 @@ edit.head = (args: { extension: string | number } | [extension: string | number 
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::edit
- * @see app/Http/Controllers/Admin/ExtensionController.php:317
+ * @see app/Http/Controllers/Admin/ExtensionController.php:319
  * @route '/admin/extensiones/{extension}/edit'
  */
         editForm.get = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -371,7 +371,7 @@ edit.head = (args: { extension: string | number } | [extension: string | number 
         })
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::edit
- * @see app/Http/Controllers/Admin/ExtensionController.php:317
+ * @see app/Http/Controllers/Admin/ExtensionController.php:319
  * @route '/admin/extensiones/{extension}/edit'
  */
         editForm.head = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -387,7 +387,7 @@ edit.head = (args: { extension: string | number } | [extension: string | number 
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::update
- * @see app/Http/Controllers/Admin/ExtensionController.php:365
+ * @see app/Http/Controllers/Admin/ExtensionController.php:367
  * @route '/admin/extensiones/{extension}'
  */
 export const update = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -402,7 +402,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::update
- * @see app/Http/Controllers/Admin/ExtensionController.php:365
+ * @see app/Http/Controllers/Admin/ExtensionController.php:367
  * @route '/admin/extensiones/{extension}'
  */
 update.url = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -430,7 +430,7 @@ update.url = (args: { extension: string | number } | [extension: string | number
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::update
- * @see app/Http/Controllers/Admin/ExtensionController.php:365
+ * @see app/Http/Controllers/Admin/ExtensionController.php:367
  * @route '/admin/extensiones/{extension}'
  */
 update.put = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -440,7 +440,7 @@ update.put = (args: { extension: string | number } | [extension: string | number
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::update
- * @see app/Http/Controllers/Admin/ExtensionController.php:365
+ * @see app/Http/Controllers/Admin/ExtensionController.php:367
  * @route '/admin/extensiones/{extension}'
  */
     const updateForm = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -455,7 +455,7 @@ update.put = (args: { extension: string | number } | [extension: string | number
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::update
- * @see app/Http/Controllers/Admin/ExtensionController.php:365
+ * @see app/Http/Controllers/Admin/ExtensionController.php:367
  * @route '/admin/extensiones/{extension}'
  */
         updateForm.put = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -470,8 +470,221 @@ update.put = (args: { extension: string | number } | [extension: string | number
     
     update.form = updateForm
 /**
+* @see \App\Http\Controllers\Admin\ExtensionController::verifySecurity
+ * @see app/Http/Controllers/Admin/ExtensionController.php:479
+ * @route '/admin/extensiones/verify-security'
+ */
+export const verifySecurity = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: verifySecurity.url(options),
+    method: 'post',
+})
+
+verifySecurity.definition = {
+    methods: ["post"],
+    url: '/admin/extensiones/verify-security',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::verifySecurity
+ * @see app/Http/Controllers/Admin/ExtensionController.php:479
+ * @route '/admin/extensiones/verify-security'
+ */
+verifySecurity.url = (options?: RouteQueryOptions) => {
+    return verifySecurity.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::verifySecurity
+ * @see app/Http/Controllers/Admin/ExtensionController.php:479
+ * @route '/admin/extensiones/verify-security'
+ */
+verifySecurity.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: verifySecurity.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\ExtensionController::verifySecurity
+ * @see app/Http/Controllers/Admin/ExtensionController.php:479
+ * @route '/admin/extensiones/verify-security'
+ */
+    const verifySecurityForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: verifySecurity.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ExtensionController::verifySecurity
+ * @see app/Http/Controllers/Admin/ExtensionController.php:479
+ * @route '/admin/extensiones/verify-security'
+ */
+        verifySecurityForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: verifySecurity.url(options),
+            method: 'post',
+        })
+    
+    verifySecurity.form = verifySecurityForm
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::uploadDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:502
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+export const uploadDocumento = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: uploadDocumento.url(args, options),
+    method: 'post',
+})
+
+uploadDocumento.definition = {
+    methods: ["post"],
+    url: '/admin/extensiones/{extension}/documento',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::uploadDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:502
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+uploadDocumento.url = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { extension: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    extension: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        extension: args.extension,
+                }
+
+    return uploadDocumento.definition.url
+            .replace('{extension}', parsedArgs.extension.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::uploadDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:502
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+uploadDocumento.post = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: uploadDocumento.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\ExtensionController::uploadDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:502
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+    const uploadDocumentoForm = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: uploadDocumento.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ExtensionController::uploadDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:502
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+        uploadDocumentoForm.post = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: uploadDocumento.url(args, options),
+            method: 'post',
+        })
+    
+    uploadDocumento.form = uploadDocumentoForm
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::deleteDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:550
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+export const deleteDocumento = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+    url: deleteDocumento.url(args, options),
+    method: 'delete',
+})
+
+deleteDocumento.definition = {
+    methods: ["delete"],
+    url: '/admin/extensiones/{extension}/documento',
+} satisfies RouteDefinition<["delete"]>
+
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::deleteDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:550
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+deleteDocumento.url = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { extension: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    extension: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        extension: args.extension,
+                }
+
+    return deleteDocumento.definition.url
+            .replace('{extension}', parsedArgs.extension.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\ExtensionController::deleteDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:550
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+deleteDocumento.delete = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+    url: deleteDocumento.url(args, options),
+    method: 'delete',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\ExtensionController::deleteDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:550
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+    const deleteDocumentoForm = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: deleteDocumento.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ExtensionController::deleteDocumento
+ * @see app/Http/Controllers/Admin/ExtensionController.php:550
+ * @route '/admin/extensiones/{extension}/documento'
+ */
+        deleteDocumentoForm.delete = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: deleteDocumento.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    deleteDocumento.form = deleteDocumentoForm
+/**
 * @see \App\Http\Controllers\Admin\ExtensionController::destroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/{extension}'
  */
 export const destroy = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -486,7 +699,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::destroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/{extension}'
  */
 destroy.url = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -514,7 +727,7 @@ destroy.url = (args: { extension: string | number } | [extension: string | numbe
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::destroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/{extension}'
  */
 destroy.delete = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -524,7 +737,7 @@ destroy.delete = (args: { extension: string | number } | [extension: string | nu
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::destroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/{extension}'
  */
     const destroyForm = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -539,7 +752,7 @@ destroy.delete = (args: { extension: string | number } | [extension: string | nu
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::destroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/{extension}'
  */
         destroyForm.delete = (args: { extension: string | number } | [extension: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -555,7 +768,7 @@ destroy.delete = (args: { extension: string | number } | [extension: string | nu
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::bulkDestroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/bulk-destroy'
  */
 export const bulkDestroy = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -570,7 +783,7 @@ bulkDestroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::bulkDestroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/bulk-destroy'
  */
 bulkDestroy.url = (options?: RouteQueryOptions) => {
@@ -579,7 +792,7 @@ bulkDestroy.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::bulkDestroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/bulk-destroy'
  */
 bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -589,7 +802,7 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::bulkDestroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/bulk-destroy'
  */
     const bulkDestroyForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -599,7 +812,7 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::bulkDestroy
- * @see app/Http/Controllers/Admin/ExtensionController.php:463
+ * @see app/Http/Controllers/Admin/ExtensionController.php:465
  * @route '/admin/extensiones/bulk-destroy'
  */
         bulkDestroyForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -615,6 +828,9 @@ create: Object.assign(create, create),
 store: Object.assign(store, store),
 edit: Object.assign(edit, edit),
 update: Object.assign(update, update),
+verifySecurity: Object.assign(verifySecurity, verifySecurity),
+uploadDocumento: Object.assign(uploadDocumento, uploadDocumento),
+deleteDocumento: Object.assign(deleteDocumento, deleteDocumento),
 destroy: Object.assign(destroy, destroy),
 bulkDestroy: Object.assign(bulkDestroy, bulkDestroy),
 }

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/iglesias'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/iglesias'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/iglesias'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/iglesias'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/iglesias'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/iglesias'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::index
- * @see app/Http/Controllers/Admin/ExtensionController.php:164
+ * @see app/Http/Controllers/Admin/ExtensionController.php:166
  * @route '/admin/iglesias'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/iglesias/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/iglesias/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/iglesias/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/iglesias/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/iglesias/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/iglesias/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\ExtensionController::create
- * @see app/Http/Controllers/Admin/ExtensionController.php:220
+ * @see app/Http/Controllers/Admin/ExtensionController.php:222
  * @route '/admin/iglesias/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

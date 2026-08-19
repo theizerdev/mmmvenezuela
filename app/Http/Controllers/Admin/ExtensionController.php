@@ -11,6 +11,8 @@ use App\Models\Parroquia;
 use App\Models\TipoLocal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class ExtensionController extends Controller
 {
@@ -468,6 +470,102 @@ class ExtensionController extends Controller
         return redirect()->route('admin.extensiones.index')->with('notification', [
             'type' => 'success',
             'message' => __('Extensión(es) eliminada(s) exitosamente.'),
+        ]);
+    }
+
+    /**
+     * Verificar contraseña o autenticación de seguridad del usuario logueado
+     */
+    public function verifySecurity(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        $user = Auth::user();
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => __('La contraseña ingresada es incorrecta.'),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Verificación de seguridad exitosa.'),
+        ]);
+    }
+
+    /**
+     * Adjuntar documento a una extensión
+     */
+    public function uploadDocumento(Request $request, $id)
+    {
+        $request->validate([
+            'documento' => 'required|file|mimes:pdf,png,jpg,jpeg,webp|max:10240', // max 10MB
+        ]);
+
+        $extension = Iglesia::findOrFail($id);
+
+        if ($request->hasFile('documento')) {
+            $file = $request->file('documento');
+
+            // Eliminar documento anterior si existía
+            if ($extension->documento_path && Storage::disk('public')->exists($extension->documento_path)) {
+                Storage::disk('public')->delete($extension->documento_path);
+            }
+
+            $originalName = $file->getClientOriginalName();
+            $mimeType = $file->getMimeType();
+            $fileSize = $file->getSize();
+
+            $path = $file->store("extensiones/documentos/{$extension->id}", 'public');
+
+            $extension->update([
+                'documento_path' => $path,
+                'documento_nombre' => $originalName,
+                'documento_size' => $fileSize,
+                'documento_mime' => $mimeType,
+                'documento_updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => __('Documento adjuntado exitosamente.'),
+                'documento_url' => Storage::url($path),
+                'documento_nombre' => $originalName,
+                'documento_size' => $fileSize,
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => __('No se pudo procesar el archivo.'),
+        ], 400);
+    }
+
+    /**
+     * Eliminar documento adjunto de una extensión
+     */
+    public function deleteDocumento($id)
+    {
+        $extension = Iglesia::findOrFail($id);
+
+        if ($extension->documento_path && Storage::disk('public')->exists($extension->documento_path)) {
+            Storage::disk('public')->delete($extension->documento_path);
+        }
+
+        $extension->update([
+            'documento_path' => null,
+            'documento_nombre' => null,
+            'documento_size' => null,
+            'documento_mime' => null,
+            'documento_updated_at' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Documento eliminado exitosamente.'),
         ]);
     }
 }
