@@ -19,7 +19,6 @@ import SessionMonitoringController from './SessionMonitoringController'
 import SucursalController from './SucursalController'
 import TaskMonitoringController from './TaskMonitoringController'
 import UserController from './UserController'
-
 const Admin = {
     PastorCarnetController: Object.assign(PastorCarnetController, PastorCarnetController),
     DashboardController: Object.assign(DashboardController, DashboardController),
