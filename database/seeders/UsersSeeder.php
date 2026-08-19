@@ -21,8 +21,8 @@ class UsersSeeder extends Seeder
         $sucursal = Sucursal::first();
 
         foreach ($roles as $role) {
-            $name = ucwords(str_replace('-', ' ', $role->name));
-            $username = strtolower(str_replace('-', '', $role->name));
+            $name = ucwords(str_replace(['-', '_'], ' ', $role->name));
+            $username = strtolower(str_replace(['-', '_', ' '], '', $role->name));
 
             $user = User::firstOrCreate([
                 'email' => "{$username}@example.com",
@@ -36,8 +36,7 @@ class UsersSeeder extends Seeder
                 'email_verified_at' => now(),
             ]);
 
-            $user->assignRole($role->name);
-
+            $user->syncRoles([$role->name]);
         }
     }
 }

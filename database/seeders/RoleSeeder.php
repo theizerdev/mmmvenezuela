@@ -14,46 +14,63 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        // Super-admin: all permissions (bypassed via Gate::before)
-        $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        // Reset cached roles and permissions
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $rolesToKeep = [
+            'Super Administrador',
+            'super-admin',
+            'Supervisor Nacional',
+            'Presbitero',
+            'Junta Nacional',
+            'Secretaria Nacional',
+        ];
+
+        // Delete obsolete roles except those in $rolesToKeep
+        Role::whereNotIn('name', $rolesToKeep)->delete();
+
+        // 1. Super Administrador (all permissions)
+        $superAdmin = Role::firstOrCreate(['name' => 'Super Administrador', 'guard_name' => 'web']);
         $superAdmin->syncPermissions(Permission::all());
 
-        // Admin: all except roles/groups management
-        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $admin->syncPermissions(
-            Permission::where('module', '!=', 'roles')
-                ->where('module', '!=', 'groups')
-                ->get()
-        );
+        $superAdminAlias = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $superAdminAlias->syncPermissions(Permission::all());
 
-        // Editor: view all + edit content
-        $operador = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
-        $operador->syncPermissions(
-            Permission::whereIn('name', [
-                'dashboard.view',
-                'users.view',
-                'users.edit',
-            ])->get()
-        );
+        // Permissions for roles with full access (view, create, edit) to Pastores and Extensiones
+        $fullPastoresExtensionesPermissions = Permission::whereIn('name', [
+            'dashboard.view',
+            'pastores.view',
+            'pastores.create',
+            'pastores.edit',
+            'extensiones.view',
+            'extensiones.create',
+            'extensiones.edit',
+        ])->get();
 
-        // Editor: view all + edit content
-        $encargado = Role::firstOrCreate(['name' => 'encargado', 'guard_name' => 'web']);
-        $encargado->syncPermissions(
-            Permission::whereIn('name', [
-                'dashboard.view',
-                'users.view',
-                'users.edit',
-            ])->get()
-        );
+        // Permissions for Presbitero (view and edit only, no create/delete)
+        $presbiteroPermissions = Permission::whereIn('name', [
+            'dashboard.view',
+            'pastores.view',
+            'pastores.edit',
+            'extensiones.view',
+            'extensiones.edit',
+        ])->get();
 
-        // Viewer: only view permissions
-        $viewer = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'web']);
-        $viewer->syncPermissions(
-            Permission::where('name', 'like', '%.view')->get()
-        );
+        // 2. Supervisor Nacional: ver, crear y editar pastores y extensiones de todas las zonas
+        $supervisor = Role::firstOrCreate(['name' => 'Supervisor Nacional', 'guard_name' => 'web']);
+        $supervisor->syncPermissions($fullPastoresExtensionesPermissions);
 
-        // Cliente: storefront customers
-        $cliente = Role::firstOrCreate(['name' => 'cliente', 'guard_name' => 'web']);
+        // 3. Presbitero: ver y editar pastores y extensiones de sus zonas
+        $presbitero = Role::firstOrCreate(['name' => 'Presbitero', 'guard_name' => 'web']);
+        $presbitero->syncPermissions($presbiteroPermissions);
+
+        // 4. Junta Nacional: ver, crear y editar pastores y extensiones de todas las zonas
+        $junta = Role::firstOrCreate(['name' => 'Junta Nacional', 'guard_name' => 'web']);
+        $junta->syncPermissions($fullPastoresExtensionesPermissions);
+
+        // 5. Secretaria Nacional: ver, crear y editar pastores y extensiones de todas las zonas
+        $secretaria = Role::firstOrCreate(['name' => 'Secretaria Nacional', 'guard_name' => 'web']);
+        $secretaria->syncPermissions($fullPastoresExtensionesPermissions);
 
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
