@@ -31,7 +31,7 @@
         </style>
 
         @php
-            $favicon = '/image/logo/logo_innovacion-movil.png';
+            $favicon = '/icons/logo_mmm-a-color-sin-fondo.png';
            
         @endphp
         <link rel="icon" href="{{ $favicon }}" type="image/png">

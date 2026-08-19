@@ -340,7 +340,7 @@ export default function AdminSaasLayout({
                                     collapsed && 'opacity-0',
                                 )}
                             >
-                                SICA
+                                SAPRCOE
                             </span>
                         </Link>
                         <Button
