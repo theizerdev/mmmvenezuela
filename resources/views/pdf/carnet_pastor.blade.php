@@ -172,12 +172,13 @@
         }
 
         .slogan-text {
-            font-size: 4pt;
+            font-size: 3.8pt;
             font-weight: bold;
             color: #ffffff;
             text-transform: uppercase;
-            width: 65mm;
+            width: 62mm;
             float: left;
+            text-align: center;
             line-height: 1.1;
         }
 
@@ -343,7 +344,8 @@
         <!-- Footer Frontal -->
         <div class="front-footer">
             <div class="slogan-text">
-                ...UN ESFUERZO DE FE Y DE SACRIFICIO EN BIEN DE LA OBRA MISIONERA Y DE LA EVANGELIZACIÓN DEL MUNDO.
+                <div>...UN ESFUERZO DE FE Y DE SACRIFICIO EN BIEN DE LA OBRA</div>
+                <div>MISIONERA Y DE LA EVANGELIZACIÓN DEL MUNDO.</div>
             </div>
             <div class="expiration-text">
                 VENCE 12-{{ date('Y') + 1 }}

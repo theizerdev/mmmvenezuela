@@ -60,11 +60,11 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
         ? `${window.location.origin}/validar-credencial/${encodeURIComponent(pastor.codigo || pastor.documento || pastor.id)}`
         : `/validar-credencial/${pastor.codigo}`;
 
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verificationUrl)}`;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(verificationUrl)}`;
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-xl p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+            <DialogContent className="max-w-2xl p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
                 <DialogHeader className="p-5 pb-3 border-b bg-gradient-to-r from-indigo-950 via-blue-950 to-indigo-950 text-white flex flex-row items-center justify-between">
                     <div>
                         <div className="flex items-center gap-2">
@@ -107,57 +107,57 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                     </div>
                 </DialogHeader>
 
-                <div className="p-6 bg-slate-950/10 flex flex-col items-center justify-center min-h-[360px] select-none">
-                    {/* Contenedor del Carnet */}
+                <div className="p-6 bg-slate-950/20 flex flex-col items-center justify-center min-h-[400px] select-none">
+                    {/* Contenedor del Carnet CR80 Proporcional (510px x 321px) */}
                     <div
-                        className="w-[420px] h-[264px] relative shadow-2xl rounded-xl overflow-hidden border border-slate-700/40 cursor-pointer transition-all duration-300 hover:shadow-indigo-500/10"
+                        className="w-[510px] h-[321px] relative shadow-2xl rounded-xl overflow-hidden border border-slate-700/50 cursor-pointer transition-all duration-300 hover:shadow-indigo-500/20"
                         onClick={() => setActiveTab(activeTab === 'front' ? 'back' : 'front')}
                     >
                         {activeTab === 'front' ? (
-                            /* --- CARA FRONTAL (FRONT) --- */
-                            <div className="w-full h-full bg-[#0f3563] text-white p-3.5 flex flex-col justify-between overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+                            /* --- CARA FRONTAL (FRONT - Réplica Exacta a Imagen 1) --- */
+                            <div className="w-full h-full bg-[#0f3563] text-white p-4 flex flex-col justify-between overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
                                 {/* Franja Diagonal Marfil/Crema (#ded7c5) */}
                                 <div
-                                    className="absolute inset-0 bg-[#ded7c5] pointer-events-none opacity-90"
+                                    className="absolute inset-0 bg-[#ded7c5] pointer-events-none opacity-95"
                                     style={{
-                                        clipPath: 'polygon(0% 100%, 20% 100%, 55% 0%, 38% 0%)'
+                                        clipPath: 'polygon(0% 100%, 21% 100%, 54% 0%, 37% 0%)'
                                     }}
                                 />
 
-                                {/* Header: Logo MMM + Datos Legales en Esquina Derecha */}
+                                {/* Header Derecho: Logo MMM + Textos Legales Exactos */}
                                 <div className="relative z-10 flex items-start justify-between">
-                                    <div className="w-12" />
-                                    <div className="flex items-center gap-2 ml-auto text-right">
+                                    <div className="w-16" />
+                                    <div className="flex items-center gap-2.5 ml-auto text-right">
                                         <img
                                             src="/icons/logo_mmm.png"
                                             alt="Logo MMM"
-                                            className="h-8 w-auto object-contain drop-shadow-md"
+                                            className="h-10 w-auto object-contain drop-shadow-md"
                                             onError={(e) => {
                                                 (e.target as HTMLElement).style.display = 'none';
                                             }}
                                         />
                                         <div className="flex flex-col text-right leading-tight">
-                                            <span className="text-[9.5px] font-extrabold uppercase tracking-wide text-white">
+                                            <span className="text-[8.5px] font-extrabold uppercase tracking-tight text-white drop-shadow-xs whitespace-nowrap">
                                                 MOVIMIENTO MISIONERO MUNDIAL
                                             </span>
-                                            <span className="text-[6.5px] font-medium text-slate-200">
+                                            <span className="text-[6.5px] font-medium text-slate-100 mt-0.5 whitespace-nowrap">
                                                 Inscrita en la Dirección de Justicia y Culto
                                             </span>
-                                            <span className="text-[6.5px] font-medium text-slate-200">
+                                            <span className="text-[6.5px] font-medium text-slate-100 whitespace-nowrap">
                                                 bajo el N° DG/520 DF/620-100.361
                                             </span>
-                                            <span className="text-[7px] font-bold text-white">
+                                            <span className="text-[7.5px] font-bold text-white tracking-wider mt-0.5 whitespace-nowrap">
                                                 J - 3 0 1 8 7 4 4 6 - 3
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Cuerpo Principal: Foto Pastor (Izquierda en Círculo Perfecto) + Datos (Derecha) */}
+                                {/* Cuerpo Principal: Foto Pastor (Izquierda) + Información (Derecha) */}
                                 <div className="relative z-10 grid grid-cols-12 gap-3 items-center my-auto pl-1">
-                                    {/* Foto Circular Perfecta */}
+                                    {/* Foto Circular con Borde Ancho Crema (#ded7c5) */}
                                     <div className="col-span-5 flex justify-center">
-                                        <div className="relative size-24 rounded-full ring-4 ring-[#ded7c5] shadow-xl overflow-hidden bg-slate-800 flex items-center justify-center border-2 border-white aspect-square">
+                                        <div className="relative size-[145px] rounded-full border-[4px] border-[#ded7c5] shadow-2xl overflow-hidden bg-slate-800 flex items-center justify-center aspect-square">
                                             {photoUrl ? (
                                                 <img
                                                     src={photoUrl}
@@ -165,84 +165,86 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                                     className="w-full h-full object-cover object-center rounded-full"
                                                 />
                                             ) : (
-                                                <div className="w-full h-full bg-gradient-to-br from-indigo-600 to-blue-800 text-white font-bold text-2xl flex items-center justify-center rounded-full">
+                                                <div className="w-full h-full bg-gradient-to-br from-indigo-700 to-blue-900 text-white font-black text-3xl flex items-center justify-center rounded-full">
                                                     {initials}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Textos y Acreditación */}
-                                    <div className="col-span-7 flex flex-col justify-center text-left pl-1">
-                                        <h2 className="text-[13px] font-black uppercase leading-tight tracking-tight text-white line-clamp-2 drop-shadow-sm">
+                                    {/* Textos: Nombre, Cédula y Acreditación Ministerial */}
+                                    <div className="col-span-7 flex flex-col justify-center text-left pl-2">
+                                        <h2 className="text-[16px] font-black uppercase leading-tight tracking-tight text-white line-clamp-2 drop-shadow-md">
                                             {pastor.nombres} {pastor.apellidos}
                                         </h2>
-                                        <p className="text-[11px] font-extrabold text-slate-100 mt-0.5 tracking-wider">
+                                        <p className="text-[13px] font-extrabold text-slate-100 mt-1 tracking-wider">
                                             {formatDocumento(pastor.documento)}
                                         </p>
 
-                                        <div className="mt-2.5">
-                                            <span className="block text-[8px] uppercase tracking-wider font-semibold text-blue-200">
+                                        <div className="mt-3">
+                                            <span className="block text-[10.5px] font-normal text-slate-200 tracking-normal">
                                                 Acreditación Ministerial
                                             </span>
-                                            <span className="block text-[11px] font-black uppercase tracking-wide text-cyan-200 drop-shadow-xs">
+                                            <span className="block text-[14px] font-black uppercase tracking-wide text-cyan-200 drop-shadow-sm mt-0.5">
                                                 {pastor.nivel_ministerial || 'MINISTRO ORDENADO'}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Pie del Carnet: Lema + Expiración */}
-                                <div className="relative z-10 flex items-end justify-between border-t border-white/20 pt-1 text-[6.5px] font-bold text-slate-100">
-                                    <p className="text-center w-full pr-12 line-clamp-1 uppercase tracking-tight text-slate-200">
-                                        ...UN ESFUERZO DE FE Y DE SACRIFICIO EN BIEN DE LA OBRA MISIONERA Y DE LA EVANGELIZACIÓN DEL MUNDO.
-                                    </p>
-                                    <span className="whitespace-nowrap font-black text-amber-300 text-[7px]">
+                                {/* Pie del Carnet: Lema en 2 Líneas Centradas (Idéntico a la Imagen) + Vencimiento */}
+                                <div className="relative z-10 flex items-end justify-between border-t border-white/20 pt-1.5 text-white">
+                                    <div className="w-16" />
+                                    <div className="flex-1 text-center font-extrabold uppercase text-[7.5px] leading-[1.25] tracking-tight text-white px-2">
+                                        <p>...UN ESFUERZO DE FE Y DE SACRIFICIO EN BIEN DE LA OBRA</p>
+                                        <p>MISIONERA Y DE LA EVANGELIZACIÓN DEL MUNDO.</p>
+                                    </div>
+                                    <span className="whitespace-nowrap font-bold text-slate-100 text-[8.5px] shrink-0 self-end pb-0.5 tracking-tight">
                                         VENCE 12-{new Date().getFullYear() + 1}
                                     </span>
                                 </div>
                             </div>
                         ) : (
                             /* --- CARA TRASERA (BACK - Fiel a la Imagen 2) --- */
-                            <div className="w-full h-full bg-white text-slate-900 p-3.5 flex flex-col justify-between overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+                            <div className="w-full h-full bg-white text-slate-900 p-4 flex flex-col justify-between overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
                                 {/* Cortes Geométricos Azules en Esquinas (#0f3563) exactos a la Imagen 2 */}
                                 <div
-                                    className="absolute top-0 left-0 w-16 h-16 bg-[#0f3563] pointer-events-none"
+                                    className="absolute top-0 left-0 w-20 h-20 bg-[#0f3563] pointer-events-none"
                                     style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}
                                 />
                                 <div
-                                    className="absolute top-0 left-0 w-20 h-20 bg-[#0f3563] pointer-events-none opacity-80"
+                                    className="absolute top-0 left-0 w-24 h-24 bg-[#0f3563] pointer-events-none opacity-80"
                                     style={{ clipPath: 'polygon(0 80%, 80% 0, 65% 0, 0 65%)' }}
                                 />
                                 <div
-                                    className="absolute bottom-0 right-0 w-20 h-20 bg-[#0f3563] pointer-events-none"
+                                    className="absolute bottom-0 right-0 w-24 h-24 bg-[#0f3563] pointer-events-none"
                                     style={{ clipPath: 'polygon(100% 100%, 0 100%, 100% 0)' }}
                                 />
 
                                 {/* Header Trasero: Logo MMM + MOVIMIENTO MISIONERO MUNDIAL */}
-                                <div className="relative z-10 flex items-center justify-center gap-2 pt-0.5">
+                                <div className="relative z-10 flex items-center justify-center gap-2.5 pt-0.5">
                                     <img
                                         src="/icons/logo_mmm.png"
                                         alt="Logo MMM"
-                                        className="h-7 w-auto object-contain"
+                                        className="h-8 w-auto object-contain"
                                         onError={(e) => {
                                             (e.target as HTMLElement).style.display = 'none';
                                         }}
                                     />
-                                    <span className="text-[11px] font-black uppercase tracking-wide text-[#0f3563]">
+                                    <span className="text-[12.5px] font-black uppercase tracking-wide text-[#0f3563]">
                                         MOVIMIENTO MISIONERO MUNDIAL
                                     </span>
                                 </div>
 
                                 {/* Textos Legales e Institucionales (Exactos a la Imagen 2) */}
-                                <div className="relative z-10 space-y-1 px-4 text-[6.8px] leading-snug font-medium text-slate-800 text-justify tracking-tight">
+                                <div className="relative z-10 space-y-1.5 px-5 text-[7.5px] leading-snug font-medium text-slate-800 text-justify tracking-tight">
                                     <p>
                                         ORGANIZACION CRISTIANA, SIN FINES DE LUCRO, DEBIDAMENTE REGISTRADA ANTE LAS AUTORIDADES GUBERNAMENTALES DE LA REPÚBLICA BOLIVARIANA DE VENEZUELA, INSCRITA EN LA DIRECCIÓN DE JUSTICIA Y CULTO BAJO EL N° DG/520 DF/620-100.361.
                                     </p>
                                     <p>
                                         ESTE CARNET ES PERSONAL E INTRANSFERIBLE Y ACREDITA AL USUARIO COMO MIEMBRO DE LA IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA DEL MOVIMIENTO MISIONERO MUNDIAL.
                                     </p>
-                                    <p className="font-semibold text-slate-900">
+                                    <p className="font-bold text-slate-900">
                                         SE LE AGRADECE A LAS AUTORIDADES CIVILES Y MILITARES TODA LA COLABORACIÓN PRESTADA AL PORTADOR DE ESTA CREDENCIAL.
                                     </p>
                                 </div>
@@ -250,7 +252,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                 {/* Titular + Código de Barras + Código QR Real */}
                                 <div className="relative z-10 flex flex-col items-center justify-center pt-0.5">
                                     {/* Nombre del Titular entre paréntesis */}
-                                    <span className="text-[9.5px] font-semibold italic text-[#0f3563] font-serif tracking-wide">
+                                    <span className="text-[11px] font-semibold italic text-[#0f3563] font-serif tracking-wide">
                                         {pastor.nombres} {pastor.apellidos} ({pastor.documento?.replace(/\D/g, '') || pastor.codigo})
                                     </span>
 
@@ -258,8 +260,8 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                     <div className="w-full flex items-center justify-between px-6 mt-1">
                                         {/* Código de Barras */}
                                         <div className="flex flex-col items-start">
-                                            <div className="w-44 h-7 flex items-center justify-center gap-[1.5px]">
-                                                {[...Array(44)].map((_, idx) => (
+                                            <div className="w-48 h-8 flex items-center justify-center gap-[1.5px]">
+                                                {[...Array(48)].map((_, idx) => (
                                                     <div
                                                         key={idx}
                                                         className={cn(
@@ -277,10 +279,10 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                                 <img
                                                     src={qrImageUrl}
                                                     alt="Código QR de Verificación"
-                                                    className="size-11 object-contain"
+                                                    className="size-12 object-contain"
                                                 />
                                             </div>
-                                            <span className="text-[5.5px] font-bold text-slate-600 uppercase tracking-tighter mt-0.5">
+                                            <span className="text-[6px] font-bold text-slate-600 uppercase tracking-tighter mt-0.5">
                                                 Escanear QR
                                             </span>
                                         </div>
@@ -290,7 +292,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                         )}
                     </div>
 
-                    <p className="text-[11px] text-muted-foreground mt-3 flex items-center gap-1.5 font-medium">
+                    <p className="text-[11px] text-muted-foreground mt-3.5 flex items-center gap-1.5 font-medium">
                         <QrCode className="size-3.5 text-blue-600" />
                         Haz clic en la tarjeta o usa los botones para alternar entre el Frontal y el Reverso
                     </p>

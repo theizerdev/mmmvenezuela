@@ -26,10 +26,14 @@ class PastorCarnetController extends Controller
     {
         $pastor = Pastor::findOrFail($id);
 
-        $pdf = $this->carnetService->generarPdfParaPastor($pastor);
+        $fpdf = new CarnetFpdf('L', 'mm', [CarnetService::ANCHO_MM, CarnetService::ALTO_MM]);
+        $this->carnetService->generarPdfParaPastor($pastor, $fpdf);
+
         $nombreArchivo = 'carnet_pastor_' . str_replace(' ', '_', $pastor->nombres . '_' . $pastor->apellidos) . '.pdf';
 
-        return $pdf->stream($nombreArchivo);
+        return response($fpdf->Output('S', $nombreArchivo))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $nombreArchivo . '"');
     }
 
     /**
@@ -44,10 +48,14 @@ class PastorCarnetController extends Controller
 
         $pastores = Pastor::whereIn('id', $request->input('ids'))->get();
 
-        $pdf = $this->carnetService->generarPdfMasivo($pastores);
+        $fpdf = new CarnetFpdf('P', 'mm', 'Letter');
+        $this->carnetService->generarPdfMasivo($pastores, $fpdf);
+
         $nombreArchivo = 'carnets_pastores_masivo.pdf';
 
-        return $pdf->stream($nombreArchivo);
+        return response($fpdf->Output('S', $nombreArchivo))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $nombreArchivo . '"');
     }
 
     /**
