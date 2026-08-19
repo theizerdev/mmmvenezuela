@@ -310,8 +310,8 @@
 
         <!-- Header Derecho -->
         <div class="front-header">
-            @if(file_exists(public_path('icons/logo_mmm.png')))
-                <img src="{{ public_path('icons/logo_mmm.png') }}" class="logo-mmm" alt="MMM">
+            @if(file_exists(public_path('icons/logo_mmm-a-color-sin-fondo.png')))
+                <img src="{{ public_path('icons/logo_mmm-a-color-sin-fondo.png') }}" class="logo-mmm" alt="MMM">
             @endif
             <div class="header-text">
                 <div class="header-title">MOVIMIENTO MISIONERO MUNDIAL</div>
@@ -370,8 +370,8 @@
 
         <!-- Header Trasero -->
         <div class="back-header">
-            @if(file_exists(public_path('icons/logo_mmm.png')))
-                <img src="{{ public_path('icons/logo_mmm.png') }}" class="logo-mmm" alt="MMM">
+            @if(file_exists(public_path('icons/logo_mmm-a-color-sin-fondo.png')))
+                <img src="{{ public_path('icons/logo_mmm-a-color-sin-fondo.png') }}" class="logo-mmm" alt="MMM">
             @endif
             <span class="back-header-title">MOVIMIENTO MISIONERO MUNDIAL</span>
         </div>
@@ -389,22 +389,15 @@
             </div>
         </div>
 
-        <!-- Nombre Titular (Formato Imagen 2) -->
-        <div class="holder-info">
-            {{ $pastor->nombres }} {{ $pastor->apellidos }} ({{ preg_replace('/[^0-9]/', '', $pastor->documento) ?: $pastor->codigo }})
-        </div>
-
-        <!-- Fila Inferior: Código de Barras + Código QR Real -->
-        <div class="back-bottom-container">
-            <div class="barcode-box">
-                @if($barcodeBase64)
-                    <img src="{{ $barcodeBase64 }}" class="barcode-img" alt="Código de Barras">
-                @endif
+        <!-- Fila Inferior: Nombre Titular Abajo + Código QR Real -->
+        <div class="back-bottom-container" style="position: absolute; bottom: 3mm; left: 5mm; right: 5mm; z-index: 5;">
+            <div class="holder-info-box" style="float: left; width: 60mm; font-family: 'Georgia', 'Times New Roman', serif; font-style: italic; font-size: 7.5pt; font-weight: bold; color: #0f3563; padding-top: 4mm;">
+                {{ $pastor->nombres }} {{ $pastor->apellidos }} ({{ preg_replace('/[^0-9]/', '', $pastor->documento) ?: $pastor->codigo }})
             </div>
 
-            <div class="qr-box">
+            <div class="qr-box" style="float: right; width: 14mm; text-align: right;">
                 @if($qrBase64)
-                    <img src="{{ $qrBase64 }}" class="qr-img" alt="QR Verificación">
+                    <img src="{{ $qrBase64 }}" class="qr-img" style="width: 14mm; height: 14mm; border: 0.5pt solid #cbd5e1; padding: 0.5mm; background: #ffffff;" alt="QR Verificación">
                 @endif
             </div>
         </div>

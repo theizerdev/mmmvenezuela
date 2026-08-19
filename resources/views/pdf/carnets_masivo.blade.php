@@ -157,8 +157,8 @@
                         </svg>
 
                         <div class="front-header">
-                            @if(file_exists(public_path('icons/logo_mmm.png')))
-                                <img src="{{ public_path('icons/logo_mmm.png') }}" class="logo-mmm" alt="MMM">
+                            @if(file_exists(public_path('icons/logo_mmm-a-color-sin-fondo.png')))
+                                <img src="{{ public_path('icons/logo_mmm-a-color-sin-fondo.png') }}" class="logo-mmm" alt="MMM">
                             @endif
                             <div class="header-text">
                                 <div class="header-title">MOVIMIENTO MISIONERO MUNDIAL</div>

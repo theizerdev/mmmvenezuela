@@ -124,48 +124,45 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                     }}
                                 />
 
-                                {/* Header Derecho: Logo MMM + Textos Legales Exactos */}
-                                <div className="relative z-10 flex items-start justify-between">
-                                    <div className="w-16" />
-                                    <div className="flex items-center gap-2.5 ml-auto text-right">
-                                        <img
-                                            src="/icons/logo_mmm.png"
-                                            alt="Logo MMM"
-                                            className="h-10 w-auto object-contain drop-shadow-md"
-                                            onError={(e) => {
-                                                (e.target as HTMLElement).style.display = 'none';
-                                            }}
-                                        />
-                                        <div className="flex flex-col text-right leading-tight">
-                                            <span className="text-[8.5px] font-extrabold uppercase tracking-tight text-white drop-shadow-xs whitespace-nowrap">
-                                                MOVIMIENTO MISIONERO MUNDIAL
-                                            </span>
-                                            <span className="text-[6.5px] font-medium text-slate-100 mt-0.5 whitespace-nowrap">
-                                                Inscrita en la Dirección de Justicia y Culto
-                                            </span>
-                                            <span className="text-[6.5px] font-medium text-slate-100 whitespace-nowrap">
-                                                bajo el N° DG/520 DF/620-100.361
-                                            </span>
-                                            <span className="text-[7.5px] font-bold text-white tracking-wider mt-0.5 whitespace-nowrap">
-                                                J - 3 0 1 8 7 4 4 6 - 3
-                                            </span>
-                                        </div>
+                                {/* Header Derecho: Logo MMM + Textos Legales Centrados Exactos a la Referencia */}
+                                <div className="relative z-10 flex items-center justify-end gap-2.5">
+                                    <img
+                                        src="/icons/logo_mmm-a-color-sin-fondo.png"
+                                        alt="Logo MMM"
+                                        className="h-10 w-auto object-contain drop-shadow-md shrink-0"
+                                        onError={(e) => {
+                                            (e.target as HTMLElement).style.display = 'none';
+                                        }}
+                                    />
+                                    <div className="flex flex-col text-center leading-tight">
+                                        <span className="text-[10px] font-black uppercase tracking-tight text-white drop-shadow-xs whitespace-nowrap">
+                                            MOVIMIENTO MISIONERO MUNDIAL
+                                        </span>
+                                        <span className="text-[7px] font-medium text-slate-100 mt-0.5 whitespace-nowrap">
+                                            Inscrita en la Dirección de Justicia y Culto
+                                        </span>
+                                        <span className="text-[7px] font-medium text-slate-100 whitespace-nowrap">
+                                            bajo el N° DG/520 DF/620-100.361
+                                        </span>
+                                        <span className="text-[8px] font-extrabold text-white tracking-[0.25em] mt-0.5 whitespace-nowrap pl-[0.25em]">
+                                            J-30187446-3
+                                        </span>
                                     </div>
                                 </div>
 
                                 {/* Cuerpo Principal: Foto Pastor (Izquierda) + Información (Derecha) */}
                                 <div className="relative z-10 grid grid-cols-12 gap-3 items-center my-auto pl-1">
-                                    {/* Foto Circular con Borde Ancho Crema (#ded7c5) */}
+                                    {/* Foto Rectangular/Cuadrada Tipo Carnet (Planilla) */}
                                     <div className="col-span-5 flex justify-center">
-                                        <div className="relative size-[145px] rounded-full border-[4px] border-[#ded7c5] shadow-2xl overflow-hidden bg-slate-800 flex items-center justify-center aspect-square">
+                                        <div className="relative w-[115px] h-[145px] rounded-xl border-[3px] border-[#ded7c5] shadow-2xl overflow-hidden bg-slate-800 flex items-center justify-center">
                                             {photoUrl ? (
                                                 <img
                                                     src={photoUrl}
                                                     alt={`${pastor.nombres} ${pastor.apellidos}`}
-                                                    className="w-full h-full object-cover object-center rounded-full"
+                                                    className="w-full h-full object-cover object-top rounded-lg"
                                                 />
                                             ) : (
-                                                <div className="w-full h-full bg-gradient-to-br from-indigo-700 to-blue-900 text-white font-black text-3xl flex items-center justify-center rounded-full">
+                                                <div className="w-full h-full bg-gradient-to-br from-indigo-700 to-blue-900 text-white font-black text-3xl flex items-center justify-center rounded-lg">
                                                     {initials}
                                                 </div>
                                             )}
@@ -224,7 +221,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                 {/* Header Trasero: Logo MMM + MOVIMIENTO MISIONERO MUNDIAL */}
                                 <div className="relative z-10 flex items-center justify-center gap-2.5 pt-0.5">
                                     <img
-                                        src="/icons/logo_mmm.png"
+                                        src="/icons/logo_mmm-a-color-sin-fondo.png"
                                         alt="Logo MMM"
                                         className="h-8 w-auto object-contain"
                                         onError={(e) => {
@@ -249,43 +246,27 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                     </p>
                                 </div>
 
-                                {/* Titular + Código de Barras + Código QR Real */}
-                                <div className="relative z-10 flex flex-col items-center justify-center pt-0.5">
-                                    {/* Nombre del Titular entre paréntesis */}
-                                    <span className="text-[11px] font-semibold italic text-[#0f3563] font-serif tracking-wide">
-                                        {pastor.nombres} {pastor.apellidos} ({pastor.documento?.replace(/\D/g, '') || pastor.codigo})
-                                    </span>
+                                {/* Sección Inferior: Nombre del Titular Abajo + Código QR Real de Verificación a la Derecha */}
+                                <div className="relative z-10 flex items-end justify-between px-6 pt-2 pb-1">
+                                    {/* Nombre del Titular entre paréntesis (Ubicado Abajo a la Izquierda) */}
+                                    <div className="flex-1 pr-4 pb-1 text-left">
+                                        <span className="text-[12px] font-bold italic text-[#0f3563] font-serif tracking-wide block leading-tight">
+                                            {pastor.nombres} {pastor.apellidos} ({pastor.documento?.replace(/\D/g, '') || pastor.codigo})
+                                        </span>
+                                    </div>
 
-                                    {/* Fila Inferior: Código de Barras (Izquierda) + QR Code Real (Derecha) */}
-                                    <div className="w-full flex items-center justify-between px-6 mt-1">
-                                        {/* Código de Barras */}
-                                        <div className="flex flex-col items-start">
-                                            <div className="w-48 h-8 flex items-center justify-center gap-[1.5px]">
-                                                {[...Array(48)].map((_, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className={cn(
-                                                            "h-full bg-slate-900",
-                                                            idx % 6 === 0 ? "w-1" : idx % 3 === 0 ? "w-[1.5px]" : "w-[1px]"
-                                                        )}
-                                                    />
-                                                ))}
-                                            </div>
+                                    {/* Código QR Real de Verificación (Derecha) */}
+                                    <div className="flex flex-col items-center shrink-0" title="Escanear para verificar pastor">
+                                        <div className="p-1 bg-white border border-slate-300 rounded-lg shadow-xs flex items-center justify-center">
+                                            <img
+                                                src={qrImageUrl}
+                                                alt="Código QR de Verificación"
+                                                className="size-14 object-contain"
+                                            />
                                         </div>
-
-                                        {/* Código QR Real de Verificación */}
-                                        <div className="flex flex-col items-center" title="Escanear para verificar pastor">
-                                            <div className="p-1 bg-white border border-slate-300 rounded-md shadow-xs flex items-center justify-center">
-                                                <img
-                                                    src={qrImageUrl}
-                                                    alt="Código QR de Verificación"
-                                                    className="size-12 object-contain"
-                                                />
-                                            </div>
-                                            <span className="text-[6px] font-bold text-slate-600 uppercase tracking-tighter mt-0.5">
-                                                Escanear QR
-                                            </span>
-                                        </div>
+                                        <span className="text-[6.5px] font-extrabold text-slate-700 uppercase tracking-tighter mt-0.5">
+                                            Escanear QR
+                                        </span>
                                     </div>
                                 </div>
                             </div>

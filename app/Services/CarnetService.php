@@ -115,52 +115,49 @@ class CarnetService
         ], 'F');
 
         // 3. Logo MMM en esquina superior derecha
-        $logoPath = public_path('icons/logo_mmm.png');
+        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
         if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, $x + 41, $y + 2.5, 9, 7.5);
+            $pdf->Image($logoPath, $x + 43.5, $y + 5.2, 7.5, 5.5);
         }
 
-        // Encabezado Texto Derecho (MMM + Registro Legal)
+        // Encabezado Texto Derecho (MMM + Registro Legal Centrado como la imagen)
         $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetFont('Helvetica', 'B', 4.8);
-        $pdf->SetXY($x + 46.5, $y + 2.2);
-        $pdf->Cell(37.5, 2.5, mb_convert_encoding('MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+        $pdf->SetFont('Helvetica', 'B', 5.2);
+        $pdf->SetXY($x + 48, $y + 2.2);
+        $pdf->Cell(36, 2.5, mb_convert_encoding('MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
 
-        $pdf->SetFont('Helvetica', '', 3.5);
-        $pdf->SetXY($x + 46.5, $y + 4.8);
-        $pdf->Cell(37.5, 2, mb_convert_encoding('Inscrita en la Dirección de Justicia y Culto', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-        $pdf->SetXY($x + 46.5, $y + 6.6);
-        $pdf->Cell(37.5, 2, mb_convert_encoding('bajo el N° DG/520 DF/620-100.361', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-        $pdf->SetXY($x + 46.5, $y + 8.4);
-        $pdf->SetFont('Helvetica', 'B', 3.8);
-        $pdf->Cell(37.5, 2, 'J - 3 0 1 8 7 4 4 6 - 3', 0, 1, 'L');
+        $pdf->SetFont('Helvetica', '', 3.6);
+        $pdf->SetXY($x + 48, $y + 4.8);
+        $pdf->Cell(36, 2, mb_convert_encoding('Inscrita en la Dirección de Justicia y Culto', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+        $pdf->SetXY($x + 48, $y + 6.7);
+        $pdf->Cell(36, 2, mb_convert_encoding('bajo el N° DG/520 DF/620-100.361', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+        $pdf->SetXY($x + 48, $y + 8.6);
+        $pdf->SetFont('Helvetica', 'B', 4.0);
+        $pdf->Cell(36, 2, 'J - 3 0 1 8 7 4 4 6 - 3', 0, 1, 'C');
 
-        // 4. Foto del Pastor recortada en Círculo Perfecto mediante GD con Anillo Crema (#ded7c5)
-        $tempCircleImg = $this->crearFotoCircularTempFile($pastor);
-        $fotoX = $x + 4.5;
-        $fotoY = $y + 8.5;
-        $fotoOuterSize = 34.5;
-        $fotoInnerSize = 33;
+        // 4. Foto del Pastor Rectangular/Cuadrada Tipo Carnet (Planilla)
+        $fotoPath = $this->obtenerRutaFotoPastor($pastor);
+        $fotoX = $x + 5.5;
+        $fotoY = $y + 9;
+        $fotoW = 28;
+        $fotoH = 34;
 
-        // Anillo exterior Crema #ded7c5
+        // Borde/Fondo Crema (#ded7c5)
         $pdf->SetFillColor(222, 215, 197);
-        $pdf->Ellipse($fotoX + ($fotoOuterSize / 2), $fotoY + ($fotoOuterSize / 2), $fotoOuterSize / 2, $fotoOuterSize / 2, 'F');
+        $pdf->Rect($fotoX - 0.8, $fotoY - 0.8, $fotoW + 1.6, $fotoH + 1.6, 'F');
 
-        if ($tempCircleImg && file_exists($tempCircleImg)) {
-            $offset = ($fotoOuterSize - $fotoInnerSize) / 2;
-            $pdf->Image($tempCircleImg, $fotoX + $offset, $fotoY + $offset, $fotoInnerSize, $fotoInnerSize);
-            @unlink($tempCircleImg);
+        if ($fotoPath && file_exists($fotoPath)) {
+            $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
         } else {
             // Fondo azul si no hay foto
             $pdf->SetFillColor(15, 53, 99);
-            $offset = ($fotoOuterSize - $fotoInnerSize) / 2;
-            $pdf->Ellipse($fotoX + ($fotoOuterSize / 2), $fotoY + ($fotoOuterSize / 2), $fotoInnerSize / 2, $fotoInnerSize / 2, 'F');
+            $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH, 'F');
         }
 
-        // Borde fino blanco protector
+        // Borde marco fino blanco protector
         $pdf->SetDrawColor(255, 255, 255);
         $pdf->SetLineWidth(0.4);
-        $pdf->Ellipse($fotoX + ($fotoOuterSize / 2), $fotoY + ($fotoOuterSize / 2), $fotoOuterSize / 2, $fotoOuterSize / 2, 'D');
+        $pdf->Rect($fotoX - 0.8, $fotoY - 0.8, $fotoW + 1.6, $fotoH + 1.6, 'D');
 
         // 5. Nombres y Apellidos del Pastor
         $pdf->SetTextColor(255, 255, 255);
@@ -241,9 +238,9 @@ class CarnetService
         ], 'F');
 
         // 3. Logo Superior Horizontal MMM
-        $logoPath = public_path('icons/logo_mmm.png');
+        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
         if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, $x + 14, $y + 3, 9, 7.5);
+            $pdf->Image($logoPath, $x + 14.5, $y + 3, 7.5, 5.5);
         }
 
         $pdf->SetTextColor(15, 53, 99);
@@ -268,19 +265,16 @@ class CarnetService
         $pdf->SetFont('Helvetica', 'B', 3.8);
         $pdf->MultiCell(70, 1.9, mb_convert_encoding($texto3, 'ISO-8859-1', 'UTF-8'), 0, 'J');
 
-        // 5. Nombre Titular + Cédula (Formato Imagen 2)
-        $pdf->SetFont('Times', 'I', 6.5);
+        // 5. Nombre Titular + Cédula (Ubicado más abajo a la izquierda)
+        $pdf->SetFont('Times', 'I', 7.5);
         $pdf->SetTextColor(15, 53, 99);
         $titular = $pastor->nombres . ' ' . $pastor->apellidos . ' (' . (preg_replace('/[^0-9]/', '', $pastor->documento) ?: $pastor->codigo) . ')';
-        $pdf->SetXY($x + 8, $y + 36);
-        $pdf->Cell(70, 3, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+        $pdf->SetXY($x + 8, $y + 43);
+        $pdf->Cell(52, 4, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-        // 6. Código de Barras (Izquierda)
-        $this->dibujarCodigoBarras($pdf, $x + 8, $y + 40, 48, 8, $pastor->documento ?: $pastor->codigo);
-
-        // 7. Código QR Real de Verificación (Derecha del reverso)
+        // 6. Código QR Real de Verificación (Derecha del reverso)
         $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-        $this->dibujarCodigoQR($pdf, $x + 60, $y + 37, 14, $qrUrl);
+        $this->dibujarCodigoQR($pdf, $x + 63, $y + 34, 16, $qrUrl);
     }
 
     /**
