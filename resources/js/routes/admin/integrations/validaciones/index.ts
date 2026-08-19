@@ -1,14 +1,8 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
-import mapbox from './mapbox'
-import googleMaps from './google-maps'
-import controlAcceso from './control-acceso'
-import whatsapp from './whatsapp'
-import validaciones from './validaciones'
-import jaak from './jaak'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
- * @route '/admin/integrations'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:535
+ * @route '/admin/integrations/validaciones'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -17,13 +11,13 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ["get","head"],
-    url: '/admin/integrations',
+    url: '/admin/integrations/validaciones',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
- * @route '/admin/integrations'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:535
+ * @route '/admin/integrations/validaciones'
  */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
@@ -31,8 +25,8 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
- * @route '/admin/integrations'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:535
+ * @route '/admin/integrations/validaciones'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -40,8 +34,8 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
- * @route '/admin/integrations'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:535
+ * @route '/admin/integrations/validaciones'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
@@ -50,8 +44,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
- * @route '/admin/integrations'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:535
+ * @route '/admin/integrations/validaciones'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: index.url(options),
@@ -60,8 +54,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
- * @route '/admin/integrations'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:535
+ * @route '/admin/integrations/validaciones'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: index.url(options),
@@ -69,8 +63,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
- * @route '/admin/integrations'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:535
+ * @route '/admin/integrations/validaciones'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: index.url({
@@ -83,14 +77,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     index.form = indexForm
-const integrations = {
+const validaciones = {
     index: Object.assign(index, index),
-mapbox: Object.assign(mapbox, mapbox),
-googleMaps: Object.assign(googleMaps, googleMaps),
-controlAcceso: Object.assign(controlAcceso, controlAcceso),
-whatsapp: Object.assign(whatsapp, whatsapp),
-validaciones: Object.assign(validaciones, validaciones),
-jaak: Object.assign(jaak, jaak),
 }
 
-export default integrations
+export default validaciones

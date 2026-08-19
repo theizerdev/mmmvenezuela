@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ParroquiaController::index
  * @see app/Http/Controllers/Admin/ParroquiaController.php:20
@@ -355,12 +355,6 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
         })
     
     bulkDestroy.form = bulkDestroyForm
-const parroquias = {
-    index: Object.assign(index, index),
-store: Object.assign(store, store),
-update: Object.assign(update, update),
-toggleStatus: Object.assign(toggleStatus, toggleStatus),
-bulkDestroy: Object.assign(bulkDestroy, bulkDestroy),
-}
+const ParroquiaController = { index, store, update, toggleStatus, bulkDestroy }
 
-export default parroquias
+export default ParroquiaController

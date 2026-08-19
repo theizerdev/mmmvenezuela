@@ -1,46 +1,30 @@
-import garita from './garita'
-import visitasAccesos from './visitas-accesos'
-import cargos from './cargos'
 import monitoring from './monitoring'
-import departamentos from './departamentos'
-import empleados from './empleados'
 import empresas from './empresas'
-import integrations from './integrations'
 import estados from './estados'
+import extensiones from './extensiones'
+import iglesias from './iglesias'
+import integrations from './integrations'
 import municipios from './municipios'
+import paises from './paises'
 import parroquias from './parroquias'
 import pastores from './pastores'
-import paises from './paises'
-import productores from './productores'
-import proveedores from './proveedores'
-import responsables from './responsables'
 import roles from './roles'
 import sucursales from './sucursales'
 import usuarios from './usuarios'
-import visitasTemporales from './visitas-temporales'
-import tipoServicios from './tipo-servicios'
 const admin = {
-    garita: Object.assign(garita, garita),
-visitasAccesos: Object.assign(visitasAccesos, visitasAccesos),
-cargos: Object.assign(cargos, cargos),
-monitoring: Object.assign(monitoring, monitoring),
-departamentos: Object.assign(departamentos, departamentos),
-empleados: Object.assign(empleados, empleados),
+    monitoring: Object.assign(monitoring, monitoring),
 empresas: Object.assign(empresas, empresas),
-integrations: Object.assign(integrations, integrations),
 estados: Object.assign(estados, estados),
+extensiones: Object.assign(extensiones, extensiones),
+iglesias: Object.assign(iglesias, iglesias),
+integrations: Object.assign(integrations, integrations),
 municipios: Object.assign(municipios, municipios),
+paises: Object.assign(paises, paises),
 parroquias: Object.assign(parroquias, parroquias),
 pastores: Object.assign(pastores, pastores),
-paises: Object.assign(paises, paises),
-productores: Object.assign(productores, productores),
-proveedores: Object.assign(proveedores, proveedores),
-responsables: Object.assign(responsables, responsables),
 roles: Object.assign(roles, roles),
 sucursales: Object.assign(sucursales, sucursales),
 usuarios: Object.assign(usuarios, usuarios),
-visitasTemporales: Object.assign(visitasTemporales, visitasTemporales),
-tipoServicios: Object.assign(tipoServicios, tipoServicios),
 }
 
 export default admin

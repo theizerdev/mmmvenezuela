@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+use Illuminate\Support\Facades\Storage;
+
 class Iglesia extends Model
 {
     use HasFactory;
@@ -46,10 +48,27 @@ class Iglesia extends Model
         'medio_comunicacion',
         'nombre_medio_comunicacion',
         'donde_medio_comunicacion',
+        'documento_path',
+        'documento_nombre',
+        'documento_size',
+        'documento_mime',
+        'documento_updated_at',
         'empresa_id',
         'sucursal_id',
         'usuario_registro_id',
     ];
+
+    protected $appends = [
+        'documento_url',
+    ];
+
+    public function getDocumentoUrlAttribute(): ?string
+    {
+        if (!$this->documento_path) {
+            return null;
+        }
+        return Storage::url($this->documento_path);
+    }
 
     protected $casts = [
         'activa' => 'boolean',

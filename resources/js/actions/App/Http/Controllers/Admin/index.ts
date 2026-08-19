@@ -1,54 +1,44 @@
-import VisitaAccesoController from './VisitaAccesoController'
+import PastorCarnetController from './PastorCarnetController'
 import DashboardController from './DashboardController'
-import EmpleadoController from './EmpleadoController'
-import ProveedorController from './ProveedorController'
-import ProductorController from './ProductorController'
-import CargoController from './CargoController'
 import DbMonitoringController from './DbMonitoringController'
-import DepartamentoController from './DepartamentoController'
 import EmpresaController from './EmpresaController'
+import EstadoController from './EstadoController'
+import ExtensionController from './ExtensionController'
 import IntegrationController from './IntegrationController'
 import LogMonitoringController from './LogMonitoringController'
+import MunicipioController from './MunicipioController'
 import PaisController from './PaisController'
-import ProductorEmpleadoController from './ProductorEmpleadoController'
-import ProductorVehiculoController from './ProductorVehiculoController'
-import ProveedorEmpleadoController from './ProveedorEmpleadoController'
-import ProveedorVehiculoController from './ProveedorVehiculoController'
+import ParroquiaController from './ParroquiaController'
+import PastorController from './PastorController'
+import PastorPlanillaController from './PastorPlanillaController'
 import QueueMonitoringController from './QueueMonitoringController'
-import ResponsableController from './ResponsableController'
 import RoleController from './RoleController'
 import ServerMonitoringController from './ServerMonitoringController'
 import SessionMonitoringController from './SessionMonitoringController'
 import SucursalController from './SucursalController'
 import TaskMonitoringController from './TaskMonitoringController'
 import UserController from './UserController'
-import VisitaTemporalController from './VisitaTemporalController'
 const Admin = {
-    VisitaAccesoController: Object.assign(VisitaAccesoController, VisitaAccesoController),
+    PastorCarnetController: Object.assign(PastorCarnetController, PastorCarnetController),
 DashboardController: Object.assign(DashboardController, DashboardController),
-EmpleadoController: Object.assign(EmpleadoController, EmpleadoController),
-ProveedorController: Object.assign(ProveedorController, ProveedorController),
-ProductorController: Object.assign(ProductorController, ProductorController),
-CargoController: Object.assign(CargoController, CargoController),
 DbMonitoringController: Object.assign(DbMonitoringController, DbMonitoringController),
-DepartamentoController: Object.assign(DepartamentoController, DepartamentoController),
 EmpresaController: Object.assign(EmpresaController, EmpresaController),
+EstadoController: Object.assign(EstadoController, EstadoController),
+ExtensionController: Object.assign(ExtensionController, ExtensionController),
 IntegrationController: Object.assign(IntegrationController, IntegrationController),
 LogMonitoringController: Object.assign(LogMonitoringController, LogMonitoringController),
+MunicipioController: Object.assign(MunicipioController, MunicipioController),
 PaisController: Object.assign(PaisController, PaisController),
-ProductorEmpleadoController: Object.assign(ProductorEmpleadoController, ProductorEmpleadoController),
-ProductorVehiculoController: Object.assign(ProductorVehiculoController, ProductorVehiculoController),
-ProveedorEmpleadoController: Object.assign(ProveedorEmpleadoController, ProveedorEmpleadoController),
-ProveedorVehiculoController: Object.assign(ProveedorVehiculoController, ProveedorVehiculoController),
+ParroquiaController: Object.assign(ParroquiaController, ParroquiaController),
+PastorController: Object.assign(PastorController, PastorController),
+PastorPlanillaController: Object.assign(PastorPlanillaController, PastorPlanillaController),
 QueueMonitoringController: Object.assign(QueueMonitoringController, QueueMonitoringController),
-ResponsableController: Object.assign(ResponsableController, ResponsableController),
 RoleController: Object.assign(RoleController, RoleController),
 ServerMonitoringController: Object.assign(ServerMonitoringController, ServerMonitoringController),
 SessionMonitoringController: Object.assign(SessionMonitoringController, SessionMonitoringController),
 SucursalController: Object.assign(SucursalController, SucursalController),
 TaskMonitoringController: Object.assign(TaskMonitoringController, TaskMonitoringController),
 UserController: Object.assign(UserController, UserController),
-VisitaTemporalController: Object.assign(VisitaTemporalController, VisitaTemporalController),
 }
 
 export default Admin
