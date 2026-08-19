@@ -32,6 +32,36 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->configureAuthentication();
+    }
+
+    /**
+     * Configure Fortify authentication logic (email or username).
+     */
+    private function configureAuthentication(): void
+    {
+        Fortify::authenticateUsing(function (Request $request) {
+            $login = $request->input(Fortify::username());
+
+            if (! $login) {
+                return null;
+            }
+
+            $user = \App\Models\User::where(function ($query) use ($login) {
+                $query->where('email', $login)
+                    ->orWhere('username', $login);
+            })->first();
+
+            if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                if ($user->status === 'inactivo' || $user->status === 'suspendido') {
+                    return null;
+                }
+
+                return $user;
+            }
+
+            return null;
+        });
     }
 
     /**

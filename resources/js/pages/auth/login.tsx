@@ -39,20 +39,20 @@ export default function Login({ status, canResetPassword }: Props) {
                     <>
                         <div className="grid gap-5">
                             <FormField
-                                label="Correo electrónico"
+                                label="Correo electrónico o usuario"
                                 htmlFor="email"
                                 error={errors.email}
                                 required
                             >
                                 <Input
                                     id="email"
-                                    type="email"
+                                    type="text"
                                     name="email"
                                     required
                                     autoFocus
                                     tabIndex={1}
-                                    autoComplete="email"
-                                    placeholder="nombre@empresa.com"
+                                    autoComplete="username"
+                                    placeholder="nombre@empresa.com o usuario"
                                 />
                             </FormField>
 
@@ -122,5 +122,5 @@ export default function Login({ status, canResetPassword }: Props) {
 
 Login.layout = {
     title: 'Inicia sesión en tu cuenta',
-    description: 'Ingresa tu correo y contraseña para continuar',
+    description: 'Ingresa tu correo o usuario y contraseña para continuar',
 };
