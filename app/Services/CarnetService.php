@@ -214,67 +214,61 @@ class CarnetService
         $pdf->SetFillColor(255, 255, 255);
         $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
 
-        // 2. Esquinas Decorativas Azules (#0f3563 / RGB 15, 53, 99) según Imagen 2
+        // 2. Esquinas Decorativas Azules (#0f3563 / RGB 15, 53, 99) compactas
         $pdf->SetFillColor(15, 53, 99);
 
-        // Esquina superior izquierda (Banda diagonal doble)
+        // Esquina superior izquierda (Triángulo compacto)
         $pdf->Polygon([
             $x + 0, $y + 0,
-            $x + 22, $y + 0,
-            $x + 0, $y + 22,
-        ], 'F');
-        $pdf->Polygon([
-            $x + 0, $y + 26,
-            $x + 26, $y + 0,
-            $x + 20, $y + 0,
-            $x + 0, $y + 20,
+            $x + 15, $y + 0,
+            $x + 0, $y + 15,
         ], 'F');
 
-        // Esquina inferior derecha (Banda diagonal)
+        // Esquina inferior derecha (Triángulo compacto)
         $pdf->Polygon([
             $x + self::ANCHO_MM, $y + self::ALTO_MM,
-            $x + self::ANCHO_MM - 22, $y + self::ALTO_MM,
-            $x + self::ANCHO_MM, $y + self::ALTO_MM - 22,
+            $x + self::ANCHO_MM - 12, $y + self::ALTO_MM,
+            $x + self::ANCHO_MM, $y + self::ALTO_MM - 12,
         ], 'F');
 
         // 3. Logo Superior Horizontal MMM
         $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
         if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, $x + 14.5, $y + 3, 7.5, 5.5);
+            $pdf->Image($logoPath, $x + 16, $y + 3, 7.5, 5.5);
         }
 
         $pdf->SetTextColor(15, 53, 99);
         $pdf->SetFont('Helvetica', 'B', 8.5);
-        $pdf->SetXY($x + 25, $y + 5);
+        $pdf->SetXY($x + 26, $y + 4.8);
         $pdf->Cell(55, 4, mb_convert_encoding('MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-        // 4. Párrafos Legales e Institucionales (Exactos a Imagen 2)
+        // 4. Párrafos Legales e Institucionales (100% en fondo blanco)
         $pdf->SetTextColor(30, 41, 59);
         $pdf->SetFont('Helvetica', '', 3.8);
 
         $texto1 = "ORGANIZACION CRISTIANA, SIN FINES DE LUCRO, DEBIDAMENTE REGISTRADA ANTE LAS AUTORIDADES GUBERNAMENTALES DE LA REPÚBLICA BOLIVARIANA DE VENEZUELA, INSCRITA EN LA DIRECCIÓN DE JUSTICIA Y CULTO BAJO EL N° DG/520 DF/620-100.361.";
-        $pdf->SetXY($x + 8, $y + 12.5);
-        $pdf->MultiCell(70, 1.9, mb_convert_encoding($texto1, 'ISO-8859-1', 'UTF-8'), 0, 'J');
+        $pdf->SetXY($x + 9.5, $y + 12.5);
+        $pdf->MultiCell(66.5, 1.9, mb_convert_encoding($texto1, 'ISO-8859-1', 'UTF-8'), 0, 'J');
 
         $texto2 = "ESTE CARNET ES PERSONAL E INTRANSFERIBLE Y ACREDITA AL USUARIO COMO MIEMBRO DE LA IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA DEL MOVIMIENTO MISIONERO MUNDIAL.";
-        $pdf->SetXY($x + 8, $pdf->GetY() + 1.2);
-        $pdf->MultiCell(70, 1.9, mb_convert_encoding($texto2, 'ISO-8859-1', 'UTF-8'), 0, 'J');
+        $pdf->SetXY($x + 9.5, $pdf->GetY() + 1.2);
+        $pdf->MultiCell(66.5, 1.9, mb_convert_encoding($texto2, 'ISO-8859-1', 'UTF-8'), 0, 'J');
 
         $texto3 = "SE LE AGRADECE A LAS AUTORIDADES CIVILES Y MILITARES TODA LA COLABORACIÓN PRESTADA AL PORTADOR DE ESTA CREDENCIAL.";
-        $pdf->SetXY($x + 8, $pdf->GetY() + 1.2);
+        $pdf->SetXY($x + 9.5, $pdf->GetY() + 1.2);
         $pdf->SetFont('Helvetica', 'B', 3.8);
-        $pdf->MultiCell(70, 1.9, mb_convert_encoding($texto3, 'ISO-8859-1', 'UTF-8'), 0, 'J');
+        $pdf->MultiCell(66.5, 1.9, mb_convert_encoding($texto3, 'ISO-8859-1', 'UTF-8'), 0, 'J');
 
         // 5. Nombre Titular + Cédula (Ubicado más abajo a la izquierda)
         $pdf->SetFont('Times', 'I', 7.5);
         $pdf->SetTextColor(15, 53, 99);
         $titular = $pastor->nombres . ' ' . $pastor->apellidos . ' (' . (preg_replace('/[^0-9]/', '', $pastor->documento) ?: $pastor->codigo) . ')';
-        $pdf->SetXY($x + 8, $y + 43);
+        $pdf->SetXY($x + 8, $y + 44);
         $pdf->Cell(52, 4, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-        // 6. Código QR Real de Verificación (Derecha del reverso)
+        // 6. Código QR Real de Verificación (100% en fondo blanco)
         $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-        $this->dibujarCodigoQR($pdf, $x + 63, $y + 34, 16, $qrUrl);
+        $this->dibujarCodigoQR($pdf, $x + 63.5, $y + 33.5, 15, $qrUrl);
     }
 
     /**

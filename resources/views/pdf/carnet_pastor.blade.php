@@ -206,8 +206,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 25mm;
-            height: 25mm;
+            width: 14mm;
+            height: 14mm;
             z-index: 1;
         }
 
@@ -215,8 +215,8 @@
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 22mm;
-            height: 22mm;
+            width: 12mm;
+            height: 12mm;
             z-index: 1;
         }
 
@@ -239,7 +239,7 @@
         .legal-texts {
             position: relative;
             z-index: 5;
-            margin: 2.5mm 5mm 0 5mm;
+            margin: 2.5mm 6mm 0 10mm;
             font-size: 3.8pt;
             line-height: 1.25;
             color: #1e293b;
