@@ -79,6 +79,8 @@ class UserController extends Controller
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
+            'zona' => 'nullable|string|max:255',
+            'distrito' => 'nullable|string|max:255',
             'roles' => 'array',
         ]);
 
@@ -116,6 +118,8 @@ class UserController extends Controller
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
+            'zona' => 'nullable|string|max:255',
+            'distrito' => 'nullable|string|max:255',
             'roles' => 'array',
         ]);
 

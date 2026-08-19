@@ -3,12 +3,13 @@
 namespace App\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 
 trait Multitenantable
 {
     public static function bootMultitenantable(): void
     {
-        // Auto-fill empresa_id y sucursal_id al crear registros
+        // Auto-fill empresa_id, sucursal_id, zona y distrito al crear registros
         static::creating(function ($model) {
             static $isResolvingCreating = false;
 
@@ -38,14 +39,25 @@ trait Multitenantable
                             $model->sucursal_id = $user->sucursal_id;
                         }
                     }
+
+                    if (Schema::hasColumn($table, 'zona') && isset($user->zona) && ! empty($user->zona)) {
+                        if (! isset($model->zona) || empty($model->zona)) {
+                            $model->zona = $user->zona;
+                        }
+                    }
+
+                    if (Schema::hasColumn($table, 'distrito') && isset($user->distrito) && ! empty($user->distrito)) {
+                        if (! isset($model->distrito) || empty($model->distrito)) {
+                            $model->distrito = $user->distrito;
+                        }
+                    }
                 }
             } finally {
                 $isResolvingCreating = false;
             }
         });
 
-        // Global scope: filtra por empresa y sucursal del usuario autenticado
-        // El Super Administrador no tiene filtro (ve todos los tenants)
+        // Global scope: filtra por empresa, sucursal y zona/distrito del usuario autenticado según su rol
         static::addGlobalScope('multitenancy', function (Builder $builder) {
             static $isResolvingUser = false;
 
@@ -83,21 +95,39 @@ trait Multitenantable
                         $builder->where("{$table}.id", $user->empresa_id);
                     }
                 } else {
-                    if ($user->empresa_id) {
+                    if (Schema::hasColumn($table, 'empresa_id') && $user->empresa_id) {
                         $builder->where("{$table}.empresa_id", $user->empresa_id);
                     }
                 }
 
-                // 2. Filtrado por Sucursal (no aplica a la tabla empresas)
+                // 2. Filtrado por Sucursal
                 if ($table === 'empresas') {
-                    // La tabla empresas representa el tenant principal y no posee columna sucursal_id
+                    // La tabla empresas no posee columna sucursal_id
                 } elseif ($table === 'sucursales') {
                     if ($user->sucursal_id) {
                         $builder->where("{$table}.id", $user->sucursal_id);
                     }
                 } else {
-                    if ($user->sucursal_id) {
+                    if (Schema::hasColumn($table, 'sucursal_id') && $user->sucursal_id) {
                         $builder->where("{$table}.sucursal_id", $user->sucursal_id);
+                    }
+                }
+
+                // 3. Filtrado por Zona y Distrito según el Rol
+                // Los roles Supervisor Nacional, Junta Nacional y Secretaria Nacional ven todas las zonas
+                $hasNationalAccess = method_exists($user, 'hasAnyRole') && $user->hasAnyRole([
+                    'Supervisor Nacional',
+                    'Junta Nacional',
+                    'Secretaria Nacional',
+                ]);
+
+                if (! $hasNationalAccess) {
+                    if (Schema::hasColumn($table, 'zona') && ! empty($user->zona)) {
+                        $builder->where("{$table}.zona", $user->zona);
+                    }
+
+                    if (Schema::hasColumn($table, 'distrito') && ! empty($user->distrito)) {
+                        $builder->where("{$table}.distrito", $user->distrito);
                     }
                 }
             } finally {

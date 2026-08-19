@@ -94,6 +94,8 @@ interface User {
     status: 'activo' | 'inactivo' | 'suspendido';
     empresa_id?: number | null;
     sucursal_id?: number | null;
+    zona?: string | null;
+    distrito?: string | null;
     empresa?: Empresa | null;
     sucursal?: Sucursal | null;
     roles: Role[];
@@ -131,6 +133,8 @@ const initialForm = {
     status: 'activo' as 'activo' | 'inactivo' | 'suspendido',
     empresa_id: '' as string | number,
     sucursal_id: '' as string | number,
+    zona: '',
+    distrito: '',
     roles: [] as string[],
 };
 
@@ -221,6 +225,8 @@ return [];
             status: user.status,
             empresa_id: user.empresa_id || '',
             sucursal_id: user.sucursal_id || '',
+            zona: user.zona || '',
+            distrito: user.distrito || '',
             roles: user.roles.map((r) => r.name),
         });
         setIsModalOpen(true);
@@ -239,6 +245,8 @@ return [];
             status: user.status,
             empresa_id: user.empresa_id || '',
             sucursal_id: user.sucursal_id || '',
+            zona: user.zona || '',
+            distrito: user.distrito || '',
             roles: user.roles.map((r) => r.name),
         });
         setIsModalOpen(true);
@@ -360,6 +368,23 @@ return;
                     <Phone className="w-3 h-3" />
                     {user.telefono ?? '—'}
                 </span>
+            ),
+        },
+        {
+            header: __('Zona / Distrito'),
+            hideOn: 'mobile',
+            cell: (user) => (
+                <div className="text-xs text-muted-foreground">
+                    {user.zona || user.distrito ? (
+                        <span>
+                            {user.zona && <span className="font-medium text-slate-700 dark:text-slate-300">{user.zona}</span>}
+                            {user.zona && user.distrito && ' - '}
+                            {user.distrito && <span>{user.distrito}</span>}
+                        </span>
+                    ) : (
+                        <span>—</span>
+                    )}
+                </div>
             ),
         },
         {
@@ -690,6 +715,30 @@ return;
                                     </SelectContent>
                                 </Select>
                                 {errors.sucursal_id && <p className="text-red-500 text-xs mt-1">{errors.sucursal_id}</p>}
+                            </div>
+
+                            {/* Zona */}
+                            <div>
+                                <Label htmlFor="zona">{__('Zona')}</Label>
+                                <Input
+                                    id="zona"
+                                    value={data.zona}
+                                    onChange={(e) => setData('zona', e.target.value)}
+                                    placeholder="Ej: Zona Central / Zona 1"
+                                />
+                                {errors.zona && <p className="text-red-500 text-xs mt-1">{errors.zona}</p>}
+                            </div>
+
+                            {/* Distrito */}
+                            <div>
+                                <Label htmlFor="distrito">{__('Distrito')}</Label>
+                                <Input
+                                    id="distrito"
+                                    value={data.distrito}
+                                    onChange={(e) => setData('distrito', e.target.value)}
+                                    placeholder="Ej: Distrito 2"
+                                />
+                                {errors.distrito && <p className="text-red-500 text-xs mt-1">{errors.distrito}</p>}
                             </div>
 
                             {/* Estado */}

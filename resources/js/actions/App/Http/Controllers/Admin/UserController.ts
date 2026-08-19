@@ -138,7 +138,7 @@ store.form = storeForm
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
-* @see app/Http/Controllers/Admin/UserController.php:107
+* @see app/Http/Controllers/Admin/UserController.php:109
 * @route '/admin/usuarios/{user}'
 */
 export const update = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -153,7 +153,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
-* @see app/Http/Controllers/Admin/UserController.php:107
+* @see app/Http/Controllers/Admin/UserController.php:109
 * @route '/admin/usuarios/{user}'
 */
 update.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -186,7 +186,7 @@ update.url = (args: { user: number | { id: number } } | [user: number | { id: nu
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
-* @see app/Http/Controllers/Admin/UserController.php:107
+* @see app/Http/Controllers/Admin/UserController.php:109
 * @route '/admin/usuarios/{user}'
 */
 update.put = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -196,7 +196,7 @@ update.put = (args: { user: number | { id: number } } | [user: number | { id: nu
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
-* @see app/Http/Controllers/Admin/UserController.php:107
+* @see app/Http/Controllers/Admin/UserController.php:109
 * @route '/admin/usuarios/{user}'
 */
 const updateForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -211,7 +211,7 @@ const updateForm = (args: { user: number | { id: number } } | [user: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
-* @see app/Http/Controllers/Admin/UserController.php:107
+* @see app/Http/Controllers/Admin/UserController.php:109
 * @route '/admin/usuarios/{user}'
 */
 updateForm.put = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -228,7 +228,7 @@ update.form = updateForm
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
-* @see app/Http/Controllers/Admin/UserController.php:149
+* @see app/Http/Controllers/Admin/UserController.php:153
 * @route '/admin/usuarios/{user}'
 */
 export const destroy = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -243,7 +243,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
-* @see app/Http/Controllers/Admin/UserController.php:149
+* @see app/Http/Controllers/Admin/UserController.php:153
 * @route '/admin/usuarios/{user}'
 */
 destroy.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -276,7 +276,7 @@ destroy.url = (args: { user: number | { id: number } } | [user: number | { id: n
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
-* @see app/Http/Controllers/Admin/UserController.php:149
+* @see app/Http/Controllers/Admin/UserController.php:153
 * @route '/admin/usuarios/{user}'
 */
 destroy.delete = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -286,7 +286,7 @@ destroy.delete = (args: { user: number | { id: number } } | [user: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
-* @see app/Http/Controllers/Admin/UserController.php:149
+* @see app/Http/Controllers/Admin/UserController.php:153
 * @route '/admin/usuarios/{user}'
 */
 const destroyForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -301,7 +301,7 @@ const destroyForm = (args: { user: number | { id: number } } | [user: number | {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
-* @see app/Http/Controllers/Admin/UserController.php:149
+* @see app/Http/Controllers/Admin/UserController.php:153
 * @route '/admin/usuarios/{user}'
 */
 destroyForm.delete = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -318,7 +318,7 @@ destroy.form = destroyForm
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
-* @see app/Http/Controllers/Admin/UserController.php:168
+* @see app/Http/Controllers/Admin/UserController.php:172
 * @route '/admin/usuarios/{user}/toggle-status'
 */
 export const toggleStatus = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -333,7 +333,7 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
-* @see app/Http/Controllers/Admin/UserController.php:168
+* @see app/Http/Controllers/Admin/UserController.php:172
 * @route '/admin/usuarios/{user}/toggle-status'
 */
 toggleStatus.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -366,7 +366,7 @@ toggleStatus.url = (args: { user: number | { id: number } } | [user: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
-* @see app/Http/Controllers/Admin/UserController.php:168
+* @see app/Http/Controllers/Admin/UserController.php:172
 * @route '/admin/usuarios/{user}/toggle-status'
 */
 toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -376,7 +376,7 @@ toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | 
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
-* @see app/Http/Controllers/Admin/UserController.php:168
+* @see app/Http/Controllers/Admin/UserController.php:172
 * @route '/admin/usuarios/{user}/toggle-status'
 */
 const toggleStatusForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -391,7 +391,7 @@ const toggleStatusForm = (args: { user: number | { id: number } } | [user: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
-* @see app/Http/Controllers/Admin/UserController.php:168
+* @see app/Http/Controllers/Admin/UserController.php:172
 * @route '/admin/usuarios/{user}/toggle-status'
 */
 toggleStatusForm.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
