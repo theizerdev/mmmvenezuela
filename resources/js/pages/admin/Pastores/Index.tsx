@@ -15,8 +15,11 @@ import {
     MapPin,
     FileText,
     LayoutGrid,
-    List
+    List,
+    IdCard
 } from 'lucide-react';
+import { PastorCarnetModal } from './Partials/PastorCarnetModal';
+
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -103,6 +106,43 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
     const [isTableLoading, setIsTableLoading] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
+    const [carnetPastor, setCarnetPastor] = useState<Pastor | null>(null);
+    const [isCarnetModalOpen, setIsCarnetModalOpen] = useState(false);
+
+    const handleOpenCarnet = (pastor: Pastor) => {
+        setCarnetPastor(pastor);
+        setIsCarnetModalOpen(true);
+    };
+
+    const handleBulkCarnetPdf = () => {
+        if (selectedIds.length === 0) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/pastores/bulk-carnet-pdf';
+        form.target = '_blank';
+
+        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+        if (csrfToken) {
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '_token';
+            tokenInput.value = csrfToken;
+            form.appendChild(tokenInput);
+        }
+
+        selectedIds.forEach((id) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = String(id);
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    };
+
 
     const getPastorPhotoUrl = (foto?: string | null) => {
         if (!foto) return null;
@@ -321,6 +361,10 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     <DropdownMenuContent align="end">
                         {hasPermission('pastores.edit') && (
                             <>
+                                <DropdownMenuItem onClick={() => handleOpenCarnet(row)} className="cursor-pointer">
+                                    <IdCard className="mr-2 size-4 text-indigo-500" />
+                                    {__('Carnet Digital')}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <a href={`/admin/pastores/${row.id}/planilla`} target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
                                         <FileText className="mr-2 size-4 text-emerald-500" />
@@ -442,16 +486,29 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             </div>
                         </div>
 
-                        {selectedIds.length > 0 && hasPermission('pastores.delete') && (
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => setIsDeleteDialogOpen(true)}
-                                className="gap-2"
-                            >
-                                <Trash2 className="size-4" />
-                                {__('Delete selected')} ({selectedIds.length})
-                            </Button>
+                        {selectedIds.length > 0 && (
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleBulkCarnetPdf}
+                                    className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 font-semibold shadow-xs"
+                                >
+                                    <IdCard className="size-4 text-indigo-600 dark:text-indigo-400" />
+                                    {__('Carnets PDF')} ({selectedIds.length})
+                                </Button>
+                                {hasPermission('pastores.delete') && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => setIsDeleteDialogOpen(true)}
+                                        className="gap-2"
+                                    >
+                                        <Trash2 className="size-4" />
+                                        {__('Delete selected')} ({selectedIds.length})
+                                    </Button>
+                                )}
+                            </div>
                         )}
                     </div>
 
@@ -627,8 +684,20 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                         type="button"
                                                         variant="ghost"
                                                         size="sm"
+                                                        onClick={() => handleOpenCarnet(pastor)}
+                                                        className="h-8 px-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg flex-1 gap-1"
+                                                        title={__('Ver Carnet Ministerial')}
+                                                    >
+                                                        <IdCard className="size-3.5" />
+                                                        <span>{__('Carnet')}</span>
+                                                    </Button>
+
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
                                                         onClick={() => window.open(`/admin/pastores/${pastor.id}/planilla`, '_blank')}
-                                                        className="h-8 px-2.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg flex-1 gap-1.5"
+                                                        className="h-8 px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg gap-1"
                                                         title={__('Ver Planilla PDF')}
                                                     >
                                                         <FileText className="size-3.5" />
@@ -640,10 +709,10 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-8 px-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg gap-1.5"
+                                                                className="h-8 w-8 p-0 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0"
+                                                                title={__('Edit')}
                                                             >
                                                                 <Pencil className="size-3.5" />
-                                                                <span>{__('Edit')}</span>
                                                             </Button>
                                                         </Link>
                                                     )}
@@ -694,6 +763,12 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             ? `Esta acción eliminará los ${selectedIds.length} pastores seleccionados permanentemente.`
                             : 'Esta acción eliminará el pastor seleccionado permanentemente.'
                     }
+                />
+
+                <PastorCarnetModal
+                    pastor={carnetPastor}
+                    isOpen={isCarnetModalOpen}
+                    onClose={() => setIsCarnetModalOpen(false)}
                 />
             </div>
         </>

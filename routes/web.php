@@ -8,11 +8,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Landing page pública: siempre visible, con o sin sesión. El propio landing
-// decide a dónde llevar al usuario (login o dashboard) según su estado de auth.
+use App\Http\Controllers\Admin\PastorCarnetController;
+
+// Landing page pública
 Route::get('/', function () {
     return redirect()->route('dashboard');
 })->name('home');
+
+// Ruta pública de verificación del carnet mediante escaneo de Código QR
+Route::get('/validar-credencial/{codigo}', [PastorCarnetController::class, 'validarCredencial'])->name('pastores.validar-credencial');
+
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/forgot-password', [ForgotPasswordOtpController::class, 'show'])->name('password.request');
