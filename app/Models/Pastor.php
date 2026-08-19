@@ -2,14 +2,26 @@
 
 namespace App\Models;
 
+use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Pastor extends Model
 {
-    use HasFactory, Multitenantable;
+    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['codigo', 'nombres', 'apellidos', 'documento', 'genero', 'nivel_ministerial', 'zona', 'distrito', 'status'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
+    }
 
     protected $table = 'pastores';
 

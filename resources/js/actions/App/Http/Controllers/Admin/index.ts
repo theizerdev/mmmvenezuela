@@ -1,5 +1,6 @@
 import PastorCarnetController from './PastorCarnetController'
 import DashboardController from './DashboardController'
+import ActivityMonitoringController from './ActivityMonitoringController'
 import DbMonitoringController from './DbMonitoringController'
 import EmpresaController from './EmpresaController'
 import EstadoController from './EstadoController'
@@ -22,6 +23,7 @@ import UserController from './UserController'
 const Admin = {
     PastorCarnetController: Object.assign(PastorCarnetController, PastorCarnetController),
     DashboardController: Object.assign(DashboardController, DashboardController),
+    ActivityMonitoringController: Object.assign(ActivityMonitoringController, ActivityMonitoringController),
     DbMonitoringController: Object.assign(DbMonitoringController, DbMonitoringController),
     EmpresaController: Object.assign(EmpresaController, EmpresaController),
     EstadoController: Object.assign(EstadoController, EstadoController),

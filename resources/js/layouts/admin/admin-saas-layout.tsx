@@ -590,6 +590,11 @@ export default function AdminSaasLayout({
                         {(() => {
                             const monitoringItems = [
                                 {
+                                    title: 'System Activities',
+                                    href: '/admin/monitoring/activities',
+                                    permission: 'monitoreo.activities',
+                                },
+                                {
                                     title: 'Database',
                                     href: dbMonitoringIndex.url(),
                                     permission: 'monitoreo.database',

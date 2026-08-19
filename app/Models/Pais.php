@@ -2,10 +2,23 @@
 
 namespace App\Models;
 
+use App\Traits\HasSpanishActivityLog;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Pais extends Model
 {
+    use HasSpanishActivityLog, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['nombre', 'codigo_iso2', 'codigo_telefonico', 'moneda_principal', 'activo'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
+    }
     protected $table = 'pais';
 
     protected $fillable = [
