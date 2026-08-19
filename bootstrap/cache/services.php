@@ -29,20 +29,16 @@
     25 => 'Codedge\\Fpdf\\FpdfServiceProvider',
     26 => 'Inertia\\ServiceProvider',
     27 => 'Laravel\\Fortify\\FortifyServiceProvider',
-    28 => 'Laravel\\Pail\\PailServiceProvider',
-    29 => 'Laravel\\Pao\\Laravel\\ServiceProvider',
-    30 => 'Laravel\\Passkeys\\PasskeysServiceProvider',
-    31 => 'Laravel\\Sail\\SailServiceProvider',
-    32 => 'Laravel\\Tinker\\TinkerServiceProvider',
-    33 => 'Laravel\\Wayfinder\\WayfinderServiceProvider',
-    34 => 'Carbon\\Laravel\\ServiceProvider',
-    35 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
-    36 => 'Termwind\\Laravel\\TermwindServiceProvider',
-    37 => 'Spatie\\Activitylog\\ActivitylogServiceProvider',
-    38 => 'Spatie\\Permission\\PermissionServiceProvider',
-    39 => 'App\\Providers\\AppServiceProvider',
-    40 => 'App\\Providers\\FortifyServiceProvider',
-    41 => 'App\\Providers\\LaraReactServiceProvider',
+    28 => 'Laravel\\Passkeys\\PasskeysServiceProvider',
+    29 => 'Laravel\\Tinker\\TinkerServiceProvider',
+    30 => 'Laravel\\Wayfinder\\WayfinderServiceProvider',
+    31 => 'Carbon\\Laravel\\ServiceProvider',
+    32 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    33 => 'Spatie\\Activitylog\\ActivitylogServiceProvider',
+    34 => 'Spatie\\Permission\\PermissionServiceProvider',
+    35 => 'App\\Providers\\AppServiceProvider',
+    36 => 'App\\Providers\\FortifyServiceProvider',
+    37 => 'App\\Providers\\LaraReactServiceProvider',
   ),
   'eager' => 
   array (
@@ -59,18 +55,15 @@
     10 => 'Barryvdh\\DomPDF\\ServiceProvider',
     11 => 'Inertia\\ServiceProvider',
     12 => 'Laravel\\Fortify\\FortifyServiceProvider',
-    13 => 'Laravel\\Pail\\PailServiceProvider',
-    14 => 'Laravel\\Pao\\Laravel\\ServiceProvider',
-    15 => 'Laravel\\Passkeys\\PasskeysServiceProvider',
-    16 => 'Laravel\\Wayfinder\\WayfinderServiceProvider',
-    17 => 'Carbon\\Laravel\\ServiceProvider',
-    18 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
-    19 => 'Termwind\\Laravel\\TermwindServiceProvider',
-    20 => 'Spatie\\Activitylog\\ActivitylogServiceProvider',
-    21 => 'Spatie\\Permission\\PermissionServiceProvider',
-    22 => 'App\\Providers\\AppServiceProvider',
-    23 => 'App\\Providers\\FortifyServiceProvider',
-    24 => 'App\\Providers\\LaraReactServiceProvider',
+    13 => 'Laravel\\Passkeys\\PasskeysServiceProvider',
+    14 => 'Laravel\\Wayfinder\\WayfinderServiceProvider',
+    15 => 'Carbon\\Laravel\\ServiceProvider',
+    16 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    17 => 'Spatie\\Activitylog\\ActivitylogServiceProvider',
+    18 => 'Spatie\\Permission\\PermissionServiceProvider',
+    19 => 'App\\Providers\\AppServiceProvider',
+    20 => 'App\\Providers\\FortifyServiceProvider',
+    21 => 'App\\Providers\\LaraReactServiceProvider',
   ),
   'deferred' => 
   array (
@@ -235,8 +228,6 @@
     'validation.presence' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'Illuminate\\Contracts\\Validation\\UncompromisedVerifier' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'fpdf' => 'Codedge\\Fpdf\\FpdfServiceProvider',
-    'Laravel\\Sail\\Console\\InstallCommand' => 'Laravel\\Sail\\SailServiceProvider',
-    'Laravel\\Sail\\Console\\PublishCommand' => 'Laravel\\Sail\\SailServiceProvider',
     'command.tinker' => 'Laravel\\Tinker\\TinkerServiceProvider',
   ),
   'when' => 
@@ -284,9 +275,6 @@
     array (
     ),
     'Codedge\\Fpdf\\FpdfServiceProvider' => 
-    array (
-    ),
-    'Laravel\\Sail\\SailServiceProvider' => 
     array (
     ),
     'Laravel\\Tinker\\TinkerServiceProvider' => 
