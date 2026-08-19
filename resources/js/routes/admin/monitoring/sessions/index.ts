@@ -82,7 +82,7 @@ index.form = indexForm
 
 /**
 * @see \App\Http\Controllers\Admin\SessionMonitoringController::destroy
-* @see app/Http/Controllers/Admin/SessionMonitoringController.php:59
+* @see app/Http/Controllers/Admin/SessionMonitoringController.php:60
 * @route '/admin/monitoring/sessions/{id}'
 */
 export const destroy = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -97,7 +97,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SessionMonitoringController::destroy
-* @see app/Http/Controllers/Admin/SessionMonitoringController.php:59
+* @see app/Http/Controllers/Admin/SessionMonitoringController.php:60
 * @route '/admin/monitoring/sessions/{id}'
 */
 destroy.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -124,7 +124,7 @@ destroy.url = (args: { id: string | number } | [id: string | number ] | string |
 
 /**
 * @see \App\Http\Controllers\Admin\SessionMonitoringController::destroy
-* @see app/Http/Controllers/Admin/SessionMonitoringController.php:59
+* @see app/Http/Controllers/Admin/SessionMonitoringController.php:60
 * @route '/admin/monitoring/sessions/{id}'
 */
 destroy.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -134,7 +134,7 @@ destroy.delete = (args: { id: string | number } | [id: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\Admin\SessionMonitoringController::destroy
-* @see app/Http/Controllers/Admin/SessionMonitoringController.php:59
+* @see app/Http/Controllers/Admin/SessionMonitoringController.php:60
 * @route '/admin/monitoring/sessions/{id}'
 */
 const destroyForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -149,7 +149,7 @@ const destroyForm = (args: { id: string | number } | [id: string | number ] | st
 
 /**
 * @see \App\Http\Controllers\Admin\SessionMonitoringController::destroy
-* @see app/Http/Controllers/Admin/SessionMonitoringController.php:59
+* @see app/Http/Controllers/Admin/SessionMonitoringController.php:60
 * @route '/admin/monitoring/sessions/{id}'
 */
 destroyForm.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -424,12 +424,12 @@ export default function AdminSaasLayout({
                             const pastorItems = [
                                 {
                                     title: 'General List',
-                                    href: pastoresIndex(),
+                                    href: typeof pastoresIndex === 'function' ? (pastoresIndex() as any)?.url || '/admin/pastores' : pastoresIndex.url(),
                                     permission: 'pastores.view',
                                 },
                                 {
                                     title: 'New Pastor',
-                                    href: pastoresCreate(),
+                                    href: typeof pastoresCreate === 'function' ? (pastoresCreate() as any)?.url || '/admin/pastores/create' : pastoresCreate.url(),
                                     permission: 'pastores.create',
                                 },
                             ].filter(item => hasPermission(item.permission));
@@ -502,12 +502,12 @@ export default function AdminSaasLayout({
                                 },
                                 {
                                     title: 'Municipalities',
-                                    href: municipiosIndex(),
+                                    href: typeof municipiosIndex === 'function' ? (municipiosIndex() as any)?.url || '/admin/municipios' : municipiosIndex.url(),
                                     permission: 'municipios.view',
                                 },
                                 {
                                     title: 'Parishes',
-                                    href: parroquiasIndex(),
+                                    href: typeof parroquiasIndex === 'function' ? (parroquiasIndex() as any)?.url || '/admin/parroquias' : parroquiasIndex.url(),
                                     permission: 'parroquias.view',
                                 },
 

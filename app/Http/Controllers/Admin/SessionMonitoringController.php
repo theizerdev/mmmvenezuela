@@ -17,9 +17,10 @@ class SessionMonitoringController extends Controller
     {
         $currentSessionId = $request->session()->getId();
 
-        // Obtener todas las sesiones de la base de datos
+        // Obtener solo las sesiones de usuarios autenticados
         $sessions = DB::table('sessions')
-            ->leftJoin('users', 'sessions.user_id', '=', 'users.id')
+            ->join('users', 'sessions.user_id', '=', 'users.id')
+            ->whereNotNull('sessions.user_id')
             ->select('sessions.id', 'sessions.user_id', 'sessions.ip_address', 'sessions.user_agent', 'sessions.last_activity', 'users.name as user_name', 'users.email as user_email')
             ->orderBy('sessions.last_activity', 'desc')
             ->get();
