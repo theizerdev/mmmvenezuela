@@ -19,7 +19,7 @@ class Iglesia extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['nombre', 'direccion', 'telefono', 'email', 'pastor_id', 'zona', 'distrito', 'activa', 'miembros_activos'])
+            ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));

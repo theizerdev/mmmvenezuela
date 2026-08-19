@@ -17,7 +17,7 @@ class Municipio extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['nombre', 'codigo', 'capital', 'activo'])
+            ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));

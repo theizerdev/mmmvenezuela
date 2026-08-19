@@ -52,7 +52,7 @@ class User extends Authenticatable implements PasskeyUser
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'username', 'email', 'status', 'telefono', 'zona', 'distrito', 'empresa_id', 'sucursal_id'])
+            ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));

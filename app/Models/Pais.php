@@ -14,7 +14,7 @@ class Pais extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['nombre', 'codigo_iso2', 'codigo_telefonico', 'moneda_principal', 'activo'])
+            ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));

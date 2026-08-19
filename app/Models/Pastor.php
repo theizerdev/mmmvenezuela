@@ -17,7 +17,7 @@ class Pastor extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['codigo', 'nombres', 'apellidos', 'documento', 'genero', 'nivel_ministerial', 'zona', 'distrito', 'status'])
+            ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));

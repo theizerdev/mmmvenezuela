@@ -18,8 +18,9 @@ class Empresa extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['razon_social', 'documento', 'status', 'telefono', 'email'])
+            ->logFillable()
             ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
 
