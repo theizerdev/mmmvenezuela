@@ -278,7 +278,22 @@ export default function RegistroPastor({
                 // Extraer palabras de nombres/apellidos para validación cruzada
                 const nombresInput = (data.nombres || '').toUpperCase().trim();
                 const apellidosInput = (data.apellidos || '').toUpperCase().trim();
-                const palabrasTitular = [...nombresInput.split(/\s+/), ...apellidosInput.split(/\s+/)].filter(p => p.length >= 3);
+                const palabrasNombres = nombresInput.split(/\s+/).filter(p => p.length >= 3);
+                const palabrasApellidos = apellidosInput.split(/\s+/).filter(p => p.length >= 3);
+
+                const coincideNombre = palabrasNombres.length > 0 && palabrasNombres.some(p => rawText.includes(p));
+                const coincideApellido = palabrasApellidos.length > 0 && palabrasApellidos.some(p => rawText.includes(p));
+
+                let coincideFecha = true;
+                if (data.fe_nacimiento) {
+                    const parts = data.fe_nacimiento.split('-');
+                    if (parts.length === 3) {
+                        const [yyyy, mm, dd] = parts;
+                        const yy = yyyy.substring(2);
+                        const datePatterns = [`${dd}-${mm}-${yy}`, `${dd}/${mm}/${yy}`, `${dd}-${mm}-${yyyy}`, `${dd}/${mm}/${yyyy}`];
+                        coincideFecha = datePatterns.some(p => rawText.includes(p));
+                    }
+                }
 
                 let isCedulaMatch = false;
                 let detectedCedulaNum: string | null = null;
@@ -290,7 +305,6 @@ export default function RegistroPastor({
                     } else if (matches.length > 0) {
                         detectedCedulaNum = matches[0];
                     } else if (cleanTextDigits.length >= 7) {
-                        // Buscar ventana de 7-8 dígitos dentro de los dígitos escaneados
                         for (let len = 8; len >= 7; len--) {
                             for (let i = 0; i <= cleanTextDigits.length - len; i++) {
                                 const sub = cleanTextDigits.substring(i, i + len);
@@ -304,21 +318,30 @@ export default function RegistroPastor({
                     }
 
                     if (isCedulaMatch) {
-                        setOcrVerified(true);
-                        setOcrMismatch(false);
-                        setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
-
-                        const coincideNombre = palabrasTitular.length > 0 && palabrasTitular.some(p => rawText.includes(p));
-                        if (coincideNombre) {
-                            setOcrStatusMessage(`¡Cédula V-${cleanDigitsInput} y Titular (${data.nombres}) validados con OCR!`);
+                        if (palabrasNombres.length > 0 && !coincideNombre && !coincideApellido) {
+                            // Los nombres o apellidos ingresados no pertenecen a la Cédula
+                            setOcrVerified(false);
+                            setOcrMismatch(true);
+                            setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
+                            setOcrStatusMessage(`⚠️ La Cédula V-${cleanDigitsInput} fue leída, pero los Nombres/Apellidos (${data.nombres} ${data.apellidos}) NO coinciden con los impresos en la foto.`);
+                        } else if (data.fe_nacimiento && !coincideFecha) {
+                            // La Fecha de Nacimiento no coincide
+                            setOcrVerified(false);
+                            setOcrMismatch(true);
+                            setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
+                            setOcrStatusMessage(`⚠️ La Cédula V-${cleanDigitsInput} fue leída, pero la Fecha de Nacimiento (${data.fe_nacimiento}) no coincide con la impresa en la foto.`);
                         } else {
-                            setOcrStatusMessage(`¡Cédula V-${cleanDigitsInput} verificada con OCR!`);
+                            // Cédula, Nombres y Fecha validados con éxito
+                            setOcrVerified(true);
+                            setOcrMismatch(false);
+                            setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
+                            setOcrStatusMessage(`✨ ¡Cédula V-${cleanDigitsInput}, Titular (${data.nombres}) y Datos validados con OCR!`);
                         }
                     } else if (detectedCedulaNum && detectedCedulaNum !== cleanDigitsInput) {
                         setOcrVerified(false);
                         setOcrMismatch(true);
                         setExtractedCedulaNumber(`V-${detectedCedulaNum}`);
-                        setOcrStatusMessage(`⚠️ La Cédula en la foto (V-${detectedCedulaNum}) NO coincide con la del pastor (V-${cleanDigitsInput}).`);
+                        setOcrStatusMessage(`⚠️ La Cédula en la foto (V-${detectedCedulaNum}) NO coincide con la Cédula ingresada (V-${cleanDigitsInput}).`);
                     } else {
                         setOcrVerified(false);
                         setOcrMismatch(false);
@@ -373,22 +396,28 @@ export default function RegistroPastor({
                         setCedulaExiste(false);
                         setCedulaEsConyugeVinculado(true);
 
-                        // Auto-completar datos personales y del cónyuge
-                        if (resData.nombres && !data.nombres) setData('nombres', resData.nombres);
-                        if (resData.apellidos && !data.apellidos) setData('apellidos', resData.apellidos);
-                        if (resData.genero) setData('genero', resData.genero);
-                        if (resData.fe_nacimiento && !data.fe_nacimiento) setData('fe_nacimiento', resData.fe_nacimiento);
-                        if (resData.nombre_conyuge) setData('nombre_conyuge', resData.nombre_conyuge);
-                        if (resData.estado_civil) setData('estado_civil', resData.estado_civil);
+                        // Auto-completar y corregir datos personales del titular simultáneamente
+                        setData(prev => ({
+                            ...prev,
+                            nombres: resData.nombres || prev.nombres,
+                            apellidos: resData.apellidos || prev.apellidos,
+                            genero: resData.genero || prev.genero,
+                            fe_nacimiento: resData.fe_nacimiento || prev.fe_nacimiento,
+                            nombre_conyuge: resData.nombre_conyuge || prev.nombre_conyuge,
+                            estado_civil: resData.estado_civil || prev.estado_civil,
+                        }));
 
                         // Pre-cargar extensión de su cónyuge si existe
                         if (resData.extension) {
                             setExtensionCargadaPorConyuge(true);
-                            if (resData.extension.nombre) setData('nombre_extension', resData.extension.nombre);
-                            if (resData.extension.estado_id) setData('estado_id', String(resData.extension.estado_id));
-                            if (resData.extension.zona) setData('zona', resData.extension.zona);
-                            if (resData.extension.distrito) setData('distrito', resData.extension.distrito);
-                            if (resData.extension.direccion) setData('direccion_extension', resData.extension.direccion);
+                            setData(prev => ({
+                                ...prev,
+                                nombre_extension: resData.extension.nombre || prev.nombre_extension,
+                                estado_id: resData.extension.estado_id ? String(resData.extension.estado_id) : prev.estado_id,
+                                zona: resData.extension.zona || prev.zona,
+                                distrito: resData.extension.distrito || prev.distrito,
+                                direccion_extension: resData.extension.direccion || prev.direccion_extension,
+                            }));
                         }
                     } else {
                         // Es una cédula ya registrada por completo -> BLOQUEAR
