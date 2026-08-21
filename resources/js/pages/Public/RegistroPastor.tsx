@@ -278,30 +278,61 @@ export default function RegistroPastor({
                     }
                 });
 
-                const rawText = (result.data.text || '').toUpperCase();
-                const cleanTextDigits = rawText.replace(/\D/g, '');
+                const normRawText = (result.data.text || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9\s]/g, ' ');
+
+                const cleanTextDigits = normRawText.replace(/\D/g, '');
                 const cleanDigitsInput = data.documento.replace(/\D/g, '');
 
                 // Buscar secuencias de 7 u 8 dígitos (cédulas venezolanas)
-                const matches = rawText.match(/\b\d{7,8}\b/g) || [];
+                const matches = normRawText.match(/\b\d{7,8}\b/g) || [];
 
-                // Extraer palabras de nombres/apellidos para validación cruzada
-                const nombresInput = (data.nombres || '').toUpperCase().trim();
-                const apellidosInput = (data.apellidos || '').toUpperCase().trim();
-                const palabrasNombres = nombresInput.split(/\s+/).filter(p => p.length >= 3);
-                const palabrasApellidos = apellidosInput.split(/\s+/).filter(p => p.length >= 3);
+                // Extraer palabras de nombres/apellidos para validación cruzada (sin acentos)
+                const normalizeWords = (str: string) =>
+                    (str || '')
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .toUpperCase()
+                        .split(/\s+/)
+                        .filter(p => p.length >= 2);
 
-                const coincideNombre = palabrasNombres.length > 0 && palabrasNombres.some(p => rawText.includes(p));
-                const coincideApellido = palabrasApellidos.length > 0 && palabrasApellidos.some(p => rawText.includes(p));
+                const palabrasNombres = normalizeWords(data.nombres);
+                const palabrasApellidos = normalizeWords(data.apellidos);
+
+                const coincideNombre = palabrasNombres.length > 0 && palabrasNombres.some(p => normRawText.includes(p));
+                const coincideApellido = palabrasApellidos.length > 0 && palabrasApellidos.some(p => normRawText.includes(p));
+                const coincideNombresOApellidos = coincideNombre || coincideApellido;
 
                 let coincideFecha = true;
                 if (data.fe_nacimiento) {
                     const parts = data.fe_nacimiento.split('-');
                     if (parts.length === 3) {
-                        const [yyyy, mm, dd] = parts;
+                        const [yyyy, mmStr, ddStr] = parts;
+                        const mmNum = parseInt(mmStr, 10);
+                        const ddNum = parseInt(ddStr, 10);
+
                         const yy = yyyy.substring(2);
-                        const datePatterns = [`${dd}-${mm}-${yy}`, `${dd}/${mm}/${yy}`, `${dd}-${mm}-${yyyy}`, `${dd}/${mm}/${yyyy}`];
-                        coincideFecha = datePatterns.some(p => rawText.includes(p));
+                        const mesNombres = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+                        const mesNombre = mesNombres[mmNum - 1] || '';
+
+                        const ddPadded = ddNum < 10 ? `0${ddNum}` : `${ddNum}`;
+                        const mmPadded = mmNum < 10 ? `0${mmNum}` : `${mmNum}`;
+
+                        const datePatterns = [
+                            `${ddPadded}/${mmPadded}/${yyyy}`, `${ddPadded}-${mmPadded}-${yyyy}`, `${ddPadded}.${mmPadded}.${yyyy}`, `${ddPadded} ${mmPadded} ${yyyy}`,
+                            `${ddPadded}/${mmPadded}/${yy}`, `${ddPadded}-${mmPadded}-${yy}`, `${ddPadded}.${mmPadded}.${yy}`,
+                            `${ddPadded} ${mesNombre} ${yyyy}`, `${ddPadded}-${mesNombre}-${yyyy}`, `${ddPadded}/${mesNombre}/${yyyy}`,
+                            `${ddNum}/${mmNum}/${yyyy}`, `${ddNum}-${mmNum}-${yyyy}`, `${ddNum}/${mmNum}/${yy}`,
+                            `${yyyy}-${mmPadded}-${ddPadded}`, `${yyyy}/${mmPadded}/${ddPadded}`
+                        ];
+
+                        const hasYear = normRawText.includes(yyyy) || normRawText.includes(` ${yy} `);
+                        const hasDayOrMonth = normRawText.includes(ddPadded) || normRawText.includes(mmPadded) || (mesNombre && normRawText.includes(mesNombre));
+
+                        coincideFecha = datePatterns.some(p => normRawText.includes(p)) || (hasYear && hasDayOrMonth);
                     }
                 }
 
@@ -328,12 +359,12 @@ export default function RegistroPastor({
                     }
 
                     if (isCedulaMatch) {
-                        if (palabrasNombres.length > 0 && !coincideNombre && !coincideApellido) {
+                        if ((palabrasNombres.length > 0 || palabrasApellidos.length > 0) && !coincideNombresOApellidos) {
                             // Los nombres o apellidos ingresados no pertenecen a la Cédula
                             setOcrVerified(false);
                             setOcrMismatch(true);
                             setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
-                            setOcrStatusMessage(`⚠️ La Cédula V-${cleanDigitsInput} fue leída, pero los Nombres/Apellidos (${data.nombres} ${data.apellidos}) NO coinciden con los impresos en la foto.`);
+                            setOcrStatusMessage(`⚠️ La Cédula V-${cleanDigitsInput} fue leída, pero los Nombres/Apellidos (${data.apellidos} ${data.nombres}) NO coinciden con los impresos en la foto.`);
                         } else if (data.fe_nacimiento && !coincideFecha) {
                             // La Fecha de Nacimiento no coincide
                             setOcrVerified(false);
@@ -345,7 +376,7 @@ export default function RegistroPastor({
                             setOcrVerified(true);
                             setOcrMismatch(false);
                             setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
-                            setOcrStatusMessage(`✨ ¡Cédula V-${cleanDigitsInput}, Titular (${data.nombres}) y Datos validados con OCR!`);
+                            setOcrStatusMessage(`✨ ¡Cédula V-${cleanDigitsInput}, Titular (${data.apellidos} ${data.nombres}) y Datos validados con OCR!`);
                         }
                     } else if (detectedCedulaNum && detectedCedulaNum !== cleanDigitsInput) {
                         setOcrVerified(false);
@@ -1462,6 +1493,40 @@ export default function RegistroPastor({
                                                 </div>
 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                 {/* Apellidos */}
+                                                 <div className="space-y-2">
+                                                     <Label htmlFor="apellidos" className="text-xs font-semibold text-slate-700">
+                                                         Apellidos <span className="text-rose-500">*</span>
+                                                     </Label>
+                                                     <Input
+                                                         id="apellidos"
+                                                         type="text"
+                                                         required
+                                                         value={data.apellidos}
+                                                         onChange={(e) => setData('apellidos', e.target.value)}
+                                                         placeholder="Ej. Pérez Rodríguez"
+                                                         className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                     />
+                                                     {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
+                                                 </div>
+
+                                                 {/* Nombres */}
+                                                 <div className="space-y-2">
+                                                     <Label htmlFor="nombres" className="text-xs font-semibold text-slate-700">
+                                                         Nombres <span className="text-rose-500">*</span>
+                                                     </Label>
+                                                     <Input
+                                                         id="nombres"
+                                                         type="text"
+                                                         required
+                                                         value={data.nombres}
+                                                         onChange={(e) => setData('nombres', e.target.value)}
+                                                         placeholder="Ej. Juan Carlos"
+                                                         className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                     />
+                                                     {errors.nombres && <p className="text-xs text-rose-500">{errors.nombres}</p>}
+                                                 </div>
+
                                                     {/* Grado Ministerial (Radix UI Select) */}
                                                     <div className="space-y-2">
                                                         <Label className="text-xs font-semibold text-slate-700">
