@@ -23,7 +23,9 @@ import {
     Users,
     AlertTriangle,
     Loader2,
-    Info
+    Info,
+    Scan,
+    Check
 } from 'lucide-react';
 
 import {
@@ -57,6 +59,7 @@ interface RegistroPastorProps {
     estados: EstadoItem[];
     gradosMinisteriales: string[];
     estadosCiviles: string[];
+    generos?: string[];
     flash?: {
         success?: {
             codigo: string;
@@ -70,11 +73,19 @@ export default function RegistroPastor({
     estados,
     gradosMinisteriales,
     estadosCiviles,
+    generos = ['Masculino', 'Femenino'],
     flash
 }: RegistroPastorProps) {
     const [step, setStep] = useState<number>(1);
     const [fotoCedulaPreview, setFotoCedulaPreview] = useState<string | null>(null);
     const [fotoPerfilPreview, setFotoPerfilPreview] = useState<string | null>(null);
+
+    // OCR Escaneo de Cédula Estados
+    const [isOcrAnalyzing, setIsOcrAnalyzing] = useState<boolean>(false);
+    const [ocrStatusMessage, setOcrStatusMessage] = useState<string | null>(null);
+    const [ocrVerified, setOcrVerified] = useState<boolean>(false);
+    const [ocrMismatch, setOcrMismatch] = useState<boolean>(false);
+    const [extractedCedulaNumber, setExtractedCedulaNumber] = useState<string | null>(null);
 
     // Validación de Cédula Principal duplicada en tiempo real
     const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
@@ -105,6 +116,7 @@ export default function RegistroPastor({
         nombres: '',
         apellidos: '',
         documento: '',
+        genero: 'Masculino',
         fe_nacimiento: '',
         estado_civil: 'Casado(a)',
         nombre_conyuge: '',
@@ -128,6 +140,32 @@ export default function RegistroPastor({
 
     const successData = flash?.success;
 
+    // Función utilitaria para calcular la edad automáticamente
+    const calculateAge = (dobString: string): number | null => {
+        if (!dobString) return null;
+        const birthDate = new Date(dobString);
+        if (isNaN(birthDate.getTime())) return null;
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age >= 0 ? age : null;
+    };
+
+    const computedEdad = calculateAge(data.fe_nacimiento);
+
+    // Cargar Tesseract.js dinámicamente para OCR en vivo
+    useEffect(() => {
+        if (!window.Tesseract) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+            script.async = true;
+            document.head.appendChild(script);
+        }
+    }, []);
+
     // Detectar cámaras disponibles
     useEffect(() => {
         if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
@@ -144,6 +182,148 @@ export default function RegistroPastor({
             stopCameraStream();
         };
     }, []);
+
+    // Pre-procesar imagen en canvas para optimizar lectura OCR (Escala de grises + Alto Contraste)
+    const preprocessImageForOcr = (imageSrc: string): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(imageSrc);
+                    return;
+                }
+
+                // Escalar resolución si la captura es pequeña para mejorar legibilidad
+                const scale = Math.max(1, 1280 / img.width);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const d = imageData.data;
+
+                // Aplicar escala de grises y binarización por umbral adaptativo para resaltar letras y números negros
+                for (let i = 0; i < d.length; i += 4) {
+                    const avg = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                    const v = avg > 120 ? 255 : 0;
+                    d[i] = v;     // R
+                    d[i + 1] = v; // G
+                    d[i + 2] = v; // B
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg', 0.95));
+            };
+            img.onerror = () => resolve(imageSrc);
+            img.src = imageSrc;
+        });
+    };
+
+    // Ejecutar OCR automático sobre la imagen de la cédula cargada o capturada
+    const analyzeCedulaWithOcr = async (imageUrl: string) => {
+        setIsOcrAnalyzing(true);
+        setOcrStatusMessage('Optimizando nitidez y escaneando OCR...');
+        setOcrVerified(false);
+        setOcrMismatch(false);
+        setExtractedCedulaNumber(null);
+
+        try {
+            if (window.Tesseract) {
+                // Pre-procesar imagen para máximo contraste de caracteres
+                const processedImage = await preprocessImageForOcr(imageUrl);
+
+                const result = await window.Tesseract.recognize(processedImage, 'eng', {
+                    logger: (m: any) => {
+                        if (m.status === 'recognizing text') {
+                            setOcrStatusMessage(`Escaneando documento (${Math.round((m.progress || 0) * 100)}%)...`);
+                        }
+                    }
+                });
+
+                const rawText = (result.data.text || '').toUpperCase();
+                const cleanTextDigits = rawText.replace(/\D/g, '');
+                const cleanDigitsInput = data.documento.replace(/\D/g, '');
+
+                // Buscar secuencias de 7 u 8 dígitos (cédulas venezolanas)
+                const matches = rawText.match(/\b\d{7,8}\b/g) || [];
+
+                // Extraer palabras de nombres/apellidos para validación cruzada
+                const nombresInput = (data.nombres || '').toUpperCase().trim();
+                const apellidosInput = (data.apellidos || '').toUpperCase().trim();
+                const palabrasTitular = [...nombresInput.split(/\s+/), ...apellidosInput.split(/\s+/)].filter(p => p.length >= 3);
+
+                let isCedulaMatch = false;
+                let detectedCedulaNum: string | null = null;
+
+                if (cleanDigitsInput) {
+                    if (cleanTextDigits.includes(cleanDigitsInput) || matches.includes(cleanDigitsInput)) {
+                        isCedulaMatch = true;
+                        detectedCedulaNum = cleanDigitsInput;
+                    } else if (matches.length > 0) {
+                        detectedCedulaNum = matches[0];
+                    } else if (cleanTextDigits.length >= 7) {
+                        // Buscar ventana de 7-8 dígitos dentro de los dígitos escaneados
+                        for (let len = 8; len >= 7; len--) {
+                            for (let i = 0; i <= cleanTextDigits.length - len; i++) {
+                                const sub = cleanTextDigits.substring(i, i + len);
+                                if (sub.startsWith('1') || sub.startsWith('2') || sub.startsWith('3')) {
+                                    detectedCedulaNum = sub;
+                                    break;
+                                }
+                            }
+                            if (detectedCedulaNum) break;
+                        }
+                    }
+
+                    if (isCedulaMatch) {
+                        setOcrVerified(true);
+                        setOcrMismatch(false);
+                        setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
+
+                        const coincideNombre = palabrasTitular.length > 0 && palabrasTitular.some(p => rawText.includes(p));
+                        if (coincideNombre) {
+                            setOcrStatusMessage(`¡Cédula V-${cleanDigitsInput} y Titular (${data.nombres}) validados con OCR!`);
+                        } else {
+                            setOcrStatusMessage(`¡Cédula V-${cleanDigitsInput} verificada con OCR!`);
+                        }
+                    } else if (detectedCedulaNum && detectedCedulaNum !== cleanDigitsInput) {
+                        setOcrVerified(false);
+                        setOcrMismatch(true);
+                        setExtractedCedulaNumber(`V-${detectedCedulaNum}`);
+                        setOcrStatusMessage(`⚠️ La Cédula en la foto (V-${detectedCedulaNum}) NO coincide con la del pastor (V-${cleanDigitsInput}).`);
+                    } else {
+                        setOcrVerified(false);
+                        setOcrMismatch(false);
+                        setExtractedCedulaNumber(null);
+                        setOcrStatusMessage('Imagen procesada. Asegúrese de colocar la Cédula bien iluminada.');
+                    }
+                } else if (matches.length > 0 || detectedCedulaNum) {
+                    const finalNum = matches[0] || detectedCedulaNum;
+                    setExtractedCedulaNumber(`V-${finalNum}`);
+                    setOcrVerified(true);
+                    setOcrMismatch(false);
+                    setOcrStatusMessage(`Se detectó el N° de Cédula: V-${finalNum}`);
+                    setData('documento', `V-${finalNum}`);
+                } else {
+                    setOcrVerified(false);
+                    setOcrMismatch(false);
+                    setOcrStatusMessage('Imagen de Cédula procesada.');
+                }
+            } else {
+                setOcrVerified(false);
+                setOcrStatusMessage('Fotografía de Cédula procesada.');
+            }
+        } catch (err) {
+            console.error('Error en OCR:', err);
+            setOcrVerified(false);
+            setOcrStatusMessage('Imagen de Cédula adjuntada.');
+        } finally {
+            setIsOcrAnalyzing(false);
+        }
+    };
 
     // Verificar en tiempo real la cédula duplicada (Pastor Principal)
     const checkCedulaDuplicada = async (doc: string) => {
@@ -164,13 +344,15 @@ export default function RegistroPastor({
                 const resData = await resp.json();
                 if (resData.existe) {
                     if (resData.es_conyuge_vinculado) {
-                        // Es un cónyuge vinculado previamente / registro completable -> PERMITIR AVANZAR
+                        // Es un cónyuge vinculado previamente -> PERMITIR AVANZAR
                         setCedulaExiste(false);
                         setCedulaEsConyugeVinculado(true);
 
-                        // Auto-completar datos del cónyuge y personales
+                        // Auto-completar datos personales y del cónyuge
                         if (resData.nombres && !data.nombres) setData('nombres', resData.nombres);
                         if (resData.apellidos && !data.apellidos) setData('apellidos', resData.apellidos);
+                        if (resData.genero) setData('genero', resData.genero);
+                        if (resData.fe_nacimiento && !data.fe_nacimiento) setData('fe_nacimiento', resData.fe_nacimiento);
                         if (resData.nombre_conyuge) setData('nombre_conyuge', resData.nombre_conyuge);
                         if (resData.estado_civil) setData('estado_civil', resData.estado_civil);
 
@@ -255,7 +437,9 @@ export default function RegistroPastor({
         setIsCameraLoading(true);
         setCameraTarget(target);
 
-        const targetFacingMode = mode || facingMode;
+        // Si es foto de cédula, preferir la cámara trasera en móviles para mayor nitidez
+        const defaultMode = target === 'foto_cedula' ? 'environment' : 'user';
+        const targetFacingMode = mode || defaultMode;
         const targetIndex = deviceIndex !== undefined ? deviceIndex : currentCameraIndex;
 
         try {
@@ -337,6 +521,7 @@ export default function RegistroPastor({
 
                     if (cameraTarget === 'foto_cedula') {
                         setFotoCedulaPreview(dataUrl);
+                        analyzeCedulaWithOcr(dataUrl);
                     } else {
                         setFotoPerfilPreview(dataUrl);
                     }
@@ -363,7 +548,11 @@ export default function RegistroPastor({
             setData(field, file);
             const reader = new FileReader();
             reader.onloadend = () => {
-                setPreview(reader.result as string);
+                const res = reader.result as string;
+                setPreview(res);
+                if (field === 'foto_cedula') {
+                    analyzeCedulaWithOcr(res);
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -389,6 +578,10 @@ export default function RegistroPastor({
             setStep((prev) => prev + 1);
             return;
         }
+        if (ocrMismatch) {
+            alert('⚠️ ATENCIÓN: La foto de la Cédula cargada (V- ' + extractedCedulaNumber + ') NO coincide con la Cédula del pastor a registrar (' + data.documento + '). Por favor suba la Cédula correcta.');
+            return;
+        }
         post('/registro-pastor', {
             forceFormData: true,
             preserveScroll: true,
@@ -408,7 +601,7 @@ export default function RegistroPastor({
                     <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <img
-                                src="/icons/logo_mmm.png"
+                                src="/icons/logo_mmm-a-color-sin-fondo.png"
                                 alt="Logo MMM"
                                 className="h-11 w-auto object-contain drop-shadow-xs"
                                 onError={(e) => {
@@ -571,7 +764,7 @@ export default function RegistroPastor({
                                                 </div>
 
                                                 {/* Cédula con Validación en Tiempo Real */}
-                                                <div className="space-y-2 md:col-span-2">
+                                                <div className="space-y-2">
                                                     <div className="flex items-center justify-between">
                                                         <Label htmlFor="documento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                                                             <IdCard className="size-3.5 text-slate-500" />
@@ -580,7 +773,7 @@ export default function RegistroPastor({
                                                         {isCheckingCedula && (
                                                             <span className="text-[11px] text-blue-700 flex items-center gap-1 font-medium">
                                                                 <Loader2 className="size-3 animate-spin" />
-                                                                Verificando Cédula...
+                                                                Verificando...
                                                             </span>
                                                         )}
                                                     </div>
@@ -625,19 +818,49 @@ export default function RegistroPastor({
                                                                 </p>
                                                                 <p className="text-[11px] text-indigo-800 mt-0.5 leading-relaxed">
                                                                     La cédula <b>{data.documento}</b> fue relacionada previamente al registrar al cónyuge <b>{cedulaExistenteConyuge || 'Pastor'}</b>.
-                                                                    Al avanzar, completarás el registro oficial, fotos y la extensión eclesiástica para <b>{cedulaExistenteNombre || 'el titular'}</b>.
+                                                                    Al avanzar, completarás el registro oficial para <b>{cedulaExistenteNombre || 'el titular'}</b>.
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                {/* Fecha de Nacimiento */}
+                                                {/* Género */}
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="fe_nacimiento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                        <Calendar className="size-3.5 text-slate-500" />
-                                                        Fecha de Nacimiento <span className="text-rose-500">*</span>
+                                                    <Label className="text-xs font-semibold text-slate-700">
+                                                        Género <span className="text-rose-500">*</span>
                                                     </Label>
+                                                    <Select
+                                                        value={data.genero}
+                                                        onValueChange={(val) => setData('genero', val)}
+                                                    >
+                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
+                                                            <SelectValue placeholder="Selecciona género" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-white border-slate-200">
+                                                            {generos.map((g) => (
+                                                                <SelectItem key={g} value={g}>
+                                                                    {g}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.genero && <p className="text-xs text-rose-500">{errors.genero}</p>}
+                                                </div>
+
+                                                {/* Fecha de Nacimiento y Edad Calculada */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label htmlFor="fe_nacimiento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                            <Calendar className="size-3.5 text-slate-500" />
+                                                            Fecha de Nacimiento <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        {computedEdad !== null && (
+                                                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[11px] font-bold px-2.5 py-0.5">
+                                                                {computedEdad} años
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                     <Input
                                                         id="fe_nacimiento"
                                                         type="date"
@@ -1001,23 +1224,29 @@ export default function RegistroPastor({
                                     {/* PASO 3: ARCHIVOS Y FOTOGRAFÍAS */}
                                     {step === 3 && (
                                         <div className="space-y-6 animate-in fade-in duration-200">
-                                            <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
-                                                <Camera className="size-4 text-blue-700" />
-                                                <span>Documentos y Fotografías Requeridas</span>
+                                            <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
+                                                    <Camera className="size-4 text-blue-700" />
+                                                    <span>Documentos y Fotografías Requeridas</span>
+                                                </div>
+                                                <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-300 text-[11px] font-bold">
+                                                    Validación Obligatoria
+                                                </Badge>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {/* Dropzone / Cámara 1: Foto de la Cédula */}
+                                                {/* Dropzone / Cámara 1: Foto de la Cédula (Con OCR en Vivo) */}
                                                 <div className="space-y-2">
                                                     <div className="flex items-center justify-between">
-                                                        <Label className="text-xs font-semibold text-slate-700">
+                                                        <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                            <Scan className="size-3.5 text-blue-700" />
                                                             Foto de la Cédula de Identidad <span className="text-rose-500">*</span>
                                                         </Label>
-                                                        <span className="text-[10px] text-slate-500 font-medium">Anverso Legible</span>
+                                                        <span className="text-[10px] text-slate-500 font-medium">Anverso Legible • OCR Activo</span>
                                                     </div>
                                                     <div className="relative border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-2xl p-4 bg-slate-50/60 flex flex-col items-center justify-center text-center transition group">
                                                         {fotoCedulaPreview ? (
-                                                            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-white border border-slate-200 shadow-xs">
+                                                            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-white border border-slate-200 shadow-xs flex flex-col items-center justify-center">
                                                                 <img
                                                                     src={fotoCedulaPreview}
                                                                     alt="Cédula Preview"
@@ -1028,11 +1257,58 @@ export default function RegistroPastor({
                                                                     onClick={() => {
                                                                         setFotoCedulaPreview(null);
                                                                         setData('foto_cedula', null);
+                                                                        setOcrVerified(false);
+                                                                        setOcrStatusMessage(null);
+                                                                        setExtractedCedulaNumber(null);
                                                                     }}
                                                                     className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 text-xs hover:bg-rose-700 transition shadow"
                                                                 >
                                                                     ✕
                                                                 </button>
+
+                                                                {/* Insignia u Overlay OCR */}
+                                                                {isOcrAnalyzing ? (
+                                                                    <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-2">
+                                                                        <Loader2 className="size-7 animate-spin text-amber-400" />
+                                                                        <p className="text-xs font-semibold">{ocrStatusMessage}</p>
+                                                                    </div>
+                                                                ) : ocrMismatch ? (
+                                                                    <div className="absolute bottom-2 left-2 right-2 bg-rose-950/90 backdrop-blur-xs text-white p-2.5 rounded-xl text-xs flex flex-col gap-1 border border-rose-500 shadow-lg animate-in slide-in-from-bottom-2">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className="flex items-center gap-1.5 font-bold text-rose-400">
+                                                                                <AlertCircle className="size-4 shrink-0" />
+                                                                                <span>¡Cédula No Coincide!</span>
+                                                                            </span>
+                                                                            {extractedCedulaNumber && (
+                                                                                <Badge className="bg-rose-600 text-white text-[10px] font-mono font-bold">
+                                                                                    Foto: {extractedCedulaNumber}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-[11px] text-rose-100 leading-tight">
+                                                                            La Cédula en la foto (<b>{extractedCedulaNumber}</b>) no pertenece a la Cédula ingresada en el registro (<b>{data.documento}</b>). Por favor sube la Cédula correcta.
+                                                                        </p>
+                                                                    </div>
+                                                                ) : ocrVerified ? (
+                                                                    <div className="absolute bottom-2 left-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white p-2 rounded-xl text-[11px] flex items-center justify-between shadow">
+                                                                        <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+                                                                            <CheckCircle2 className="size-3.5" />
+                                                                            <span>{ocrStatusMessage || 'Documento Validado con OCR'}</span>
+                                                                        </span>
+                                                                        {extractedCedulaNumber && (
+                                                                            <Badge className="bg-emerald-500 text-white text-[10px] font-mono font-bold">
+                                                                                {extractedCedulaNumber}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                ) : ocrStatusMessage ? (
+                                                                    <div className="absolute bottom-2 left-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white p-2 rounded-xl text-[11px] flex items-center justify-between shadow">
+                                                                        <span className="flex items-center gap-1.5 font-medium text-slate-200">
+                                                                            <Info className="size-3.5 text-blue-400" />
+                                                                            <span>{ocrStatusMessage}</span>
+                                                                        </span>
+                                                                    </div>
+                                                                ) : null}
                                                             </div>
                                                         ) : (
                                                             <div className="w-full py-4 flex flex-col items-center justify-center gap-3">
@@ -1041,16 +1317,16 @@ export default function RegistroPastor({
                                                                 </div>
                                                                 <div className="space-y-0.5">
                                                                     <p className="text-xs font-semibold text-slate-800">
-                                                                        Subir o capturar foto de Cédula
+                                                                        Escanear o subir foto de Cédula
                                                                     </p>
                                                                     <p className="text-[10px] text-slate-500">
-                                                                        PNG, JPG max 5MB
+                                                                        Validación obligatoria de identidad • PNG, JPG max 5MB
                                                                     </p>
                                                                 </div>
 
                                                                 <div className="flex items-center gap-2 pt-1 w-full justify-center">
                                                                     <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-2xs transition inline-flex items-center gap-1.5">
-                                                                        <span>Subir Imagen</span>
+                                                                        <span>Subir Documento</span>
                                                                         <input
                                                                             type="file"
                                                                             accept="image/*"
@@ -1064,7 +1340,7 @@ export default function RegistroPastor({
                                                                         className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 h-auto rounded-lg shadow-2xs flex items-center gap-1.5"
                                                                     >
                                                                         <Camera className="size-3.5" />
-                                                                        <span>Tomar Foto</span>
+                                                                        <span>Escanear Cámara</span>
                                                                     </Button>
                                                                 </div>
                                                             </div>
@@ -1144,7 +1420,7 @@ export default function RegistroPastor({
                                             <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-900">
                                                 <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
                                                 <p>
-                                                    Declaración de Veracidad: Al enviar este formulario declaro que los datos ingresados y las fotografías adjuntas son fidedignos y corresponden al titular.
+                                                    Declaración de Veracidad: Al enviar este formulario declaro que los datos ingresados y las fotografías adjuntas de la Cédula de Identidad y carnet son fidedignos y corresponden al titular para la verificación oficial.
                                                 </p>
                                             </div>
                                         </div>
@@ -1198,7 +1474,7 @@ export default function RegistroPastor({
                     )}
                 </main>
 
-                {/* MODAL DE CÁMARA WEB / MULTI-CÁMARA */}
+                {/* MODAL DE CÁMARA WEB / MULTI-CÁMARA CON GUÍA DE ENCUADRE DE CÉDULA */}
                 {cameraTarget && (
                     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                         <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-0">
@@ -1208,7 +1484,7 @@ export default function RegistroPastor({
                                     <Camera className="size-4 text-amber-400" />
                                     <span>
                                         {cameraTarget === 'foto_cedula'
-                                            ? 'Capturar Foto de Cédula'
+                                            ? 'Escanear Cédula de Identidad'
                                             : 'Capturar Foto Tipo Carnet'}
                                     </span>
                                 </div>
@@ -1221,28 +1497,44 @@ export default function RegistroPastor({
                                 </button>
                             </div>
 
-                            {/* Viewport de la Cámara */}
+                            {/* Viewport de la Cámara con Guía de Documento */}
                             <div className="relative bg-slate-950 aspect-video flex items-center justify-center overflow-hidden">
                                 {isCameraLoading && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white space-y-2 bg-slate-950">
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white space-y-2 bg-slate-950 z-20">
                                         <RefreshCw className="size-8 animate-spin text-amber-400" />
                                         <p className="text-xs">Iniciando cámara...</p>
                                     </div>
                                 )}
 
                                 {cameraError ? (
-                                    <div className="p-6 text-center text-rose-400 space-y-2 text-xs">
+                                    <div className="p-6 text-center text-rose-400 space-y-2 text-xs z-20">
                                         <AlertCircle className="size-8 mx-auto text-rose-500" />
                                         <p>{cameraError}</p>
                                     </div>
                                 ) : (
-                                    <video
-                                        ref={videoRef}
-                                        autoPlay
-                                        playsInline
-                                        muted
-                                        className="w-full h-full object-contain"
-                                    />
+                                    <>
+                                        <video
+                                            ref={videoRef}
+                                            autoPlay
+                                            playsInline
+                                            muted
+                                            className="w-full h-full object-contain"
+                                        />
+
+                                        {/* GUÍA DE ENCUADRE TIPO CÉDULA DE IDENTIDAD */}
+                                        {cameraTarget === 'foto_cedula' && (
+                                            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6 z-10">
+                                                <div className="w-[85%] h-[75%] border-2 border-dashed border-amber-400 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] flex flex-col items-center justify-between p-3 animate-pulse">
+                                                    <span className="text-[10px] font-bold text-amber-300 bg-slate-900/80 px-3 py-1 rounded-full uppercase tracking-wider">
+                                                        Alinea la Cédula dentro del recuadro
+                                                    </span>
+                                                    <span className="text-[10px] text-amber-200 bg-slate-900/80 px-2.5 py-0.5 rounded-full">
+                                                        Procura buena iluminación
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
 

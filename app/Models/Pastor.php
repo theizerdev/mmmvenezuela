@@ -25,8 +25,16 @@ class Pastor extends Model
 
     protected $table = 'pastores';
 
+    protected $attributes = [
+        'empresa_id' => 1,
+        'sucursal_id' => 1,
+        'status' => true,
+    ];
+
     protected $fillable = [
         'codigo',
+        'empresa_id',
+        'sucursal_id',
         'nombres',
         'apellidos',
         'documento',
@@ -92,7 +100,7 @@ class Pastor extends Model
         'edad' => 'integer',
     ];
 
-    protected $appends = ['nombre_completo'];
+    protected $appends = ['nombre_completo', 'foto_url', 'foto_cedula_url'];
 
     /**
      * Generar código de pastor (11 a 15 dígitos):
@@ -124,6 +132,76 @@ class Pastor extends Model
     public function getNombreCompletoAttribute(): string
     {
         return trim("{$this->nombres} {$this->apellidos}");
+    }
+
+    /**
+     * URL pública de la foto del pastor para vistas e impresiones.
+     */
+    public function getFotoUrlAttribute(): ?string
+    {
+        if (!$this->foto) {
+            return null;
+        }
+
+        $trimmed = trim($this->foto);
+        if (!$trimmed) {
+            return null;
+        }
+
+        if (str_starts_with($trimmed, 'data:') || str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            return $trimmed;
+        }
+
+        if (str_starts_with($trimmed, 'storage/')) {
+            return '/' . $trimmed;
+        }
+
+        if (str_starts_with($trimmed, 'pastores/')) {
+            return '/storage/' . $trimmed;
+        }
+
+        if (str_starts_with($trimmed, '/')) {
+            return $trimmed;
+        }
+
+        if (file_exists(public_path('pastores/' . $trimmed))) {
+            return '/pastores/' . $trimmed;
+        }
+
+        return '/storage/pastores/' . $trimmed;
+    }
+
+    /**
+     * URL pública de la foto de la cédula del pastor.
+     */
+    public function getFotoCedulaUrlAttribute(): ?string
+    {
+        if (!$this->foto_cedula) {
+            return null;
+        }
+
+        $trimmed = trim($this->foto_cedula);
+        if (!$trimmed) {
+            return null;
+        }
+
+        if (str_starts_with($trimmed, 'data:') || str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            return $trimmed;
+        }
+
+        if (str_starts_with($trimmed, 'storage/')) {
+            return '/' . $trimmed;
+        }
+
+        if (str_starts_with($trimmed, 'pastores_cedulas/')) {
+            return '/storage/' . $trimmed;
+        }
+
+        if (str_starts_with($trimmed, '/')) {
+            return $trimmed;
+        }
+
+        return '/storage/' . $trimmed;
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Estado;
 use App\Models\Iglesia;
 use App\Models\Pastor;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -39,10 +40,16 @@ class PastorRegistroPublicoController extends Controller
             'Divorciado(a)',
         ];
 
+        $generos = [
+            'Masculino',
+            'Femenino',
+        ];
+
         return Inertia::render('Public/RegistroPastor', [
             'estados' => $estados,
             'gradosMinisteriales' => $gradosMinisteriales,
             'estadosCiviles' => $estadosCiviles,
+            'generos' => $generos,
         ]);
     }
 
@@ -102,6 +109,9 @@ class PastorRegistroPublicoController extends Controller
             'nombre' => $pastor->nombre_completo,
             'nombres' => $pastor->nombres,
             'apellidos' => $pastor->apellidos,
+            'genero' => $pastor->genero ?: 'Masculino',
+            'fe_nacimiento' => $pastor->fe_nacimiento ? $pastor->fe_nacimiento->format('Y-m-d') : null,
+            'edad' => $pastor->edad,
             'codigo' => $pastor->codigo,
             'estado_civil' => $pastor->estado_civil ?: 'Casado(a)',
             'nombre_conyuge' => $nombreConyuge,
@@ -145,6 +155,7 @@ class PastorRegistroPublicoController extends Controller
             'nombres' => ['required', 'string', 'max:255'],
             'apellidos' => ['required', 'string', 'max:255'],
             'documento' => $docValidationRules,
+            'genero' => ['required', 'string', 'in:Masculino,Femenino'],
             'fe_nacimiento' => ['required', 'date'],
             'estado_civil' => ['required', 'string', 'max:50'],
             'nombre_conyuge' => ['nullable', 'required_if:estado_civil,Casado(a)', 'string', 'max:255'],
@@ -166,6 +177,7 @@ class PastorRegistroPublicoController extends Controller
             'foto' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
         ], [
             'documento.unique' => 'Esta cédula de identidad ya se encuentra registrada en el sistema.',
+            'genero.required' => 'Debe seleccionar el género.',
             'cedula_conyuge.required_if' => 'Debe indicar la Cédula de Identidad de su cónyuge si también está pastoreando.',
             'cedula_conyuge.unique' => 'La Cédula de Identidad del cónyuge ya se encuentra registrada en el sistema.',
             'nombre_conyuge.required_if' => 'Si su estado civil es Casado(a), debe indicar el nombre completo de su cónyuge.',
@@ -188,11 +200,18 @@ class PastorRegistroPublicoController extends Controller
                 $fotoPerfilPath = $request->file('foto')->store('pastores', 'public');
             }
 
+            // Calcular edad automáticamente a partir de la fecha de nacimiento
+            $edadCalculada = Carbon::parse($validated['fe_nacimiento'])->age;
+
             $pastorData = [
+                'empresa_id' => 1,
+                'sucursal_id' => 1,
                 'nombres' => $validated['nombres'],
                 'apellidos' => $validated['apellidos'],
                 'documento' => $validated['documento'],
+                'genero' => $validated['genero'],
                 'fe_nacimiento' => $validated['fe_nacimiento'],
+                'edad' => $edadCalculada,
                 'estado_civil' => $validated['estado_civil'],
                 'nombre_conyuge' => $validated['nombre_conyuge'] ?? null,
                 'telefono_tlf' => $validated['telefono_tlf'],
@@ -236,10 +255,16 @@ class PastorRegistroPublicoController extends Controller
                     ? trim($validated['cedula_conyuge'])
                     : 'C-' . preg_replace('/\D/', '', $validated['documento']);
 
+                // Inferir género del cónyuge opuesto
+                $generoConyuge = $validated['genero'] === 'Masculino' ? 'Femenino' : 'Masculino';
+
                 if ($existingConyugePastor) {
                     $existingConyugePastor->update([
+                        'empresa_id' => 1,
+                        'sucursal_id' => 1,
                         'nombres' => $nombresConyuge,
                         'apellidos' => $apellidosConyuge,
+                        'genero' => $generoConyuge,
                         'nombre_conyuge' => $pastor->nombre_completo,
                         'conyuge_id' => $pastor->id,
                         'telefono_tlf' => $validated['telefono_tlf'],
@@ -256,9 +281,12 @@ class PastorRegistroPublicoController extends Controller
 
                     $pastorConyuge = Pastor::create([
                         'codigo' => $codigoConyuge,
+                        'empresa_id' => 1,
+                        'sucursal_id' => 1,
                         'nombres' => $nombresConyuge,
                         'apellidos' => $apellidosConyuge,
                         'documento' => $docConyuge,
+                        'genero' => $generoConyuge,
                         'estado_civil' => 'Casado(a)',
                         'nombre_conyuge' => $pastor->nombre_completo,
                         'conyuge_id' => $pastor->id,
@@ -282,6 +310,8 @@ class PastorRegistroPublicoController extends Controller
             if ($iglesia) {
                 // Actualizar datos de la extensión si ya existía
                 $iglesia->update([
+                    'empresa_id' => 1,
+                    'sucursal_id' => 1,
                     'nombre' => $validated['nombre_extension'],
                     'direccion' => $validated['direccion_extension'],
                     'estado_id' => $validated['estado_id'],
@@ -292,6 +322,8 @@ class PastorRegistroPublicoController extends Controller
             } else {
                 // Crear registro de Extensión / Iglesia
                 $iglesia = Iglesia::create([
+                    'empresa_id' => 1,
+                    'sucursal_id' => 1,
                     'nombre' => $validated['nombre_extension'],
                     'direccion' => $validated['direccion_extension'],
                     'estado_id' => $validated['estado_id'],

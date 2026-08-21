@@ -440,10 +440,22 @@ export default function PastorFormWizard({
 
     const photoPreviewUrl = useMemo(() => {
         if (!data.foto) return null;
-        if (data.foto.startsWith('data:') || data.foto.startsWith('http') || data.foto.startsWith('/')) {
-            return data.foto;
+        if (typeof data.foto !== 'string') return null;
+        const trimmed = data.foto.trim();
+        if (!trimmed) return null;
+        if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
         }
-        return `/pastores/${data.foto}`;
+        if (trimmed.startsWith('storage/')) {
+            return `/${trimmed}`;
+        }
+        if (trimmed.startsWith('pastores/')) {
+            return `/storage/${trimmed}`;
+        }
+        if (trimmed.startsWith('/')) {
+            return trimmed;
+        }
+        return `/pastores/${trimmed}`;
     }, [data.foto]);
 
     const handleSubmit = (e: React.FormEvent) => {

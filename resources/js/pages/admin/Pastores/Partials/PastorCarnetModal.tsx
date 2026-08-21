@@ -29,7 +29,16 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
         if (!foto) return null;
         const trimmed = foto.trim();
         if (!trimmed) return null;
-        if (trimmed.startsWith('data:') || trimmed.startsWith('http') || trimmed.startsWith('/')) {
+        if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+        if (trimmed.startsWith('storage/')) {
+            return `/${trimmed}`;
+        }
+        if (trimmed.startsWith('pastores/')) {
+            return `/storage/${trimmed}`;
+        }
+        if (trimmed.startsWith('/')) {
             return trimmed;
         }
         return `/pastores/${trimmed}`;

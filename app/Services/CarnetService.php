@@ -413,14 +413,30 @@ class CarnetService
             return null;
         }
 
+        // 1. Verificar si está guardada en storage/app/public/ (ej: "pastores/xyz.jpg")
+        $pathStorage = storage_path('app/public/' . ltrim($trimmed, '/'));
+        if (file_exists($pathStorage)) {
+            return $pathStorage;
+        }
+
+        // 2. Si empieza por storage/
+        if (str_starts_with($trimmed, 'storage/')) {
+            $pathStorageSub = storage_path('app/public/' . substr($trimmed, 8));
+            if (file_exists($pathStorageSub)) {
+                return $pathStorageSub;
+            }
+        }
+
+        // 3. Verificar si está en public/pastores/
         $pathPublic = public_path('pastores/' . $trimmed);
         if (file_exists($pathPublic)) {
             return $pathPublic;
         }
 
-        $pathStorage = storage_path('app/public/' . $trimmed);
-        if (file_exists($pathStorage)) {
-            return $pathStorage;
+        // 4. Verificar en raíz de public/
+        $pathRootPublic = public_path(ltrim($trimmed, '/'));
+        if (file_exists($pathRootPublic)) {
+            return $pathRootPublic;
         }
 
         return null;
