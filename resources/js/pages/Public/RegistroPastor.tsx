@@ -1446,11 +1446,15 @@ export default function RegistroPastor({
                                                                         <p className="text-xs font-semibold">{ocrStatusMessage}</p>
                                                                     </div>
                                                                 ) : ocrMismatch ? (
-                                                                    <div className="absolute bottom-2 left-2 right-2 bg-rose-950/90 backdrop-blur-xs text-white p-2.5 rounded-xl text-xs flex flex-col gap-1 border border-rose-500 shadow-lg animate-in slide-in-from-bottom-2">
+                                                                    <div className="absolute bottom-2 left-2 right-2 bg-rose-950/95 backdrop-blur-xs text-white p-2.5 rounded-xl text-xs flex flex-col gap-1.5 border border-rose-500 shadow-lg animate-in slide-in-from-bottom-2">
                                                                         <div className="flex items-center justify-between">
-                                                                            <span className="flex items-center gap-1.5 font-bold text-rose-400">
-                                                                                <AlertCircle className="size-4 shrink-0" />
-                                                                                <span>¡Cédula No Coincide!</span>
+                                                                            <span className="flex items-center gap-1.5 font-bold text-rose-300">
+                                                                                <AlertCircle className="size-4 shrink-0 text-rose-400" />
+                                                                                <span>
+                                                                                    {extractedCedulaNumber && extractedCedulaNumber.replace(/\D/g, '') === data.documento.replace(/\D/g, '')
+                                                                                        ? '¡Nombres o Datos No Coinciden!'
+                                                                                        : '¡Número de Cédula No Coincide!'}
+                                                                                </span>
                                                                             </span>
                                                                             {extractedCedulaNumber && (
                                                                                 <Badge className="bg-rose-600 text-white text-[10px] font-mono font-bold">
@@ -1459,8 +1463,33 @@ export default function RegistroPastor({
                                                                             )}
                                                                         </div>
                                                                         <p className="text-[11px] text-rose-100 leading-tight">
-                                                                            La Cédula en la foto (<b>{extractedCedulaNumber}</b>) no pertenece a la Cédula ingresada en el registro (<b>{data.documento}</b>). Por favor sube la Cédula correcta.
+                                                                            {ocrStatusMessage || `La Cédula en la foto (${extractedCedulaNumber}) no coincide con los datos del registro (${data.documento}).`}
                                                                         </p>
+
+                                                                        {cedulaEsConyugeVinculado && cedulaExistenteNombre && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    const partes = (cedulaExistenteNombre || '').trim().split(/\s+/);
+                                                                                    const n = partes.length > 1 ? partes.slice(0, Math.ceil(partes.length / 2)).join(' ') : (partes[0] || '');
+                                                                                    const a = partes.length > 1 ? partes.slice(Math.ceil(partes.length / 2)).join(' ') : '';
+
+                                                                                    setData(prev => ({
+                                                                                        ...prev,
+                                                                                        nombres: n || prev.nombres,
+                                                                                        apellidos: a || prev.apellidos,
+                                                                                    }));
+
+                                                                                    setOcrMismatch(false);
+                                                                                    setOcrVerified(true);
+                                                                                    setOcrStatusMessage(`✨ ¡Nombres y Apellidos auto-corregidos a "${cedulaExistenteNombre}"!`);
+                                                                                }}
+                                                                                className="mt-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[11px] px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 shadow transition"
+                                                                            >
+                                                                                <Sparkles className="size-3.5 text-slate-950" />
+                                                                                <span>Corregir Nombres a "{cedulaExistenteNombre}"</span>
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 ) : ocrVerified ? (
                                                                     <div className="absolute bottom-2 left-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white p-2 rounded-xl text-[11px] flex items-center justify-between shadow">
