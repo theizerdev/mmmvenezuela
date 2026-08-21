@@ -100,6 +100,12 @@ class PastorRegistroPublicoController extends Controller
                 'estado_id' => $iglesia->estado_id,
                 'zona' => $iglesia->zona,
                 'distrito' => $iglesia->distrito,
+                'miembros_activos' => $iglesia->miembros_activos,
+                'cantidad_campos_blancos' => $iglesia->cantidad_campos_blancos,
+                'miembro_probante' => $iglesia->miembro_probante,
+                'tiempo_trabajo' => $iglesia->tiempo_trabajo,
+                'iglesias_fundadas' => $iglesia->iglesias_fundadas,
+                'pastores_ministerio' => $iglesia->pastores_ministerio,
             ];
         }
 
@@ -213,6 +219,13 @@ class PastorRegistroPublicoController extends Controller
             'estado_id' => ['required', 'exists:estados,id'],
             'zona' => ['nullable', 'string', 'max:50'],
             'distrito' => ['nullable', 'string', 'max:50'],
+
+            'miembros_activos' => ['nullable', 'numeric', 'min:0'],
+            'cantidad_campos_blancos' => ['nullable', 'numeric', 'min:0'],
+            'miembro_probante' => ['nullable', 'numeric', 'min:0'],
+            'tiempo_trabajo' => ['nullable', 'string', 'max:255'],
+            'iglesias_fundadas' => ['nullable', 'numeric', 'min:0'],
+            'pastores_ministerio' => ['nullable', 'numeric', 'min:0'],
 
             'foto_cedula' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'foto' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
@@ -348,31 +361,30 @@ class PastorRegistroPublicoController extends Controller
             $iglesia = $pastor->iglesias()->first()
                 ?? ($pastorConyuge ? $pastorConyuge->iglesias()->first() : null);
 
+            $iglesiaData = [
+                'empresa_id' => 1,
+                'sucursal_id' => 1,
+                'nombre' => $validated['nombre_extension'],
+                'direccion' => $validated['direccion_extension'],
+                'estado_id' => $validated['estado_id'],
+                'zona' => $validated['zona'] ?? null,
+                'distrito' => $validated['distrito'] ?? null,
+                'miembros_activos' => isset($validated['miembros_activos']) && $validated['miembros_activos'] !== '' ? (int)$validated['miembros_activos'] : 0,
+                'cantidad_campos_blancos' => isset($validated['cantidad_campos_blancos']) && $validated['cantidad_campos_blancos'] !== '' ? (int)$validated['cantidad_campos_blancos'] : 0,
+                'miembro_probante' => isset($validated['miembro_probante']) && $validated['miembro_probante'] !== '' ? (int)$validated['miembro_probante'] : 0,
+                'tiempo_trabajo' => $validated['tiempo_trabajo'] ?? null,
+                'iglesias_fundadas' => isset($validated['iglesias_fundadas']) && $validated['iglesias_fundadas'] !== '' ? (int)$validated['iglesias_fundadas'] : 0,
+                'pastores_ministerio' => isset($validated['pastores_ministerio']) && $validated['pastores_ministerio'] !== '' ? (int)$validated['pastores_ministerio'] : 0,
+                'activa' => true,
+            ];
+
             if ($iglesia) {
                 // Actualizar datos de la extensión si ya existía
-                $iglesia->update([
-                    'empresa_id' => 1,
-                    'sucursal_id' => 1,
-                    'nombre' => $validated['nombre_extension'],
-                    'direccion' => $validated['direccion_extension'],
-                    'estado_id' => $validated['estado_id'],
-                    'zona' => $validated['zona'] ?? null,
-                    'distrito' => $validated['distrito'] ?? null,
-                    'activa' => true,
-                ]);
+                $iglesia->update($iglesiaData);
             } else {
                 // Crear registro de Extensión / Iglesia
-                $iglesia = Iglesia::create([
-                    'empresa_id' => 1,
-                    'sucursal_id' => 1,
-                    'nombre' => $validated['nombre_extension'],
-                    'direccion' => $validated['direccion_extension'],
-                    'estado_id' => $validated['estado_id'],
-                    'zona' => $validated['zona'] ?? null,
-                    'distrito' => $validated['distrito'] ?? null,
-                    'pastor_id' => $pastor->id,
-                    'activa' => true,
-                ]);
+                $iglesiaData['pastor_id'] = $pastor->id;
+                $iglesia = Iglesia::create($iglesiaData);
             }
 
             // Relacionar a los pastores con la extensión en la tabla pivote iglesia_pastor

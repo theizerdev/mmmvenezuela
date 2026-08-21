@@ -26,7 +26,10 @@ import {
     Info,
     Scan,
     Check,
-    Edit2
+    Edit2,
+    TrendingUp,
+    UserCheck,
+    Clock
 } from 'lucide-react';
 import PhotoEditorModal from '@/Components/PhotoEditorModal';
 
@@ -140,6 +143,13 @@ export default function RegistroPastor({
         estado_id: estados?.[0]?.id ? String(estados[0].id) : '',
         zona: '',
         distrito: '',
+
+        miembros_activos: '',
+        cantidad_campos_blancos: '',
+        miembro_probante: '',
+        tiempo_trabajo: '',
+        iglesias_fundadas: '',
+        pastores_ministerio: '',
 
         foto_cedula: null as File | null,
         foto: null as File | null,
@@ -417,6 +427,12 @@ export default function RegistroPastor({
                                 zona: resData.extension.zona || prev.zona,
                                 distrito: resData.extension.distrito || prev.distrito,
                                 direccion_extension: resData.extension.direccion || prev.direccion_extension,
+                                miembros_activos: resData.extension.miembros_activos !== undefined && resData.extension.miembros_activos !== null ? String(resData.extension.miembros_activos) : prev.miembros_activos,
+                                cantidad_campos_blancos: resData.extension.cantidad_campos_blancos !== undefined && resData.extension.cantidad_campos_blancos !== null ? String(resData.extension.cantidad_campos_blancos) : prev.cantidad_campos_blancos,
+                                miembro_probante: resData.extension.miembro_probante !== undefined && resData.extension.miembro_probante !== null ? String(resData.extension.miembro_probante) : prev.miembro_probante,
+                                tiempo_trabajo: resData.extension.tiempo_trabajo || prev.tiempo_trabajo,
+                                iglesias_fundadas: resData.extension.iglesias_fundadas !== undefined && resData.extension.iglesias_fundadas !== null ? String(resData.extension.iglesias_fundadas) : prev.iglesias_fundadas,
+                                pastores_ministerio: resData.extension.pastores_ministerio !== undefined && resData.extension.pastores_ministerio !== null ? String(resData.extension.pastores_ministerio) : prev.pastores_ministerio,
                             }));
                         }
                     } else {
@@ -1309,7 +1325,7 @@ export default function RegistroPastor({
                                                         </Label>
                                                         <Textarea
                                                             id="direccion_extension"
-                                                            required
+                                                                    required
                                                             rows={2}
                                                             value={data.direccion_extension}
                                                             onChange={(e) => setData('direccion_extension', e.target.value)}
@@ -1317,6 +1333,123 @@ export default function RegistroPastor({
                                                             className="bg-slate-50/50 border-slate-300 focus:bg-white resize-none"
                                                         />
                                                         {errors.direccion_extension && <p className="text-xs text-rose-500">{errors.direccion_extension}</p>}
+                                                    </div>
+
+                                                    {/* SUB-SECCIÓN: ESTADÍSTICAS DE LA IGLESIA */}
+                                                    <div className="md:col-span-3 pt-3 border-t border-slate-200/80 space-y-3">
+                                                        <div className="flex items-center gap-2 text-slate-800 font-bold text-xs uppercase tracking-wider">
+                                                            <TrendingUp className="size-4 text-blue-600" />
+                                                            <span>Estadísticas de la Iglesia</span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 bg-slate-50/70 p-4 rounded-xl border border-slate-200/70">
+                                                            {/* Miembros Activos */}
+                                                            <div className="space-y-1.5">
+                                                                <Label htmlFor="miembros_activos" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                                    <Users className="size-3.5 text-blue-600" />
+                                                                    Miembros Activos
+                                                                </Label>
+                                                                <Input
+                                                                    id="miembros_activos"
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={data.miembros_activos}
+                                                                    onChange={(e) => setData('miembros_activos', e.target.value)}
+                                                                    placeholder="Ej. 50"
+                                                                    className="bg-white border-slate-300 focus:border-blue-500"
+                                                                />
+                                                                {errors.miembros_activos && <p className="text-xs text-rose-500">{errors.miembros_activos}</p>}
+                                                            </div>
+
+                                                            {/* Miembros Probantes */}
+                                                            <div className="space-y-1.5">
+                                                                <Label htmlFor="miembro_probante" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                                    <UserCheck className="size-3.5 text-indigo-600" />
+                                                                    Miembro Probante
+                                                                </Label>
+                                                                <Input
+                                                                    id="miembro_probante"
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={data.miembro_probante}
+                                                                    onChange={(e) => setData('miembro_probante', e.target.value)}
+                                                                    placeholder="Ej. 15"
+                                                                    className="bg-white border-slate-300 focus:border-blue-500"
+                                                                />
+                                                                {errors.miembro_probante && <p className="text-xs text-rose-500">{errors.miembro_probante}</p>}
+                                                            </div>
+
+                                                            {/* Campos Blancos */}
+                                                            <div className="space-y-1.5">
+                                                                <Label htmlFor="cantidad_campos_blancos" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                                    <MapPin className="size-3.5 text-emerald-600" />
+                                                                    Campos Blancos
+                                                                </Label>
+                                                                <Input
+                                                                    id="cantidad_campos_blancos"
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={data.cantidad_campos_blancos}
+                                                                    onChange={(e) => setData('cantidad_campos_blancos', e.target.value)}
+                                                                    placeholder="Ej. 3"
+                                                                    className="bg-white border-slate-300 focus:border-blue-500"
+                                                                />
+                                                                {errors.cantidad_campos_blancos && <p className="text-xs text-rose-500">{errors.cantidad_campos_blancos}</p>}
+                                                            </div>
+
+                                                            {/* Tiempo de Trabajo */}
+                                                            <div className="space-y-1.5">
+                                                                <Label htmlFor="tiempo_trabajo" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                                    <Clock className="size-3.5 text-amber-600" />
+                                                                    Tiempo de Trabajo
+                                                                </Label>
+                                                                <Input
+                                                                    id="tiempo_trabajo"
+                                                                    type="text"
+                                                                    value={data.tiempo_trabajo}
+                                                                    onChange={(e) => setData('tiempo_trabajo', e.target.value)}
+                                                                    placeholder="Ej. 5 años"
+                                                                    className="bg-white border-slate-300 focus:border-blue-500"
+                                                                />
+                                                                {errors.tiempo_trabajo && <p className="text-xs text-rose-500">{errors.tiempo_trabajo}</p>}
+                                                            </div>
+
+                                                            {/* Iglesias Fundadas */}
+                                                            <div className="space-y-1.5">
+                                                                <Label htmlFor="iglesias_fundadas" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                                    <Church className="size-3.5 text-cyan-600" />
+                                                                    Iglesias Fundadas
+                                                                </Label>
+                                                                <Input
+                                                                    id="iglesias_fundadas"
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={data.iglesias_fundadas}
+                                                                    onChange={(e) => setData('iglesias_fundadas', e.target.value)}
+                                                                    placeholder="Ej. 2"
+                                                                    className="bg-white border-slate-300 focus:border-blue-500"
+                                                                />
+                                                                {errors.iglesias_fundadas && <p className="text-xs text-rose-500">{errors.iglesias_fundadas}</p>}
+                                                            </div>
+
+                                                            {/* Pastores al Ministerio */}
+                                                            <div className="space-y-1.5">
+                                                                <Label htmlFor="pastores_ministerio" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                                    <Award className="size-3.5 text-purple-600" />
+                                                                    Pastores al Ministerio
+                                                                </Label>
+                                                                <Input
+                                                                    id="pastores_ministerio"
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={data.pastores_ministerio}
+                                                                    onChange={(e) => setData('pastores_ministerio', e.target.value)}
+                                                                    placeholder="Ej. 1"
+                                                                    className="bg-white border-slate-300 focus:border-blue-500"
+                                                                />
+                                                                {errors.pastores_ministerio && <p className="text-xs text-rose-500">{errors.pastores_ministerio}</p>}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

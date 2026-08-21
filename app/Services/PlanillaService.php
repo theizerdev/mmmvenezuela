@@ -36,6 +36,93 @@ class PlanillaService
         return $direccion ?: 'No especificada';
     }
 
+    public function resolveImagePath($path)
+    {
+        if (empty($path)) {
+            return null;
+        }
+
+        $cleanPath = ltrim(trim($path), '/');
+        $cleanWithoutStorage = str_starts_with($cleanPath, 'storage/')
+            ? substr($cleanPath, 8)
+            : $cleanPath;
+
+        $candidates = [
+            storage_path('app/public/' . $cleanWithoutStorage),
+            storage_path('app/public/' . $cleanPath),
+            public_path('storage/' . $cleanWithoutStorage),
+            public_path('storage/' . $cleanPath),
+            public_path($cleanPath),
+            public_path('pastores/' . basename($cleanPath)),
+            public_path('pastores_cedulas/' . basename($cleanPath)),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    public function cropToCarnetPortrait($imagePath)
+    {
+        if (!file_exists($imagePath) || !function_exists('imagecreatefromstring')) {
+            return $imagePath;
+        }
+
+        $info = @getimagesize($imagePath);
+        if (!$info || $info[0] <= 0 || $info[1] <= 0) {
+            return $imagePath;
+        }
+
+        $origW = $info[0];
+        $origH = $info[1];
+        $targetRatio = 35 / 42; // ~0.8333 (Relación carnet vertical 3:4)
+
+        $currentRatio = $origW / $origH;
+
+        // Si ya tiene una relación carnet adecuada (entre 0.78 y 0.88), no requiere re-corte
+        if (abs($currentRatio - $targetRatio) < 0.05) {
+            return $imagePath;
+        }
+
+        $content = @file_get_contents($imagePath);
+        if (!$content) return $imagePath;
+
+        $srcImg = @imagecreatefromstring($content);
+        if (!$srcImg) return $imagePath;
+
+        if ($currentRatio > $targetRatio) {
+            // Foto panorámica / webcam horizontal: recortar el exceso a la izquierda y derecha para centrar en el rostro
+            $cropW = (int) round($origH * $targetRatio);
+            $cropH = $origH;
+            $cropX = (int) round(($origW - $cropW) / 2);
+            $cropY = 0;
+        } else {
+            // Foto vertical alargada: recortar el exceso superior e inferior
+            $cropW = $origW;
+            $cropH = (int) round($origW / $targetRatio);
+            $cropX = 0;
+            $cropY = (int) round(($origH - $cropH) / 2);
+        }
+
+        $dstImg = imagecreatetruecolor($cropW, $cropH);
+        imagealphablending($dstImg, false);
+        imagesavealpha($dstImg, true);
+
+        imagecopy($dstImg, $srcImg, 0, 0, $cropX, $cropY, $cropW, $cropH);
+
+        $tempPath = storage_path('app/temp_carnet_' . md5($imagePath . filemtime($imagePath)) . '.jpg');
+        imagejpeg($dstImg, $tempPath, 92);
+
+        imagedestroy($srcImg);
+        imagedestroy($dstImg);
+
+        return $tempPath;
+    }
+
     public function generarPdfParaPastor(Pastor $pastor, $fpdf = null)
     {
         if (! $fpdf) {
@@ -91,7 +178,7 @@ class PlanillaService
         $logoPath = public_path('icons/logo_mmm.png');
         if (file_exists($logoPath)) {
             // Fondo blanco para destacar el logo dentro de la barra azul
-            
+
             $fpdf->Rect(13, 13, 20, 28, 'F');
             $fpdf->Image($logoPath, 14, 20, 26, 20);
         }
@@ -150,29 +237,31 @@ class PlanillaService
         $fpdf->SetLineWidth(0.4);
         $fpdf->Rect($photoX, $photoY, $photoW, $photoH, 'DF');
 
-        if ($pastor->foto && file_exists(public_path('pastores/' . trim($pastor->foto)))) {
-            $imagePath = public_path('pastores/' . trim($pastor->foto));
-            $imgInfo = @getimagesize($imagePath);
+        $resolvedFoto = $this->resolveImagePath($pastor->foto) ?: $this->resolveImagePath($pastor->foto_cedula);
 
-          
+        if ($resolvedFoto) {
+            // Recortar automáticamente al centro el retrato en proporción Carnet (3:4 vertical)
+            $carnetFotoPath = $this->cropToCarnetPortrait($resolvedFoto);
+
+            $imgInfo = @getimagesize($carnetFotoPath);
+            if ($imgInfo && $imgInfo[0] > 0 && $imgInfo[1] > 0) {
                 $origW = $imgInfo[0];
                 $origH = $imgInfo[1];
 
-                // Margen interno de 0.5mm dentro del recuadro carnet
                 $maxW = $photoW - 1; // 34mm
                 $maxH = $photoH - 1; // 41mm
 
-                // Calcular escala para mantener aspecto sin estirar
                 $scale = min($maxW / $origW, $maxH / $origH);
                 $finalW = $origW * $scale;
                 $finalH = $origH * $scale;
 
-                // Centrar dentro del recuadro carnet
                 $finalX = $photoX + 0.5 + ($maxW - $finalW) / 2;
                 $finalY = $photoY + 0.5 + ($maxH - $finalH) / 2;
 
-                $fpdf->Image($imagePath, 162, 10, 38, 42);
-       
+                $fpdf->Image($carnetFotoPath, $finalX, $finalY, $finalW, $finalH);
+            } else {
+                $fpdf->Image($carnetFotoPath, $photoX + 0.5, $photoY + 0.5, $photoW - 1, $photoH - 1);
+            }
         } else {
             $fpdf->SetXY($photoX, $photoY + 18);
             $fpdf->SetFont('Arial', 'I', 8);
@@ -747,9 +836,11 @@ class PlanillaService
             }
         }
 
+       
         // Pie de página
-        $fpdf->Ln(10);
+        $fpdf->Ln(6);
         $fpdf->SetFont('Arial', 'I', 8);
+        $fpdf->SetTextColor(100, 100, 100);
         $fpdf->Cell(0, 5, utf8_decode('Planilla generada el ' . date('d/m/Y H:i:s')), 0, 1, 'C');
     }
 }
