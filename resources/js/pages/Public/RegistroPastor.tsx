@@ -25,8 +25,10 @@ import {
     Loader2,
     Info,
     Scan,
-    Check
+    Check,
+    Edit2
 } from 'lucide-react';
+import PhotoEditorModal from '@/Components/PhotoEditorModal';
 
 import {
     Card,
@@ -86,6 +88,11 @@ export default function RegistroPastor({
     const [ocrVerified, setOcrVerified] = useState<boolean>(false);
     const [ocrMismatch, setOcrMismatch] = useState<boolean>(false);
     const [extractedCedulaNumber, setExtractedCedulaNumber] = useState<string | null>(null);
+
+    // Modal Editor de Foto (Recorte, Rotación, Brillo/Contraste)
+    const [isEditorOpen, setIsEditorOpen] = useState<boolean>(false);
+    const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
+    const [editorTarget, setEditorTarget] = useState<'foto_cedula' | 'foto'>('foto_cedula');
 
     // Validación de Cédula Principal duplicada en tiempo real
     const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
@@ -504,31 +511,18 @@ export default function RegistroPastor({
 
         const video = videoRef.current;
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    const filename = `${cameraTarget}_${Date.now()}.jpg`;
-                    const file = new File([blob], filename, { type: 'image/jpeg' });
-
-                    setData(cameraTarget, file);
-
-                    if (cameraTarget === 'foto_cedula') {
-                        setFotoCedulaPreview(dataUrl);
-                        analyzeCedulaWithOcr(dataUrl);
-                    } else {
-                        setFotoPerfilPreview(dataUrl);
-                    }
-
-                    closeCameraModal();
-                }
-            }, 'image/jpeg', 0.9);
+            setEditorImageSrc(dataUrl);
+            setEditorTarget(cameraTarget);
+            setIsEditorOpen(true);
+            closeCameraModal();
         }
     };
 
@@ -540,21 +534,30 @@ export default function RegistroPastor({
 
     const handleFileChange = (
         e: React.ChangeEvent<HTMLInputElement>,
-        field: 'foto_cedula' | 'foto',
-        setPreview: React.Dispatch<React.SetStateAction<string | null>>
+        field: 'foto_cedula' | 'foto'
     ) => {
         const file = e.target.files?.[0];
         if (file) {
-            setData(field, file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 const res = reader.result as string;
-                setPreview(res);
-                if (field === 'foto_cedula') {
-                    analyzeCedulaWithOcr(res);
-                }
+                setEditorImageSrc(res);
+                setEditorTarget(field);
+                setIsEditorOpen(true);
             };
             reader.readAsDataURL(file);
+        }
+        e.target.value = '';
+    };
+
+    const handleEditorSave = (file: File, dataUrl: string) => {
+        if (editorTarget === 'foto_cedula') {
+            setFotoCedulaPreview(dataUrl);
+            setData('foto_cedula', file);
+            analyzeCedulaWithOcr(dataUrl);
+        } else {
+            setFotoPerfilPreview(dataUrl);
+            setData('foto', file);
         }
     };
 
@@ -1252,19 +1255,33 @@ export default function RegistroPastor({
                                                                     alt="Cédula Preview"
                                                                     className="w-full h-full object-contain"
                                                                 />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setFotoCedulaPreview(null);
-                                                                        setData('foto_cedula', null);
-                                                                        setOcrVerified(false);
-                                                                        setOcrStatusMessage(null);
-                                                                        setExtractedCedulaNumber(null);
-                                                                    }}
-                                                                    className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 text-xs hover:bg-rose-700 transition shadow"
-                                                                >
-                                                                    ✕
-                                                                </button>
+                                                                <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setEditorImageSrc(fotoCedulaPreview);
+                                                                            setEditorTarget('foto_cedula');
+                                                                            setIsEditorOpen(true);
+                                                                        }}
+                                                                        className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-xs transition shadow"
+                                                                    >
+                                                                        <Edit2 className="size-3 text-blue-400" />
+                                                                        <span>Editar</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setFotoCedulaPreview(null);
+                                                                            setData('foto_cedula', null);
+                                                                            setOcrVerified(false);
+                                                                            setOcrStatusMessage(null);
+                                                                            setExtractedCedulaNumber(null);
+                                                                        }}
+                                                                        className="bg-rose-600 text-white rounded-lg p-1 text-xs hover:bg-rose-700 transition shadow"
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                </div>
 
                                                                 {/* Insignia u Overlay OCR */}
                                                                 {isOcrAnalyzing ? (
@@ -1330,7 +1347,7 @@ export default function RegistroPastor({
                                                                         <input
                                                                             type="file"
                                                                             accept="image/*"
-                                                                            onChange={(e) => handleFileChange(e, 'foto_cedula', setFotoCedulaPreview)}
+                                                                            onChange={(e) => handleFileChange(e, 'foto_cedula')}
                                                                             className="hidden"
                                                                         />
                                                                     </label>
@@ -1365,16 +1382,30 @@ export default function RegistroPastor({
                                                                     alt="Perfil Preview"
                                                                     className="w-full h-full object-cover"
                                                                 />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setFotoPerfilPreview(null);
-                                                                        setData('foto', null);
-                                                                    }}
-                                                                    className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 text-xs hover:bg-rose-700 transition shadow"
-                                                                >
-                                                                    ✕
-                                                                </button>
+                                                                <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setEditorImageSrc(fotoPerfilPreview);
+                                                                            setEditorTarget('foto');
+                                                                            setIsEditorOpen(true);
+                                                                        }}
+                                                                        className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-xs transition shadow"
+                                                                    >
+                                                                        <Edit2 className="size-3 text-blue-400" />
+                                                                        <span>Editar</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setFotoPerfilPreview(null);
+                                                                            setData('foto', null);
+                                                                        }}
+                                                                        className="bg-rose-600 text-white rounded-lg p-1 text-xs hover:bg-rose-700 transition shadow"
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         ) : (
                                                             <div className="w-full py-4 flex flex-col items-center justify-center gap-3">
@@ -1396,7 +1427,7 @@ export default function RegistroPastor({
                                                                         <input
                                                                             type="file"
                                                                             accept="image/*"
-                                                                            onChange={(e) => handleFileChange(e, 'foto', setFotoPerfilPreview)}
+                                                                            onChange={(e) => handleFileChange(e, 'foto')}
                                                                             className="hidden"
                                                                         />
                                                                     </label>
@@ -1587,6 +1618,16 @@ export default function RegistroPastor({
                     </div>
                 </footer>
             </div>
+
+            {/* Modal Editor de Fotografías (Cédula y Carnet) */}
+            <PhotoEditorModal
+                isOpen={isEditorOpen}
+                imageSrc={editorImageSrc}
+                aspectRatio={editorTarget === 'foto_cedula' ? 'cedula' : 'carnet'}
+                title={editorTarget === 'foto_cedula' ? 'Editar y Ajustar Foto de Cédula' : 'Editar Foto Tipo Carnet'}
+                onClose={() => setIsEditorOpen(false)}
+                onSave={handleEditorSave}
+            />
         </>
     );
 }
