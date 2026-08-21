@@ -17,7 +17,8 @@ import {
     X,
     Crop,
     Sparkles,
-    Move
+    Move,
+    AlertTriangle
 } from 'lucide-react';
 
 interface PhotoEditorModalProps {
@@ -66,8 +67,12 @@ export default function PhotoEditorModal({
     }, [isOpen, imageSrc]);
 
     const handleReset = () => {
-        setRotation(0);
-        setZoom(1);
+        const img = imageRef.current;
+        const autoRotate = (aspectRatio === 'cedula' && img && img.height > img.width) ? 90 : 0;
+        const autoZoom = aspectRatio === 'cedula' ? 1.2 : 1;
+
+        setRotation(autoRotate);
+        setZoom(autoZoom);
         setPan({ x: 0, y: 0 });
         setBrightness(100);
         setContrast(100);
@@ -285,22 +290,44 @@ export default function PhotoEditorModal({
                         <Move className="size-3 text-blue-400" />
                         <span>Arrastra la foto para encuadrar</span>
                     </div>
+
+                    {/* Indicador de Nitidez / Borrosidad */}
+                    <div className={`absolute top-3 right-3 backdrop-blur-xs px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 border shadow-sm transition ${
+                        isBlurry
+                            ? 'bg-amber-950/90 text-amber-300 border-amber-500/80 animate-pulse'
+                            : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/80'
+                    }`}>
+                        {isBlurry ? (
+                            <>
+                                <AlertTriangle className="size-3.5 text-amber-400" />
+                                <span>⚠️ Foto Borrosa (Mejora Brillo/Contraste)</span>
+                            </>
+                        ) : (
+                            <>
+                                <Check className="size-3.5 text-emerald-400" />
+                                <span>✨ Foto Nítida y Legible</span>
+                            </>
+                        )}
+                    </div>
                 </div>
 
-                {/* Barra de Herramientas de Ajuste */}
+                {/* Barra de Herramientas de Ajuste Sencilla (Apta para todo público) */}
                 <div className="space-y-4 bg-slate-800/60 p-4 rounded-2xl border border-slate-800/80">
-                    {/* Botones de Rotación y Zoom */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
+                    {/* Botones de Acción Rápida (Presets en 1-Clic) */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
                         <div className="flex items-center gap-2">
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={rotateLeft}
-                                className="bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200 text-xs gap-1.5"
+                                onClick={() => {
+                                    setBrightness(120);
+                                    setContrast(130);
+                                }}
+                                className="bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 text-xs font-bold gap-1.5"
                             >
-                                <RotateCcw className="size-3.5 text-blue-400" />
-                                <span>-90°</span>
+                                <Sparkles className="size-3.5 text-amber-400" />
+                                <span>🪄 1-Clic Auto-Mejorar</span>
                             </Button>
                             <Button
                                 type="button"
@@ -310,20 +337,37 @@ export default function PhotoEditorModal({
                                 className="bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200 text-xs gap-1.5"
                             >
                                 <RotateCw className="size-3.5 text-blue-400" />
-                                <span>+90°</span>
+                                <span>Girar 90°</span>
                             </Button>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setZoom((prev) => Math.max(0.8, prev - 0.15))}
+                                className="bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200 text-xs px-2.5"
+                            >
+                                <span>Zoom -</span>
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setZoom((prev) => Math.min(2.5, prev + 0.15))}
+                                className="bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200 text-xs px-2.5"
+                            >
+                                <span>Zoom +</span>
+                            </Button>
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleReset}
-                                className="text-slate-400 hover:text-white text-xs gap-1.5"
+                                className="text-slate-400 hover:text-white text-xs"
                             >
-                                <Sparkles className="size-3.5 text-amber-400" />
-                                <span>Restablecer</span>
+                                Restablecer
                             </Button>
                         </div>
                     </div>

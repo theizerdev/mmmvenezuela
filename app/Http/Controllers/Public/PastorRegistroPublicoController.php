@@ -127,28 +127,69 @@ class PastorRegistroPublicoController extends Controller
     public function store(Request $request)
     {
         $cleanedDoc = trim($request->input('documento', ''));
+        $numericDoc = preg_replace('/[^\d]/', '', $cleanedDoc);
+
+        // Buscar primero por cédula exacta
         $existingPastor = !empty($cleanedDoc)
             ? Pastor::where('documento', $cleanedDoc)->first()
             : null;
 
-        // Permitir la actualización si el registro existente fue creado previamente como cónyuge o está incompleto
-        $isVinculableSpouseDoc = $existingPastor && ($existingPastor->conyuge_id !== null || empty($existingPastor->foto));
+        // Si no hay coincidencia exacta por documento, buscar registro incompleto/cónyuge pre-creado por dígitos numéricos
+        if (!$existingPastor && !empty($numericDoc)) {
+            $existingPastor = Pastor::where(function ($q) use ($numericDoc) {
+                $q->where('documento', 'LIKE', "%{$numericDoc}%")
+                    ->orWhere('codigo', 'LIKE', "%{$numericDoc}%");
+            })
+            ->where(function ($q) {
+                $q->whereNotNull('conyuge_id')
+                    ->orWhereNull('foto')
+                    ->orWhereNull('foto_cedula');
+            })
+            ->first();
+        }
 
         $docValidationRules = ['required', 'string', 'max:30'];
-        if (!$isVinculableSpouseDoc) {
-            $docValidationRules[] = 'unique:pastores,documento';
+        if ($existingPastor) {
+            $rule = Rule::unique('pastores', 'documento')->ignore($existingPastor->id);
+            if ($existingPastor->conyuge_id) {
+                $rule->ignore($existingPastor->conyuge_id);
+            }
+            $docValidationRules[] = $rule;
+        } else {
+            $docValidationRules[] = Rule::unique('pastores', 'documento');
         }
 
         $cleanedConyugeDoc = trim($request->input('cedula_conyuge', ''));
+        $numericConyugeDoc = preg_replace('/[^\d]/', '', $cleanedConyugeDoc);
+
         $existingConyugePastor = !empty($cleanedConyugeDoc)
             ? Pastor::where('documento', $cleanedConyugeDoc)->first()
             : null;
 
-        $isVinculableSpouseConyugeDoc = $existingConyugePastor && ($existingConyugePastor->conyuge_id !== null || empty($existingConyugePastor->foto));
+        if (!$existingConyugePastor && !empty($numericConyugeDoc)) {
+            $existingConyugePastor = Pastor::where(function ($q) use ($numericConyugeDoc) {
+                $q->where('documento', 'LIKE', "%{$numericConyugeDoc}%")
+                    ->orWhere('codigo', 'LIKE', "%{$numericConyugeDoc}%");
+            })->first();
+        }
 
         $cedulaConyugeValidationRules = ['nullable', 'required_if:conyuge_pastorea,true,1', 'string', 'max:30'];
-        if (!$isVinculableSpouseConyugeDoc) {
-            $cedulaConyugeValidationRules[] = Rule::unique('pastores', 'documento')->ignore($existingPastor?->id);
+        if ($existingConyugePastor) {
+            $ruleConyuge = Rule::unique('pastores', 'documento')
+                ->ignore($existingConyugePastor->id);
+            if ($existingPastor) {
+                $ruleConyuge->ignore($existingPastor->id);
+            }
+            if ($existingConyugePastor->conyuge_id) {
+                $ruleConyuge->ignore($existingConyugePastor->conyuge_id);
+            }
+            $cedulaConyugeValidationRules[] = $ruleConyuge;
+        } else {
+            $ruleConyuge = Rule::unique('pastores', 'documento');
+            if ($existingPastor) {
+                $ruleConyuge->ignore($existingPastor->id);
+            }
+            $cedulaConyugeValidationRules[] = $ruleConyuge;
         }
 
         $validated = $request->validate([

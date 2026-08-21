@@ -519,10 +519,21 @@ export default function RegistroPastor({
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
-            setEditorImageSrc(dataUrl);
-            setEditorTarget(cameraTarget);
-            setIsEditorOpen(true);
-            closeCameraModal();
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const filename = `${cameraTarget}_${Date.now()}.jpg`;
+                    const file = new File([blob], filename, { type: 'image/jpeg' });
+                    setData(cameraTarget, file);
+
+                    if (cameraTarget === 'foto_cedula') {
+                        setFotoCedulaPreview(dataUrl);
+                        analyzeCedulaWithOcr(dataUrl);
+                    } else {
+                        setFotoPerfilPreview(dataUrl);
+                    }
+                    closeCameraModal();
+                }
+            }, 'image/jpeg', 0.95);
         }
     };
 
@@ -538,12 +549,16 @@ export default function RegistroPastor({
     ) => {
         const file = e.target.files?.[0];
         if (file) {
+            setData(field, file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 const res = reader.result as string;
-                setEditorImageSrc(res);
-                setEditorTarget(field);
-                setIsEditorOpen(true);
+                if (field === 'foto_cedula') {
+                    setFotoCedulaPreview(res);
+                    analyzeCedulaWithOcr(res);
+                } else {
+                    setFotoPerfilPreview(res);
+                }
             };
             reader.readAsDataURL(file);
         }
