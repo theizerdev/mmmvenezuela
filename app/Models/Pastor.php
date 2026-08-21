@@ -34,6 +34,8 @@ class Pastor extends Model
         'edad',
         'fe_nacimiento',
         'foto',
+        'foto_cedula',
+        'email',
         'estado_civil',
         'nombre_conyuge',
         'conyuge_id',

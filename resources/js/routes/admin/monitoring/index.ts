@@ -7,7 +7,7 @@ import sessions from './sessions'
 import tasks from './tasks'
 const monitoring = {
     activities: Object.assign(activities, activities),
-    database: Object.assign(database, database),
+database: Object.assign(database, database),
 logs: Object.assign(logs, logs),
 queues: Object.assign(queues, queues),
 server: Object.assign(server, server),

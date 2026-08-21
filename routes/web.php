@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 use App\Http\Controllers\Admin\PastorCarnetController;
+use App\Http\Controllers\Public\PastorRegistroPublicoController;
 
 // Landing page pública
 Route::get('/', function () {
@@ -17,6 +18,10 @@ Route::get('/', function () {
 
 // Ruta pública de verificación del carnet mediante escaneo de Código QR
 Route::get('/validar-credencial/{codigo}', [PastorCarnetController::class, 'validarCredencial'])->name('pastores.validar-credencial');
+
+// Ruta pública de registro de Pastores y Extensiones
+Route::get('/registro-pastor', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
+Route::post('/registro-pastor', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
 
 
 Route::middleware(['guest'])->group(function () {
