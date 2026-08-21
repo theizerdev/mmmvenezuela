@@ -203,19 +203,41 @@ export default function RegistroPastor({
                     return;
                 }
 
-                // Escalar resolución si la captura es pequeña para mejorar legibilidad
-                const scale = Math.max(1, 1280 / img.width);
-                canvas.width = img.width * scale;
-                canvas.height = img.height * scale;
+                // 1. Auto-Rotación a Horizontal (Si la foto se tomó en vertical)
+                const isVertical = img.height > img.width;
+                const targetW = isVertical ? img.height : img.width;
+                const targetH = isVertical ? img.width : img.height;
 
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                // 2. Auto-Zoom (Enfocar el texto recortando bordes innecesarios a 1.25x)
+                const zoomFactor = 1.25;
+                const finalW = Math.max(1280, Math.round(targetW * zoomFactor));
+                const finalH = Math.round(targetH * zoomFactor);
+
+                canvas.width = finalW;
+                canvas.height = finalH;
+
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+
+                if (isVertical) {
+                    // Rotar 90° a la derecha para dejar el documento horizontal
+                    ctx.rotate((90 * Math.PI) / 180);
+                }
+
+                // Dibujar la imagen escalada y centrada
+                const drawW = isVertical ? finalH : finalW;
+                const drawH = isVertical ? finalW : finalH;
+
+                ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+                ctx.restore();
+
+                // 3. Auto-Binarización por Umbral Adaptativo (Resaltar letras y dígitos en blanco/negro puro)
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const d = imageData.data;
 
-                // Aplicar escala de grises y binarización por umbral adaptativo para resaltar letras y números negros
                 for (let i = 0; i < d.length; i += 4) {
                     const avg = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-                    const v = avg > 120 ? 255 : 0;
+                    const v = avg > 122 ? 255 : 0;
                     d[i] = v;     // R
                     d[i + 1] = v; // G
                     d[i + 2] = v; // B
@@ -543,6 +565,71 @@ export default function RegistroPastor({
         setCameraError(null);
     };
 
+    const autoCorregirFotoDirecta = (imageSrc: string, field: 'foto_cedula' | 'foto') => {
+        setIsOcrAnalyzing(true);
+        setOcrStatusMessage('🪄 Auto-corregiendo orientación, zoom y contraste...');
+
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            const isVertical = img.height > img.width;
+            const shouldRotate = field === 'foto_cedula' ? isVertical : false;
+
+            const targetW = shouldRotate ? img.height : img.width;
+            const targetH = shouldRotate ? img.width : img.height;
+
+            const zoomFactor = field === 'foto_cedula' ? 1.25 : 1.1;
+            const finalW = Math.max(1280, Math.round(targetW * zoomFactor));
+            const finalH = Math.round(targetH * zoomFactor);
+
+            canvas.width = finalW;
+            canvas.height = finalH;
+
+            ctx.save();
+            ctx.filter = 'brightness(115%) contrast(125%)';
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+
+            if (shouldRotate) {
+                ctx.rotate((90 * Math.PI) / 180);
+            }
+
+            const drawW = shouldRotate ? finalH : finalW;
+            const drawH = shouldRotate ? finalW : finalH;
+
+            ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+            ctx.restore();
+
+            const correctedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const file = new File([blob], `${field}_autocorregida.jpg`, { type: 'image/jpeg' });
+                    setData(field, file);
+
+                    if (field === 'foto_cedula') {
+                        setFotoCedulaPreview(correctedDataUrl);
+                        analyzeCedulaWithOcr(correctedDataUrl);
+                    } else {
+                        setFotoPerfilPreview(correctedDataUrl);
+                        setIsOcrAnalyzing(false);
+                    }
+                }
+            }, 'image/jpeg', 0.95);
+        };
+        img.src = imageSrc;
+    };
+
+    const autoCorregirFoto = (field: 'foto_cedula' | 'foto') => {
+        const imageSrc = field === 'foto_cedula' ? fotoCedulaPreview : fotoPerfilPreview;
+        if (imageSrc) {
+            autoCorregirFotoDirecta(imageSrc, field);
+        }
+    };
+
     const handleFileChange = (
         e: React.ChangeEvent<HTMLInputElement>,
         field: 'foto_cedula' | 'foto'
@@ -555,7 +642,17 @@ export default function RegistroPastor({
                 const res = reader.result as string;
                 if (field === 'foto_cedula') {
                     setFotoCedulaPreview(res);
-                    analyzeCedulaWithOcr(res);
+
+                    // Auto-detectar si la imagen de la cédula es vertical para rotarla horizontalmente de inmediato
+                    const checkImg = new Image();
+                    checkImg.onload = () => {
+                        if (checkImg.height > checkImg.width) {
+                            autoCorregirFotoDirecta(res, field);
+                        } else {
+                            analyzeCedulaWithOcr(res);
+                        }
+                    };
+                    checkImg.src = res;
                 } else {
                     setFotoPerfilPreview(res);
                 }
@@ -1273,6 +1370,15 @@ export default function RegistroPastor({
                                                                 <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
                                                                     <button
                                                                         type="button"
+                                                                        onClick={() => autoCorregirFoto('foto_cedula')}
+                                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md transition"
+                                                                        title="Voltea la foto a horizontal, aplica brillo, contraste y zoom óptimo para OCR"
+                                                                    >
+                                                                        <Sparkles className="size-3 text-amber-300 animate-pulse" />
+                                                                        <span>Auto-corregir</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
                                                                         onClick={() => {
                                                                             setEditorImageSrc(fotoCedulaPreview);
                                                                             setEditorTarget('foto_cedula');
@@ -1281,7 +1387,7 @@ export default function RegistroPastor({
                                                                         className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-xs transition shadow"
                                                                     >
                                                                         <Edit2 className="size-3 text-blue-400" />
-                                                                        <span>Editar</span>
+                                                                        <span>Ajustar</span>
                                                                     </button>
                                                                     <button
                                                                         type="button"
