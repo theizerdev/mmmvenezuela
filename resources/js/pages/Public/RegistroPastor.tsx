@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
     User,
     Church,
-    UploadCloud,
     CheckCircle2,
     ArrowRight,
     ArrowLeft,
     ShieldCheck,
-    FileText,
     IdCard,
     Calendar,
     Phone,
@@ -18,9 +16,34 @@ import {
     AlertCircle,
     Camera,
     Sparkles,
-    Building
+    FileText,
+    RefreshCw,
+    X,
+    Heart,
+    Users
 } from 'lucide-react';
+
+import {
+    Card,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardContent,
+    CardFooter
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface EstadoItem {
     id: number;
@@ -50,12 +73,25 @@ export default function RegistroPastor({
     const [fotoCedulaPreview, setFotoCedulaPreview] = useState<string | null>(null);
     const [fotoPerfilPreview, setFotoPerfilPreview] = useState<string | null>(null);
 
+    // Cámara Estados
+    const [cameraTarget, setCameraTarget] = useState<'foto_cedula' | 'foto' | null>(null);
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+    const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+    const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
+    const [isCameraLoading, setIsCameraLoading] = useState<boolean>(false);
+    const [cameraError, setCameraError] = useState<string | null>(null);
+
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
+
     const { data, setData, post, processing, errors, reset } = useForm({
         nombres: '',
         apellidos: '',
         documento: '',
         fe_nacimiento: '',
         estado_civil: 'Casado(a)',
+        conyuge_pastorea: false,
+        nombre_conyuge: '',
         telefono_tlf: '',
         email: '',
 
@@ -74,6 +110,134 @@ export default function RegistroPastor({
 
     const successData = flash?.success;
 
+    // Detectar cámaras disponibles
+    useEffect(() => {
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.mediaDevices.enumerateDevices().then((devices) => {
+                const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+                setAvailableCameras(videoDevices);
+            }).catch(() => {});
+        }
+    }, []);
+
+    // Detener la cámara al desmontar
+    useEffect(() => {
+        return () => {
+            stopCameraStream();
+        };
+    }, []);
+
+    const stopCameraStream = () => {
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+            mediaStreamRef.current = null;
+        }
+    };
+
+    const startCamera = async (target: 'foto_cedula' | 'foto', mode?: 'user' | 'environment', deviceIndex?: number) => {
+        stopCameraStream();
+        setCameraError(null);
+        setIsCameraLoading(true);
+        setCameraTarget(target);
+
+        const targetFacingMode = mode || facingMode;
+        const targetIndex = deviceIndex !== undefined ? deviceIndex : currentCameraIndex;
+
+        try {
+            let constraints: MediaStreamConstraints = {
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                }
+            };
+
+            if (availableCameras.length > 1 && availableCameras[targetIndex]) {
+                constraints = {
+                    video: {
+                        deviceId: { exact: availableCameras[targetIndex].deviceId },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+            } else {
+                constraints = {
+                    video: {
+                        facingMode: targetFacingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            mediaStreamRef.current = stream;
+
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+            }
+            setIsCameraLoading(false);
+        } catch (err: any) {
+            console.error('Camera error:', err);
+            setIsCameraLoading(false);
+            setCameraError('No se pudo acceder a la cámara. Por favor permite los permisos o intenta subir un archivo.');
+        }
+    };
+
+    const flipCamera = () => {
+        if (availableCameras.length > 1) {
+            const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
+            setCurrentCameraIndex(nextIndex);
+            if (cameraTarget) {
+                startCamera(cameraTarget, facingMode, nextIndex);
+            }
+        } else {
+            const newMode = facingMode === 'user' ? 'environment' : 'user';
+            setFacingMode(newMode);
+            if (cameraTarget) {
+                startCamera(cameraTarget, newMode);
+            }
+        }
+    };
+
+    const capturePhoto = () => {
+        if (!videoRef.current || !cameraTarget) return;
+
+        const video = videoRef.current;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const filename = `${cameraTarget}_${Date.now()}.jpg`;
+                    const file = new File([blob], filename, { type: 'image/jpeg' });
+
+                    setData(cameraTarget, file);
+
+                    if (cameraTarget === 'foto_cedula') {
+                        setFotoCedulaPreview(dataUrl);
+                    } else {
+                        setFotoPerfilPreview(dataUrl);
+                    }
+
+                    closeCameraModal();
+                }
+            }, 'image/jpeg', 0.9);
+        }
+    };
+
+    const closeCameraModal = () => {
+        stopCameraStream();
+        setCameraTarget(null);
+        setCameraError(null);
+    };
+
     const handleFileChange = (
         e: React.ChangeEvent<HTMLInputElement>,
         field: 'foto_cedula' | 'foto',
@@ -90,16 +254,22 @@ export default function RegistroPastor({
         }
     };
 
-    const nextStep = () => {
-        if (step < 3) setStep(step + 1);
+    const nextStep = (e?: React.MouseEvent) => {
+        if (e) e.preventDefault();
+        if (step < 3) setStep((prev) => prev + 1);
     };
 
-    const prevStep = () => {
-        if (step > 1) setStep(step - 1);
+    const prevStep = (e?: React.MouseEvent) => {
+        if (e) e.preventDefault();
+        if (step > 1) setStep((prev) => prev - 1);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (step < 3) {
+            setStep((prev) => prev + 1);
+            return;
+        }
         post('/registro-pastor', {
             forceFormData: true,
             preserveScroll: true,
@@ -113,32 +283,32 @@ export default function RegistroPastor({
         <>
             <Head title="Registro de Pastores y Extensión - Movimiento Misionero Mundial Venezuela" />
 
-            <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
-                {/* Header Institucional */}
-                <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
-                    <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+                {/* Header Institucional Claro */}
+                <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-xs">
+                    <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <img
                                 src="/icons/logo_mmm.png"
                                 alt="Logo MMM"
-                                className="h-12 w-auto object-contain drop-shadow-md"
+                                className="h-11 w-auto object-contain drop-shadow-xs"
                                 onError={(e) => {
                                     (e.target as HTMLElement).style.display = 'none';
                                 }}
                             />
                             <div>
-                                <h1 className="text-xs md:text-sm font-black tracking-wider uppercase text-amber-400">
+                                <h1 className="text-xs md:text-sm font-black tracking-wider uppercase text-blue-900">
                                     MOVIMIENTO MISIONERO MUNDIAL
                                 </h1>
-                                <p className="text-xs text-slate-400 font-medium">
+                                <p className="text-xs text-slate-500 font-medium">
                                     Oficina Nacional de Venezuela • Censo Pastoral
                                 </p>
                             </div>
                         </div>
-                        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-800/50">
-                            <ShieldCheck className="size-4 text-emerald-400" />
-                            <span>Formulario Oficial de Registro</span>
-                        </div>
+                        <Badge variant="outline" className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-800 border-blue-200 font-medium">
+                            <ShieldCheck className="size-3.5 text-emerald-600" />
+                            <span>Formulario Oficial</span>
+                        </Badge>
                     </div>
                 </header>
 
@@ -146,30 +316,30 @@ export default function RegistroPastor({
                 <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 md:py-12">
                     {/* Pantalla de Éxito al Completar */}
                     {step === 4 || successData ? (
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
-                            <div className="size-20 mx-auto bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                <CheckCircle2 className="size-10 text-slate-950 stroke-[2.5]" />
+                        <Card className="bg-white border-slate-200 shadow-xl rounded-3xl p-6 md:p-10 text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                            <div className="size-20 mx-auto bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center shadow-md">
+                                <CheckCircle2 className="size-10 text-emerald-600 stroke-[2.5]" />
                             </div>
 
                             <div className="space-y-2">
-                                <span className="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-xs px-3 py-1 font-bold uppercase tracking-wider">
                                     ¡Registro Recibido Exitosamente!
-                                </span>
-                                <h2 className="text-2xl md:text-3xl font-extrabold text-white">
+                                </Badge>
+                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900">
                                     {successData?.nombre || `${data.nombres} ${data.apellidos}`}
                                 </h2>
-                                <p className="text-slate-400 text-sm max-w-md mx-auto">
-                                    Tus datos y la información de la extensión han sido registrados en nuestro sistema de censo pastoral nacional.
+                                <p className="text-slate-600 text-sm max-w-md mx-auto">
+                                    Tus datos y la información de la extensión han sido registrados en nuestro censo pastoral nacional.
                                 </p>
                             </div>
 
                             {/* Tarjeta de Código Generado */}
                             {successData?.codigo && (
-                                <div className="p-6 bg-slate-950/80 rounded-2xl border border-slate-800 max-w-sm mx-auto space-y-2 shadow-inner">
-                                    <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
+                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 max-w-sm mx-auto space-y-2 shadow-inner">
+                                    <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">
                                         Código Eclesiástico Asignado
                                     </span>
-                                    <div className="text-2xl md:text-3xl font-mono font-black text-amber-400 tracking-widest select-all">
+                                    <div className="text-2xl md:text-3xl font-mono font-black text-blue-900 tracking-widest select-all">
                                         {successData.codigo}
                                     </div>
                                     <p className="text-[11px] text-slate-500">
@@ -187,491 +357,668 @@ export default function RegistroPastor({
                                         setStep(1);
                                     }}
                                     variant="outline"
-                                    className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200"
+                                    className="border-slate-300 bg-white hover:bg-slate-100 text-slate-700"
                                 >
                                     Registrar otro Pastor
                                 </Button>
                             </div>
-                        </div>
+                        </Card>
                     ) : (
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
-                            {/* Stepper Header */}
-                            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 border-b border-slate-800">
+                        <Card className="bg-white border-slate-200 shadow-xl rounded-3xl overflow-hidden">
+                            {/* Stepper Header Radix */}
+                            <CardHeader className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-900 text-white p-6 md:p-8 border-b border-blue-800">
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+                                        <CardTitle className="text-xl md:text-2xl font-bold flex items-center gap-2 text-white">
                                             <Sparkles className="size-5 text-amber-400" />
                                             Censo Nacional de Pastores
-                                        </h2>
-                                        <p className="text-xs text-slate-400">
-                                            Por favor completa la información del pastor y la extensión correspondiente.
-                                        </p>
+                                        </CardTitle>
+                                        <CardDescription className="text-xs text-blue-100 mt-1">
+                                            Ingresa la información requerida del pastor y su extensión eclesiástica.
+                                        </CardDescription>
                                     </div>
-                                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                                    <Badge className="bg-blue-800/80 text-blue-100 border border-blue-700 text-xs px-3 py-1 font-semibold">
                                         Paso {step} de 3
-                                    </span>
+                                    </Badge>
                                 </div>
 
                                 {/* Barra de Progreso */}
                                 <div className="grid grid-cols-3 gap-2">
-                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 1 ? 'bg-amber-400' : 'bg-slate-800'}`} />
-                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 2 ? 'bg-amber-400' : 'bg-slate-800'}`} />
-                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 3 ? 'bg-amber-400' : 'bg-slate-800'}`} />
+                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 1 ? 'bg-amber-400' : 'bg-blue-950/60'}`} />
+                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 2 ? 'bg-amber-400' : 'bg-blue-950/60'}`} />
+                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 3 ? 'bg-amber-400' : 'bg-blue-950/60'}`} />
                                 </div>
 
                                 {/* Etiquetas del Stepper */}
-                                <div className="grid grid-cols-3 gap-2 text-[11px] font-medium text-slate-400 mt-2 text-center">
-                                    <span className={step === 1 ? 'text-amber-400 font-bold' : ''}>1. Datos del Pastor</span>
-                                    <span className={step === 2 ? 'text-amber-400 font-bold' : ''}>2. Ministerio y Extensión</span>
-                                    <span className={step === 3 ? 'text-amber-400 font-bold' : ''}>3. Documentos y Fotos</span>
+                                <div className="grid grid-cols-3 gap-2 text-[11px] font-medium text-blue-200 mt-2 text-center">
+                                    <span className={step === 1 ? 'text-amber-300 font-bold' : ''}>1. Datos del Pastor</span>
+                                    <span className={step === 2 ? 'text-amber-300 font-bold' : ''}>2. Ministerio y Extensión</span>
+                                    <span className={step === 3 ? 'text-amber-300 font-bold' : ''}>3. Documentos y Fotos</span>
                                 </div>
-                            </div>
+                            </CardHeader>
 
                             {/* Formulario */}
-                            <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-                                {/* PASO 1: DATOS PERSONALES */}
-                                {step === 1 && (
-                                    <div className="space-y-6 animate-in fade-in duration-200">
-                                        <div className="border-b border-slate-800 pb-3 flex items-center gap-2 text-amber-400 font-semibold text-sm">
-                                            <User className="size-4" />
-                                            <span>Información Personal y Contacto</span>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Nombres */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Nombres <span className="text-rose-400">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={data.nombres}
-                                                    onChange={(e) => setData('nombres', e.target.value)}
-                                                    placeholder="Ej. Juan Carlos"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.nombres && <p className="text-xs text-rose-400">{errors.nombres}</p>}
+                            <form onSubmit={handleSubmit}>
+                                <CardContent className="p-6 md:p-8 space-y-6">
+                                    {/* PASO 1: DATOS PERSONALES */}
+                                    {step === 1 && (
+                                        <div className="space-y-6 animate-in fade-in duration-200">
+                                            <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
+                                                <User className="size-4 text-blue-700" />
+                                                <span>Información Personal y Contacto</span>
                                             </div>
 
-                                            {/* Apellidos */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Apellidos <span className="text-rose-400">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={data.apellidos}
-                                                    onChange={(e) => setData('apellidos', e.target.value)}
-                                                    placeholder="Ej. Pérez Rodríguez"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.apellidos && <p className="text-xs text-rose-400">{errors.apellidos}</p>}
-                                            </div>
-
-                                            {/* Cédula */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    <IdCard className="size-3.5 text-slate-400" />
-                                                    Cédula de Identidad <span className="text-rose-400">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={data.documento}
-                                                    onChange={(e) => setData('documento', e.target.value)}
-                                                    placeholder="Ej. V-12345678"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.documento && <p className="text-xs text-rose-400">{errors.documento}</p>}
-                                            </div>
-
-                                            {/* Fecha de Nacimiento */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    <Calendar className="size-3.5 text-slate-400" />
-                                                    Fecha de Nacimiento <span className="text-rose-400">*</span>
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    required
-                                                    value={data.fe_nacimiento}
-                                                    onChange={(e) => setData('fe_nacimiento', e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.fe_nacimiento && <p className="text-xs text-rose-400">{errors.fe_nacimiento}</p>}
-                                            </div>
-
-                                            {/* Estado Civil */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Estado Civil <span className="text-rose-400">*</span>
-                                                </label>
-                                                <select
-                                                    value={data.estado_civil}
-                                                    onChange={(e) => setData('estado_civil', e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 transition"
-                                                >
-                                                    {estadosCiviles.map((ec) => (
-                                                        <option key={ec} value={ec}>
-                                                            {ec}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                {errors.estado_civil && <p className="text-xs text-rose-400">{errors.estado_civil}</p>}
-                                            </div>
-
-                                            {/* Teléfono Móvil */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    <Phone className="size-3.5 text-slate-400" />
-                                                    Teléfono Móvil <span className="text-rose-400">*</span>
-                                                </label>
-                                                <input
-                                                    type="tel"
-                                                    required
-                                                    value={data.telefono_tlf}
-                                                    onChange={(e) => setData('telefono_tlf', e.target.value)}
-                                                    placeholder="Ej. 0414-1234567"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.telefono_tlf && <p className="text-xs text-rose-400">{errors.telefono_tlf}</p>}
-                                            </div>
-
-                                            {/* Correo Electrónico */}
-                                            <div className="space-y-1.5 md:col-span-2">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    <Mail className="size-3.5 text-slate-400" />
-                                                    Correo Electrónico
-                                                </label>
-                                                <input
-                                                    type="email"
-                                                    value={data.email}
-                                                    onChange={(e) => setData('email', e.target.value)}
-                                                    placeholder="Ej. pastor@ejemplo.com"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.email && <p className="text-xs text-rose-400">{errors.email}</p>}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-end pt-4 border-t border-slate-800">
-                                            <Button
-                                                type="button"
-                                                onClick={nextStep}
-                                                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-amber-500/10 flex items-center gap-2"
-                                            >
-                                                <span>Siguiente Paso</span>
-                                                <ArrowRight className="size-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* PASO 2: MINISTERIO Y EXTENSIÓN */}
-                                {step === 2 && (
-                                    <div className="space-y-6 animate-in fade-in duration-200">
-                                        <div className="border-b border-slate-800 pb-3 flex items-center gap-2 text-amber-400 font-semibold text-sm">
-                                            <Award className="size-4" />
-                                            <span>Información Ministerial y de la Extensión</span>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Grado Ministerial */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Grado Ministerial <span className="text-rose-400">*</span>
-                                                </label>
-                                                <select
-                                                    value={data.nivel_ministerial}
-                                                    onChange={(e) => setData('nivel_ministerial', e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 transition"
-                                                >
-                                                    {gradosMinisteriales.map((gm) => (
-                                                        <option key={gm} value={gm}>
-                                                            {gm}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                {errors.nivel_ministerial && <p className="text-xs text-rose-400">{errors.nivel_ministerial}</p>}
-                                            </div>
-
-                                            {/* Último año de promoción */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Último Año de Promoción
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={data.ano_promocion}
-                                                    onChange={(e) => setData('ano_promocion', e.target.value)}
-                                                    placeholder="Ej. 2020"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.ano_promocion && <p className="text-xs text-rose-400">{errors.ano_promocion}</p>}
-                                            </div>
-
-                                            {/* Nombre de la Extensión */}
-                                            <div className="space-y-1.5 md:col-span-2">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    <Church className="size-3.5 text-slate-400" />
-                                                    Nombre de la Extensión (Iglesia) <span className="text-rose-400">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={data.nombre_extension}
-                                                    onChange={(e) => setData('nombre_extension', e.target.value)}
-                                                    placeholder="Ej. MMM Central Barquisimeto"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.nombre_extension && <p className="text-xs text-rose-400">{errors.nombre_extension}</p>}
-                                            </div>
-
-                                            {/* Dirección de la extensión */}
-                                            <div className="space-y-1.5 md:col-span-2">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    <MapPin className="size-3.5 text-slate-400" />
-                                                    Dirección de la Extensión (Iglesia) <span className="text-rose-400">*</span>
-                                                </label>
-                                                <textarea
-                                                    required
-                                                    rows={2}
-                                                    value={data.direccion_extension}
-                                                    onChange={(e) => setData('direccion_extension', e.target.value)}
-                                                    placeholder="Ej. Av. Principal con Calle 12, Sector Centro"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition resize-none"
-                                                />
-                                                {errors.direccion_extension && <p className="text-xs text-rose-400">{errors.direccion_extension}</p>}
-                                            </div>
-
-                                            {/* Estado */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Estado <span className="text-rose-400">*</span>
-                                                </label>
-                                                <select
-                                                    value={data.estado_id}
-                                                    onChange={(e) => setData('estado_id', e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 transition"
-                                                >
-                                                    {estados.map((est) => (
-                                                        <option key={est.id} value={est.id}>
-                                                            {est.nombre}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                {errors.estado_id && <p className="text-xs text-rose-400">{errors.estado_id}</p>}
-                                            </div>
-
-                                            {/* Zona */}
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Zona
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={data.zona}
-                                                    onChange={(e) => setData('zona', e.target.value)}
-                                                    placeholder="Ej. Zona 1"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.zona && <p className="text-xs text-rose-400">{errors.zona}</p>}
-                                            </div>
-
-                                            {/* Distrito */}
-                                            <div className="space-y-1.5 md:col-span-2">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                                                    Distrito
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={data.distrito}
-                                                    onChange={(e) => setData('distrito', e.target.value)}
-                                                    placeholder="Ej. Distrito Central"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
-                                                />
-                                                {errors.distrito && <p className="text-xs text-rose-400">{errors.distrito}</p>}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                                            <Button
-                                                type="button"
-                                                onClick={prevStep}
-                                                variant="outline"
-                                                className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 flex items-center gap-2"
-                                            >
-                                                <ArrowLeft className="size-4" />
-                                                <span>Anterior</span>
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                onClick={nextStep}
-                                                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-amber-500/10 flex items-center gap-2"
-                                            >
-                                                <span>Siguiente Paso</span>
-                                                <ArrowRight className="size-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* PASO 3: ARCHIVOS Y FOTOGRAFÍAS */}
-                                {step === 3 && (
-                                    <div className="space-y-6 animate-in fade-in duration-200">
-                                        <div className="border-b border-slate-800 pb-3 flex items-center gap-2 text-amber-400 font-semibold text-sm">
-                                            <Camera className="size-4" />
-                                            <span>Documentos y Fotografías Requeridas</span>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            {/* Dropzone 1: Foto de la Cédula */}
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                                                    <span>Foto de la Cédula de Identidad <span className="text-rose-400">*</span></span>
-                                                    <span className="text-[10px] text-slate-400">Anverso Legible</span>
-                                                </label>
-                                                <div className="relative border-2 border-dashed border-slate-800 hover:border-amber-400/60 rounded-2xl p-4 bg-slate-950/50 flex flex-col items-center justify-center text-center transition group">
-                                                    {fotoCedulaPreview ? (
-                                                        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-800">
-                                                            <img
-                                                                src={fotoCedulaPreview}
-                                                                alt="Cédula Preview"
-                                                                className="w-full h-full object-contain"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setFotoCedulaPreview(null);
-                                                                    setData('foto_cedula', null);
-                                                                }}
-                                                                className="absolute top-2 right-2 bg-rose-500 text-white rounded-full p-1 text-xs hover:bg-rose-600 transition shadow"
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <label className="cursor-pointer w-full py-6 flex flex-col items-center justify-center gap-2">
-                                                            <div className="size-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 group-hover:scale-110 transition">
-                                                                <IdCard className="size-6" />
-                                                            </div>
-                                                            <div className="space-y-0.5">
-                                                                <p className="text-xs font-semibold text-slate-200">
-                                                                    Haz clic para subir la foto de tu Cédula
-                                                                </p>
-                                                                <p className="text-[10px] text-slate-500">
-                                                                    Usada como validador de los datos ingresados (PNG, JPG max 5MB)
-                                                                </p>
-                                                            </div>
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                required
-                                                                onChange={(e) => handleFileChange(e, 'foto_cedula', setFotoCedulaPreview)}
-                                                                className="hidden"
-                                                            />
-                                                        </label>
-                                                    )}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Nombres */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="nombres" className="text-xs font-semibold text-slate-700">
+                                                        Nombres <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="nombres"
+                                                        type="text"
+                                                        required
+                                                        value={data.nombres}
+                                                        onChange={(e) => setData('nombres', e.target.value)}
+                                                        placeholder="Ej. Juan Carlos"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.nombres && <p className="text-xs text-rose-500">{errors.nombres}</p>}
                                                 </div>
-                                                {errors.foto_cedula && <p className="text-xs text-rose-400">{errors.foto_cedula}</p>}
-                                            </div>
 
-                                            {/* Dropzone 2: Foto Tipo Carnet */}
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                                                    <span>Foto Tipo Carnet <span className="text-rose-400">*</span></span>
-                                                    <span className="text-[10px] text-amber-400 font-medium">Fondo Blanco • Medio Cuerpo</span>
-                                                </label>
-                                                <div className="relative border-2 border-dashed border-slate-800 hover:border-amber-400/60 rounded-2xl p-4 bg-slate-950/50 flex flex-col items-center justify-center text-center transition group">
-                                                    {fotoPerfilPreview ? (
-                                                        <div className="relative w-full aspect-square max-w-[180px] mx-auto rounded-xl overflow-hidden bg-slate-900 border border-slate-800">
-                                                            <img
-                                                                src={fotoPerfilPreview}
-                                                                alt="Perfil Preview"
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setFotoPerfilPreview(null);
-                                                                    setData('foto', null);
-                                                                }}
-                                                                className="absolute top-2 right-2 bg-rose-500 text-white rounded-full p-1 text-xs hover:bg-rose-600 transition shadow"
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <label className="cursor-pointer w-full py-6 flex flex-col items-center justify-center gap-2">
-                                                            <div className="size-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 group-hover:scale-110 transition">
-                                                                <User className="size-6" />
-                                                            </div>
-                                                            <div className="space-y-0.5">
-                                                                <p className="text-xs font-semibold text-slate-200">
-                                                                    Haz clic para subir tu foto formal
-                                                                </p>
-                                                                <p className="text-[10px] text-slate-400 font-medium">
-                                                                    Requisito: Fondo blanco, vestimenta formal, medio cuerpo.
-                                                                </p>
-                                                            </div>
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                required
-                                                                onChange={(e) => handleFileChange(e, 'foto', setFotoPerfilPreview)}
-                                                                className="hidden"
-                                                            />
-                                                        </label>
-                                                    )}
+                                                {/* Apellidos */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="apellidos" className="text-xs font-semibold text-slate-700">
+                                                        Apellidos <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="apellidos"
+                                                        type="text"
+                                                        required
+                                                        value={data.apellidos}
+                                                        onChange={(e) => setData('apellidos', e.target.value)}
+                                                        placeholder="Ej. Pérez Rodríguez"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
                                                 </div>
-                                                {errors.foto && <p className="text-xs text-rose-400">{errors.foto}</p>}
-                                            </div>
-                                        </div>
 
-                                        {/* Nota de Declaración / Veracidad */}
-                                        <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-xs text-amber-300">
-                                            <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                                            <p>
-                                                Declaración de Veracidad: Al enviar este formulario declaro que los datos ingresados y las fotografías adjuntas son fidedignos y corresponden al titular.
-                                            </p>
-                                        </div>
+                                                {/* Cédula */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="documento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                        <IdCard className="size-3.5 text-slate-500" />
+                                                        Cédula de Identidad <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="documento"
+                                                        type="text"
+                                                        required
+                                                        value={data.documento}
+                                                        onChange={(e) => setData('documento', e.target.value)}
+                                                        placeholder="Ej. V-12345678"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.documento && <p className="text-xs text-rose-500">{errors.documento}</p>}
+                                                </div>
 
-                                        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                                            <Button
-                                                type="button"
-                                                onClick={prevStep}
-                                                variant="outline"
-                                                className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 flex items-center gap-2"
-                                            >
-                                                <ArrowLeft className="size-4" />
-                                                <span>Anterior</span>
-                                            </Button>
-                                            <Button
-                                                type="submit"
-                                                disabled={processing}
-                                                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-8 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2"
-                                            >
-                                                {processing ? (
-                                                    <span>Enviando...</span>
-                                                ) : (
-                                                    <>
-                                                        <CheckCircle2 className="size-4" />
-                                                        <span>Enviar Registro</span>
-                                                    </>
+                                                {/* Fecha de Nacimiento */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="fe_nacimiento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                        <Calendar className="size-3.5 text-slate-500" />
+                                                        Fecha de Nacimiento <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="fe_nacimiento"
+                                                        type="date"
+                                                        required
+                                                        value={data.fe_nacimiento}
+                                                        onChange={(e) => setData('fe_nacimiento', e.target.value)}
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.fe_nacimiento && <p className="text-xs text-rose-500">{errors.fe_nacimiento}</p>}
+                                                </div>
+
+                                                {/* Estado Civil (Radix UI Select) */}
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold text-slate-700">
+                                                        Estado Civil <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Select
+                                                        value={data.estado_civil}
+                                                        onValueChange={(val) => {
+                                                            setData('estado_civil', val);
+                                                            if (val !== 'Casado(a)') {
+                                                                setData('conyuge_pastorea', false);
+                                                                setData('nombre_conyuge', '');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
+                                                            <SelectValue placeholder="Selecciona estado civil" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-white border-slate-200">
+                                                            {estadosCiviles.map((ec) => (
+                                                                <SelectItem key={ec} value={ec}>
+                                                                    {ec}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.estado_civil && <p className="text-xs text-rose-500">{errors.estado_civil}</p>}
+                                                </div>
+
+                                                {/* Teléfono Móvil */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="telefono_tlf" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                        <Phone className="size-3.5 text-slate-500" />
+                                                        Teléfono Móvil <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="telefono_tlf"
+                                                        type="tel"
+                                                        required
+                                                        value={data.telefono_tlf}
+                                                        onChange={(e) => setData('telefono_tlf', e.target.value)}
+                                                        placeholder="Ej. 0414-1234567"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.telefono_tlf && <p className="text-xs text-rose-500">{errors.telefono_tlf}</p>}
+                                                </div>
+
+                                                {/* Correo Electrónico */}
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <Label htmlFor="email" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                        <Mail className="size-3.5 text-slate-500" />
+                                                        Correo Electrónico
+                                                    </Label>
+                                                    <Input
+                                                        id="email"
+                                                        type="email"
+                                                        value={data.email}
+                                                        onChange={(e) => setData('email', e.target.value)}
+                                                        placeholder="Ej. pastor@ejemplo.com"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.email && <p className="text-xs text-rose-500">{errors.email}</p>}
+                                                </div>
+
+                                                {/* SECCIÓN ESPECIAL PARA CÓNYUGE PASTORM: Si es Casado(a) */}
+                                                {data.estado_civil === 'Casado(a)' && (
+                                                    <div className="md:col-span-2 mt-2 p-4 bg-indigo-50/60 border border-indigo-200/80 rounded-2xl space-y-4 animate-in fade-in duration-200">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="space-y-0.5">
+                                                                <Label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                                                    <Heart className="size-4 text-rose-500 fill-rose-500" />
+                                                                    <span>¿Su cónyuge también está pastoreando?</span>
+                                                                </Label>
+                                                                <p className="text-[11px] text-slate-500">
+                                                                    Active esta casilla para registrar automáticamente a su cónyuge como pastor y vincular ambos registros.
+                                                                </p>
+                                                            </div>
+                                                            <Switch
+                                                                checked={data.conyuge_pastorea}
+                                                                onCheckedChange={(checked) => setData('conyuge_pastorea', checked)}
+                                                            />
+                                                        </div>
+
+                                                        {data.conyuge_pastorea && (
+                                                            <div className="space-y-2 pt-2 border-t border-indigo-200/60">
+                                                                <Label htmlFor="nombre_conyuge" className="text-xs font-semibold text-indigo-900 flex items-center gap-1">
+                                                                    <Users className="size-3.5 text-indigo-600" />
+                                                                    Nombre Completo de su Cónyuge <span className="text-rose-500">*</span>
+                                                                </Label>
+                                                                <Input
+                                                                    id="nombre_conyuge"
+                                                                    type="text"
+                                                                    required={data.conyuge_pastorea}
+                                                                    value={data.nombre_conyuge}
+                                                                    onChange={(e) => setData('nombre_conyuge', e.target.value)}
+                                                                    placeholder="Ej. María Elena de Pérez"
+                                                                    className="bg-white border-indigo-200 focus:border-indigo-500"
+                                                                />
+                                                                {errors.nombre_conyuge && <p className="text-xs text-rose-500">{errors.nombre_conyuge}</p>}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
-                                            </Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+
+                                    {/* PASO 2: MINISTERIO Y EXTENSIÓN */}
+                                    {step === 2 && (
+                                        <div className="space-y-6 animate-in fade-in duration-200">
+                                            <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
+                                                <Award className="size-4 text-blue-700" />
+                                                <span>Información Ministerial y de la Extensión</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Grado Ministerial (Radix UI Select) */}
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold text-slate-700">
+                                                        Grado Ministerial <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Select
+                                                        value={data.nivel_ministerial}
+                                                        onValueChange={(val) => setData('nivel_ministerial', val)}
+                                                    >
+                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
+                                                            <SelectValue placeholder="Selecciona grado ministerial" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-white border-slate-200">
+                                                            {gradosMinisteriales.map((gm) => (
+                                                                <SelectItem key={gm} value={gm}>
+                                                                    {gm}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.nivel_ministerial && <p className="text-xs text-rose-500">{errors.nivel_ministerial}</p>}
+                                                </div>
+
+                                                {/* Último año de promoción */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="ano_promocion" className="text-xs font-semibold text-slate-700">
+                                                        Último Año de Promoción
+                                                    </Label>
+                                                    <Input
+                                                        id="ano_promocion"
+                                                        type="text"
+                                                        value={data.ano_promocion}
+                                                        onChange={(e) => setData('ano_promocion', e.target.value)}
+                                                        placeholder="Ej. 2020"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.ano_promocion && <p className="text-xs text-rose-500">{errors.ano_promocion}</p>}
+                                                </div>
+
+                                                {/* Nombre de la Extensión */}
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <Label htmlFor="nombre_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                        <Church className="size-3.5 text-slate-500" />
+                                                        Nombre de la Extensión (Iglesia) <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="nombre_extension"
+                                                        type="text"
+                                                        required
+                                                        value={data.nombre_extension}
+                                                        onChange={(e) => setData('nombre_extension', e.target.value)}
+                                                        placeholder="Ej. MMM Central Barquisimeto"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.nombre_extension && <p className="text-xs text-rose-500">{errors.nombre_extension}</p>}
+                                                </div>
+
+                                                {/* Dirección de la extensión */}
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <Label htmlFor="direccion_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                        <MapPin className="size-3.5 text-slate-500" />
+                                                        Dirección de la Extensión (Iglesia) <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Textarea
+                                                        id="direccion_extension"
+                                                        required
+                                                        rows={2}
+                                                        value={data.direccion_extension}
+                                                        onChange={(e) => setData('direccion_extension', e.target.value)}
+                                                        placeholder="Ej. Av. Principal con Calle 12, Sector Centro"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white resize-none"
+                                                    />
+                                                    {errors.direccion_extension && <p className="text-xs text-rose-500">{errors.direccion_extension}</p>}
+                                                </div>
+
+                                                {/* Estado (Radix UI Select) */}
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold text-slate-700">
+                                                        Estado <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <Select
+                                                        value={data.estado_id}
+                                                        onValueChange={(val) => setData('estado_id', val)}
+                                                    >
+                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
+                                                            <SelectValue placeholder="Selecciona estado" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-white border-slate-200">
+                                                            {estados.map((est) => (
+                                                                <SelectItem key={est.id} value={String(est.id)}>
+                                                                    {est.nombre}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.estado_id && <p className="text-xs text-rose-500">{errors.estado_id}</p>}
+                                                </div>
+
+                                                {/* Zona */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="zona" className="text-xs font-semibold text-slate-700">
+                                                        Zona
+                                                    </Label>
+                                                    <Input
+                                                        id="zona"
+                                                        type="text"
+                                                        value={data.zona}
+                                                        onChange={(e) => setData('zona', e.target.value)}
+                                                        placeholder="Ej. Zona 1"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.zona && <p className="text-xs text-rose-500">{errors.zona}</p>}
+                                                </div>
+
+                                                {/* Distrito */}
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <Label htmlFor="distrito" className="text-xs font-semibold text-slate-700">
+                                                        Distrito
+                                                    </Label>
+                                                    <Input
+                                                        id="distrito"
+                                                        type="text"
+                                                        value={data.distrito}
+                                                        onChange={(e) => setData('distrito', e.target.value)}
+                                                        placeholder="Ej. Distrito Central"
+                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                    />
+                                                    {errors.distrito && <p className="text-xs text-rose-500">{errors.distrito}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* PASO 3: ARCHIVOS Y FOTOGRAFÍAS */}
+                                    {step === 3 && (
+                                        <div className="space-y-6 animate-in fade-in duration-200">
+                                            <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
+                                                <Camera className="size-4 text-blue-700" />
+                                                <span>Documentos y Fotografías Requeridas</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {/* Dropzone / Cámara 1: Foto de la Cédula */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-xs font-semibold text-slate-700">
+                                                            Foto de la Cédula de Identidad <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        <span className="text-[10px] text-slate-500 font-medium">Anverso Legible</span>
+                                                    </div>
+                                                    <div className="relative border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-2xl p-4 bg-slate-50/60 flex flex-col items-center justify-center text-center transition group">
+                                                        {fotoCedulaPreview ? (
+                                                            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-white border border-slate-200 shadow-xs">
+                                                                <img
+                                                                    src={fotoCedulaPreview}
+                                                                    alt="Cédula Preview"
+                                                                    className="w-full h-full object-contain"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setFotoCedulaPreview(null);
+                                                                        setData('foto_cedula', null);
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 text-xs hover:bg-rose-700 transition shadow"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full py-4 flex flex-col items-center justify-center gap-3">
+                                                                <div className="size-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-blue-700 shadow-xs group-hover:scale-110 transition">
+                                                                    <IdCard className="size-6" />
+                                                                </div>
+                                                                <div className="space-y-0.5">
+                                                                    <p className="text-xs font-semibold text-slate-800">
+                                                                        Subir o capturar foto de Cédula
+                                                                    </p>
+                                                                    <p className="text-[10px] text-slate-500">
+                                                                        PNG, JPG max 5MB
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-2 pt-1 w-full justify-center">
+                                                                    <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-2xs transition inline-flex items-center gap-1.5">
+                                                                        <span>Subir Imagen</span>
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            onChange={(e) => handleFileChange(e, 'foto_cedula', setFotoCedulaPreview)}
+                                                                            className="hidden"
+                                                                        />
+                                                                    </label>
+                                                                    <Button
+                                                                        type="button"
+                                                                        onClick={() => startCamera('foto_cedula')}
+                                                                        className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 h-auto rounded-lg shadow-2xs flex items-center gap-1.5"
+                                                                    >
+                                                                        <Camera className="size-3.5" />
+                                                                        <span>Tomar Foto</span>
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {errors.foto_cedula && <p className="text-xs text-rose-500">{errors.foto_cedula}</p>}
+                                                </div>
+
+                                                {/* Dropzone / Cámara 2: Foto Tipo Carnet */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-xs font-semibold text-slate-700">
+                                                            Foto Tipo Carnet <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        <span className="text-[10px] text-blue-700 font-semibold">Fondo Blanco • Medio Cuerpo</span>
+                                                    </div>
+                                                    <div className="relative border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-2xl p-4 bg-slate-50/60 flex flex-col items-center justify-center text-center transition group">
+                                                        {fotoPerfilPreview ? (
+                                                            <div className="relative w-full aspect-square max-w-[180px] mx-auto rounded-xl overflow-hidden bg-white border border-slate-200 shadow-xs">
+                                                                <img
+                                                                    src={fotoPerfilPreview}
+                                                                    alt="Perfil Preview"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setFotoPerfilPreview(null);
+                                                                        setData('foto', null);
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 text-xs hover:bg-rose-700 transition shadow"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full py-4 flex flex-col items-center justify-center gap-3">
+                                                                <div className="size-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-blue-700 shadow-xs group-hover:scale-110 transition">
+                                                                    <User className="size-6" />
+                                                                </div>
+                                                                <div className="space-y-0.5">
+                                                                    <p className="text-xs font-semibold text-slate-800">
+                                                                        Subir o capturar foto formal
+                                                                    </p>
+                                                                    <p className="text-[10px] text-slate-600 font-medium">
+                                                                        Requisito: Fondo blanco, vestimenta formal.
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-2 pt-1 w-full justify-center">
+                                                                    <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-2xs transition inline-flex items-center gap-1.5">
+                                                                        <span>Subir Imagen</span>
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            onChange={(e) => handleFileChange(e, 'foto', setFotoPerfilPreview)}
+                                                                            className="hidden"
+                                                                        />
+                                                                    </label>
+                                                                    <Button
+                                                                        type="button"
+                                                                        onClick={() => startCamera('foto')}
+                                                                        className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 h-auto rounded-lg shadow-2xs flex items-center gap-1.5"
+                                                                    >
+                                                                        <Camera className="size-3.5" />
+                                                                        <span>Tomar Foto</span>
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {errors.foto && <p className="text-xs text-rose-500">{errors.foto}</p>}
+                                                </div>
+                                            </div>
+
+                                            {/* Declaración de Veracidad */}
+                                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-900">
+                                                <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                                                <p>
+                                                    Declaración de Veracidad: Al enviar este formulario declaro que los datos ingresados y las fotografías adjuntas son fidedignos y corresponden al titular.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+
+                                <CardFooter className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+                                    {step > 1 ? (
+                                        <Button
+                                            type="button"
+                                            onClick={prevStep}
+                                            variant="outline"
+                                            className="border-slate-300 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-2"
+                                        >
+                                            <ArrowLeft className="size-4" />
+                                            <span>Anterior</span>
+                                        </Button>
+                                    ) : (
+                                        <div />
+                                    )}
+
+                                    {step < 3 ? (
+                                        <Button
+                                            type="button"
+                                            onClick={nextStep}
+                                            className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2"
+                                        >
+                                            <span>Siguiente Paso</span>
+                                            <ArrowRight className="size-4" />
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-2.5 rounded-xl shadow-md flex items-center gap-2"
+                                        >
+                                            {processing ? (
+                                                <span>Enviando...</span>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 className="size-4" />
+                                                    <span>Enviar Registro</span>
+                                                </>
+                                            )}
+                                        </Button>
+                                    )}
+                                </CardFooter>
                             </form>
-                        </div>
+                        </Card>
                     )}
                 </main>
 
-                {/* Footer */}
-                <footer className="w-full border-t border-slate-800 bg-slate-900/60 py-4 text-center text-xs text-slate-500">
+                {/* MODAL DE CÁMARA WEB / MULTI-CÁMARA */}
+                {cameraTarget && (
+                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-0">
+                            {/* Header del Modal */}
+                            <div className="bg-blue-900 text-white px-6 py-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2 font-bold text-sm">
+                                    <Camera className="size-4 text-amber-400" />
+                                    <span>
+                                        {cameraTarget === 'foto_cedula'
+                                            ? 'Capturar Foto de Cédula'
+                                            : 'Capturar Foto Tipo Carnet'}
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={closeCameraModal}
+                                    className="text-blue-200 hover:text-white transition"
+                                >
+                                    <X className="size-5" />
+                                </button>
+                            </div>
+
+                            {/* Viewport de la Cámara */}
+                            <div className="relative bg-slate-950 aspect-video flex items-center justify-center overflow-hidden">
+                                {isCameraLoading && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white space-y-2 bg-slate-950">
+                                        <RefreshCw className="size-8 animate-spin text-amber-400" />
+                                        <p className="text-xs">Iniciando cámara...</p>
+                                    </div>
+                                )}
+
+                                {cameraError ? (
+                                    <div className="p-6 text-center text-rose-400 space-y-2 text-xs">
+                                        <AlertCircle className="size-8 mx-auto text-rose-500" />
+                                        <p>{cameraError}</p>
+                                    </div>
+                                ) : (
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="w-full h-full object-contain"
+                                    />
+                                )}
+                            </div>
+
+                            {/* Acciones y Voltear Cámara */}
+                            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                                {/* Botón Voltear Cámara (siempre habilitado o con indicación) */}
+                                <Button
+                                    type="button"
+                                    onClick={flipCamera}
+                                    variant="outline"
+                                    className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 text-xs"
+                                    title="Voltear Cámara (Frontal / Trasera)"
+                                >
+                                    <RefreshCw className="size-3.5" />
+                                    <span>
+                                        {availableCameras.length > 1
+                                            ? `Cambiar Cámara (${currentCameraIndex + 1}/${availableCameras.length})`
+                                            : 'Voltear Cámara'}
+                                    </span>
+                                </Button>
+
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        onClick={closeCameraModal}
+                                        variant="ghost"
+                                        className="text-slate-600 hover:bg-slate-200 text-xs"
+                                    >
+                                        Cancelar
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        onClick={capturePhoto}
+                                        disabled={isCameraLoading || !!cameraError}
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 rounded-xl shadow flex items-center gap-1.5"
+                                    >
+                                        <Camera className="size-4" />
+                                        <span>Capturar Foto</span>
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Footer Claro */}
+                <footer className="w-full border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
                     <div className="max-w-6xl mx-auto px-4">
                         &copy; {new Date().getFullYear()} Movimiento Misionero Mundial Venezuela. Todos los derechos reservados.
                     </div>
