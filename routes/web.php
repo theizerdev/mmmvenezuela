@@ -22,6 +22,7 @@ Route::get('/validar-credencial/{codigo}', [PastorCarnetController::class, 'vali
 // Ruta pública de registro de Pastores y Extensiones
 Route::get('/registro-pastor', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
 Route::post('/registro-pastor', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
+Route::get('/registro-pastor/verificar-cedula/{cedula}', [PastorRegistroPublicoController::class, 'verificarCedula'])->name('registro-pastor.verificar-cedula');
 
 
 Route::middleware(['guest'])->group(function () {

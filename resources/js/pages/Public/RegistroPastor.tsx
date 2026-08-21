@@ -20,7 +20,10 @@ import {
     RefreshCw,
     X,
     Heart,
-    Users
+    Users,
+    AlertTriangle,
+    Loader2,
+    Info
 } from 'lucide-react';
 
 import {
@@ -73,6 +76,20 @@ export default function RegistroPastor({
     const [fotoCedulaPreview, setFotoCedulaPreview] = useState<string | null>(null);
     const [fotoPerfilPreview, setFotoPerfilPreview] = useState<string | null>(null);
 
+    // Validación de Cédula Principal duplicada en tiempo real
+    const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
+    const [cedulaExiste, setCedulaExiste] = useState<boolean>(false);
+    const [cedulaEsConyugeVinculado, setCedulaEsConyugeVinculado] = useState<boolean>(false);
+    const [cedulaExistenteNombre, setCedulaExistenteNombre] = useState<string | null>(null);
+    const [cedulaExistenteConyuge, setCedulaExistenteConyuge] = useState<string | null>(null);
+    const [extensionCargadaPorConyuge, setExtensionCargadaPorConyuge] = useState<boolean>(false);
+
+    // Validación de Cédula Cónyuge duplicada en tiempo real
+    const [isCheckingCedulaConyuge, setIsCheckingCedulaConyuge] = useState<boolean>(false);
+    const [cedulaConyugeExiste, setCedulaConyugeExiste] = useState<boolean>(false);
+    const [cedulaConyugeEsVinculado, setCedulaConyugeEsVinculado] = useState<boolean>(false);
+    const [cedulaConyugeExistenteNombre, setCedulaConyugeExistenteNombre] = useState<string | null>(null);
+
     // Cámara Estados
     const [cameraTarget, setCameraTarget] = useState<'foto_cedula' | 'foto' | null>(null);
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -90,8 +107,9 @@ export default function RegistroPastor({
         documento: '',
         fe_nacimiento: '',
         estado_civil: 'Casado(a)',
-        conyuge_pastorea: false,
         nombre_conyuge: '',
+        conyuge_pastorea: false,
+        cedula_conyuge: '',
         telefono_tlf: '',
         email: '',
 
@@ -126,6 +144,103 @@ export default function RegistroPastor({
             stopCameraStream();
         };
     }, []);
+
+    // Verificar en tiempo real la cédula duplicada (Pastor Principal)
+    const checkCedulaDuplicada = async (doc: string) => {
+        const cleanDoc = doc.trim();
+        if (!cleanDoc || cleanDoc.length < 5) {
+            setCedulaExiste(false);
+            setCedulaEsConyugeVinculado(false);
+            setCedulaExistenteNombre(null);
+            setCedulaExistenteConyuge(null);
+            setExtensionCargadaPorConyuge(false);
+            return;
+        }
+
+        setIsCheckingCedula(true);
+        try {
+            const resp = await fetch(`/registro-pastor/verificar-cedula/${encodeURIComponent(cleanDoc)}`);
+            if (resp.ok) {
+                const resData = await resp.json();
+                if (resData.existe) {
+                    if (resData.es_conyuge_vinculado) {
+                        // Es un cónyuge vinculado previamente / registro completable -> PERMITIR AVANZAR
+                        setCedulaExiste(false);
+                        setCedulaEsConyugeVinculado(true);
+
+                        // Auto-completar datos del cónyuge y personales
+                        if (resData.nombres && !data.nombres) setData('nombres', resData.nombres);
+                        if (resData.apellidos && !data.apellidos) setData('apellidos', resData.apellidos);
+                        if (resData.nombre_conyuge) setData('nombre_conyuge', resData.nombre_conyuge);
+                        if (resData.estado_civil) setData('estado_civil', resData.estado_civil);
+
+                        // Pre-cargar extensión de su cónyuge si existe
+                        if (resData.extension) {
+                            setExtensionCargadaPorConyuge(true);
+                            if (resData.extension.nombre) setData('nombre_extension', resData.extension.nombre);
+                            if (resData.extension.estado_id) setData('estado_id', String(resData.extension.estado_id));
+                            if (resData.extension.zona) setData('zona', resData.extension.zona);
+                            if (resData.extension.distrito) setData('distrito', resData.extension.distrito);
+                            if (resData.extension.direccion) setData('direccion_extension', resData.extension.direccion);
+                        }
+                    } else {
+                        // Es una cédula ya registrada por completo -> BLOQUEAR
+                        setCedulaExiste(true);
+                        setCedulaEsConyugeVinculado(false);
+                    }
+                    setCedulaExistenteNombre(resData.nombre || null);
+                    setCedulaExistenteConyuge(resData.nombre_conyuge || null);
+                } else {
+                    setCedulaExiste(false);
+                    setCedulaEsConyugeVinculado(false);
+                    setCedulaExistenteNombre(null);
+                    setCedulaExistenteConyuge(null);
+                    setExtensionCargadaPorConyuge(false);
+                }
+            }
+        } catch (err) {
+            console.error('Error al verificar cédula:', err);
+        } finally {
+            setIsCheckingCedula(false);
+        }
+    };
+
+    // Verificar en tiempo real la cédula duplicada (Cónyuge Pastor)
+    const checkCedulaConyugeDuplicada = async (doc: string) => {
+        const cleanDoc = doc.trim();
+        if (!cleanDoc || cleanDoc.length < 5) {
+            setCedulaConyugeExiste(false);
+            setCedulaConyugeEsVinculado(false);
+            setCedulaConyugeExistenteNombre(null);
+            return;
+        }
+
+        setIsCheckingCedulaConyuge(true);
+        try {
+            const resp = await fetch(`/registro-pastor/verificar-cedula/${encodeURIComponent(cleanDoc)}`);
+            if (resp.ok) {
+                const resData = await resp.json();
+                if (resData.existe) {
+                    if (resData.es_conyuge_vinculado) {
+                        setCedulaConyugeExiste(false);
+                        setCedulaConyugeEsVinculado(true);
+                    } else {
+                        setCedulaConyugeExiste(true);
+                        setCedulaConyugeEsVinculado(false);
+                    }
+                    setCedulaConyugeExistenteNombre(resData.nombre || null);
+                } else {
+                    setCedulaConyugeExiste(false);
+                    setCedulaConyugeEsVinculado(false);
+                    setCedulaConyugeExistenteNombre(null);
+                }
+            }
+        } catch (err) {
+            console.error('Error al verificar cédula cónyuge:', err);
+        } finally {
+            setIsCheckingCedulaConyuge(false);
+        }
+    };
 
     const stopCameraStream = () => {
         if (mediaStreamRef.current) {
@@ -256,6 +371,9 @@ export default function RegistroPastor({
 
     const nextStep = (e?: React.MouseEvent) => {
         if (e) e.preventDefault();
+        if (step === 1 && (cedulaExiste || cedulaConyugeExiste)) {
+            return;
+        }
         if (step < 3) setStep((prev) => prev + 1);
     };
 
@@ -267,6 +385,7 @@ export default function RegistroPastor({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (step < 3) {
+            if (step === 1 && (cedulaExiste || cedulaConyugeExiste)) return;
             setStep((prev) => prev + 1);
             return;
         }
@@ -354,6 +473,14 @@ export default function RegistroPastor({
                                         reset();
                                         setFotoCedulaPreview(null);
                                         setFotoPerfilPreview(null);
+                                        setCedulaExiste(false);
+                                        setCedulaEsConyugeVinculado(false);
+                                        setCedulaExistenteNombre(null);
+                                        setCedulaExistenteConyuge(null);
+                                        setCedulaConyugeExiste(false);
+                                        setCedulaConyugeEsVinculado(false);
+                                        setCedulaConyugeExistenteNombre(null);
+                                        setExtensionCargadaPorConyuge(false);
                                         setStep(1);
                                     }}
                                     variant="outline"
@@ -392,7 +519,7 @@ export default function RegistroPastor({
                                 {/* Etiquetas del Stepper */}
                                 <div className="grid grid-cols-3 gap-2 text-[11px] font-medium text-blue-200 mt-2 text-center">
                                     <span className={step === 1 ? 'text-amber-300 font-bold' : ''}>1. Datos del Pastor</span>
-                                    <span className={step === 2 ? 'text-amber-300 font-bold' : ''}>2. Ministerio y Extensión</span>
+                                    <span className={step === 2 ? 'text-amber-300 font-bold' : ''}>2. Extensión y Ministerio</span>
                                     <span className={step === 3 ? 'text-amber-300 font-bold' : ''}>3. Documentos y Fotos</span>
                                 </div>
                             </CardHeader>
@@ -443,22 +570,66 @@ export default function RegistroPastor({
                                                     {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
                                                 </div>
 
-                                                {/* Cédula */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="documento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                        <IdCard className="size-3.5 text-slate-500" />
-                                                        Cédula de Identidad <span className="text-rose-500">*</span>
-                                                    </Label>
+                                                {/* Cédula con Validación en Tiempo Real */}
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label htmlFor="documento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                            <IdCard className="size-3.5 text-slate-500" />
+                                                            Cédula de Identidad <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        {isCheckingCedula && (
+                                                            <span className="text-[11px] text-blue-700 flex items-center gap-1 font-medium">
+                                                                <Loader2 className="size-3 animate-spin" />
+                                                                Verificando Cédula...
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <Input
                                                         id="documento"
                                                         type="text"
                                                         required
                                                         value={data.documento}
-                                                        onChange={(e) => setData('documento', e.target.value)}
+                                                        onChange={(e) => {
+                                                            setData('documento', e.target.value);
+                                                            checkCedulaDuplicada(e.target.value);
+                                                        }}
+                                                        onBlur={(e) => checkCedulaDuplicada(e.target.value)}
                                                         placeholder="Ej. V-12345678"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                        className={`bg-slate-50/50 focus:bg-white ${cedulaExiste ? 'border-rose-500 ring-rose-500/20 ring-2' : cedulaEsConyugeVinculado ? 'border-indigo-500 ring-indigo-500/20 ring-2' : 'border-slate-300'}`}
                                                     />
                                                     {errors.documento && <p className="text-xs text-rose-500">{errors.documento}</p>}
+
+                                                    {/* Alerta 1: Cédula de un Pastor Completo (Bloqueante) */}
+                                                    {cedulaExiste && (
+                                                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-800 font-medium animate-in fade-in duration-150">
+                                                            <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" />
+                                                            <div>
+                                                                <p className="font-bold">¡Cédula de Identidad Ya Registrada!</p>
+                                                                <p className="text-[11px] text-rose-700 mt-0.5">
+                                                                    La cédula <b>{data.documento}</b> pertenece al pastor registrado: <b>{cedulaExistenteNombre}</b>
+                                                                    {cedulaExistenteConyuge && (
+                                                                        <span> (Casado/a con <b>{cedulaExistenteConyuge}</b>)</span>
+                                                                    )}.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Alerta 2: Cédula de Cónyuge Pre-Vinculado (Informativa y Permitida) */}
+                                                    {cedulaEsConyugeVinculado && (
+                                                        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-start gap-2.5 text-xs text-indigo-950 font-medium animate-in fade-in duration-150 shadow-2xs">
+                                                            <Info className="size-4 shrink-0 text-indigo-600 mt-0.5" />
+                                                            <div>
+                                                                <p className="font-bold text-indigo-900">
+                                                                    Censo de Cónyuge Pastor Detectado
+                                                                </p>
+                                                                <p className="text-[11px] text-indigo-800 mt-0.5 leading-relaxed">
+                                                                    La cédula <b>{data.documento}</b> fue relacionada previamente al registrar al cónyuge <b>{cedulaExistenteConyuge || 'Pastor'}</b>.
+                                                                    Al avanzar, completarás el registro oficial, fotos y la extensión eclesiástica para <b>{cedulaExistenteNombre || 'el titular'}</b>.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Fecha de Nacimiento */}
@@ -488,8 +659,9 @@ export default function RegistroPastor({
                                                         onValueChange={(val) => {
                                                             setData('estado_civil', val);
                                                             if (val !== 'Casado(a)') {
-                                                                setData('conyuge_pastorea', false);
                                                                 setData('nombre_conyuge', '');
+                                                                setData('conyuge_pastorea', false);
+                                                                setData('cedula_conyuge', '');
                                                             }
                                                         }}
                                                     >
@@ -526,7 +698,7 @@ export default function RegistroPastor({
                                                 </div>
 
                                                 {/* Correo Electrónico */}
-                                                <div className="space-y-2 md:col-span-2">
+                                                <div className="space-y-2">
                                                     <Label htmlFor="email" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                                                         <Mail className="size-3.5 text-slate-500" />
                                                         Correo Electrónico
@@ -542,35 +714,39 @@ export default function RegistroPastor({
                                                     {errors.email && <p className="text-xs text-rose-500">{errors.email}</p>}
                                                 </div>
 
-                                                {/* SECCIÓN ESPECIAL PARA CÓNYUGE PASTORM: Si es Casado(a) */}
+                                                {/* SECCIÓN ESPECIAL PARA CÓNYUGE: Si el estado civil es Casado(a) */}
                                                 {data.estado_civil === 'Casado(a)' && (
-                                                    <div className="md:col-span-2 mt-2 p-4 bg-indigo-50/60 border border-indigo-200/80 rounded-2xl space-y-4 animate-in fade-in duration-200">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="space-y-0.5">
-                                                                <Label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                                                                    <Heart className="size-4 text-rose-500 fill-rose-500" />
-                                                                    <span>¿Su cónyuge también está pastoreando?</span>
-                                                                </Label>
-                                                                <p className="text-[11px] text-slate-500">
-                                                                    Active esta casilla para registrar automáticamente a su cónyuge como pastor y vincular ambos registros.
+                                                    cedulaEsConyugeVinculado ? (
+                                                        /* Si es un cónyuge ya vinculado por la otra cédula, mostramos una tarjeta elegante con su cónyuge */
+                                                        <div className="md:col-span-2 mt-2 p-4 bg-gradient-to-r from-indigo-50/80 via-blue-50/60 to-indigo-50/80 border border-indigo-200/80 rounded-2xl flex items-center justify-between shadow-2xs animate-in fade-in duration-200">
+                                                            <div className="space-y-1">
+                                                                <span className="text-[10px] uppercase font-bold text-indigo-700 tracking-wider flex items-center gap-1.5">
+                                                                    <Heart className="size-3.5 text-rose-500 fill-rose-500" />
+                                                                    <span>Cónyuge Pastor Vinculado</span>
+                                                                </span>
+                                                                <p className="text-base font-black text-indigo-950">
+                                                                    {cedulaExistenteConyuge || data.nombre_conyuge || 'Pastor Registrado'}
+                                                                </p>
+                                                                <p className="text-[11px] text-slate-600">
+                                                                    Tu registro se encuentra vinculado al de tu cónyuge. Ambos compartirán la misma extensión eclesiástica.
                                                                 </p>
                                                             </div>
-                                                            <Switch
-                                                                checked={data.conyuge_pastorea}
-                                                                onCheckedChange={(checked) => setData('conyuge_pastorea', checked)}
-                                                            />
+                                                            <Badge className="bg-indigo-700 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shrink-0">
+                                                                Vinculado ✓
+                                                            </Badge>
                                                         </div>
-
-                                                        {data.conyuge_pastorea && (
-                                                            <div className="space-y-2 pt-2 border-t border-indigo-200/60">
+                                                    ) : (
+                                                        /* Si es un registro nuevo regular de casado, solicitamos el nombre del cónyuge */
+                                                        <div className="md:col-span-2 mt-2 p-4 bg-indigo-50/60 border border-indigo-200/80 rounded-2xl space-y-4 animate-in fade-in duration-200">
+                                                            <div className="space-y-2">
                                                                 <Label htmlFor="nombre_conyuge" className="text-xs font-semibold text-indigo-900 flex items-center gap-1">
-                                                                    <Users className="size-3.5 text-indigo-600" />
+                                                                    <Heart className="size-3.5 text-rose-500 fill-rose-500" />
                                                                     Nombre Completo de su Cónyuge <span className="text-rose-500">*</span>
                                                                 </Label>
                                                                 <Input
                                                                     id="nombre_conyuge"
                                                                     type="text"
-                                                                    required={data.conyuge_pastorea}
+                                                                    required={data.estado_civil === 'Casado(a)'}
                                                                     value={data.nombre_conyuge}
                                                                     onChange={(e) => setData('nombre_conyuge', e.target.value)}
                                                                     placeholder="Ej. María Elena de Pérez"
@@ -578,150 +754,245 @@ export default function RegistroPastor({
                                                                 />
                                                                 {errors.nombre_conyuge && <p className="text-xs text-rose-500">{errors.nombre_conyuge}</p>}
                                                             </div>
-                                                        )}
-                                                    </div>
+
+                                                            <div className="flex items-center justify-between pt-2 border-t border-indigo-200/60">
+                                                                <div className="space-y-0.5">
+                                                                    <Label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                                                        <Users className="size-4 text-indigo-700" />
+                                                                        <span>¿Su cónyuge también está pastoreando?</span>
+                                                                    </Label>
+                                                                    <p className="text-[11px] text-slate-500">
+                                                                        Active esta opción para registrar a su cónyuge como pastor y vincular ambas cédulas eclesiásticas.
+                                                                    </p>
+                                                                </div>
+                                                                <Switch
+                                                                    checked={data.conyuge_pastorea}
+                                                                    onCheckedChange={(checked) => {
+                                                                        setData('conyuge_pastorea', checked);
+                                                                        if (!checked) {
+                                                                            setData('cedula_conyuge', '');
+                                                                            setCedulaConyugeExiste(false);
+                                                                            setCedulaConyugeEsVinculado(false);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                            {data.conyuge_pastorea && (
+                                                                <div className="space-y-2 pt-2 border-t border-indigo-200/60 animate-in fade-in duration-200">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <Label htmlFor="cedula_conyuge" className="text-xs font-semibold text-indigo-900 flex items-center gap-1">
+                                                                            <IdCard className="size-3.5 text-indigo-600" />
+                                                                            Cédula de Identidad de su Cónyuge Pastor <span className="text-rose-500">*</span>
+                                                                        </Label>
+                                                                        {isCheckingCedulaConyuge && (
+                                                                            <span className="text-[11px] text-indigo-700 flex items-center gap-1 font-medium">
+                                                                                <Loader2 className="size-3 animate-spin" />
+                                                                                Verificando Cédula...
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <Input
+                                                                        id="cedula_conyuge"
+                                                                        type="text"
+                                                                        required={data.conyuge_pastorea}
+                                                                        value={data.cedula_conyuge}
+                                                                        onChange={(e) => {
+                                                                            setData('cedula_conyuge', e.target.value);
+                                                                            checkCedulaConyugeDuplicada(e.target.value);
+                                                                        }}
+                                                                        onBlur={(e) => checkCedulaConyugeDuplicada(e.target.value)}
+                                                                        placeholder="Ej. V-87654321"
+                                                                        className={`bg-white focus:border-indigo-500 ${cedulaConyugeExiste ? 'border-rose-500 ring-rose-500/20 ring-2' : 'border-indigo-200'}`}
+                                                                    />
+                                                                    {errors.cedula_conyuge && <p className="text-xs text-rose-500">{errors.cedula_conyuge}</p>}
+
+                                                                    {cedulaConyugeExiste && (
+                                                                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-800 font-medium animate-in fade-in duration-150">
+                                                                            <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" />
+                                                                            <div>
+                                                                                <p className="font-bold">¡Cédula del Cónyuge Ya Registrada!</p>
+                                                                                <p className="text-[11px] text-rose-700 mt-0.5">
+                                                                                    La cédula <b>{data.cedula_conyuge}</b> ya pertenece a un pastor registrado: <b>{cedulaConyugeExistenteNombre}</b>.
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )
                                                 )}
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* PASO 2: MINISTERIO Y EXTENSIÓN */}
+                                    {/* PASO 2: EXTENSIÓN Y MINISTERIO */}
                                     {step === 2 && (
                                         <div className="space-y-6 animate-in fade-in duration-200">
-                                            <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
-                                                <Award className="size-4 text-blue-700" />
-                                                <span>Información Ministerial y de la Extensión</span>
+                                            {/* BLOQUE 1: DATOS DE LA EXTENSIÓN (IGLESIA) */}
+                                            <div className="space-y-4">
+                                                <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
+                                                        <Church className="size-4 text-blue-700" />
+                                                        <span>1. Datos de la Extensión (Iglesia)</span>
+                                                    </div>
+                                                    {extensionCargadaPorConyuge && (
+                                                        <Badge className="bg-indigo-100 text-indigo-900 border-indigo-300 text-[10px] px-2.5 py-0.5 font-semibold">
+                                                            Cargado por Cónyuge ✓
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                {extensionCargadaPorConyuge && (
+                                                    <div className="p-3 bg-indigo-50/80 border border-indigo-200/80 rounded-xl flex items-center gap-2 text-xs text-indigo-900">
+                                                        <Info className="size-4 shrink-0 text-indigo-600" />
+                                                        <span>
+                                                            Se han pre-cargado automáticamente la extensión y ubicación registradas previamente por tu cónyuge (<b>{cedulaExistenteConyuge}</b>). Puedes modificarlas si lo requieres.
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    {/* Nombre de la Extensión */}
+                                                    <div className="space-y-2 md:col-span-3">
+                                                        <Label htmlFor="nombre_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                            <Church className="size-3.5 text-slate-500" />
+                                                            Nombre de la Extensión (Iglesia) <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        <Input
+                                                            id="nombre_extension"
+                                                            type="text"
+                                                            required
+                                                            value={data.nombre_extension}
+                                                            onChange={(e) => setData('nombre_extension', e.target.value)}
+                                                            placeholder="Ej. MMM Central Barquisimeto"
+                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                        />
+                                                        {errors.nombre_extension && <p className="text-xs text-rose-500">{errors.nombre_extension}</p>}
+                                                    </div>
+
+                                                    {/* Estado */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-semibold text-slate-700">
+                                                            Estado <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        <Select
+                                                            value={data.estado_id}
+                                                            onValueChange={(val) => setData('estado_id', val)}
+                                                        >
+                                                            <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
+                                                                <SelectValue placeholder="Selecciona estado" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-white border-slate-200">
+                                                                {estados.map((est) => (
+                                                                    <SelectItem key={est.id} value={String(est.id)}>
+                                                                        {est.nombre}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {errors.estado_id && <p className="text-xs text-rose-500">{errors.estado_id}</p>}
+                                                    </div>
+
+                                                    {/* Zona */}
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="zona" className="text-xs font-semibold text-slate-700">
+                                                            Zona
+                                                        </Label>
+                                                        <Input
+                                                            id="zona"
+                                                            type="text"
+                                                            value={data.zona}
+                                                            onChange={(e) => setData('zona', e.target.value)}
+                                                            placeholder="Ej. Zona 1"
+                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                        />
+                                                        {errors.zona && <p className="text-xs text-rose-500">{errors.zona}</p>}
+                                                    </div>
+
+                                                    {/* Distrito */}
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="distrito" className="text-xs font-semibold text-slate-700">
+                                                            Distrito
+                                                        </Label>
+                                                        <Input
+                                                            id="distrito"
+                                                            type="text"
+                                                            value={data.distrito}
+                                                            onChange={(e) => setData('distrito', e.target.value)}
+                                                            placeholder="Ej. Distrito Central"
+                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                        />
+                                                        {errors.distrito && <p className="text-xs text-rose-500">{errors.distrito}</p>}
+                                                    </div>
+
+                                                    {/* Dirección Completa */}
+                                                    <div className="space-y-2 md:col-span-3">
+                                                        <Label htmlFor="direccion_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                                            <MapPin className="size-3.5 text-slate-500" />
+                                                            Dirección de la Extensión (Iglesia) <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        <Textarea
+                                                            id="direccion_extension"
+                                                            required
+                                                            rows={2}
+                                                            value={data.direccion_extension}
+                                                            onChange={(e) => setData('direccion_extension', e.target.value)}
+                                                            placeholder="Ej. Av. Principal con Calle 12, Sector Centro"
+                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white resize-none"
+                                                        />
+                                                        {errors.direccion_extension && <p className="text-xs text-rose-500">{errors.direccion_extension}</p>}
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* Grado Ministerial (Radix UI Select) */}
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs font-semibold text-slate-700">
-                                                        Grado Ministerial <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Select
-                                                        value={data.nivel_ministerial}
-                                                        onValueChange={(val) => setData('nivel_ministerial', val)}
-                                                    >
-                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
-                                                            <SelectValue placeholder="Selecciona grado ministerial" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-white border-slate-200">
-                                                            {gradosMinisteriales.map((gm) => (
-                                                                <SelectItem key={gm} value={gm}>
-                                                                    {gm}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {errors.nivel_ministerial && <p className="text-xs text-rose-500">{errors.nivel_ministerial}</p>}
+                                            {/* BLOQUE 2: INFORMACIÓN MINISTERIAL */}
+                                            <div className="space-y-4 pt-2">
+                                                <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
+                                                    <Award className="size-4 text-blue-700" />
+                                                    <span>2. Datos Ministeriales del Pastor</span>
                                                 </div>
 
-                                                {/* Último año de promoción */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="ano_promocion" className="text-xs font-semibold text-slate-700">
-                                                        Último Año de Promoción
-                                                    </Label>
-                                                    <Input
-                                                        id="ano_promocion"
-                                                        type="text"
-                                                        value={data.ano_promocion}
-                                                        onChange={(e) => setData('ano_promocion', e.target.value)}
-                                                        placeholder="Ej. 2020"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.ano_promocion && <p className="text-xs text-rose-500">{errors.ano_promocion}</p>}
-                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Grado Ministerial (Radix UI Select) */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-semibold text-slate-700">
+                                                            Grado Ministerial <span className="text-rose-500">*</span>
+                                                        </Label>
+                                                        <Select
+                                                            value={data.nivel_ministerial}
+                                                            onValueChange={(val) => setData('nivel_ministerial', val)}
+                                                        >
+                                                            <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
+                                                                <SelectValue placeholder="Selecciona grado ministerial" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-white border-slate-200">
+                                                                {gradosMinisteriales.map((gm) => (
+                                                                    <SelectItem key={gm} value={gm}>
+                                                                        {gm}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {errors.nivel_ministerial && <p className="text-xs text-rose-500">{errors.nivel_ministerial}</p>}
+                                                    </div>
 
-                                                {/* Nombre de la Extensión */}
-                                                <div className="space-y-2 md:col-span-2">
-                                                    <Label htmlFor="nombre_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                        <Church className="size-3.5 text-slate-500" />
-                                                        Nombre de la Extensión (Iglesia) <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Input
-                                                        id="nombre_extension"
-                                                        type="text"
-                                                        required
-                                                        value={data.nombre_extension}
-                                                        onChange={(e) => setData('nombre_extension', e.target.value)}
-                                                        placeholder="Ej. MMM Central Barquisimeto"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.nombre_extension && <p className="text-xs text-rose-500">{errors.nombre_extension}</p>}
-                                                </div>
-
-                                                {/* Dirección de la extensión */}
-                                                <div className="space-y-2 md:col-span-2">
-                                                    <Label htmlFor="direccion_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                        <MapPin className="size-3.5 text-slate-500" />
-                                                        Dirección de la Extensión (Iglesia) <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Textarea
-                                                        id="direccion_extension"
-                                                        required
-                                                        rows={2}
-                                                        value={data.direccion_extension}
-                                                        onChange={(e) => setData('direccion_extension', e.target.value)}
-                                                        placeholder="Ej. Av. Principal con Calle 12, Sector Centro"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white resize-none"
-                                                    />
-                                                    {errors.direccion_extension && <p className="text-xs text-rose-500">{errors.direccion_extension}</p>}
-                                                </div>
-
-                                                {/* Estado (Radix UI Select) */}
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs font-semibold text-slate-700">
-                                                        Estado <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Select
-                                                        value={data.estado_id}
-                                                        onValueChange={(val) => setData('estado_id', val)}
-                                                    >
-                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
-                                                            <SelectValue placeholder="Selecciona estado" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-white border-slate-200">
-                                                            {estados.map((est) => (
-                                                                <SelectItem key={est.id} value={String(est.id)}>
-                                                                    {est.nombre}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {errors.estado_id && <p className="text-xs text-rose-500">{errors.estado_id}</p>}
-                                                </div>
-
-                                                {/* Zona */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="zona" className="text-xs font-semibold text-slate-700">
-                                                        Zona
-                                                    </Label>
-                                                    <Input
-                                                        id="zona"
-                                                        type="text"
-                                                        value={data.zona}
-                                                        onChange={(e) => setData('zona', e.target.value)}
-                                                        placeholder="Ej. Zona 1"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.zona && <p className="text-xs text-rose-500">{errors.zona}</p>}
-                                                </div>
-
-                                                {/* Distrito */}
-                                                <div className="space-y-2 md:col-span-2">
-                                                    <Label htmlFor="distrito" className="text-xs font-semibold text-slate-700">
-                                                        Distrito
-                                                    </Label>
-                                                    <Input
-                                                        id="distrito"
-                                                        type="text"
-                                                        value={data.distrito}
-                                                        onChange={(e) => setData('distrito', e.target.value)}
-                                                        placeholder="Ej. Distrito Central"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.distrito && <p className="text-xs text-rose-500">{errors.distrito}</p>}
+                                                    {/* Último año de promoción */}
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="ano_promocion" className="text-xs font-semibold text-slate-700">
+                                                            Último Año de Promoción
+                                                        </Label>
+                                                        <Input
+                                                            id="ano_promocion"
+                                                            type="text"
+                                                            value={data.ano_promocion}
+                                                            onChange={(e) => setData('ano_promocion', e.target.value)}
+                                                            placeholder="Ej. 2020"
+                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                        />
+                                                        {errors.ano_promocion && <p className="text-xs text-rose-500">{errors.ano_promocion}</p>}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -884,7 +1155,7 @@ export default function RegistroPastor({
                                     {step > 1 ? (
                                         <Button
                                             type="button"
-                                            onClick={prevStep}
+                                            onClick={(e) => prevStep(e)}
                                             variant="outline"
                                             className="border-slate-300 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-2"
                                         >
@@ -898,8 +1169,9 @@ export default function RegistroPastor({
                                     {step < 3 ? (
                                         <Button
                                             type="button"
-                                            onClick={nextStep}
-                                            className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2"
+                                            onClick={(e) => nextStep(e)}
+                                            disabled={step === 1 && (cedulaExiste || cedulaConyugeExiste)}
+                                            className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             <span>Siguiente Paso</span>
                                             <ArrowRight className="size-4" />
@@ -976,7 +1248,6 @@ export default function RegistroPastor({
 
                             {/* Acciones y Voltear Cámara */}
                             <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-                                {/* Botón Voltear Cámara (siempre habilitado o con indicación) */}
                                 <Button
                                     type="button"
                                     onClick={flipCamera}
