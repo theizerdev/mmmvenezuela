@@ -179,7 +179,7 @@ export default function RegistroPastor({
             navigator.mediaDevices.enumerateDevices().then((devices) => {
                 const videoDevices = devices.filter((device) => device.kind === 'videoinput');
                 setAvailableCameras(videoDevices);
-            }).catch(() => {});
+            }).catch(() => { });
         }
     }, []);
 
@@ -191,7 +191,7 @@ export default function RegistroPastor({
     }, []);
 
     // Pre-procesar imagen en canvas para optimizar lectura OCR (Escala de grises + Alto Contraste)
-    const preprocessImageForOcr = (imageSrc: string): Promise<string> => {
+    const preprocessImageForOcr = (imageSrc: string, degrees: number = 0): Promise<string> => {
         return new Promise((resolve) => {
             const img = new Image();
             img.crossOrigin = 'Anonymous';
@@ -203,13 +203,12 @@ export default function RegistroPastor({
                     return;
                 }
 
-                // 1. Auto-Rotación a Horizontal (Si la foto se tomó en vertical)
-                const isVertical = img.height > img.width;
-                const targetW = isVertical ? img.height : img.width;
-                const targetH = isVertical ? img.width : img.height;
+                const rad = (degrees * Math.PI) / 180;
+                const isRotated90or270 = degrees === 90 || degrees === 270;
+                const targetW = isRotated90or270 ? img.height : img.width;
+                const targetH = isRotated90or270 ? img.width : img.height;
 
-                // 2. Auto-Zoom (Enfocar el texto recortando bordes innecesarios a 1.25x)
-                const zoomFactor = 1.25;
+                const zoomFactor = 1.15;
                 const finalW = Math.max(1280, Math.round(targetW * zoomFactor));
                 const finalH = Math.round(targetH * zoomFactor);
 
@@ -219,19 +218,16 @@ export default function RegistroPastor({
                 ctx.save();
                 ctx.translate(canvas.width / 2, canvas.height / 2);
 
-                if (isVertical) {
-                    // Rotar 90° a la derecha para dejar el documento horizontal
-                    ctx.rotate((90 * Math.PI) / 180);
+                if (degrees !== 0) {
+                    ctx.rotate(rad);
                 }
 
-                // Dibujar la imagen escalada y centrada
-                const drawW = isVertical ? finalH : finalW;
-                const drawH = isVertical ? finalW : finalH;
+                const drawW = isRotated90or270 ? finalH : finalW;
+                const drawH = isRotated90or270 ? finalW : finalH;
 
                 ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
                 ctx.restore();
 
-                // 3. Auto-Binarización por Umbral Adaptativo (Resaltar letras y dígitos en blanco/negro puro)
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const d = imageData.data;
 
@@ -565,9 +561,13 @@ export default function RegistroPastor({
         setCameraError(null);
     };
 
-    const autoCorregirFotoDirecta = (imageSrc: string, field: 'foto_cedula' | 'foto') => {
+    const autoCorregirFotoDirecta = (
+        imageSrc: string,
+        field: 'foto_cedula' | 'foto',
+        forcedDegrees?: number
+    ) => {
         setIsOcrAnalyzing(true);
-        setOcrStatusMessage('🪄 Auto-corregiendo orientación, zoom y contraste...');
+        setOcrStatusMessage('🪄 Auto-corregiendo orientación de frente, zoom y contraste...');
 
         const img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -577,12 +577,19 @@ export default function RegistroPastor({
             if (!ctx) return;
 
             const isVertical = img.height > img.width;
-            const shouldRotate = field === 'foto_cedula' ? isVertical : false;
+            let degrees = forcedDegrees;
+            if (degrees === undefined) {
+                // Rotar 270° (-90° anti-horario) para orientar el texto hacia la parte superior y de frente
+                degrees = (field === 'foto_cedula' && isVertical) ? 270 : 0;
+            }
 
-            const targetW = shouldRotate ? img.height : img.width;
-            const targetH = shouldRotate ? img.width : img.height;
+            const rad = (degrees * Math.PI) / 180;
+            const isRotated90or270 = degrees === 90 || degrees === 270;
 
-            const zoomFactor = field === 'foto_cedula' ? 1.25 : 1.1;
+            const targetW = isRotated90or270 ? img.height : img.width;
+            const targetH = isRotated90or270 ? img.width : img.height;
+
+            const zoomFactor = field === 'foto_cedula' ? 1.15 : 1.05;
             const finalW = Math.max(1280, Math.round(targetW * zoomFactor));
             const finalH = Math.round(targetH * zoomFactor);
 
@@ -593,12 +600,12 @@ export default function RegistroPastor({
             ctx.filter = 'brightness(115%) contrast(125%)';
             ctx.translate(canvas.width / 2, canvas.height / 2);
 
-            if (shouldRotate) {
-                ctx.rotate((90 * Math.PI) / 180);
+            if (degrees !== 0) {
+                ctx.rotate(rad);
             }
 
-            const drawW = shouldRotate ? finalH : finalW;
-            const drawH = shouldRotate ? finalW : finalH;
+            const drawW = isRotated90or270 ? finalH : finalW;
+            const drawH = isRotated90or270 ? finalW : finalH;
 
             ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
             ctx.restore();
@@ -1386,8 +1393,7 @@ export default function RegistroPastor({
                                                                         }}
                                                                         className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-xs transition shadow"
                                                                     >
-                                                                        <Edit2 className="size-3 text-blue-400" />
-                                                                        <span>Ajustar</span>
+
                                                                     </button>
                                                                     <button
                                                                         type="button"
