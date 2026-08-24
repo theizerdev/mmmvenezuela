@@ -9,6 +9,7 @@ use App\Models\Iglesia;
 use App\Models\Municipio;
 use App\Models\Parroquia;
 use App\Models\Pastor;
+use App\Models\TipoLocal;
 use App\Models\User;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
@@ -23,7 +24,7 @@ use Inertia\Response;
 class PastorRegistroPublicoController extends Controller
 {
     /**
-     * Muestra el formulario público de registro de pastores (Wizard de 5 Pasos).
+     * Muestra el formulario público de registro de pastores (Wizard de 6 Pasos).
      */
     public function index(): Response
     {
@@ -39,6 +40,10 @@ class PastorRegistroPublicoController extends Controller
 
         $parroquias = Parroquia::where('activo', true)
             ->select('id', 'municipio_id', 'nombre', 'codigo')
+            ->orderBy('nombre', 'asc')
+            ->get();
+
+        $tiposLocal = TipoLocal::select('id', 'nombre')
             ->orderBy('nombre', 'asc')
             ->get();
 
@@ -70,6 +75,7 @@ class PastorRegistroPublicoController extends Controller
             'estados' => $estados,
             'municipios' => $municipios,
             'parroquias' => $parroquias,
+            'tiposLocal' => $tiposLocal,
             'pastoresDisponibles' => $pastoresDisponibles,
             'gradosMinisteriales' => $gradosMinisteriales,
             'estadosCiviles' => $estadosCiviles,
@@ -118,23 +124,39 @@ class PastorRegistroPublicoController extends Controller
 
         if ($iglesia) {
             $extension = [
+                'id' => $iglesia->id,
                 'nombre' => $iglesia->nombre,
-                'direccion' => $iglesia->direccion,
-                'estado_id' => $iglesia->estado_id,
-                'zona' => $iglesia->zona,
-                'distrito' => $iglesia->distrito,
-                'miembros_activos' => $iglesia->miembros_activos,
-                'cantidad_campos_blancos' => $iglesia->cantidad_campos_blancos,
-                'miembro_probante' => $iglesia->miembro_probante,
-                'tiempo_trabajo' => $iglesia->tiempo_trabajo,
-                'iglesias_fundadas' => $iglesia->iglesias_fundadas,
-                'pastores_ministerio' => $iglesia->pastores_ministerio,
+                'tipo_local_id' => $iglesia->tipo_local_id ? (string)$iglesia->tipo_local_id : '',
+                'estado_id' => $iglesia->estado_id ? (string)$iglesia->estado_id : '',
+                'municipio_id' => $iglesia->municipio_id ? (string)$iglesia->municipio_id : '',
+                'parroquia_id' => $iglesia->parroquia_id ? (string)$iglesia->parroquia_id : '',
+                'direccion' => $iglesia->direccion ?: '',
+                'sector' => $iglesia->sector ?: '',
+                'calle' => $iglesia->calle ?: '',
+                'avenida' => $iglesia->avenida ?: '',
+                'latitud' => $iglesia->latitud !== null ? (string)$iglesia->latitud : '',
+                'longitud' => $iglesia->longitud !== null ? (string)$iglesia->longitud : '',
+                'zona' => $iglesia->zona ?: '',
+                'distrito' => $iglesia->distrito ?: '',
+                'fecha_fundacion' => $iglesia->fecha_fundacion ? $iglesia->fecha_fundacion->format('Y-m-d') : '',
+                'anios_activa' => $iglesia->anios_activa !== null ? (string)$iglesia->anios_activa : '',
+                'tiempo_trabajo' => $iglesia->tiempo_trabajo ?: '',
+                'descripcion' => $iglesia->descripcion ?: '',
+                'miembros_activos' => $iglesia->miembros_activos !== null ? (string)$iglesia->miembros_activos : '',
+                'cantidad_campos_blancos' => $iglesia->cantidad_campos_blancos !== null ? (string)$iglesia->cantidad_campos_blancos : '',
+                'miembro_probante' => $iglesia->miembro_probante !== null ? (string)$iglesia->miembro_probante : '',
+                'logros_obtenidos' => $iglesia->logros_obtenidos ?: '',
+                'iglesias_fundadas' => $iglesia->iglesias_fundadas !== null ? (string)$iglesia->iglesias_fundadas : '',
+                'pastores_ministerio' => $iglesia->pastores_ministerio !== null ? (string)$iglesia->pastores_ministerio : '',
+                'posee_medio_comunicacion' => (bool)$iglesia->posee_medio_comunicacion,
+                'medio_comunicacion' => $iglesia->medio_comunicacion ?: '',
             ];
         }
 
         return response()->json([
             'existe' => true,
             'nombre' => $pastor->nombre_completo,
+            'extension' => $extension,
             'pastor' => [
                 'id' => $pastor->id,
                 'codigo' => $pastor->codigo,
@@ -275,6 +297,35 @@ class PastorRegistroPublicoController extends Controller
             // Paso 5: Fotografías
             'foto' => ['nullable'],
             'foto_cedula' => ['nullable'],
+
+            // Paso 6: Iglesias y Extensiones a su Cargo
+            'tiene_extension' => ['nullable', 'boolean'],
+            'extension_id' => ['nullable'],
+            'extension_nombre' => ['nullable', 'string', 'max:191'],
+            'extension_tipo_local_id' => ['nullable'],
+            'extension_estado_id' => ['nullable'],
+            'extension_municipio_id' => ['nullable'],
+            'extension_parroquia_id' => ['nullable'],
+            'extension_direccion' => ['nullable', 'string'],
+            'extension_sector' => ['nullable', 'string', 'max:191'],
+            'extension_calle' => ['nullable', 'string', 'max:191'],
+            'extension_avenida' => ['nullable', 'string', 'max:191'],
+            'extension_latitud' => ['nullable'],
+            'extension_longitud' => ['nullable'],
+            'extension_zona' => ['nullable', 'string', 'max:50'],
+            'extension_distrito' => ['nullable', 'string', 'max:50'],
+            'extension_fecha_fundacion' => ['nullable'],
+            'extension_anios_activa' => ['nullable'],
+            'extension_tiempo_trabajo' => ['nullable', 'string', 'max:100'],
+            'extension_descripcion' => ['nullable', 'string'],
+            'extension_miembros_activos' => ['nullable'],
+            'extension_cantidad_campos_blancos' => ['nullable'],
+            'extension_miembro_probante' => ['nullable'],
+            'extension_logros_obtenidos' => ['nullable', 'string'],
+            'extension_iglesias_fundadas' => ['nullable'],
+            'extension_pastores_ministerio' => ['nullable'],
+            'extension_posee_medio_comunicacion' => ['nullable', 'boolean'],
+            'extension_medios_lista' => ['nullable'],
         ], [
             'documento.required' => 'La Cédula de Identidad es obligatoria.',
             'nombres.required' => 'El nombre es obligatorio.',
@@ -501,12 +552,70 @@ class PastorRegistroPublicoController extends Controller
                 }
             }
 
+            // 5. Creación / Actualización de la Iglesia / Extensión a su cargo (Paso 6)
+            $registraExtension = filter_var($validated['tiene_extension'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $extensionNombre = trim($validated['extension_nombre'] ?? '');
+            $iglesiaRegistrada = null;
+
+            if ($registraExtension && !empty($extensionNombre)) {
+                $extensionData = [
+                    'nombre' => $extensionNombre,
+                    'pastor_id' => $pastor->id,
+                    'empresa_id' => 1,
+                    'sucursal_id' => 1,
+                    'estado_id' => !empty($validated['extension_estado_id']) ? (int)$validated['extension_estado_id'] : ($pastor->estado_id ?? null),
+                    'municipio_id' => !empty($validated['extension_municipio_id']) ? (int)$validated['extension_municipio_id'] : ($pastor->municipio_id ?? null),
+                    'parroquia_id' => !empty($validated['extension_parroquia_id']) ? (int)$validated['extension_parroquia_id'] : ($pastor->parroquia_id ?? null),
+                    'tipo_local_id' => !empty($validated['extension_tipo_local_id']) ? (int)$validated['extension_tipo_local_id'] : null,
+                    'direccion' => $validated['extension_direccion'] ?? null,
+                    'sector' => $validated['extension_sector'] ?? null,
+                    'calle' => $validated['extension_calle'] ?? null,
+                    'avenida' => $validated['extension_avenida'] ?? null,
+                    'latitud' => !empty($validated['extension_latitud']) ? (float)$validated['extension_latitud'] : null,
+                    'longitud' => !empty($validated['extension_longitud']) ? (float)$validated['extension_longitud'] : null,
+                    'zona' => !empty($validated['extension_zona']) ? preg_replace('/\D/', '', $validated['extension_zona']) : ($pastor->zona ?? null),
+                    'distrito' => !empty($validated['extension_distrito']) ? preg_replace('/\D/', '', $validated['extension_distrito']) : ($pastor->distrito ?? null),
+                    'fecha_fundacion' => !empty($validated['extension_fecha_fundacion']) ? $validated['extension_fecha_fundacion'] : null,
+                    'anios_activa' => !empty($validated['extension_anios_activa']) ? (int)$validated['extension_anios_activa'] : null,
+                    'tiempo_trabajo' => $validated['extension_tiempo_trabajo'] ?? null,
+                    'descripcion' => $validated['extension_descripcion'] ?? null,
+                    'miembros_activos' => !empty($validated['extension_miembros_activos']) ? (int)$validated['extension_miembros_activos'] : 0,
+                    'cantidad_campos_blancos' => !empty($validated['extension_cantidad_campos_blancos']) ? (int)$validated['extension_cantidad_campos_blancos'] : 0,
+                    'miembro_probante' => !empty($validated['extension_miembro_probante']) ? (int)$validated['extension_miembro_probante'] : 0,
+                    'logros_obtenidos' => $validated['extension_logros_obtenidos'] ?? null,
+                    'iglesias_fundadas' => !empty($validated['extension_iglesias_fundadas']) ? (int)$validated['extension_iglesias_fundadas'] : 0,
+                    'pastores_ministerio' => !empty($validated['extension_pastores_ministerio']) ? (int)$validated['extension_pastores_ministerio'] : 0,
+                    'posee_medio_comunicacion' => filter_var($validated['extension_posee_medio_comunicacion'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    'medio_comunicacion' => is_array($validated['extension_medios_lista'] ?? null) ? json_encode($validated['extension_medios_lista']) : ($validated['extension_medios_lista'] ?? null),
+                    'activa' => true,
+                ];
+
+                $extensionId = !empty($validated['extension_id']) ? (int)$validated['extension_id'] : null;
+                if ($extensionId) {
+                    $iglesiaExistente = Iglesia::find($extensionId);
+                    if ($iglesiaExistente) {
+                        $iglesiaExistente->update($extensionData);
+                        $iglesiaRegistrada = $iglesiaExistente;
+                    }
+                }
+
+                if (!$iglesiaRegistrada) {
+                    $iglesiaRegistrada = Iglesia::where('pastor_id', $pastor->id)->first();
+                    if ($iglesiaRegistrada) {
+                        $iglesiaRegistrada->update($extensionData);
+                    } else {
+                        $iglesiaRegistrada = Iglesia::create($extensionData);
+                    }
+                }
+            }
+
             // Notificar al Presbítero de la misma zona / distrito por WhatsApp
             $this->notificarPresbiteroWhatsApp($pastor);
 
             return back()->with('success', [
                 'codigo' => $pastor->codigo,
                 'nombre' => $pastor->nombre_completo,
+                'iglesia' => $iglesiaRegistrada ? $iglesiaRegistrada->nombre : null,
                 'mensaje' => '¡Registro completado exitosamente! Los datos han sido recibidos para su validación oficial.',
             ]);
         });
