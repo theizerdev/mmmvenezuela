@@ -226,6 +226,14 @@ export default function RegistroPastor({
         { value: 'Delicada', label: 'Delicada' },
     ], []);
 
+    const distritoOptions: Select2Option[] = useMemo(() => [
+        { value: '1', label: 'Distrito 1' },
+        { value: '2', label: 'Distrito 2' },
+        { value: '3', label: 'Distrito 3' },
+        { value: '4', label: 'Distrito 4' },
+        { value: '5', label: 'Distrito 5' },
+    ], []);
+
     const estadoOptions: Select2Option[] = useMemo(() => {
         return estados.map((est) => ({ value: String(est.id), label: est.nombre }));
     }, [estados]);
@@ -256,7 +264,7 @@ export default function RegistroPastor({
                         localStorage.removeItem(k);
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
             setHasPendingDraft(false);
             setLastSavedTime(null);
             return;
@@ -335,7 +343,7 @@ export default function RegistroPastor({
                     localStorage.removeItem(k);
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
         setHasPendingDraft(false);
         setLastSavedTime(null);
     };
@@ -395,7 +403,7 @@ export default function RegistroPastor({
             try {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed)) return parsed;
-            } catch (e) {}
+            } catch (e) { }
             return raw.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean).map((nombre) => ({ nombre, dosis: '' }));
         }
         return [];
@@ -433,7 +441,7 @@ export default function RegistroPastor({
                 if (result.existe && result.pastor) {
                     const p = result.pastor;
                     setCedulaExistenteNombre(result.nombre || `${p.nombres} ${p.apellidos}`);
-                    
+
                     // Cargar todos los datos registrados del pastor para su edición
                     setData((prev) => ({
                         ...prev,
@@ -694,7 +702,7 @@ export default function RegistroPastor({
                             localStorage.removeItem(k);
                         }
                     }
-                } catch (err) {}
+                } catch (err) { }
                 setHasPendingDraft(false);
                 setLastSavedTime(null);
             },
@@ -723,7 +731,7 @@ export default function RegistroPastor({
                     localStorage.removeItem(k);
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
         setHasPendingDraft(false);
         setLastSavedTime(null);
         setIsSubmittingModalOpen(false);
@@ -989,22 +997,20 @@ export default function RegistroPastor({
                                         key={step.id}
                                         type="button"
                                         onClick={() => setActiveTab(step.id)}
-                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${
-                                            isActive
+                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${isActive
                                                 ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 shadow-xs'
                                                 : isCompleted
-                                                ? 'bg-white border-emerald-300 hover:border-emerald-400'
-                                                : 'bg-white border-slate-200 hover:bg-slate-50'
-                                        }`}
+                                                    ? 'bg-white border-emerald-300 hover:border-emerald-400'
+                                                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                                            }`}
                                     >
                                         <div
-                                            className={`flex items-center justify-center h-9 w-9 rounded-lg shrink-0 font-bold text-xs sm:text-sm ${
-                                                isActive
+                                            className={`flex items-center justify-center h-9 w-9 rounded-lg shrink-0 font-bold text-xs sm:text-sm ${isActive
                                                     ? 'bg-blue-700 text-white shadow-xs'
                                                     : isCompleted
-                                                    ? 'bg-emerald-600 text-white'
-                                                    : 'bg-slate-100 text-slate-500'
-                                            }`}
+                                                        ? 'bg-emerald-600 text-white'
+                                                        : 'bg-slate-100 text-slate-500'
+                                                }`}
                                         >
                                             {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                                         </div>
@@ -1553,7 +1559,7 @@ export default function RegistroPastor({
                                     <span>Paso 3: Trayectoria y Datos Eclesiásticos</span>
                                 </div>
                                 <CardDescription className="text-slate-500 text-xs font-medium">
-                                    Grado ministerial, zona eclesiástica, distrito y responsabilidades dentro de la obra.
+                                    Grado ministerial, zona, distrito y responsabilidades dentro de la obra.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-4 sm:p-6 space-y-6">
@@ -1574,13 +1580,15 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="zona" className="text-xs font-bold uppercase text-slate-700">
-                                            Zona Eclesiástica
+                                            Zona
                                         </Label>
                                         <Input
                                             id="zona"
+                                            type="text"
+                                            inputMode="numeric"
                                             value={data.zona}
-                                            onChange={(e) => setData('zona', e.target.value)}
-                                            placeholder="Ej. Zona 1"
+                                            onChange={(e) => setData('zona', e.target.value.replace(/\D/g, ''))}
+                                            placeholder="Ej. 1"
                                             className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
                                         />
                                     </div>
@@ -1589,12 +1597,13 @@ export default function RegistroPastor({
                                         <Label htmlFor="distrito" className="text-xs font-bold uppercase text-slate-700">
                                             Distrito
                                         </Label>
-                                        <Input
+                                        <Select2
                                             id="distrito"
-                                            value={data.distrito}
-                                            onChange={(e) => setData('distrito', e.target.value)}
-                                            placeholder="Ej. Distrito Capital"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            options={distritoOptions}
+                                            value={data.distrito ? String(data.distrito).replace(/\D/g, '') : ''}
+                                            onChange={(val) => setData('distrito', val)}
+                                            placeholder="Seleccione Distrito (1 al 5)"
+                                            className="mt-1"
                                         />
                                     </div>
                                 </div>

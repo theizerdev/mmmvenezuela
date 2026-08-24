@@ -802,12 +802,14 @@ return;
 
                             {/* Zona */}
                             <div>
-                                <Label htmlFor="zona">{__('Zona')}</Label>
+                                <Label htmlFor="zona">{__('Zona')} (Número)</Label>
                                 <Input
                                     id="zona"
+                                    type="text"
+                                    inputMode="numeric"
                                     value={data.zona}
-                                    onChange={(e) => setData('zona', e.target.value)}
-                                    placeholder="Ej: Zona Central / Zona 1"
+                                    onChange={(e) => setData('zona', e.target.value.replace(/\D/g, ''))}
+                                    placeholder="Ej: 1"
                                 />
                                 {errors.zona && <p className="text-red-500 text-xs mt-1">{errors.zona}</p>}
                             </div>
@@ -815,12 +817,21 @@ return;
                             {/* Distrito */}
                             <div>
                                 <Label htmlFor="distrito">{__('Distrito')}</Label>
-                                <Input
-                                    id="distrito"
-                                    value={data.distrito}
-                                    onChange={(e) => setData('distrito', e.target.value)}
-                                    placeholder="Ej: Distrito 2"
-                                />
+                                <Select
+                                    value={data.distrito ? String(data.distrito).replace(/\D/g, '') : ''}
+                                    onValueChange={(v) => setData('distrito', v)}
+                                >
+                                    <SelectTrigger id="distrito" className="w-full">
+                                        <SelectValue placeholder={__('Seleccione Distrito (1 al 5)')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">Distrito 1</SelectItem>
+                                        <SelectItem value="2">Distrito 2</SelectItem>
+                                        <SelectItem value="3">Distrito 3</SelectItem>
+                                        <SelectItem value="4">Distrito 4</SelectItem>
+                                        <SelectItem value="5">Distrito 5</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 {errors.distrito && <p className="text-red-500 text-xs mt-1">{errors.distrito}</p>}
                             </div>
 

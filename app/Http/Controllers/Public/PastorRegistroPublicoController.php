@@ -381,8 +381,8 @@ class PastorRegistroPublicoController extends Controller
                 'instituto_teologico' => $validated['instituto_teologico'] ?? null,
 
                 'nivel_ministerial' => $validated['nivel_ministerial'],
-                'zona' => $validated['zona'] ?? null,
-                'distrito' => $validated['distrito'] ?? null,
+                'zona' => !empty($validated['zona']) ? preg_replace('/\D/', '', $validated['zona']) : null,
+                'distrito' => !empty($validated['distrito']) ? preg_replace('/\D/', '', $validated['distrito']) : null,
                 'ano_promocion' => $validated['ano_promocion'] ?? null,
                 'tiempo_colaborando' => $validated['tiempo_colaborando'] ?? null,
                 'batizado_espiritu_santo' => filter_var($validated['batizado_espiritu_santo'] ?? true, FILTER_VALIDATE_BOOLEAN),
