@@ -167,6 +167,7 @@ export default function RegistroExtension({
         iglesias_fundadas: iglesia?.iglesias_fundadas ? String(iglesia.iglesias_fundadas) : '',
         pastores_ministerio: iglesia?.pastores_ministerio ? String(iglesia.pastores_ministerio) : '',
         posee_medio_comunicacion: Boolean(iglesia?.posee_medio_comunicacion),
+        es_pastor_principal: true,
         medios_lista: parsedMedios,
     });
 
@@ -519,8 +520,8 @@ export default function RegistroExtension({
                         </div>
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2.5 py-0.5 rounded-full">
-                                    Pastor a Cargo
+                                <span className={`text-[11px] font-extrabold uppercase tracking-wider border px-2.5 py-0.5 rounded-full transition-colors ${data.es_pastor_principal ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' : 'bg-amber-500/20 text-amber-300 border-amber-400/30'}`}>
+                                    {data.es_pastor_principal ? 'Pastor Principal' : 'Co-Pastor / Asistente'}
                                 </span>
                                 {pastor.codigo && (
                                     <span className="text-[11px] font-mono font-bold bg-white/10 text-white px-2 py-0.5 rounded-md">
@@ -618,18 +619,18 @@ export default function RegistroExtension({
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
                                     className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left ${isActive
-                                            ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 shadow-xs'
-                                            : isCompleted
-                                                ? 'bg-white border-emerald-300 hover:border-emerald-400'
-                                                : 'bg-white border-slate-200 hover:bg-slate-50'
+                                        ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 shadow-xs'
+                                        : isCompleted
+                                            ? 'bg-white border-emerald-300 hover:border-emerald-400'
+                                            : 'bg-white border-slate-200 hover:bg-slate-50'
                                         }`}
                                 >
                                     <div
                                         className={`flex items-center justify-center h-9 w-9 rounded-lg shrink-0 font-bold text-xs sm:text-sm ${isActive
-                                                ? 'bg-blue-700 text-white shadow-xs'
-                                                : isCompleted
-                                                    ? 'bg-emerald-600 text-white'
-                                                    : 'bg-slate-100 text-slate-500'
+                                            ? 'bg-blue-700 text-white shadow-xs'
+                                            : isCompleted
+                                                ? 'bg-emerald-600 text-white'
+                                                : 'bg-slate-100 text-slate-500'
                                             }`}
                                     >
                                         {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -661,6 +662,32 @@ export default function RegistroExtension({
                             </CardHeader>
 
                             <CardContent className="p-4 sm:p-6 space-y-4">
+                                {/* Switch: Pastor Principal de la Extensión */}
+                                <div className="p-4 bg-blue-50/70 rounded-2xl border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheck className={`w-4 h-4 ${data.es_pastor_principal ? 'text-blue-700' : 'text-slate-400'}`} />
+                                            <Label htmlFor="es_pastor_principal" className="text-xs sm:text-sm font-bold text-slate-900 cursor-pointer">
+                                                ¿Es el Pastor Principal de esta Iglesia / Extensión?
+                                            </Label>
+                                        </div>
+                                        <p className="text-[11px] sm:text-xs text-slate-500">
+                                            {data.es_pastor_principal
+                                                ? 'Activo: Este pastor figurará como el Responsable Principal de la sede.'
+                                                : 'Inactivo: Este pastor figurará como Co-Pastor / Asistente vinculado a la sede.'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${data.es_pastor_principal ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                                            {data.es_pastor_principal ? 'Pastor Principal' : 'Co-Pastor / Asistente'}
+                                        </span>
+                                        <Switch
+                                            id="es_pastor_principal"
+                                            checked={data.es_pastor_principal}
+                                            onCheckedChange={(checked) => setData('es_pastor_principal', checked)}
+                                        />
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <Label htmlFor="nombre" className="text-xs font-bold uppercase text-slate-700">
@@ -741,7 +768,7 @@ export default function RegistroExtension({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <Label htmlFor="zona" className="text-xs font-bold uppercase text-slate-700">
-                                            Zona de la Iglesia (Número)
+                                            Zona
                                         </Label>
                                         <Input
                                             id="zona"
@@ -756,7 +783,7 @@ export default function RegistroExtension({
 
                                     <div>
                                         <Label htmlFor="distrito" className="text-xs font-bold uppercase text-slate-700">
-                                            Distrito de la Iglesia
+                                            Distrito
                                         </Label>
                                         <Select2
                                             id="distrito"

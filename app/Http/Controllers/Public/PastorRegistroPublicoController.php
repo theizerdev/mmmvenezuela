@@ -746,6 +746,7 @@ class PastorRegistroPublicoController extends Controller
             'iglesias_fundadas' => 'nullable|integer|min:0',
             'pastores_ministerio' => 'nullable|integer|min:0',
             'posee_medio_comunicacion' => 'nullable|boolean',
+            'es_pastor_principal' => 'nullable|boolean',
             'medios_lista' => 'nullable|array',
             'medios_lista.*.cual' => 'nullable|string|max:255',
             'medios_lista.*.donde' => 'nullable|string|max:255',
@@ -780,7 +781,7 @@ class PastorRegistroPublicoController extends Controller
 
             $extensionPayload = [
                 'nombre' => $validated['nombre'],
-                'pastor_id' => $pastor->id,
+                'pastor_id' => ($validated['es_pastor_principal'] ?? true) ? $pastor->id : ($pastor->conyuge_id ?: $pastor->id),
                 'tipo_local_id' => $validated['tipo_local_id'] ?? null,
                 'estado_id' => $validated['estado_id'],
                 'municipio_id' => $validated['municipio_id'] ?? null,
