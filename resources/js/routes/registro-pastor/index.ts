@@ -1,8 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::index
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:22
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:24
+ * @route '/registro'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -11,13 +11,13 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ["get","head"],
-    url: '/registro-pastor',
+    url: '/registro',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::index
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:22
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:24
+ * @route '/registro'
  */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
@@ -25,8 +25,8 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::index
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:22
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:24
+ * @route '/registro'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -34,8 +34,8 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::index
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:22
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:24
+ * @route '/registro'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
@@ -44,8 +44,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::index
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:22
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:24
+ * @route '/registro'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: index.url(options),
@@ -54,8 +54,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::index
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:22
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:24
+ * @route '/registro'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: index.url(options),
@@ -63,8 +63,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::index
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:22
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:24
+ * @route '/registro'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: index.url({
@@ -79,8 +79,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:136
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:156
+ * @route '/registro'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -89,13 +89,13 @@ export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
 store.definition = {
     methods: ["post"],
-    url: '/registro-pastor',
+    url: '/registro',
 } satisfies RouteDefinition<["post"]>
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:136
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:156
+ * @route '/registro'
  */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
@@ -103,8 +103,8 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:136
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:156
+ * @route '/registro'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -113,8 +113,8 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:136
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:156
+ * @route '/registro'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: store.url(options),
@@ -123,8 +123,8 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:136
- * @route '/registro-pastor'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:156
+ * @route '/registro'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: store.url(options),
@@ -134,8 +134,8 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::verificarCedula
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:61
- * @route '/registro-pastor/verificar-cedula/{cedula}'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:81
+ * @route '/registro/verificar-cedula/{cedula}'
  */
 export const verificarCedula = (args: { cedula: string | number } | [cedula: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: verificarCedula.url(args, options),
@@ -144,13 +144,13 @@ export const verificarCedula = (args: { cedula: string | number } | [cedula: str
 
 verificarCedula.definition = {
     methods: ["get","head"],
-    url: '/registro-pastor/verificar-cedula/{cedula}',
+    url: '/registro/verificar-cedula/{cedula}',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::verificarCedula
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:61
- * @route '/registro-pastor/verificar-cedula/{cedula}'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:81
+ * @route '/registro/verificar-cedula/{cedula}'
  */
 verificarCedula.url = (args: { cedula: string | number } | [cedula: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
@@ -177,8 +177,8 @@ verificarCedula.url = (args: { cedula: string | number } | [cedula: string | num
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::verificarCedula
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:61
- * @route '/registro-pastor/verificar-cedula/{cedula}'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:81
+ * @route '/registro/verificar-cedula/{cedula}'
  */
 verificarCedula.get = (args: { cedula: string | number } | [cedula: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: verificarCedula.url(args, options),
@@ -186,8 +186,8 @@ verificarCedula.get = (args: { cedula: string | number } | [cedula: string | num
 })
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::verificarCedula
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:61
- * @route '/registro-pastor/verificar-cedula/{cedula}'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:81
+ * @route '/registro/verificar-cedula/{cedula}'
  */
 verificarCedula.head = (args: { cedula: string | number } | [cedula: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: verificarCedula.url(args, options),
@@ -196,8 +196,8 @@ verificarCedula.head = (args: { cedula: string | number } | [cedula: string | nu
 
     /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::verificarCedula
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:61
- * @route '/registro-pastor/verificar-cedula/{cedula}'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:81
+ * @route '/registro/verificar-cedula/{cedula}'
  */
     const verificarCedulaForm = (args: { cedula: string | number } | [cedula: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: verificarCedula.url(args, options),
@@ -206,8 +206,8 @@ verificarCedula.head = (args: { cedula: string | number } | [cedula: string | nu
 
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::verificarCedula
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:61
- * @route '/registro-pastor/verificar-cedula/{cedula}'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:81
+ * @route '/registro/verificar-cedula/{cedula}'
  */
         verificarCedulaForm.get = (args: { cedula: string | number } | [cedula: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: verificarCedula.url(args, options),
@@ -215,8 +215,8 @@ verificarCedula.head = (args: { cedula: string | number } | [cedula: string | nu
         })
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::verificarCedula
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:61
- * @route '/registro-pastor/verificar-cedula/{cedula}'
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:81
+ * @route '/registro/verificar-cedula/{cedula}'
  */
         verificarCedulaForm.head = (args: { cedula: string | number } | [cedula: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: verificarCedula.url(args, {

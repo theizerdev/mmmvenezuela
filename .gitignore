@@ -3,6 +3,8 @@
 /node_modules
 /public/fonts-manifest.dev.json
 /public/hot
+/public/pastores
+/public/pastores_cedulas
 /public/storage
 /storage/*.key
 /storage/pail

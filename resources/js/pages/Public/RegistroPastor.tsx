@@ -1,69 +1,73 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import {
-    User,
-    Church,
-    CheckCircle2,
-    ArrowRight,
-    ArrowLeft,
-    ShieldCheck,
-    IdCard,
-    Calendar,
-    Phone,
-    Mail,
-    Award,
-    MapPin,
-    AlertCircle,
-    Camera,
-    Sparkles,
-    FileText,
-    RefreshCw,
-    X,
-    Heart,
-    Users,
-    AlertTriangle,
-    Loader2,
-    Info,
-    Scan,
-    Check,
-    Edit2,
-    TrendingUp,
-    UserCheck,
-    Clock
-} from 'lucide-react';
-import PhotoEditorModal from '@/Components/PhotoEditorModal';
-
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-    CardContent,
-    CardFooter
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardHeader, CardDescription, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+    User,
+    GraduationCap,
+    Cross,
+    Stethoscope,
+    Camera,
+    ArrowLeft,
+    ArrowRight,
+    Save,
+    Check,
+    MapPin,
+    Upload,
+    Trash2,
+    Video,
+    AlertCircle,
+    PhoneCall,
+    Plus,
+    SwitchCamera,
+    CheckCircle2,
+    IdCard,
+    ShieldCheck,
+    Info,
+    Sparkles
+} from 'lucide-react';
 
 interface EstadoItem {
     id: number;
     nombre: string;
+    codigo?: string;
+}
+
+interface MunicipioItem {
+    id: number;
+    estado_id: number;
+    nombre: string;
+    codigo?: string;
+}
+
+interface ParroquiaItem {
+    id: number;
+    municipio_id: number;
+    nombre: string;
+    codigo?: string;
+}
+
+interface PastorItem {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    codigo: string;
+    documento: string;
+    genero?: string;
 }
 
 interface RegistroPastorProps {
     estados: EstadoItem[];
-    gradosMinisteriales: string[];
-    estadosCiviles: string[];
+    municipios: MunicipioItem[];
+    parroquias: ParroquiaItem[];
+    pastoresDisponibles?: PastorItem[];
+    gradosMinisteriales?: string[];
+    estadosCiviles?: string[];
     generos?: string[];
     flash?: {
         success?: {
@@ -75,1926 +79,1483 @@ interface RegistroPastorProps {
 }
 
 export default function RegistroPastor({
-    estados,
-    gradosMinisteriales,
-    estadosCiviles,
+    estados = [],
+    municipios = [],
+    parroquias = [],
+    pastoresDisponibles = [],
+    gradosMinisteriales = ['Colaborador', 'Laico', 'Licenciado', 'Ministro Ordenado'],
+    estadosCiviles = ['Soltero(a)', 'Casado(a)', 'Viudo(a)', 'Divorciado(a)'],
     generos = ['Masculino', 'Femenino'],
-    flash
+    flash,
 }: RegistroPastorProps) {
-    const [step, setStep] = useState<number>(1);
-    const [fotoCedulaPreview, setFotoCedulaPreview] = useState<string | null>(null);
-    const [fotoPerfilPreview, setFotoPerfilPreview] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<number>(1);
+    const [dismissedSuccess, setDismissedSuccess] = useState<boolean>(false);
 
-    // OCR Escaneo de Cédula Estados
-    const [isOcrAnalyzing, setIsOcrAnalyzing] = useState<boolean>(false);
-    const [ocrStatusMessage, setOcrStatusMessage] = useState<string | null>(null);
-    const [ocrVerified, setOcrVerified] = useState<boolean>(false);
-    const [ocrMismatch, setOcrMismatch] = useState<boolean>(false);
-    const [extractedCedulaNumber, setExtractedCedulaNumber] = useState<string | null>(null);
-
-    // Modal Editor de Foto (Recorte, Rotación, Brillo/Contraste)
-    const [isEditorOpen, setIsEditorOpen] = useState<boolean>(false);
-    const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
-    const [editorTarget, setEditorTarget] = useState<'foto_cedula' | 'foto'>('foto_cedula');
-
-    // Validación de Cédula Principal duplicada en tiempo real
+    // Estados de verificación de Cédula en tiempo real
     const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
     const [cedulaExiste, setCedulaExiste] = useState<boolean>(false);
     const [cedulaEsConyugeVinculado, setCedulaEsConyugeVinculado] = useState<boolean>(false);
     const [cedulaExistenteNombre, setCedulaExistenteNombre] = useState<string | null>(null);
-    const [cedulaExistenteConyuge, setCedulaExistenteConyuge] = useState<string | null>(null);
-    const [extensionCargadaPorConyuge, setExtensionCargadaPorConyuge] = useState<boolean>(false);
 
-    // Validación de Cédula Cónyuge duplicada en tiempo real
-    const [isCheckingCedulaConyuge, setIsCheckingCedulaConyuge] = useState<boolean>(false);
-    const [cedulaConyugeExiste, setCedulaConyugeExiste] = useState<boolean>(false);
-    const [cedulaConyugeEsVinculado, setCedulaConyugeEsVinculado] = useState<boolean>(false);
-    const [cedulaConyugeExistenteNombre, setCedulaConyugeExistenteNombre] = useState<string | null>(null);
-
-    // Cámara Estados
-    const [cameraTarget, setCameraTarget] = useState<'foto_cedula' | 'foto' | null>(null);
-    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-    const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
-    const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
-    const [isCameraLoading, setIsCameraLoading] = useState<boolean>(false);
-    const [cameraError, setCameraError] = useState<string | null>(null);
-    const [dismissedSuccess, setDismissedSuccess] = useState<boolean>(false);
-
+    // Cámara Web para Foto de Perfil
     const videoRef = useRef<HTMLVideoElement>(null);
-    const mediaStreamRef = useRef<MediaStream | null>(null);
+    const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+    const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+    const [activeCameraTarget, setActiveCameraTarget] = useState<'foto' | 'foto_cedula'>('foto');
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        codigo: '',
         nombres: '',
         apellidos: '',
         documento: '',
         genero: 'Masculino',
+        edad: '',
         fe_nacimiento: '',
+        foto: '',
+        foto_cedula: '',
         estado_civil: 'Casado(a)',
         nombre_conyuge: '',
-        conyuge_pastorea: false,
-        cedula_conyuge: '',
-        telefono_tlf: '',
-        email: '',
+        conyuge_id: '',
 
+        // Eclesiásticos
         nivel_ministerial: 'Ministro Ordenado',
-        ano_promocion: '',
-
-        nombre_extension: '',
-        direccion_extension: '',
-        estado_id: estados?.[0]?.id ? String(estados[0].id) : '',
         zona: '',
         distrito: '',
+        ano_promocion: '',
+        tiempo_colaborando: '',
+        batizado_espiritu_santo: true,
+        pertenece_ministerio: true,
+        cargo_nacional: '',
+        mencion: '',
+        nota: '',
 
-        miembros_activos: '',
-        cantidad_campos_blancos: '',
-        miembro_probante: '',
-        tiempo_trabajo: '',
-        iglesias_fundadas: '',
-        pastores_ministerio: '',
+        // Académicos
+        grado_instruccion: 'Universitario',
+        titulo_obtenido: '',
+        estudio_teologico: false,
+        titulo_teologico: '',
+        tiempo_de_estudio_teologico: '',
+        instituto_teologico: '',
 
-        foto_cedula: null as File | null,
-        foto: null as File | null,
+        // Ubicación y Contacto
+        edificio_casa_quinta: '',
+        piso: '',
+        apartamento: '',
+        calle_avenida: '',
+        urbanizacion: '',
+        estado_id: estados?.[0]?.id ? String(estados[0].id) : '',
+        municipio_id: '',
+        parroquia_id: '',
+        municipio: '',
+        telefono_hab: '',
+        telefono_tlf: '',
+        telefono_otro: '',
+        email: '',
+
+        // Salud y Emergencia
+        grupo_sanguineo: 'O+',
+        condicion_salud: 'Buena',
+        padece_enfermedad: false,
+        enfermedades_cronicas: '',
+        toma_medicamentos: false,
+        medicamentos_recetados: '',
+        alergias: '',
+        contacto_emergencia_nombre: '',
+        contacto_emergencia_telefono: '',
+        observaciones_salud: '',
     });
 
     const successData = !dismissedSuccess ? flash?.success : undefined;
 
-    const handleRegistrarOtro = () => {
-        reset();
-        setFotoCedulaPreview(null);
-        setFotoPerfilPreview(null);
-        setIsOcrAnalyzing(false);
-        setOcrStatusMessage(null);
-        setOcrVerified(false);
-        setOcrMismatch(false);
-        setExtractedCedulaNumber(null);
-        setIsEditorOpen(false);
-        setEditorImageSrc(null);
-        setIsCheckingCedula(false);
-        setCedulaExiste(false);
-        setCedulaEsConyugeVinculado(false);
-        setCedulaExistenteNombre(null);
-        setCedulaExistenteConyuge(null);
-        setExtensionCargadaPorConyuge(false);
-        setIsCheckingCedulaConyuge(false);
-        setCedulaConyugeExiste(false);
-        setCedulaConyugeEsVinculado(false);
-        setCedulaConyugeExistenteNombre(null);
-        setCameraTarget(null);
-        setCameraError(null);
-        setDismissedSuccess(true);
-        setStep(1);
-        router.get('/registro-pastor', {}, { replace: true, preserveState: false });
-    };
-
-    // Función utilitaria para calcular la edad automáticamente
-    const calculateAge = (dobString: string): number | null => {
-        if (!dobString) return null;
-        const birthDate = new Date(dobString);
-        if (isNaN(birthDate.getTime())) return null;
+    // Calcular edad automáticamente al cambiar fecha de nacimiento
+    const calculateAge = (birthDateString: string): string => {
+        if (!birthDateString) return '';
+        const birthDate = new Date(birthDateString);
+        if (isNaN(birthDate.getTime())) return '';
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
             age--;
         }
-        return age >= 0 ? age : null;
+        return age >= 0 ? String(age) : '';
     };
 
-    const computedEdad = calculateAge(data.fe_nacimiento);
-
-    // Cargar Tesseract.js dinámicamente para OCR en vivo
-    useEffect(() => {
-        if (!window.Tesseract) {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-            script.async = true;
-            document.head.appendChild(script);
-        }
-    }, []);
-
-    // Detectar cámaras disponibles
-    useEffect(() => {
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-            navigator.mediaDevices.enumerateDevices().then((devices) => {
-                const videoDevices = devices.filter((device) => device.kind === 'videoinput');
-                setAvailableCameras(videoDevices);
-            }).catch(() => { });
-        }
-    }, []);
-
-    // Detener la cámara al desmontar
-    useEffect(() => {
-        return () => {
-            stopCameraStream();
-        };
-    }, []);
-
-    // Pre-procesar imagen en canvas para optimizar lectura OCR (Escala de grises + Alto Contraste)
-    const preprocessImageForOcr = (imageSrc: string, degrees: number = 0): Promise<string> => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    resolve(imageSrc);
-                    return;
-                }
-
-                const rad = (degrees * Math.PI) / 180;
-                const isRotated90or270 = degrees === 90 || degrees === 270;
-                const targetW = isRotated90or270 ? img.height : img.width;
-                const targetH = isRotated90or270 ? img.width : img.height;
-
-                const zoomFactor = 1.15;
-                const finalW = Math.max(1280, Math.round(targetW * zoomFactor));
-                const finalH = Math.round(targetH * zoomFactor);
-
-                canvas.width = finalW;
-                canvas.height = finalH;
-
-                ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-
-                if (degrees !== 0) {
-                    ctx.rotate(rad);
-                }
-
-                const drawW = isRotated90or270 ? finalH : finalW;
-                const drawH = isRotated90or270 ? finalW : finalH;
-
-                ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-                ctx.restore();
-
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const d = imageData.data;
-
-                for (let i = 0; i < d.length; i += 4) {
-                    const avg = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-                    const v = avg > 122 ? 255 : 0;
-                    d[i] = v;     // R
-                    d[i + 1] = v; // G
-                    d[i + 2] = v; // B
-                }
-
-                ctx.putImageData(imageData, 0, 0);
-                resolve(canvas.toDataURL('image/jpeg', 0.95));
-            };
-            img.onerror = () => resolve(imageSrc);
-            img.src = imageSrc;
-        });
+    const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        const computedAge = calculateAge(val);
+        setData((prev) => ({
+            ...prev,
+            fe_nacimiento: val,
+            edad: computedAge !== '' ? computedAge : prev.edad,
+        }));
     };
 
-    // Ejecutar OCR automático sobre la imagen de la cédula cargada o capturada
-    const analyzeCedulaWithOcr = async (imageUrl: string) => {
-        setIsOcrAnalyzing(true);
-        setOcrStatusMessage('Optimizando nitidez y escaneando OCR...');
-        setOcrVerified(false);
-        setOcrMismatch(false);
-        setExtractedCedulaNumber(null);
+    // Opciones territoriales en cascada
+    const municipiosFiltrados = useMemo(() => {
+        if (!data.estado_id) return [];
+        return municipios.filter((m) => String(m.estado_id) === String(data.estado_id));
+    }, [municipios, data.estado_id]);
 
-        try {
-            if (window.Tesseract) {
-                // Pre-procesar imagen para máximo contraste de caracteres
-                const processedImage = await preprocessImageForOcr(imageUrl);
+    const parroquiasFiltradas = useMemo(() => {
+        if (!data.municipio_id) return [];
+        return parroquias.filter((p) => String(p.municipio_id) === String(data.municipio_id));
+    }, [parroquias, data.municipio_id]);
 
-                const result = await window.Tesseract.recognize(processedImage, 'eng', {
-                    logger: (m: any) => {
-                        if (m.status === 'recognizing text') {
-                            setOcrStatusMessage(`Escaneando documento (${Math.round((m.progress || 0) * 100)}%)...`);
-                        }
-                    }
-                });
-
-                const normRawText = (result.data.text || '')
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9\s]/g, ' ');
-
-                const cleanTextDigits = normRawText.replace(/\D/g, '');
-                const cleanDigitsInput = data.documento.replace(/\D/g, '');
-
-                // Buscar secuencias de 7 u 8 dígitos (cédulas venezolanas)
-                const matches = normRawText.match(/\b\d{7,8}\b/g) || [];
-
-                // Extraer palabras de nombres/apellidos para validación cruzada (sin acentos)
-                const normalizeWords = (str: string) =>
-                    (str || '')
-                        .normalize('NFD')
-                        .replace(/[\u0300-\u036f]/g, '')
-                        .toUpperCase()
-                        .split(/\s+/)
-                        .filter(p => p.length >= 2);
-
-                const palabrasNombres = normalizeWords(data.nombres);
-                const palabrasApellidos = normalizeWords(data.apellidos);
-
-                const coincideNombre = palabrasNombres.length > 0 && palabrasNombres.some(p => normRawText.includes(p));
-                const coincideApellido = palabrasApellidos.length > 0 && palabrasApellidos.some(p => normRawText.includes(p));
-                const coincideNombresOApellidos = coincideNombre || coincideApellido;
-
-                let coincideFecha = true;
-                if (data.fe_nacimiento) {
-                    const parts = data.fe_nacimiento.split('-');
-                    if (parts.length === 3) {
-                        const [yyyy, mmStr, ddStr] = parts;
-                        const mmNum = parseInt(mmStr, 10);
-                        const ddNum = parseInt(ddStr, 10);
-
-                        const yy = yyyy.substring(2);
-                        const mesNombres = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-                        const mesNombre = mesNombres[mmNum - 1] || '';
-
-                        const ddPadded = ddNum < 10 ? `0${ddNum}` : `${ddNum}`;
-                        const mmPadded = mmNum < 10 ? `0${mmNum}` : `${mmNum}`;
-
-                        const datePatterns = [
-                            `${ddPadded}/${mmPadded}/${yyyy}`, `${ddPadded}-${mmPadded}-${yyyy}`, `${ddPadded}.${mmPadded}.${yyyy}`, `${ddPadded} ${mmPadded} ${yyyy}`,
-                            `${ddPadded}/${mmPadded}/${yy}`, `${ddPadded}-${mmPadded}-${yy}`, `${ddPadded}.${mmPadded}.${yy}`,
-                            `${ddPadded} ${mesNombre} ${yyyy}`, `${ddPadded}-${mesNombre}-${yyyy}`, `${ddPadded}/${mesNombre}/${yyyy}`,
-                            `${ddNum}/${mmNum}/${yyyy}`, `${ddNum}-${mmNum}-${yyyy}`, `${ddNum}/${mmNum}/${yy}`,
-                            `${yyyy}-${mmPadded}-${ddPadded}`, `${yyyy}/${mmPadded}/${ddPadded}`
-                        ];
-
-                        const hasYear = normRawText.includes(yyyy) || normRawText.includes(` ${yy} `);
-                        const hasDayOrMonth = normRawText.includes(ddPadded) || normRawText.includes(mmPadded) || (mesNombre && normRawText.includes(mesNombre));
-
-                        coincideFecha = datePatterns.some(p => normRawText.includes(p)) || (hasYear && hasDayOrMonth);
-                    }
-                }
-
-                let isCedulaMatch = false;
-                let detectedCedulaNum: string | null = null;
-
-                if (cleanDigitsInput) {
-                    if (cleanTextDigits.includes(cleanDigitsInput) || matches.includes(cleanDigitsInput)) {
-                        isCedulaMatch = true;
-                        detectedCedulaNum = cleanDigitsInput;
-                    } else if (matches.length > 0) {
-                        detectedCedulaNum = matches[0];
-                    } else if (cleanTextDigits.length >= 7) {
-                        for (let len = 8; len >= 7; len--) {
-                            for (let i = 0; i <= cleanTextDigits.length - len; i++) {
-                                const sub = cleanTextDigits.substring(i, i + len);
-                                if (sub.startsWith('1') || sub.startsWith('2') || sub.startsWith('3')) {
-                                    detectedCedulaNum = sub;
-                                    break;
-                                }
-                            }
-                            if (detectedCedulaNum) break;
-                        }
-                    }
-
-                    if (isCedulaMatch) {
-                        if ((palabrasNombres.length > 0 || palabrasApellidos.length > 0) && !coincideNombresOApellidos) {
-                            // Los nombres o apellidos ingresados no pertenecen a la Cédula
-                            setOcrVerified(false);
-                            setOcrMismatch(true);
-                            setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
-                            setOcrStatusMessage(`⚠️ La Cédula V-${cleanDigitsInput} fue leída, pero los Nombres/Apellidos (${data.apellidos} ${data.nombres}) NO coinciden con los impresos en la foto.`);
-                        } else if (data.fe_nacimiento && !coincideFecha) {
-                            // La Fecha de Nacimiento no coincide
-                            setOcrVerified(false);
-                            setOcrMismatch(true);
-                            setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
-                            setOcrStatusMessage(`⚠️ La Cédula V-${cleanDigitsInput} fue leída, pero la Fecha de Nacimiento (${data.fe_nacimiento}) no coincide con la impresa en la foto.`);
-                        } else {
-                            // Cédula, Nombres y Fecha validados con éxito
-                            setOcrVerified(true);
-                            setOcrMismatch(false);
-                            setExtractedCedulaNumber(`V-${cleanDigitsInput}`);
-                            setOcrStatusMessage(`✨ ¡Cédula V-${cleanDigitsInput}, Titular (${data.apellidos} ${data.nombres}) y Datos validados con OCR!`);
-                        }
-                    } else if (detectedCedulaNum && detectedCedulaNum !== cleanDigitsInput) {
-                        setOcrVerified(false);
-                        setOcrMismatch(true);
-                        setExtractedCedulaNumber(`V-${detectedCedulaNum}`);
-                        setOcrStatusMessage(`⚠️ La Cédula en la foto (V-${detectedCedulaNum}) NO coincide con la Cédula ingresada (V-${cleanDigitsInput}).`);
-                    } else {
-                        setOcrVerified(false);
-                        setOcrMismatch(false);
-                        setExtractedCedulaNumber(null);
-                        setOcrStatusMessage('Imagen procesada. Asegúrese de colocar la Cédula bien iluminada.');
-                    }
-                } else if (matches.length > 0 || detectedCedulaNum) {
-                    const finalNum = matches[0] || detectedCedulaNum;
-                    setExtractedCedulaNumber(`V-${finalNum}`);
-                    setOcrVerified(true);
-                    setOcrMismatch(false);
-                    setOcrStatusMessage(`Se detectó el N° de Cédula: V-${finalNum}`);
-                    setData('documento', `V-${finalNum}`);
-                } else {
-                    setOcrVerified(false);
-                    setOcrMismatch(false);
-                    setOcrStatusMessage('Imagen de Cédula procesada.');
-                }
-            } else {
-                setOcrVerified(false);
-                setOcrStatusMessage('Fotografía de Cédula procesada.');
-            }
-        } catch (err) {
-            console.error('Error en OCR:', err);
-            setOcrVerified(false);
-            setOcrStatusMessage('Imagen de Cédula adjuntada.');
-        } finally {
-            setIsOcrAnalyzing(false);
-        }
+    const handleEstadoChange = (val: string) => {
+        setData((prev) => ({
+            ...prev,
+            estado_id: val,
+            municipio_id: '',
+            parroquia_id: '',
+        }));
     };
 
-    // Verificar en tiempo real la cédula duplicada (Pastor Principal)
+    const handleMunicipioChange = (val: string) => {
+        const munFound = municipios.find((m) => String(m.id) === val);
+        setData((prev) => ({
+            ...prev,
+            municipio_id: val,
+            parroquia_id: '',
+            municipio: munFound ? munFound.nombre : prev.municipio,
+        }));
+    };
+
+    // Manejo de Medicamentos
+    const [nuevoMedicamentoNombre, setNuevoMedicamentoNombre] = useState('');
+    const [nuevoMedicamentoDosis, setNuevoMedicamentoDosis] = useState('');
+
+    const medicamentosList = useMemo(() => {
+        const raw = data.medicamentos_recetados;
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'string') {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+            } catch (e) {}
+            return raw.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean).map((nombre) => ({ nombre, dosis: '' }));
+        }
+        return [];
+    }, [data.medicamentos_recetados]);
+
+    const handleAgregarMedicamento = () => {
+        if (!nuevoMedicamentoNombre.trim()) return;
+        const nuevaLista = [
+            ...medicamentosList,
+            { nombre: nuevoMedicamentoNombre.trim(), dosis: nuevoMedicamentoDosis.trim() }
+        ];
+        setData('medicamentos_recetados', JSON.stringify(nuevaLista));
+        setNuevoMedicamentoNombre('');
+        setNuevoMedicamentoDosis('');
+    };
+
+    const handleEliminarMedicamento = (index: number) => {
+        const nuevaLista = medicamentosList.filter((_, i) => i !== index);
+        setData('medicamentos_recetados', nuevaLista.length > 0 ? JSON.stringify(nuevaLista) : '');
+    };
+
+    // Validación de Cédula duplicada en tiempo real
     const checkCedulaDuplicada = async (doc: string) => {
-        const cleanDoc = doc.trim();
-        if (!cleanDoc || cleanDoc.length < 5) {
+        const trimmed = doc.trim();
+        if (trimmed.length < 5) {
             setCedulaExiste(false);
             setCedulaEsConyugeVinculado(false);
             setCedulaExistenteNombre(null);
-            setCedulaExistenteConyuge(null);
-            setExtensionCargadaPorConyuge(false);
             return;
         }
 
         setIsCheckingCedula(true);
         try {
-            const resp = await fetch(`/registro-pastor/verificar-cedula/${encodeURIComponent(cleanDoc)}`);
-            if (resp.ok) {
-                const resData = await resp.json();
-                if (resData.existe) {
-                    if (resData.es_conyuge_vinculado) {
-                        // Es un cónyuge vinculado previamente -> PERMITIR AVANZAR
-                        setCedulaExiste(false);
-                        setCedulaEsConyugeVinculado(true);
-
-                        // Auto-completar y corregir datos personales del titular simultáneamente
-                        setData(prev => ({
+            const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(trimmed)}`);
+            if (res.ok) {
+                const result = await res.json();
+                if (result.existe) {
+                    setCedulaExiste(!result.es_conyuge_vinculado);
+                    setCedulaEsConyugeVinculado(Boolean(result.es_conyuge_vinculado));
+                    setCedulaExistenteNombre(result.nombre || null);
+                    if (result.es_conyuge_vinculado && result.nombres) {
+                        setData((prev) => ({
                             ...prev,
-                            nombres: resData.nombres || prev.nombres,
-                            apellidos: resData.apellidos || prev.apellidos,
-                            genero: resData.genero || prev.genero,
-                            fe_nacimiento: resData.fe_nacimiento || prev.fe_nacimiento,
-                            nombre_conyuge: resData.nombre_conyuge || prev.nombre_conyuge,
-                            estado_civil: resData.estado_civil || prev.estado_civil,
+                            nombres: prev.nombres || result.nombres,
+                            apellidos: prev.apellidos || result.apellidos,
+                            genero: result.genero || prev.genero,
+                            fe_nacimiento: result.fe_nacimiento || prev.fe_nacimiento,
+                            nombre_conyuge: result.nombre_conyuge || prev.nombre_conyuge,
                         }));
-
-                        // Pre-cargar extensión de su cónyuge si existe
-                        if (resData.extension) {
-                            setExtensionCargadaPorConyuge(true);
-                            setData(prev => ({
-                                ...prev,
-                                nombre_extension: resData.extension.nombre || prev.nombre_extension,
-                                estado_id: resData.extension.estado_id ? String(resData.extension.estado_id) : prev.estado_id,
-                                zona: resData.extension.zona || prev.zona,
-                                distrito: resData.extension.distrito || prev.distrito,
-                                direccion_extension: resData.extension.direccion || prev.direccion_extension,
-                                miembros_activos: resData.extension.miembros_activos !== undefined && resData.extension.miembros_activos !== null ? String(resData.extension.miembros_activos) : prev.miembros_activos,
-                                cantidad_campos_blancos: resData.extension.cantidad_campos_blancos !== undefined && resData.extension.cantidad_campos_blancos !== null ? String(resData.extension.cantidad_campos_blancos) : prev.cantidad_campos_blancos,
-                                miembro_probante: resData.extension.miembro_probante !== undefined && resData.extension.miembro_probante !== null ? String(resData.extension.miembro_probante) : prev.miembro_probante,
-                                tiempo_trabajo: resData.extension.tiempo_trabajo || prev.tiempo_trabajo,
-                                iglesias_fundadas: resData.extension.iglesias_fundadas !== undefined && resData.extension.iglesias_fundadas !== null ? String(resData.extension.iglesias_fundadas) : prev.iglesias_fundadas,
-                                pastores_ministerio: resData.extension.pastores_ministerio !== undefined && resData.extension.pastores_ministerio !== null ? String(resData.extension.pastores_ministerio) : prev.pastores_ministerio,
-                            }));
-                        }
-                    } else {
-                        // Es una cédula ya registrada por completo -> BLOQUEAR
-                        setCedulaExiste(true);
-                        setCedulaEsConyugeVinculado(false);
                     }
-                    setCedulaExistenteNombre(resData.nombre || null);
-                    setCedulaExistenteConyuge(resData.nombre_conyuge || null);
                 } else {
                     setCedulaExiste(false);
                     setCedulaEsConyugeVinculado(false);
                     setCedulaExistenteNombre(null);
-                    setCedulaExistenteConyuge(null);
-                    setExtensionCargadaPorConyuge(false);
                 }
             }
-        } catch (err) {
-            console.error('Error al verificar cédula:', err);
+        } catch (e) {
+            // Ignorar errores de red
         } finally {
             setIsCheckingCedula(false);
         }
     };
 
-    // Verificar en tiempo real la cédula duplicada (Cónyuge Pastor)
-    const checkCedulaConyugeDuplicada = async (doc: string) => {
-        const cleanDoc = doc.trim();
-        if (!cleanDoc || cleanDoc.length < 5) {
-            setCedulaConyugeExiste(false);
-            setCedulaConyugeEsVinculado(false);
-            setCedulaConyugeExistenteNombre(null);
-            return;
-        }
+    // Cámara Web y Compresión de Fotos
+    const resizeAndCompressImage = (imageSrc: string, targetW = 400, targetH = 480, quality = 0.85): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = imageSrc;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = targetW;
+                canvas.height = targetH;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    const imgRatio = img.width / img.height;
+                    const targetRatio = targetW / targetH;
 
-        setIsCheckingCedulaConyuge(true);
-        try {
-            const resp = await fetch(`/registro-pastor/verificar-cedula/${encodeURIComponent(cleanDoc)}`);
-            if (resp.ok) {
-                const resData = await resp.json();
-                if (resData.existe) {
-                    if (resData.es_conyuge_vinculado) {
-                        setCedulaConyugeExiste(false);
-                        setCedulaConyugeEsVinculado(true);
+                    let sourceW = img.width;
+                    let sourceH = img.height;
+                    let sourceX = 0;
+                    let sourceY = 0;
+
+                    if (imgRatio > targetRatio) {
+                        sourceW = img.height * targetRatio;
+                        sourceX = (img.width - sourceW) / 2;
                     } else {
-                        setCedulaConyugeExiste(true);
-                        setCedulaConyugeEsVinculado(false);
+                        sourceH = img.width / targetRatio;
+                        sourceY = (img.height - sourceH) / 2;
                     }
-                    setCedulaConyugeExistenteNombre(resData.nombre || null);
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, targetW, targetH);
+                    ctx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, targetW, targetH);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
                 } else {
-                    setCedulaConyugeExiste(false);
-                    setCedulaConyugeEsVinculado(false);
-                    setCedulaConyugeExistenteNombre(null);
-                }
-            }
-        } catch (err) {
-            console.error('Error al verificar cédula cónyuge:', err);
-        } finally {
-            setIsCheckingCedulaConyuge(false);
-        }
-    };
-
-    const stopCameraStream = () => {
-        if (mediaStreamRef.current) {
-            mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-            mediaStreamRef.current = null;
-        }
-    };
-
-    const startCamera = async (target: 'foto_cedula' | 'foto', mode?: 'user' | 'environment', deviceIndex?: number) => {
-        stopCameraStream();
-        setCameraError(null);
-        setIsCameraLoading(true);
-        setCameraTarget(target);
-
-        // Si es foto de cédula, preferir la cámara trasera en móviles para mayor nitidez
-        const defaultMode = target === 'foto_cedula' ? 'environment' : 'user';
-        const targetFacingMode = mode || defaultMode;
-        const targetIndex = deviceIndex !== undefined ? deviceIndex : currentCameraIndex;
-
-        try {
-            let constraints: MediaStreamConstraints = {
-                video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
+                    resolve(imageSrc);
                 }
             };
-
-            if (availableCameras.length > 1 && availableCameras[targetIndex]) {
-                constraints = {
-                    video: {
-                        deviceId: { exact: availableCameras[targetIndex].deviceId },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
-                };
-            } else {
-                constraints = {
-                    video: {
-                        facingMode: targetFacingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
-                };
-            }
-
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            mediaStreamRef.current = stream;
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
-            }
-            setIsCameraLoading(false);
-        } catch (err: any) {
-            console.error('Camera error:', err);
-            setIsCameraLoading(false);
-            setCameraError('No se pudo acceder a la cámara. Por favor permite los permisos o intenta subir un archivo.');
-        }
+            img.onerror = () => resolve(imageSrc);
+        });
     };
 
-    const flipCamera = () => {
-        if (availableCameras.length > 1) {
-            const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
-            setCurrentCameraIndex(nextIndex);
-            if (cameraTarget) {
-                startCamera(cameraTarget, facingMode, nextIndex);
-            }
-        } else {
-            const newMode = facingMode === 'user' ? 'environment' : 'user';
-            setFacingMode(newMode);
-            if (cameraTarget) {
-                startCamera(cameraTarget, newMode);
-            }
+    const startCamera = async (target: 'foto' | 'foto_cedula', overrideFacingMode?: 'user' | 'environment') => {
+        setActiveCameraTarget(target);
+        const mode = overrideFacingMode || facingMode;
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((t) => t.stop());
         }
-    };
-
-    const capturePhoto = () => {
-        if (!videoRef.current || !cameraTarget) return;
-
-        const video = videoRef.current;
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    const filename = `${cameraTarget}_${Date.now()}.jpg`;
-                    const file = new File([blob], filename, { type: 'image/jpeg' });
-                    setData(cameraTarget, file);
-
-                    if (cameraTarget === 'foto_cedula') {
-                        setFotoCedulaPreview(dataUrl);
-                        analyzeCedulaWithOcr(dataUrl);
-                    } else {
-                        setFotoPerfilPreview(dataUrl);
-                    }
-                    closeCameraModal();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: mode },
+            });
+            setMediaStream(stream);
+            setIsCameraActive(true);
+            setTimeout(() => {
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
                 }
-            }, 'image/jpeg', 0.95);
+            }, 100);
+        } catch (err) {
+            alert('No se pudo acceder a la cámara web. Verifique los permisos en su navegador.');
         }
     };
 
-    const closeCameraModal = () => {
-        stopCameraStream();
-        setCameraTarget(null);
-        setCameraError(null);
+    const stopCamera = () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((t) => t.stop());
+            setMediaStream(null);
+        }
+        setIsCameraActive(false);
     };
 
-    const autoCorregirFotoDirecta = (
-        imageSrc: string,
-        field: 'foto_cedula' | 'foto',
-        forcedDegrees?: number
-    ) => {
-        setIsOcrAnalyzing(true);
-        setOcrStatusMessage('🪄 Auto-corregiendo orientación de frente, zoom y contraste...');
-
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
+    const capturePhoto = async () => {
+        if (videoRef.current) {
+            const video = videoRef.current;
             const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
             const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-
-            const isVertical = img.height > img.width;
-            let degrees = forcedDegrees;
-            if (degrees === undefined) {
-                // Rotar 270° (-90° anti-horario) para orientar el texto hacia la parte superior y de frente
-                degrees = (field === 'foto_cedula' && isVertical) ? 270 : 0;
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const raw = canvas.toDataURL('image/jpeg', 0.9);
+                const compressed = await resizeAndCompressImage(raw);
+                setData(activeCameraTarget, compressed);
+                stopCamera();
             }
-
-            const rad = (degrees * Math.PI) / 180;
-            const isRotated90or270 = degrees === 90 || degrees === 270;
-
-            const targetW = isRotated90or270 ? img.height : img.width;
-            const targetH = isRotated90or270 ? img.width : img.height;
-
-            const zoomFactor = field === 'foto_cedula' ? 1.15 : 1.05;
-            const finalW = Math.max(1280, Math.round(targetW * zoomFactor));
-            const finalH = Math.round(targetH * zoomFactor);
-
-            canvas.width = finalW;
-            canvas.height = finalH;
-
-            ctx.save();
-            ctx.filter = 'brightness(115%) contrast(125%)';
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-
-            if (degrees !== 0) {
-                ctx.rotate(rad);
-            }
-
-            const drawW = isRotated90or270 ? finalH : finalW;
-            const drawH = isRotated90or270 ? finalW : finalH;
-
-            ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-            ctx.restore();
-
-            const correctedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    const file = new File([blob], `${field}_autocorregida.jpg`, { type: 'image/jpeg' });
-                    setData(field, file);
-
-                    if (field === 'foto_cedula') {
-                        setFotoCedulaPreview(correctedDataUrl);
-                        analyzeCedulaWithOcr(correctedDataUrl);
-                    } else {
-                        setFotoPerfilPreview(correctedDataUrl);
-                        setIsOcrAnalyzing(false);
-                    }
-                }
-            }, 'image/jpeg', 0.95);
-        };
-        img.src = imageSrc;
-    };
-
-    const autoCorregirFoto = (field: 'foto_cedula' | 'foto') => {
-        const imageSrc = field === 'foto_cedula' ? fotoCedulaPreview : fotoPerfilPreview;
-        if (imageSrc) {
-            autoCorregirFotoDirecta(imageSrc, field);
         }
     };
 
-    const handleFileChange = (
-        e: React.ChangeEvent<HTMLInputElement>,
-        field: 'foto_cedula' | 'foto'
-    ) => {
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'foto' | 'foto_cedula') => {
         const file = e.target.files?.[0];
         if (file) {
-            setData(field, file);
             const reader = new FileReader();
-            reader.onloadend = () => {
-                const res = reader.result as string;
-                if (field === 'foto_cedula') {
-                    setFotoCedulaPreview(res);
-
-                    // Auto-detectar si la imagen de la cédula es vertical para rotarla horizontalmente de inmediato
-                    const checkImg = new Image();
-                    checkImg.onload = () => {
-                        if (checkImg.height > checkImg.width) {
-                            autoCorregirFotoDirecta(res, field);
-                        } else {
-                            analyzeCedulaWithOcr(res);
-                        }
-                    };
-                    checkImg.src = res;
-                } else {
-                    setFotoPerfilPreview(res);
+            reader.onload = async (event) => {
+                const result = event.target?.result as string;
+                if (result) {
+                    const compressed = await resizeAndCompressImage(result);
+                    setData(target, compressed);
                 }
             };
             reader.readAsDataURL(file);
         }
-        e.target.value = '';
-    };
-
-    const handleEditorSave = (file: File, dataUrl: string) => {
-        if (editorTarget === 'foto_cedula') {
-            setFotoCedulaPreview(dataUrl);
-            setData('foto_cedula', file);
-            analyzeCedulaWithOcr(dataUrl);
-        } else {
-            setFotoPerfilPreview(dataUrl);
-            setData('foto', file);
-        }
-    };
-
-    const nextStep = (e?: React.MouseEvent) => {
-        if (e) e.preventDefault();
-        if (step === 1 && (cedulaExiste || cedulaConyugeExiste)) {
-            return;
-        }
-        if (step < 3) setStep((prev) => prev + 1);
-    };
-
-    const prevStep = (e?: React.MouseEvent) => {
-        if (e) e.preventDefault();
-        if (step > 1) setStep((prev) => prev - 1);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (step < 3) {
-            if (step === 1 && (cedulaExiste || cedulaConyugeExiste)) return;
-            setStep((prev) => prev + 1);
-            return;
-        }
-        if (ocrMismatch) {
-            alert('⚠️ ATENCIÓN: La foto de la Cédula cargada (V- ' + extractedCedulaNumber + ') NO coincide con la Cédula del pastor a registrar (' + data.documento + '). Por favor suba la Cédula correcta.');
-            return;
-        }
-        post('/registro-pastor', {
-            forceFormData: true,
+        post('/registro', {
             preserveScroll: true,
             onSuccess: () => {
                 setDismissedSuccess(false);
-                setStep(4);
             },
         });
     };
 
-    return (
-        <>
-            <Head title="Registro de Pastores y Extensión - Movimiento Misionero Mundial Venezuela" />
+    const handleResetOtro = () => {
+        reset();
+        setDismissedSuccess(true);
+        setActiveTab(1);
+        setCedulaExiste(false);
+        setCedulaEsConyugeVinculado(false);
+        router.get('/registro', {}, { replace: true, preserveState: false });
+    };
 
-            <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
-                {/* Header Institucional Claro */}
-                <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-xs">
-                    <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <img
-                                src="/icons/logo_mmm-a-color-sin-fondo.png"
-                                alt="Logo MMM"
-                                className="h-11 w-auto object-contain drop-shadow-xs"
-                                onError={(e) => {
-                                    (e.target as HTMLElement).style.display = 'none';
-                                }}
-                            />
-                            <div>
-                                <h1 className="text-xs md:text-sm font-black tracking-wider uppercase text-blue-900">
-                                    MOVIMIENTO MISIONERO MUNDIAL
-                                </h1>
-                                <p className="text-xs text-slate-500 font-medium">
-                                    Oficina Nacional de Venezuela • Registro Pastoral
-                                </p>
-                            </div>
+    const steps = [
+        { id: 1, title: 'Datos Personales', icon: User, desc: 'Identificación, contacto y dirección' },
+        { id: 2, title: 'Datos Académicos', icon: GraduationCap, desc: 'Nivel de estudio y teología' },
+        { id: 3, title: 'Datos Eclesiásticos', icon: Cross, desc: 'Nivel ministerial, zona y distrito' },
+        { id: 4, title: 'Estado de Salud', icon: Stethoscope, desc: 'Historial médico y emergencia' },
+        { id: 5, title: 'Fotografía', icon: Camera, desc: 'Foto de perfil y cédula de identidad' },
+    ];
+
+    // Si la operación fue exitosa, mostrar pantalla de confirmación
+    if (successData) {
+        return (
+            <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6">
+                <Head title="Registro Exitoso - MMM Venezuela" />
+                <Card className="w-full max-w-xl bg-slate-800 border-slate-700 shadow-2xl text-slate-100 overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-center text-white">
+                        <div className="mx-auto w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-3 backdrop-blur-xs">
+                            <CheckCircle2 className="w-10 h-10 text-white" />
                         </div>
-                        <Badge variant="outline" className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-800 border-blue-200 font-medium">
-                            <ShieldCheck className="size-3.5 text-emerald-600" />
-                            <span>Formulario Oficial</span>
+                        <h2 className="text-2xl font-bold">¡Registro Completado con Éxito!</h2>
+                        <p className="text-emerald-100 text-xs sm:text-sm mt-1">
+                            Movimiento Misionero Mundial en Venezuela
+                        </p>
+                    </div>
+
+                    <CardContent className="p-6 sm:p-8 space-y-6 text-center">
+                        <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-700">
+                            <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                                Código Ministerial Asignado
+                            </p>
+                            <span className="font-mono text-3xl font-extrabold text-amber-400 tracking-wider">
+                                {successData.codigo}
+                            </span>
+                        </div>
+
+                        <div className="space-y-1 text-slate-300 text-sm">
+                            <p className="font-semibold text-lg text-white">{successData.nombre}</p>
+                            <p className="text-slate-400 text-xs">
+                                {successData.mensaje || 'Sus datos han sido recibidos para la validación y emisión de credencial ministerial.'}
+                            </p>
+                        </div>
+
+                        <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+                            <Button
+                                type="button"
+                                onClick={handleResetOtro}
+                                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-2.5 px-6 rounded-xl shadow-lg"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Registrar a Otro Pastor
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+            <Head title="Registro Oficial de Pastores - MMM Venezuela" />
+
+            {/* Header Oficial Institucional */}
+            <header className="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md">
+                <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-lg font-bold text-slate-950 text-lg">
+                            🇻🇪
+                        </div>
+                        <div>
+                            <h1 className="font-bold text-sm sm:text-base text-slate-100 tracking-tight leading-tight">
+                                Movimiento Misionero Mundial
+                            </h1>
+                            <p className="text-[11px] sm:text-xs text-amber-400 font-medium">
+                                Ficha de Registro Ministerial Oficial
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="hidden sm:flex items-center gap-2">
+                        <Badge variant="outline" className="border-slate-700 text-slate-300 bg-slate-800/50 py-1 px-2.5 text-xs">
+                            <ShieldCheck className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
+                            Portal Seguro
                         </Badge>
                     </div>
-                </header>
+                </div>
+            </header>
 
-                {/* Contenido Principal */}
-                <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 md:py-12">
-                    {/* Pantalla de Éxito al Completar */}
-                    {step === 4 || successData ? (
-                        <Card className="bg-white border-slate-200 shadow-xl rounded-3xl p-6 md:p-10 text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
-                            <div className="size-20 mx-auto bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center shadow-md">
-                                <CheckCircle2 className="size-10 text-emerald-600 stroke-[2.5]" />
-                            </div>
+            {/* Contenido Principal */}
+            <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 space-y-6">
+                {/* Formulario Wizard */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Header de Título y Progreso */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                            <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-amber-400" />
+                                Formulario de Registro de Pastor
+                            </h2>
+                            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                                Complete los 5 módulos con información verídica y actualizada.
+                            </p>
+                        </div>
 
-                            <div className="space-y-2">
-                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-xs px-3 py-1 font-bold uppercase tracking-wider">
-                                    ¡Registro Recibido Exitosamente!
-                                </Badge>
-                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900">
-                                    {successData?.nombre || `${data.nombres} ${data.apellidos}`}
-                                </h2>
-                                <p className="text-slate-600 text-sm max-w-md mx-auto">
-                                    Tus datos y la información de la extensión han sido registrados en nuestro registro pastoral nacional.
-                                </p>
-                            </div>
-
-                            {/* Tarjeta de Código Generado */}
-                            {successData?.codigo && (
-                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 max-w-sm mx-auto space-y-2 shadow-inner">
-                                    <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">
-                                        Código Eclesiástico Asignado
-                                    </span>
-                                    <div className="text-2xl md:text-3xl font-mono font-black text-blue-900 tracking-widest select-all">
-                                        {successData.codigo}
-                                    </div>
-                                    <p className="text-[11px] text-slate-500">
-                                        Guarda este código para tus consultas y trámites eclesiásticos.
-                                    </p>
-                                </div>
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            {activeTab > 1 && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setActiveTab(activeTab - 1)}
+                                    className="border-slate-700 text-slate-300 hover:bg-slate-800 flex-1 md:flex-initial"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-1.5" />
+                                    Anterior
+                                </Button>
                             )}
-
-                            <div className="pt-4 flex justify-center gap-4">
-                                <Button
-                                    onClick={handleRegistrarOtro}
-                                    variant="outline"
-                                    className="border-slate-300 bg-white hover:bg-slate-100 text-slate-700"
-                                >
-                                    Registrar otro Pastor
-                                </Button>
-                            </div>
-                        </Card>
-                    ) : (
-                        <Card className="bg-white border-slate-200 shadow-xl rounded-3xl overflow-hidden">
-                            {/* Stepper Header Radix */}
-                            <CardHeader className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-900 text-white p-6 md:p-8 border-b border-blue-800">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <CardTitle className="text-xl md:text-2xl font-bold flex items-center gap-2 text-white">
-                                            <Sparkles className="size-5 text-amber-400" />
-                                            Registro Nacional de Pastores
-                                        </CardTitle>
-                                        <CardDescription className="text-xs text-blue-100 mt-1">
-                                            Ingresa la información requerida del pastor y su extensión eclesiástica.
-                                        </CardDescription>
-                                    </div>
-                                    <Badge className="bg-blue-800/80 text-blue-100 border border-blue-700 text-xs px-3 py-1 font-semibold">
-                                        Paso {step} de 3
-                                    </Badge>
-                                </div>
-
-                                {/* Barra de Progreso */}
-                                <div className="grid grid-cols-3 gap-2">
-                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 1 ? 'bg-amber-400' : 'bg-blue-950/60'}`} />
-                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 2 ? 'bg-amber-400' : 'bg-blue-950/60'}`} />
-                                    <div className={`h-2 rounded-full transition-all duration-300 ${step >= 3 ? 'bg-amber-400' : 'bg-blue-950/60'}`} />
-                                </div>
-
-                                {/* Etiquetas del Stepper */}
-                                <div className="grid grid-cols-3 gap-2 text-[11px] font-medium text-blue-200 mt-2 text-center">
-                                    <span className={step === 1 ? 'text-amber-300 font-bold' : ''}>1. Datos del Pastor</span>
-                                    <span className={step === 2 ? 'text-amber-300 font-bold' : ''}>2. Extensión y Ministerio</span>
-                                    <span className={step === 3 ? 'text-amber-300 font-bold' : ''}>3. Documentos y Fotos</span>
-                                </div>
-                            </CardHeader>
-
-                            {/* Formulario */}
-                            <form onSubmit={handleSubmit}>
-                                <CardContent className="p-6 md:p-8 space-y-6">
-                                    {/* PASO 1: DATOS PERSONALES */}
-                                    {step === 1 && (
-                                        <div className="space-y-6 animate-in fade-in duration-200">
-                                            <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
-                                                <User className="size-4 text-blue-700" />
-                                                <span>Información Personal y Contacto</span>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* Nombres */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="nombres" className="text-xs font-semibold text-slate-700">
-                                                        Nombres <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Input
-                                                        id="nombres"
-                                                        type="text"
-                                                        required
-                                                        value={data.nombres}
-                                                        onChange={(e) => setData('nombres', e.target.value)}
-                                                        placeholder="Ej. Juan Carlos"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.nombres && <p className="text-xs text-rose-500">{errors.nombres}</p>}
-                                                </div>
-
-                                                {/* Apellidos */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="apellidos" className="text-xs font-semibold text-slate-700">
-                                                        Apellidos <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Input
-                                                        id="apellidos"
-                                                        type="text"
-                                                        required
-                                                        value={data.apellidos}
-                                                        onChange={(e) => setData('apellidos', e.target.value)}
-                                                        placeholder="Ej. Pérez Rodríguez"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
-                                                </div>
-
-                                                {/* Cédula con Validación en Tiempo Real */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label htmlFor="documento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                            <IdCard className="size-3.5 text-slate-500" />
-                                                            Cédula de Identidad <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        {isCheckingCedula && (
-                                                            <span className="text-[11px] text-blue-700 flex items-center gap-1 font-medium">
-                                                                <Loader2 className="size-3 animate-spin" />
-                                                                Verificando...
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <Input
-                                                        id="documento"
-                                                        type="text"
-                                                        required
-                                                        value={data.documento}
-                                                        onChange={(e) => {
-                                                            setData('documento', e.target.value);
-                                                            checkCedulaDuplicada(e.target.value);
-                                                        }}
-                                                        onBlur={(e) => checkCedulaDuplicada(e.target.value)}
-                                                        placeholder="Ej. V-12345678"
-                                                        className={`bg-slate-50/50 focus:bg-white ${cedulaExiste ? 'border-rose-500 ring-rose-500/20 ring-2' : cedulaEsConyugeVinculado ? 'border-indigo-500 ring-indigo-500/20 ring-2' : 'border-slate-300'}`}
-                                                    />
-                                                    {errors.documento && <p className="text-xs text-rose-500">{errors.documento}</p>}
-
-                                                    {/* Alerta 1: Cédula de un Pastor Completo (Bloqueante) */}
-                                                    {cedulaExiste && (
-                                                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-800 font-medium animate-in fade-in duration-150">
-                                                            <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" />
-                                                            <div>
-                                                                <p className="font-bold">¡Cédula de Identidad Ya Registrada!</p>
-                                                                <p className="text-[11px] text-rose-700 mt-0.5">
-                                                                    La cédula <b>{data.documento}</b> pertenece al pastor registrado: <b>{cedulaExistenteNombre}</b>
-                                                                    {cedulaExistenteConyuge && (
-                                                                        <span> (Casado/a con <b>{cedulaExistenteConyuge}</b>)</span>
-                                                                    )}.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Alerta 2: Cédula de Cónyuge Pre-Vinculado (Informativa y Permitida) */}
-                                                    {cedulaEsConyugeVinculado && (
-                                                        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-start gap-2.5 text-xs text-indigo-950 font-medium animate-in fade-in duration-150 shadow-2xs">
-                                                            <Info className="size-4 shrink-0 text-indigo-600 mt-0.5" />
-                                                            <div>
-                                                                <p className="font-bold text-indigo-900">
-                                                                    Registro de Cónyuge Pastor Detectado
-                                                                </p>
-                                                                <p className="text-[11px] text-indigo-800 mt-0.5 leading-relaxed">
-                                                                    La cédula <b>{data.documento}</b> fue relacionada previamente al registrar al cónyuge <b>{cedulaExistenteConyuge || 'Pastor'}</b>.
-                                                                    Al avanzar, completarás el registro oficial para <b>{cedulaExistenteNombre || 'el titular'}</b>.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Género */}
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs font-semibold text-slate-700">
-                                                        Género <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Select
-                                                        value={data.genero}
-                                                        onValueChange={(val) => setData('genero', val)}
-                                                    >
-                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
-                                                            <SelectValue placeholder="Selecciona género" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-white border-slate-200">
-                                                            {generos.map((g) => (
-                                                                <SelectItem key={g} value={g}>
-                                                                    {g}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {errors.genero && <p className="text-xs text-rose-500">{errors.genero}</p>}
-                                                </div>
-
-                                                {/* Fecha de Nacimiento y Edad Calculada */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label htmlFor="fe_nacimiento" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                            <Calendar className="size-3.5 text-slate-500" />
-                                                            Fecha de Nacimiento <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        {computedEdad !== null && (
-                                                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[11px] font-bold px-2.5 py-0.5">
-                                                                {computedEdad} años
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <Input
-                                                        id="fe_nacimiento"
-                                                        type="date"
-                                                        required
-                                                        value={data.fe_nacimiento}
-                                                        onChange={(e) => setData('fe_nacimiento', e.target.value)}
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.fe_nacimiento && <p className="text-xs text-rose-500">{errors.fe_nacimiento}</p>}
-                                                </div>
-
-                                                {/* Estado Civil (Radix UI Select) */}
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs font-semibold text-slate-700">
-                                                        Estado Civil <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Select
-                                                        value={data.estado_civil}
-                                                        onValueChange={(val) => {
-                                                            setData('estado_civil', val);
-                                                            if (val !== 'Casado(a)') {
-                                                                setData('nombre_conyuge', '');
-                                                                setData('conyuge_pastorea', false);
-                                                                setData('cedula_conyuge', '');
-                                                            }
-                                                        }}
-                                                    >
-                                                        <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
-                                                            <SelectValue placeholder="Selecciona estado civil" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-white border-slate-200">
-                                                            {estadosCiviles.map((ec) => (
-                                                                <SelectItem key={ec} value={ec}>
-                                                                    {ec}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {errors.estado_civil && <p className="text-xs text-rose-500">{errors.estado_civil}</p>}
-                                                </div>
-
-                                                {/* Teléfono Móvil */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="telefono_tlf" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                        <Phone className="size-3.5 text-slate-500" />
-                                                        Teléfono Móvil <span className="text-rose-500">*</span>
-                                                    </Label>
-                                                    <Input
-                                                        id="telefono_tlf"
-                                                        type="tel"
-                                                        required
-                                                        value={data.telefono_tlf}
-                                                        onChange={(e) => setData('telefono_tlf', e.target.value)}
-                                                        placeholder="Ej. 0414-1234567"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.telefono_tlf && <p className="text-xs text-rose-500">{errors.telefono_tlf}</p>}
-                                                </div>
-
-                                                {/* Correo Electrónico */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="email" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                        <Mail className="size-3.5 text-slate-500" />
-                                                        Correo Electrónico
-                                                    </Label>
-                                                    <Input
-                                                        id="email"
-                                                        type="email"
-                                                        value={data.email}
-                                                        onChange={(e) => setData('email', e.target.value)}
-                                                        placeholder="Ej. pastor@ejemplo.com"
-                                                        className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                    />
-                                                    {errors.email && <p className="text-xs text-rose-500">{errors.email}</p>}
-                                                </div>
-
-                                                {/* SECCIÓN ESPECIAL PARA CÓNYUGE: Si el estado civil es Casado(a) */}
-                                                {data.estado_civil === 'Casado(a)' && (
-                                                    cedulaEsConyugeVinculado ? (
-                                                        /* Si es un cónyuge ya vinculado por la otra cédula, mostramos una tarjeta elegante con su cónyuge */
-                                                        <div className="md:col-span-2 mt-2 p-4 bg-gradient-to-r from-indigo-50/80 via-blue-50/60 to-indigo-50/80 border border-indigo-200/80 rounded-2xl flex items-center justify-between shadow-2xs animate-in fade-in duration-200">
-                                                            <div className="space-y-1">
-                                                                <span className="text-[10px] uppercase font-bold text-indigo-700 tracking-wider flex items-center gap-1.5">
-                                                                    <Heart className="size-3.5 text-rose-500 fill-rose-500" />
-                                                                    <span>Cónyuge Pastor Vinculado</span>
-                                                                </span>
-                                                                <p className="text-base font-black text-indigo-950">
-                                                                    {cedulaExistenteConyuge || data.nombre_conyuge || 'Pastor Registrado'}
-                                                                </p>
-                                                                <p className="text-[11px] text-slate-600">
-                                                                    Tu registro se encuentra vinculado al de tu cónyuge. Ambos compartirán la misma extensión eclesiástica.
-                                                                </p>
-                                                            </div>
-                                                            <Badge className="bg-indigo-700 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shrink-0">
-                                                                Vinculado ✓
-                                                            </Badge>
-                                                        </div>
-                                                    ) : (
-                                                        /* Si es un registro nuevo regular de casado, solicitamos el nombre del cónyuge */
-                                                        <div className="md:col-span-2 mt-2 p-4 bg-indigo-50/60 border border-indigo-200/80 rounded-2xl space-y-4 animate-in fade-in duration-200">
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="nombre_conyuge" className="text-xs font-semibold text-indigo-900 flex items-center gap-1">
-                                                                    <Heart className="size-3.5 text-rose-500 fill-rose-500" />
-                                                                    Nombre Completo de su Cónyuge <span className="text-rose-500">*</span>
-                                                                </Label>
-                                                                <Input
-                                                                    id="nombre_conyuge"
-                                                                    type="text"
-                                                                    required={data.estado_civil === 'Casado(a)'}
-                                                                    value={data.nombre_conyuge}
-                                                                    onChange={(e) => setData('nombre_conyuge', e.target.value)}
-                                                                    placeholder="Ej. María Elena de Pérez"
-                                                                    className="bg-white border-indigo-200 focus:border-indigo-500"
-                                                                />
-                                                                {errors.nombre_conyuge && <p className="text-xs text-rose-500">{errors.nombre_conyuge}</p>}
-                                                            </div>
-
-                                                            <div className="flex items-center justify-between pt-2 border-t border-indigo-200/60">
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                                                                        <Users className="size-4 text-indigo-700" />
-                                                                        <span>¿Su cónyuge también está pastoreando?</span>
-                                                                    </Label>
-                                                                    <p className="text-[11px] text-slate-500">
-                                                                        Active esta opción para registrar a su cónyuge como pastor y vincular ambas cédulas eclesiásticas.
-                                                                    </p>
-                                                                </div>
-                                                                <Switch
-                                                                    checked={data.conyuge_pastorea}
-                                                                    onCheckedChange={(checked) => {
-                                                                        setData('conyuge_pastorea', checked);
-                                                                        if (!checked) {
-                                                                            setData('cedula_conyuge', '');
-                                                                            setCedulaConyugeExiste(false);
-                                                                            setCedulaConyugeEsVinculado(false);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </div>
-
-                                                            {data.conyuge_pastorea && (
-                                                                <div className="space-y-2 pt-2 border-t border-indigo-200/60 animate-in fade-in duration-200">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <Label htmlFor="cedula_conyuge" className="text-xs font-semibold text-indigo-900 flex items-center gap-1">
-                                                                            <IdCard className="size-3.5 text-indigo-600" />
-                                                                            Cédula de Identidad de su Cónyuge Pastor <span className="text-rose-500">*</span>
-                                                                        </Label>
-                                                                        {isCheckingCedulaConyuge && (
-                                                                            <span className="text-[11px] text-indigo-700 flex items-center gap-1 font-medium">
-                                                                                <Loader2 className="size-3 animate-spin" />
-                                                                                Verificando Cédula...
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <Input
-                                                                        id="cedula_conyuge"
-                                                                        type="text"
-                                                                        required={data.conyuge_pastorea}
-                                                                        value={data.cedula_conyuge}
-                                                                        onChange={(e) => {
-                                                                            setData('cedula_conyuge', e.target.value);
-                                                                            checkCedulaConyugeDuplicada(e.target.value);
-                                                                        }}
-                                                                        onBlur={(e) => checkCedulaConyugeDuplicada(e.target.value)}
-                                                                        placeholder="Ej. V-87654321"
-                                                                        className={`bg-white focus:border-indigo-500 ${cedulaConyugeExiste ? 'border-rose-500 ring-rose-500/20 ring-2' : 'border-indigo-200'}`}
-                                                                    />
-                                                                    {errors.cedula_conyuge && <p className="text-xs text-rose-500">{errors.cedula_conyuge}</p>}
-
-                                                                    {cedulaConyugeExiste && (
-                                                                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-800 font-medium animate-in fade-in duration-150">
-                                                                            <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" />
-                                                                            <div>
-                                                                                <p className="font-bold">¡Cédula del Cónyuge Ya Registrada!</p>
-                                                                                <p className="text-[11px] text-rose-700 mt-0.5">
-                                                                                    La cédula <b>{data.cedula_conyuge}</b> ya pertenece a un pastor registrado: <b>{cedulaConyugeExistenteNombre}</b>.
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* PASO 2: EXTENSIÓN Y MINISTERIO */}
-                                    {step === 2 && (
-                                        <div className="space-y-6 animate-in fade-in duration-200">
-                                            {/* BLOQUE 1: DATOS DE LA EXTENSIÓN (IGLESIA) */}
-                                            <div className="space-y-4">
-                                                <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                                                    <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
-                                                        <Church className="size-4 text-blue-700" />
-                                                        <span>1. Datos de la Extensión (Iglesia)</span>
-                                                    </div>
-                                                    {extensionCargadaPorConyuge && (
-                                                        <Badge className="bg-indigo-100 text-indigo-900 border-indigo-300 text-[10px] px-2.5 py-0.5 font-semibold">
-                                                            Cargado por Cónyuge ✓
-                                                        </Badge>
-                                                    )}
-                                                </div>
-
-                                                {extensionCargadaPorConyuge && (
-                                                    <div className="p-3 bg-indigo-50/80 border border-indigo-200/80 rounded-xl flex items-center gap-2 text-xs text-indigo-900">
-                                                        <Info className="size-4 shrink-0 text-indigo-600" />
-                                                        <span>
-                                                            Se han pre-cargado automáticamente la extensión y ubicación registradas previamente por tu cónyuge (<b>{cedulaExistenteConyuge}</b>). Puedes modificarlas si lo requieres.
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    {/* Nombre de la Extensión */}
-                                                    <div className="space-y-2 md:col-span-3">
-                                                        <Label htmlFor="nombre_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                            <Church className="size-3.5 text-slate-500" />
-                                                            Nombre de la Extensión (Iglesia) <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <Input
-                                                            id="nombre_extension"
-                                                            type="text"
-                                                            required
-                                                            value={data.nombre_extension}
-                                                            onChange={(e) => setData('nombre_extension', e.target.value)}
-                                                            placeholder="Ej. MMM Central Barquisimeto"
-                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                        />
-                                                        {errors.nombre_extension && <p className="text-xs text-rose-500">{errors.nombre_extension}</p>}
-                                                    </div>
-
-                                                    {/* Estado */}
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-semibold text-slate-700">
-                                                            Estado <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <Select
-                                                            value={data.estado_id}
-                                                            onValueChange={(val) => setData('estado_id', val)}
-                                                        >
-                                                            <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
-                                                                <SelectValue placeholder="Selecciona estado" />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="bg-white border-slate-200">
-                                                                {estados.map((est) => (
-                                                                    <SelectItem key={est.id} value={String(est.id)}>
-                                                                        {est.nombre}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        {errors.estado_id && <p className="text-xs text-rose-500">{errors.estado_id}</p>}
-                                                    </div>
-
-                                                    {/* Zona */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="zona" className="text-xs font-semibold text-slate-700">
-                                                            Zona
-                                                        </Label>
-                                                        <Input
-                                                            id="zona"
-                                                            type="text"
-                                                            value={data.zona}
-                                                            onChange={(e) => setData('zona', e.target.value)}
-                                                            placeholder="Ej. Zona 1"
-                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                        />
-                                                        {errors.zona && <p className="text-xs text-rose-500">{errors.zona}</p>}
-                                                    </div>
-
-                                                    {/* Distrito */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="distrito" className="text-xs font-semibold text-slate-700">
-                                                            Distrito
-                                                        </Label>
-                                                        <Input
-                                                            id="distrito"
-                                                            type="text"
-                                                            value={data.distrito}
-                                                            onChange={(e) => setData('distrito', e.target.value)}
-                                                            placeholder="Ej. Distrito Central"
-                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                        />
-                                                        {errors.distrito && <p className="text-xs text-rose-500">{errors.distrito}</p>}
-                                                    </div>
-
-                                                    {/* Dirección Completa */}
-                                                    <div className="space-y-2 md:col-span-3">
-                                                        <Label htmlFor="direccion_extension" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                            <MapPin className="size-3.5 text-slate-500" />
-                                                            Dirección de la Extensión (Iglesia) <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <Textarea
-                                                            id="direccion_extension"
-                                                            required
-                                                            rows={2}
-                                                            value={data.direccion_extension}
-                                                            onChange={(e) => setData('direccion_extension', e.target.value)}
-                                                            placeholder="Ej. Av. Principal con Calle 12, Sector Centro"
-                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white resize-none"
-                                                        />
-                                                        {errors.direccion_extension && <p className="text-xs text-rose-500">{errors.direccion_extension}</p>}
-                                                    </div>
-
-                                                    {/* SUB-SECCIÓN: ESTADÍSTICAS DE LA IGLESIA */}
-                                                    <div className="md:col-span-3 pt-3 border-t border-slate-200/80 space-y-3">
-                                                        <div className="flex items-center gap-2 text-slate-800 font-bold text-xs uppercase tracking-wider">
-                                                            <TrendingUp className="size-4 text-blue-600" />
-                                                            <span>Estadísticas de la Iglesia</span>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 bg-slate-50/70 p-4 rounded-xl border border-slate-200/70">
-                                                            {/* Miembros Activos */}
-                                                            <div className="space-y-1.5">
-                                                                <Label htmlFor="miembros_activos" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                                    <Users className="size-3.5 text-blue-600" />
-                                                                    Miembros Activos
-                                                                </Label>
-                                                                <Input
-                                                                    id="miembros_activos"
-                                                                    type="number"
-                                                                    min="0"
-                                                                    value={data.miembros_activos}
-                                                                    onChange={(e) => setData('miembros_activos', e.target.value)}
-                                                                    placeholder="Ej. 50"
-                                                                    className="bg-white border-slate-300 focus:border-blue-500"
-                                                                />
-                                                                {errors.miembros_activos && <p className="text-xs text-rose-500">{errors.miembros_activos}</p>}
-                                                            </div>
-
-                                                            {/* Miembros Probantes */}
-                                                            <div className="space-y-1.5">
-                                                                <Label htmlFor="miembro_probante" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                                    <UserCheck className="size-3.5 text-indigo-600" />
-                                                                    Miembro Probante
-                                                                </Label>
-                                                                <Input
-                                                                    id="miembro_probante"
-                                                                    type="number"
-                                                                    min="0"
-                                                                    value={data.miembro_probante}
-                                                                    onChange={(e) => setData('miembro_probante', e.target.value)}
-                                                                    placeholder="Ej. 15"
-                                                                    className="bg-white border-slate-300 focus:border-blue-500"
-                                                                />
-                                                                {errors.miembro_probante && <p className="text-xs text-rose-500">{errors.miembro_probante}</p>}
-                                                            </div>
-
-                                                            {/* Campos Blancos */}
-                                                            <div className="space-y-1.5">
-                                                                <Label htmlFor="cantidad_campos_blancos" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                                    <MapPin className="size-3.5 text-emerald-600" />
-                                                                    Campos Blancos
-                                                                </Label>
-                                                                <Input
-                                                                    id="cantidad_campos_blancos"
-                                                                    type="number"
-                                                                    min="0"
-                                                                    value={data.cantidad_campos_blancos}
-                                                                    onChange={(e) => setData('cantidad_campos_blancos', e.target.value)}
-                                                                    placeholder="Ej. 3"
-                                                                    className="bg-white border-slate-300 focus:border-blue-500"
-                                                                />
-                                                                {errors.cantidad_campos_blancos && <p className="text-xs text-rose-500">{errors.cantidad_campos_blancos}</p>}
-                                                            </div>
-
-                                                            {/* Tiempo de Trabajo */}
-                                                            <div className="space-y-1.5">
-                                                                <Label htmlFor="tiempo_trabajo" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                                    <Clock className="size-3.5 text-amber-600" />
-                                                                    Tiempo de Trabajo
-                                                                </Label>
-                                                                <Input
-                                                                    id="tiempo_trabajo"
-                                                                    type="text"
-                                                                    value={data.tiempo_trabajo}
-                                                                    onChange={(e) => setData('tiempo_trabajo', e.target.value)}
-                                                                    placeholder="Ej. 5 años"
-                                                                    className="bg-white border-slate-300 focus:border-blue-500"
-                                                                />
-                                                                {errors.tiempo_trabajo && <p className="text-xs text-rose-500">{errors.tiempo_trabajo}</p>}
-                                                            </div>
-
-                                                            {/* Iglesias Fundadas */}
-                                                            <div className="space-y-1.5">
-                                                                <Label htmlFor="iglesias_fundadas" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                                    <Church className="size-3.5 text-cyan-600" />
-                                                                    Iglesias Fundadas
-                                                                </Label>
-                                                                <Input
-                                                                    id="iglesias_fundadas"
-                                                                    type="number"
-                                                                    min="0"
-                                                                    value={data.iglesias_fundadas}
-                                                                    onChange={(e) => setData('iglesias_fundadas', e.target.value)}
-                                                                    placeholder="Ej. 2"
-                                                                    className="bg-white border-slate-300 focus:border-blue-500"
-                                                                />
-                                                                {errors.iglesias_fundadas && <p className="text-xs text-rose-500">{errors.iglesias_fundadas}</p>}
-                                                            </div>
-
-                                                            {/* Pastores al Ministerio */}
-                                                            <div className="space-y-1.5">
-                                                                <Label htmlFor="pastores_ministerio" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                                    <Award className="size-3.5 text-purple-600" />
-                                                                    Pastores al Ministerio
-                                                                </Label>
-                                                                <Input
-                                                                    id="pastores_ministerio"
-                                                                    type="number"
-                                                                    min="0"
-                                                                    value={data.pastores_ministerio}
-                                                                    onChange={(e) => setData('pastores_ministerio', e.target.value)}
-                                                                    placeholder="Ej. 1"
-                                                                    className="bg-white border-slate-300 focus:border-blue-500"
-                                                                />
-                                                                {errors.pastores_ministerio && <p className="text-xs text-rose-500">{errors.pastores_ministerio}</p>}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* BLOQUE 2: INFORMACIÓN MINISTERIAL */}
-                                            <div className="space-y-4 pt-2">
-                                                        <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
-                                                            <Award className="size-4 text-blue-700" />
-                                                            <span>2. Datos Ministeriales del Pastor</span>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            {/* Grado Ministerial (Radix UI Select) */}
-                                                            <div className="space-y-2">
-                                                                <Label className="text-xs font-semibold text-slate-700">
-                                                                    Grado Ministerial <span className="text-rose-500">*</span>
-                                                                </Label>
-                                                                <Select
-                                                                    value={data.nivel_ministerial}
-                                                                    onValueChange={(val) => setData('nivel_ministerial', val)}
-                                                                >
-                                                                    <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
-                                                                        <SelectValue placeholder="Selecciona grado ministerial" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent className="bg-white border-slate-200">
-                                                                        {gradosMinisteriales.map((gm) => (
-                                                                            <SelectItem key={gm} value={gm}>
-                                                                                {gm}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                {errors.nivel_ministerial && <p className="text-xs text-rose-500">{errors.nivel_ministerial}</p>}
-                                                            </div>
-
-                                                            {/* Último año de promoción */}
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="ano_promocion" className="text-xs font-semibold text-slate-700">
-                                                                    Último Año de Promoción
-                                                                </Label>
-                                                                <Input
-                                                                    id="ano_promocion"
-                                                                    type="text"
-                                                                    value={data.ano_promocion}
-                                                                    onChange={(e) => setData('ano_promocion', e.target.value)}
-                                                                    placeholder="Ej. 2020"
-                                                                    className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                                />
-                                                                {errors.ano_promocion && <p className="text-xs text-rose-500">{errors.ano_promocion}</p>}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                        </div>
-                                    )}
-
-                                    {/* PASO 3: ARCHIVOS Y FOTOGRAFÍAS */}
-                                    {step === 3 && (
-                                        <div className="space-y-6 animate-in fade-in duration-200">
-                                            <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
-                                                    <Camera className="size-4 text-blue-700" />
-                                                    <span>Documentos y Fotografías Requeridas</span>
-                                                </div>
-                                                <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-300 text-[11px] font-bold">
-                                                    Validación Obligatoria
-                                                </Badge>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {/* Dropzone / Cámara 1: Foto de la Cédula (Con OCR en Vivo) */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                            <Scan className="size-3.5 text-blue-700" />
-                                                            Foto de la Cédula de Identidad <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <span className="text-[10px] text-slate-500 font-medium">Anverso Legible • OCR Activo</span>
-                                                    </div>
-                                                    <div className="relative border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-2xl p-4 bg-slate-50/60 flex flex-col items-center justify-center text-center transition group">
-                                                        {fotoCedulaPreview ? (
-                                                            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-white border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-                                                                <img
-                                                                    src={fotoCedulaPreview}
-                                                                    alt="Cédula Preview"
-                                                                    className="w-full h-full object-contain"
-                                                                />
-                                                                <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => autoCorregirFoto('foto_cedula')}
-                                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md transition"
-                                                                        title="Voltea la foto a horizontal, aplica brillo, contraste y zoom óptimo para OCR"
-                                                                    >
-                                                                        <Sparkles className="size-3 text-amber-300 animate-pulse" />
-                                                                        <span>Auto-corregir</span>
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            setEditorImageSrc(fotoCedulaPreview);
-                                                                            setEditorTarget('foto_cedula');
-                                                                            setIsEditorOpen(true);
-                                                                        }}
-                                                                        className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-xs transition shadow"
-                                                                    >
-                                                                        <Edit2 className="size-3 text-blue-400" />
-                                                                        <span>Editar</span>
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            setFotoCedulaPreview(null);
-                                                                            setData('foto_cedula', null);
-                                                                            setOcrVerified(false);
-                                                                            setOcrStatusMessage(null);
-                                                                            setExtractedCedulaNumber(null);
-                                                                        }}
-                                                                        className="bg-rose-600 text-white rounded-lg p-1 text-xs hover:bg-rose-700 transition shadow"
-                                                                    >
-                                                                        ✕
-                                                                    </button>
-                                                                </div>
-
-                                                                {/* Insignia u Overlay OCR */}
-                                                                {isOcrAnalyzing ? (
-                                                                    <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-2">
-                                                                        <Loader2 className="size-7 animate-spin text-amber-400" />
-                                                                        <p className="text-xs font-semibold">{ocrStatusMessage}</p>
-                                                                    </div>
-                                                                ) : ocrMismatch ? (
-                                                                    <div className="absolute bottom-2 left-2 right-2 bg-rose-950/95 backdrop-blur-xs text-white p-2.5 rounded-xl text-xs flex flex-col gap-1.5 border border-rose-500 shadow-lg animate-in slide-in-from-bottom-2">
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className="flex items-center gap-1.5 font-bold text-rose-300">
-                                                                                <AlertCircle className="size-4 shrink-0 text-rose-400" />
-                                                                                <span>
-                                                                                    {extractedCedulaNumber && extractedCedulaNumber.replace(/\D/g, '') === data.documento.replace(/\D/g, '')
-                                                                                        ? '¡Nombres o Datos No Coinciden!'
-                                                                                        : '¡Número de Cédula No Coincide!'}
-                                                                                </span>
-                                                                            </span>
-                                                                            {extractedCedulaNumber && (
-                                                                                <Badge className="bg-rose-600 text-white text-[10px] font-mono font-bold">
-                                                                                    Foto: {extractedCedulaNumber}
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                        <p className="text-[11px] text-rose-100 leading-tight">
-                                                                            {ocrStatusMessage || `La Cédula en la foto (${extractedCedulaNumber}) no coincide con los datos del registro (${data.documento}).`}
-                                                                        </p>
-
-                                                                        {cedulaEsConyugeVinculado && cedulaExistenteNombre && (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => {
-                                                                                    const partes = (cedulaExistenteNombre || '').trim().split(/\s+/);
-                                                                                    const n = partes.length > 1 ? partes.slice(0, Math.ceil(partes.length / 2)).join(' ') : (partes[0] || '');
-                                                                                    const a = partes.length > 1 ? partes.slice(Math.ceil(partes.length / 2)).join(' ') : '';
-
-                                                                                    setData(prev => ({
-                                                                                        ...prev,
-                                                                                        nombres: n || prev.nombres,
-                                                                                        apellidos: a || prev.apellidos,
-                                                                                    }));
-
-                                                                                    setOcrMismatch(false);
-                                                                                    setOcrVerified(true);
-                                                                                    setOcrStatusMessage(`✨ ¡Nombres y Apellidos auto-corregidos a "${cedulaExistenteNombre}"!`);
-                                                                                }}
-                                                                                className="mt-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[11px] px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 shadow transition"
-                                                                            >
-                                                                                <Sparkles className="size-3.5 text-slate-950" />
-                                                                                <span>Corregir Nombres a "{cedulaExistenteNombre}"</span>
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                ) : ocrVerified ? (
-                                                                    <div className="absolute bottom-2 left-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white p-2 rounded-xl text-[11px] flex items-center justify-between shadow">
-                                                                        <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-                                                                            <CheckCircle2 className="size-3.5" />
-                                                                            <span>{ocrStatusMessage || 'Documento Validado con OCR'}</span>
-                                                                        </span>
-                                                                        {extractedCedulaNumber && (
-                                                                            <Badge className="bg-emerald-500 text-white text-[10px] font-mono font-bold">
-                                                                                {extractedCedulaNumber}
-                                                                            </Badge>
-                                                                        )}
-                                                                    </div>
-                                                                ) : ocrStatusMessage ? (
-                                                                    <div className="absolute bottom-2 left-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white p-2 rounded-xl text-[11px] flex items-center justify-between shadow">
-                                                                        <span className="flex items-center gap-1.5 font-medium text-slate-200">
-                                                                            <Info className="size-3.5 text-blue-400" />
-                                                                            <span>{ocrStatusMessage}</span>
-                                                                        </span>
-                                                                    </div>
-                                                                ) : null}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-full py-4 flex flex-col items-center justify-center gap-3">
-                                                                <div className="size-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-blue-700 shadow-xs group-hover:scale-110 transition">
-                                                                    <IdCard className="size-6" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <p className="text-xs font-semibold text-slate-800">
-                                                                        Escanear o subir foto de Cédula
-                                                                    </p>
-                                                                    <p className="text-[10px] text-slate-500">
-                                                                        Validación obligatoria de identidad • PNG, JPG max 5MB
-                                                                    </p>
-                                                                </div>
-
-                                                                <div className="flex items-center gap-2 pt-1 w-full justify-center">
-                                                                    <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-2xs transition inline-flex items-center gap-1.5">
-                                                                        <span>Subir Documento</span>
-                                                                        <input
-                                                                            type="file"
-                                                                            accept="image/*"
-                                                                            onChange={(e) => handleFileChange(e, 'foto_cedula')}
-                                                                            className="hidden"
-                                                                        />
-                                                                    </label>
-                                                                    <Button
-                                                                        type="button"
-                                                                        onClick={() => startCamera('foto_cedula')}
-                                                                        className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 h-auto rounded-lg shadow-2xs flex items-center gap-1.5"
-                                                                    >
-                                                                        <Camera className="size-3.5" />
-                                                                        <span>Escanear Cámara</span>
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    {errors.foto_cedula && <p className="text-xs text-rose-500">{errors.foto_cedula}</p>}
-                                                </div>
-
-                                                {/* Dropzone / Cámara 2: Foto Tipo Carnet */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label className="text-xs font-semibold text-slate-700">
-                                                            Foto Tipo Carnet <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <span className="text-[10px] text-blue-700 font-semibold">Fondo Blanco • Medio Cuerpo</span>
-                                                    </div>
-                                                    <div className="relative border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-2xl p-4 bg-slate-50/60 flex flex-col items-center justify-center text-center transition group">
-                                                        {fotoPerfilPreview ? (
-                                                            <div className="relative w-full aspect-square max-w-[180px] mx-auto rounded-xl overflow-hidden bg-white border border-slate-200 shadow-xs">
-                                                                <img
-                                                                    src={fotoPerfilPreview}
-                                                                    alt="Perfil Preview"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                                <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            setEditorImageSrc(fotoPerfilPreview);
-                                                                            setEditorTarget('foto');
-                                                                            setIsEditorOpen(true);
-                                                                        }}
-                                                                        className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-xs transition shadow"
-                                                                    >
-                                                                        <Edit2 className="size-3 text-blue-400" />
-                                                                        <span>Editar</span>
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            setFotoPerfilPreview(null);
-                                                                            setData('foto', null);
-                                                                        }}
-                                                                        className="bg-rose-600 text-white rounded-lg p-1 text-xs hover:bg-rose-700 transition shadow"
-                                                                    >
-                                                                        ✕
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-full py-4 flex flex-col items-center justify-center gap-3">
-                                                                <div className="size-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-blue-700 shadow-xs group-hover:scale-110 transition">
-                                                                    <User className="size-6" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <p className="text-xs font-semibold text-slate-800">
-                                                                        Subir o capturar foto formal
-                                                                    </p>
-                                                                    <p className="text-[10px] text-slate-600 font-medium">
-                                                                        Requisito: Fondo blanco, vestimenta formal.
-                                                                    </p>
-                                                                </div>
-
-                                                                <div className="flex items-center gap-2 pt-1 w-full justify-center">
-                                                                    <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-2xs transition inline-flex items-center gap-1.5">
-                                                                        <span>Subir Imagen</span>
-                                                                        <input
-                                                                            type="file"
-                                                                            accept="image/*"
-                                                                            onChange={(e) => handleFileChange(e, 'foto')}
-                                                                            className="hidden"
-                                                                        />
-                                                                    </label>
-                                                                    <Button
-                                                                        type="button"
-                                                                        onClick={() => startCamera('foto')}
-                                                                        className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 h-auto rounded-lg shadow-2xs flex items-center gap-1.5"
-                                                                    >
-                                                                        <Camera className="size-3.5" />
-                                                                        <span>Tomar Foto</span>
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    {errors.foto && <p className="text-xs text-rose-500">{errors.foto}</p>}
-                                                </div>
-                                            </div>
-
-                                            {/* Declaración de Veracidad */}
-                                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-900">
-                                                <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
-                                                <p>
-                                                    Declaración de Veracidad: Al enviar este formulario declaro que los datos ingresados y las fotografías adjuntas de la Cédula de Identidad y carnet son fidedignos y corresponden al titular para la verificación oficial.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </CardContent>
-
-                                <CardFooter className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between">
-                                    {step > 1 ? (
-                                        <Button
-                                            type="button"
-                                            onClick={(e) => prevStep(e)}
-                                            variant="outline"
-                                            className="border-slate-300 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-2"
-                                        >
-                                            <ArrowLeft className="size-4" />
-                                            <span>Anterior</span>
-                                        </Button>
-                                    ) : (
-                                        <div />
-                                    )}
-
-                                    {step < 3 ? (
-                                        <Button
-                                            type="button"
-                                            onClick={(e) => nextStep(e)}
-                                            disabled={step === 1 && (cedulaExiste || cedulaConyugeExiste)}
-                                            className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <span>Siguiente Paso</span>
-                                            <ArrowRight className="size-4" />
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-2.5 rounded-xl shadow-md flex items-center gap-2"
-                                        >
-                                            {processing ? (
-                                                <span>Enviando...</span>
-                                            ) : (
-                                                <>
-                                                    <CheckCircle2 className="size-4" />
-                                                    <span>Enviar Registro</span>
-                                                </>
-                                            )}
-                                        </Button>
-                                    )}
-                                </CardFooter>
-                            </form>
-                        </Card>
-                    )}
-                </main>
-
-                {/* MODAL DE CÁMARA WEB / MULTI-CÁMARA CON GUÍA DE ENCUADRE DE CÉDULA */}
-                {cameraTarget && (
-                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                        <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-0">
-                            {/* Header del Modal */}
-                            <div className="bg-blue-900 text-white px-6 py-4 flex items-center justify-between">
-                                <div className="flex items-center gap-2 font-bold text-sm">
-                                    <Camera className="size-4 text-amber-400" />
-                                    <span>
-                                        {cameraTarget === 'foto_cedula'
-                                            ? 'Escanear Cédula de Identidad'
-                                            : 'Capturar Foto Tipo Carnet'}
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={closeCameraModal}
-                                    className="text-blue-200 hover:text-white transition"
-                                >
-                                    <X className="size-5" />
-                                </button>
-                            </div>
-
-                            {/* Viewport de la Cámara con Guía de Documento */}
-                            <div className="relative bg-slate-950 aspect-video flex items-center justify-center overflow-hidden">
-                                {isCameraLoading && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white space-y-2 bg-slate-950 z-20">
-                                        <RefreshCw className="size-8 animate-spin text-amber-400" />
-                                        <p className="text-xs">Iniciando cámara...</p>
-                                    </div>
-                                )}
-
-                                {cameraError ? (
-                                    <div className="p-6 text-center text-rose-400 space-y-2 text-xs z-20">
-                                        <AlertCircle className="size-8 mx-auto text-rose-500" />
-                                        <p>{cameraError}</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <video
-                                            ref={videoRef}
-                                            autoPlay
-                                            playsInline
-                                            muted
-                                            className="w-full h-full object-contain"
-                                        />
-
-                                        {/* GUÍA DE ENCUADRE TIPO CÉDULA DE IDENTIDAD */}
-                                        {cameraTarget === 'foto_cedula' && (
-                                            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6 z-10">
-                                                <div className="w-[85%] h-[75%] border-2 border-dashed border-amber-400 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] flex flex-col items-center justify-between p-3 animate-pulse">
-                                                    <span className="text-[10px] font-bold text-amber-300 bg-slate-900/80 px-3 py-1 rounded-full uppercase tracking-wider">
-                                                        Alinea la Cédula dentro del recuadro
-                                                    </span>
-                                                    <span className="text-[10px] text-amber-200 bg-slate-900/80 px-2.5 py-0.5 rounded-full">
-                                                        Procura buena iluminación
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Acciones y Voltear Cámara */}
-                            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                            {activeTab < 5 ? (
                                 <Button
                                     type="button"
-                                    onClick={flipCamera}
-                                    variant="outline"
-                                    className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 text-xs"
-                                    title="Voltear Cámara (Frontal / Trasera)"
+                                    onClick={() => setActiveTab(activeTab + 1)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white flex-1 md:flex-initial shadow-md"
                                 >
-                                    <RefreshCw className="size-3.5" />
-                                    <span>
-                                        {availableCameras.length > 1
-                                            ? `Cambiar Cámara (${currentCameraIndex + 1}/${availableCameras.length})`
-                                            : 'Voltear Cámara'}
-                                    </span>
+                                    Siguiente
+                                    <ArrowRight className="w-4 h-4 ml-1.5" />
                                 </Button>
-
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        onClick={closeCameraModal}
-                                        variant="ghost"
-                                        className="text-slate-600 hover:bg-slate-200 text-xs"
-                                    >
-                                        Cancelar
-                                    </Button>
-
-                                    <Button
-                                        type="button"
-                                        onClick={capturePhoto}
-                                        disabled={isCameraLoading || !!cameraError}
-                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 rounded-xl shadow flex items-center gap-1.5"
-                                    >
-                                        <Camera className="size-4" />
-                                        <span>Capturar Foto</span>
-                                    </Button>
-                                </div>
-                            </div>
+                            ) : (
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex-1 md:flex-initial shadow-lg"
+                                >
+                                    <Save className="w-4 h-4 mr-1.5" />
+                                    {processing ? 'Enviando Datos...' : 'Finalizar y Enviar Registro'}
+                                </Button>
+                            )}
                         </div>
                     </div>
-                )}
 
-                {/* Footer Claro */}
-                <footer className="w-full border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
-                    <div className="max-w-6xl mx-auto px-4">
-                        &copy; {new Date().getFullYear()} Movimiento Misionero Mundial Venezuela. Todos los derechos reservados.
+                    {/* Stepper Tabs - Responsivo */}
+                    <div className="space-y-3">
+                        {/* Barra Móvil */}
+                        <div className="block sm:hidden bg-slate-900 border border-slate-800 p-3 rounded-xl">
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                                <span className="font-semibold text-amber-400">
+                                    Paso {activeTab} de 5: {steps[activeTab - 1].title}
+                                </span>
+                                <span className="font-mono text-slate-400">{Math.round((activeTab / 5) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full transition-all duration-300 rounded-full"
+                                    style={{ width: `${(activeTab / 5) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Grid de Pasos */}
+                        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-5 scrollbar-thin">
+                            {steps.map((step) => {
+                                const Icon = step.icon;
+                                const isActive = activeTab === step.id;
+                                const isCompleted = activeTab > step.id;
+
+                                return (
+                                    <button
+                                        key={step.id}
+                                        type="button"
+                                        onClick={() => setActiveTab(step.id)}
+                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${
+                                            isActive
+                                                ? 'bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+                                                : isCompleted
+                                                ? 'bg-slate-900 border-emerald-500/40 hover:border-emerald-500/60'
+                                                : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/80'
+                                        }`}
+                                    >
+                                        <div
+                                            className={`flex items-center justify-center h-9 w-9 rounded-lg shrink-0 font-semibold text-xs sm:text-sm ${
+                                                isActive
+                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    : isCompleted
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : 'bg-slate-800 text-slate-400'
+                                            }`}
+                                        >
+                                            {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                                                Paso {step.id}
+                                            </span>
+                                            <h3 className="font-semibold text-xs sm:text-sm truncate text-white">
+                                                {step.title}
+                                            </h3>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                </footer>
-            </div>
 
-            {/* Modal Editor de Fotografías (Cédula y Carnet) */}
-            <PhotoEditorModal
-                isOpen={isEditorOpen}
-                imageSrc={editorImageSrc}
-                aspectRatio={editorTarget === 'foto_cedula' ? 'cedula' : 'carnet'}
-                title={editorTarget === 'foto_cedula' ? 'Editar y Ajustar Foto de Cédula' : 'Editar Foto Tipo Carnet'}
-                onClose={() => setIsEditorOpen(false)}
-                onSave={handleEditorSave}
-            />
-        </>
+                    {/* PASO 1: DATOS PERSONALES, CONTACTO Y DIRECCIÓN */}
+                    {activeTab === 1 && (
+                        <Card className="bg-slate-900 border-slate-800 shadow-xl text-slate-100">
+                            <CardHeader className="border-b border-slate-800 bg-slate-900/50">
+                                <div className="flex items-center gap-2 text-amber-400 font-semibold text-base">
+                                    <User className="h-5 w-5" />
+                                    <span>Paso 1: Información Personal, Contacto y Dirección</span>
+                                </div>
+                                <CardDescription className="text-slate-400 text-xs">
+                                    Ingrese sus datos de identidad nacional, estado civil y residencia actual.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                {/* Fila 1: Nombres, Apellidos, Cédula, Género */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <Label htmlFor="nombres" className="text-xs font-semibold uppercase text-slate-300">
+                                            Nombres <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="nombres"
+                                            required
+                                            value={data.nombres}
+                                            onChange={(e) => setData('nombres', e.target.value)}
+                                            placeholder="Ej. Juan Carlos"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                        {errors.nombres && <p className="text-xs text-rose-400 mt-1">{errors.nombres}</p>}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="apellidos" className="text-xs font-semibold uppercase text-slate-300">
+                                            Apellidos <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="apellidos"
+                                            required
+                                            value={data.apellidos}
+                                            onChange={(e) => setData('apellidos', e.target.value)}
+                                            placeholder="Ej. Pérez Rodríguez"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                        {errors.apellidos && <p className="text-xs text-rose-400 mt-1">{errors.apellidos}</p>}
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="documento" className="text-xs font-semibold uppercase text-slate-300">
+                                                Cédula de Identidad <span className="text-rose-500">*</span>
+                                            </Label>
+                                            {isCheckingCedula && <span className="text-[10px] text-blue-400 animate-pulse">Verificando...</span>}
+                                        </div>
+                                        <Input
+                                            id="documento"
+                                            required
+                                            value={data.documento}
+                                            onChange={(e) => {
+                                                setData('documento', e.target.value);
+                                                checkCedulaDuplicada(e.target.value);
+                                            }}
+                                            onBlur={(e) => checkCedulaDuplicada(e.target.value)}
+                                            placeholder="Ej. V-12345678"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500 font-mono"
+                                        />
+                                        {errors.documento && <p className="text-xs text-rose-400 mt-1">{errors.documento}</p>}
+
+                                        {cedulaExiste && (
+                                            <p className="text-xs text-rose-400 mt-1 flex items-center gap-1">
+                                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                                Ya registrada a nombre de: {cedulaExistenteNombre}
+                                            </p>
+                                        )}
+                                        {cedulaEsConyugeVinculado && (
+                                            <p className="text-xs text-indigo-400 mt-1 flex items-center gap-1">
+                                                <Info className="w-3.5 h-3.5 shrink-0" />
+                                                Registro vinculado a su cónyuge. Se completará su perfil.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="genero" className="text-xs font-semibold uppercase text-slate-300">
+                                            Género <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <select
+                                            id="genero"
+                                            value={data.genero}
+                                            onChange={(e) => setData('genero', e.target.value)}
+                                            className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500"
+                                        >
+                                            {generos.map((g) => (
+                                                <option key={g} value={g}>{g}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Fila 2: Fecha Nacimiento, Edad, Estado Civil, Cónyuge */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <Label htmlFor="fe_nacimiento" className="text-xs font-semibold uppercase text-slate-300">
+                                            Fecha de Nacimiento
+                                        </Label>
+                                        <Input
+                                            id="fe_nacimiento"
+                                            type="date"
+                                            value={data.fe_nacimiento}
+                                            onChange={handleBirthDateChange}
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="edad" className="text-xs font-semibold uppercase text-slate-300">
+                                            Edad (Años)
+                                        </Label>
+                                        <Input
+                                            id="edad"
+                                            type="number"
+                                            value={data.edad}
+                                            onChange={(e) => setData('edad', e.target.value)}
+                                            placeholder="Calculada autom."
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="estado_civil" className="text-xs font-semibold uppercase text-slate-300">
+                                            Estado Civil
+                                        </Label>
+                                        <select
+                                            id="estado_civil"
+                                            value={data.estado_civil}
+                                            onChange={(e) => setData('estado_civil', e.target.value)}
+                                            className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500"
+                                        >
+                                            {estadosCiviles.map((ec) => (
+                                                <option key={ec} value={ec}>{ec}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="nombre_conyuge" className="text-xs font-semibold uppercase text-slate-300">
+                                            Nombre del Cónyuge {data.estado_civil.includes('Casado') && <span className="text-rose-500">*</span>}
+                                        </Label>
+                                        <Input
+                                            id="nombre_conyuge"
+                                            value={data.nombre_conyuge}
+                                            onChange={(e) => setData('nombre_conyuge', e.target.value)}
+                                            placeholder="Nombre completo de su esposo(a)"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Fila 3: Teléfonos y Correo */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="telefono_tlf" className="text-xs font-semibold uppercase text-slate-300">
+                                            Teléfono Celular / WhatsApp <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="telefono_tlf"
+                                            required
+                                            value={data.telefono_tlf}
+                                            onChange={(e) => setData('telefono_tlf', e.target.value)}
+                                            placeholder="0414-1234567"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                        {errors.telefono_tlf && <p className="text-xs text-rose-400 mt-1">{errors.telefono_tlf}</p>}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="telefono_hab" className="text-xs font-semibold uppercase text-slate-300">
+                                            Teléfono de Habitación / Fijo
+                                        </Label>
+                                        <Input
+                                            id="telefono_hab"
+                                            value={data.telefono_hab}
+                                            onChange={(e) => setData('telefono_hab', e.target.value)}
+                                            placeholder="0212-1234567"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="email" className="text-xs font-semibold uppercase text-slate-300">
+                                            Correo Electrónico
+                                        </Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={data.email}
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            placeholder="pastor@ejemplo.com"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                        {errors.email && <p className="text-xs text-rose-400 mt-1">{errors.email}</p>}
+                                    </div>
+                                </div>
+
+                                {/* Fila 4: Dirección Territorial */}
+                                <div className="border-t border-slate-800 pt-4">
+                                    <h4 className="text-xs uppercase font-bold text-amber-400 tracking-wider mb-3 flex items-center gap-1.5">
+                                        <MapPin className="w-4 h-4" />
+                                        Dirección y Ubicación Geográfica
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                        <div>
+                                            <Label htmlFor="estado_id" className="text-xs font-semibold uppercase text-slate-300">
+                                                Estado <span className="text-rose-500">*</span>
+                                            </Label>
+                                            <select
+                                                id="estado_id"
+                                                value={data.estado_id}
+                                                onChange={(e) => handleEstadoChange(e.target.value)}
+                                                className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500"
+                                            >
+                                                <option value="">-- Seleccione Estado --</option>
+                                                {estados.map((est) => (
+                                                    <option key={est.id} value={est.id}>{est.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="municipio_id" className="text-xs font-semibold uppercase text-slate-300">
+                                                Municipio
+                                            </Label>
+                                            <select
+                                                id="municipio_id"
+                                                value={data.municipio_id}
+                                                onChange={(e) => handleMunicipioChange(e.target.value)}
+                                                disabled={!data.estado_id}
+                                                className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500 disabled:opacity-50"
+                                            >
+                                                <option value="">-- Seleccione Municipio --</option>
+                                                {municipiosFiltrados.map((m) => (
+                                                    <option key={m.id} value={m.id}>{m.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="parroquia_id" className="text-xs font-semibold uppercase text-slate-300">
+                                                Parroquia
+                                            </Label>
+                                            <select
+                                                id="parroquia_id"
+                                                value={data.parroquia_id}
+                                                onChange={(e) => setData('parroquia_id', e.target.value)}
+                                                disabled={!data.municipio_id}
+                                                className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500 disabled:opacity-50"
+                                            >
+                                                <option value="">-- Seleccione Parroquia --</option>
+                                                {parroquiasFiltradas.map((p) => (
+                                                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <Label htmlFor="urbanizacion" className="text-xs font-semibold uppercase text-slate-300">
+                                                Sector / Urbanización
+                                            </Label>
+                                            <Input
+                                                id="urbanizacion"
+                                                value={data.urbanizacion}
+                                                onChange={(e) => setData('urbanizacion', e.target.value)}
+                                                placeholder="Ej. Urb. La Concordia"
+                                                className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="calle_avenida" className="text-xs font-semibold uppercase text-slate-300">
+                                                Calle / Avenida
+                                            </Label>
+                                            <Input
+                                                id="calle_avenida"
+                                                value={data.calle_avenida}
+                                                onChange={(e) => setData('calle_avenida', e.target.value)}
+                                                placeholder="Ej. Av. Principal"
+                                                className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="edificio_casa_quinta" className="text-xs font-semibold uppercase text-slate-300">
+                                                Casa / Edificio / Quinta
+                                            </Label>
+                                            <Input
+                                                id="edificio_casa_quinta"
+                                                value={data.edificio_casa_quinta}
+                                                onChange={(e) => setData('edificio_casa_quinta', e.target.value)}
+                                                placeholder="Ej. Casa N° 12-A"
+                                                className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="piso" className="text-xs font-semibold uppercase text-slate-300">
+                                                Piso / Apto
+                                            </Label>
+                                            <Input
+                                                id="piso"
+                                                value={data.piso}
+                                                onChange={(e) => setData('piso', e.target.value)}
+                                                placeholder="Ej. Piso 2 / Apto 4"
+                                                className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* PASO 2: DATOS ACADÉMICOS Y TEOLÓGICOS */}
+                    {activeTab === 2 && (
+                        <Card className="bg-slate-900 border-slate-800 shadow-xl text-slate-100">
+                            <CardHeader className="border-b border-slate-800 bg-slate-900/50">
+                                <div className="flex items-center gap-2 text-amber-400 font-semibold text-base">
+                                    <GraduationCap className="h-5 w-5" />
+                                    <span>Paso 2: Formación Académica & Estudios Teológicos</span>
+                                </div>
+                                <CardDescription className="text-slate-400 text-xs">
+                                    Nivel de instrucción académica secular y preparación teológica o bíblica.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <Label htmlFor="grado_instruccion" className="text-xs font-semibold uppercase text-slate-300">
+                                            Grado de Instrucción Académica
+                                        </Label>
+                                        <select
+                                            id="grado_instruccion"
+                                            value={data.grado_instruccion}
+                                            onChange={(e) => setData('grado_instruccion', e.target.value)}
+                                            className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500"
+                                        >
+                                            <option value="Primaria">Primaria</option>
+                                            <option value="Secundaria / Bachillerato">Secundaria / Bachillerato</option>
+                                            <option value="Técnico Medio / Superior">Técnico Medio / Superior</option>
+                                            <option value="Universitario">Universitario</option>
+                                            <option value="Postgrado / Maestría">Postgrado / Maestría</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="titulo_obtenido" className="text-xs font-semibold uppercase text-slate-300">
+                                            Título Secular Obtenido
+                                        </Label>
+                                        <Input
+                                            id="titulo_obtenido"
+                                            value={data.titulo_obtenido}
+                                            onChange={(e) => setData('titulo_obtenido', e.target.value)}
+                                            placeholder="Ej. Lic. en Educación, Ing. Civil, Bachiller"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-slate-800 pt-5 space-y-4">
+                                    <div className="flex items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                        <div>
+                                            <p className="font-semibold text-sm text-white">¿Posee Estudios Teológicos?</p>
+                                            <p className="text-xs text-slate-400">
+                                                Indique si ha cursado estudios en seminarios o institutos bíblicos.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={data.estudio_teologico}
+                                            onCheckedChange={(checked) => setData('estudio_teologico', checked)}
+                                        />
+                                    </div>
+
+                                    {data.estudio_teologico && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                            <div>
+                                                <Label htmlFor="titulo_teologico" className="text-xs font-semibold uppercase text-slate-300">
+                                                    Título Teológico
+                                                </Label>
+                                                <Input
+                                                    id="titulo_teologico"
+                                                    value={data.titulo_teologico}
+                                                    onChange={(e) => setData('titulo_teologico', e.target.value)}
+                                                    placeholder="Ej. Bachiller en Teología"
+                                                    className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="instituto_teologico" className="text-xs font-semibold uppercase text-slate-300">
+                                                    Instituto / Seminario
+                                                </Label>
+                                                <Input
+                                                    id="instituto_teologico"
+                                                    value={data.instituto_teologico}
+                                                    onChange={(e) => setData('instituto_teologico', e.target.value)}
+                                                    placeholder="Ej. Instituto Bíblico Elim"
+                                                    className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="tiempo_de_estudio_teologico" className="text-xs font-semibold uppercase text-slate-300">
+                                                    Tiempo de Estudio
+                                                </Label>
+                                                <Input
+                                                    id="tiempo_de_estudio_teologico"
+                                                    value={data.tiempo_de_estudio_teologico}
+                                                    onChange={(e) => setData('tiempo_de_estudio_teologico', e.target.value)}
+                                                    placeholder="Ej. 3 Años"
+                                                    className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* PASO 3: DATOS ECLESIÁSTICOS */}
+                    {activeTab === 3 && (
+                        <Card className="bg-slate-900 border-slate-800 shadow-xl text-slate-100">
+                            <CardHeader className="border-b border-slate-800 bg-slate-900/50">
+                                <div className="flex items-center gap-2 text-amber-400 font-semibold text-base">
+                                    <Cross className="h-5 w-5" />
+                                    <span>Paso 3: Trayectoria y Datos Eclesiásticos</span>
+                                </div>
+                                <CardDescription className="text-slate-400 text-xs">
+                                    Grado ministerial, zona eclesiástica, distrito y responsabilidades dentro de la obra.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="nivel_ministerial" className="text-xs font-semibold uppercase text-slate-300">
+                                            Grado Ministerial <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <select
+                                            id="nivel_ministerial"
+                                            value={data.nivel_ministerial}
+                                            onChange={(e) => setData('nivel_ministerial', e.target.value)}
+                                            className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500"
+                                        >
+                                            {gradosMinisteriales.map((gm) => (
+                                                <option key={gm} value={gm}>{gm}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="zona" className="text-xs font-semibold uppercase text-slate-300">
+                                            Zona Eclesiástica
+                                        </Label>
+                                        <Input
+                                            id="zona"
+                                            value={data.zona}
+                                            onChange={(e) => setData('zona', e.target.value)}
+                                            placeholder="Ej. Zona 1"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="distrito" className="text-xs font-semibold uppercase text-slate-300">
+                                            Distrito
+                                        </Label>
+                                        <Input
+                                            id="distrito"
+                                            value={data.distrito}
+                                            onChange={(e) => setData('distrito', e.target.value)}
+                                            placeholder="Ej. Distrito Capital"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="ano_promocion" className="text-xs font-semibold uppercase text-slate-300">
+                                            Año de Promoción / Ordenación
+                                        </Label>
+                                        <Input
+                                            id="ano_promocion"
+                                            value={data.ano_promocion}
+                                            onChange={(e) => setData('ano_promocion', e.target.value)}
+                                            placeholder="Ej. 2018"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="tiempo_colaborando" className="text-xs font-semibold uppercase text-slate-300">
+                                            Tiempo en el Ministerio
+                                        </Label>
+                                        <Input
+                                            id="tiempo_colaborando"
+                                            value={data.tiempo_colaborando}
+                                            onChange={(e) => setData('tiempo_colaborando', e.target.value)}
+                                            placeholder="Ej. 12 Años y 4 Meses"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="cargo_nacional" className="text-xs font-semibold uppercase text-slate-300">
+                                            Cargo Nacional / Responsabilidad
+                                        </Label>
+                                        <Input
+                                            id="cargo_nacional"
+                                            value={data.cargo_nacional}
+                                            onChange={(e) => setData('cargo_nacional', e.target.value)}
+                                            placeholder="Ej. Supervisor de Zona / Presbítero"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                        <div>
+                                            <p className="font-semibold text-sm text-white">Bautizado en el Espíritu Santo</p>
+                                            <p className="text-xs text-slate-400">Con la evidencia bíblica de hablar en otras lenguas</p>
+                                        </div>
+                                        <Switch
+                                            checked={data.batizado_espiritu_santo}
+                                            onCheckedChange={(c) => setData('batizado_espiritu_santo', c)}
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                        <div>
+                                            <p className="font-semibold text-sm text-white">Pertenece al Ministerio Oficial MMM</p>
+                                            <p className="text-xs text-slate-400">Obrero activo en la nómina nacional</p>
+                                        </div>
+                                        <Switch
+                                            checked={data.pertenece_ministerio}
+                                            onCheckedChange={(c) => setData('pertenece_ministerio', c)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="nota" className="text-xs font-semibold uppercase text-slate-300">
+                                        Observaciones o Notas Ministeriales
+                                    </Label>
+                                    <Textarea
+                                        id="nota"
+                                        rows={2}
+                                        value={data.nota}
+                                        onChange={(e) => setData('nota', e.target.value)}
+                                        placeholder="Información adicional sobre su labor ministerial..."
+                                        className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* PASO 4: ESTADO DE SALUD */}
+                    {activeTab === 4 && (
+                        <Card className="bg-slate-900 border-slate-800 shadow-xl text-slate-100">
+                            <CardHeader className="border-b border-slate-800 bg-slate-900/50">
+                                <div className="flex items-center gap-2 text-amber-400 font-semibold text-base">
+                                    <Stethoscope className="h-5 w-5" />
+                                    <span>Paso 4: Ficha de Salud & Contacto de Emergencia</span>
+                                </div>
+                                <CardDescription className="text-slate-400 text-xs">
+                                    Datos médicos vitales para atención preventiva y asistencia en eventos nacionales.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="grupo_sanguineo" className="text-xs font-semibold uppercase text-slate-300">
+                                            Grupo Sanguíneo
+                                        </Label>
+                                        <select
+                                            id="grupo_sanguineo"
+                                            value={data.grupo_sanguineo}
+                                            onChange={(e) => setData('grupo_sanguineo', e.target.value)}
+                                            className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500 font-mono"
+                                        >
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="condicion_salud" className="text-xs font-semibold uppercase text-slate-300">
+                                            Condición General de Salud
+                                        </Label>
+                                        <select
+                                            id="condicion_salud"
+                                            value={data.condicion_salud}
+                                            onChange={(e) => setData('condicion_salud', e.target.value)}
+                                            className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white focus:outline-hidden focus:border-blue-500"
+                                        >
+                                            <option value="Excelente">Excelente</option>
+                                            <option value="Buena">Buena</option>
+                                            <option value="Regular">Regular</option>
+                                            <option value="Delicada">Delicada</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="alergias" className="text-xs font-semibold uppercase text-slate-300">
+                                            Alergias Conocidas
+                                        </Label>
+                                        <Input
+                                            id="alergias"
+                                            value={data.alergias}
+                                            onChange={(e) => setData('alergias', e.target.value)}
+                                            placeholder="Ej. Penicilina, polen, ninguna"
+                                            className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="font-semibold text-sm text-white">¿Padece alguna Enfermedad?</p>
+                                                <p className="text-xs text-slate-400">Hipertensión, diabetes, afección cardíaca, etc.</p>
+                                            </div>
+                                            <Switch
+                                                checked={data.padece_enfermedad}
+                                                onCheckedChange={(c) => setData('padece_enfermedad', c)}
+                                            />
+                                        </div>
+                                        {data.padece_enfermedad && (
+                                            <Textarea
+                                                rows={2}
+                                                value={data.enfermedades_cronicas}
+                                                onChange={(e) => setData('enfermedades_cronicas', e.target.value)}
+                                                placeholder="Describa el diagnóstico o enfermedad crónica..."
+                                                className="bg-slate-800 border-slate-700 text-white focus:border-blue-500"
+                                            />
+                                        )}
+                                    </div>
+
+                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="font-semibold text-sm text-white">¿Toma Medicamentos Diarios?</p>
+                                                <p className="text-xs text-slate-400">Tratamiento prescrito permanente</p>
+                                            </div>
+                                            <Switch
+                                                checked={data.toma_medicamentos}
+                                                onCheckedChange={(c) => setData('toma_medicamentos', c)}
+                                            />
+                                        </div>
+
+                                        {data.toma_medicamentos && (
+                                            <div className="space-y-2">
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        value={nuevoMedicamentoNombre}
+                                                        onChange={(e) => setNuevoMedicamentoNombre(e.target.value)}
+                                                        placeholder="Nombre del medicamento"
+                                                        className="bg-slate-800 border-slate-700 text-xs text-white"
+                                                    />
+                                                    <Input
+                                                        value={nuevoMedicamentoDosis}
+                                                        onChange={(e) => setNuevoMedicamentoDosis(e.target.value)}
+                                                        placeholder="Dosis (Ej. 50mg)"
+                                                        className="bg-slate-800 border-slate-700 text-xs text-white w-28"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={handleAgregarMedicamento}
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+
+                                                {medicamentosList.length > 0 && (
+                                                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                                        {medicamentosList.map((m: any, idx: number) => (
+                                                            <div key={idx} className="flex items-center justify-between bg-slate-900 p-2 rounded-md text-xs border border-slate-700">
+                                                                <span className="text-slate-200">
+                                                                    <b>{m.nombre}</b> {m.dosis ? `(${m.dosis})` : ''}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleEliminarMedicamento(idx)}
+                                                                    className="text-rose-400 hover:text-rose-300"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-slate-800 pt-4">
+                                    <h4 className="text-xs uppercase font-bold text-amber-400 tracking-wider mb-3 flex items-center gap-1.5">
+                                        <PhoneCall className="w-4 h-4" />
+                                        Contacto para Emergencias
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="contacto_emergencia_nombre" className="text-xs font-semibold uppercase text-slate-300">
+                                                Nombre del Contacto
+                                            </Label>
+                                            <Input
+                                                id="contacto_emergencia_nombre"
+                                                value={data.contacto_emergencia_nombre}
+                                                onChange={(e) => setData('contacto_emergencia_nombre', e.target.value)}
+                                                placeholder="Ej. María Pérez (Esposa / Familiar)"
+                                                className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="contacto_emergencia_telefono" className="text-xs font-semibold uppercase text-slate-300">
+                                                Teléfono de Emergencia
+                                            </Label>
+                                            <Input
+                                                id="contacto_emergencia_telefono"
+                                                value={data.contacto_emergencia_telefono}
+                                                onChange={(e) => setData('contacto_emergencia_telefono', e.target.value)}
+                                                placeholder="Ej. 0412-9876543"
+                                                className="mt-1 bg-slate-800/80 border-slate-700 text-white focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* PASO 5: FOTOGRAFÍA DEL PASTOR Y CÉDULA */}
+                    {activeTab === 5 && (
+                        <Card className="bg-slate-900 border-slate-800 shadow-xl text-slate-100">
+                            <CardHeader className="border-b border-slate-800 bg-slate-900/50">
+                                <div className="flex items-center gap-2 text-amber-400 font-semibold text-base">
+                                    <Camera className="h-5 w-5" />
+                                    <span>Paso 5: Fotografía Tipo Carnet y Foto de la Cédula</span>
+                                </div>
+                                <CardDescription className="text-slate-400 text-xs">
+                                    Tome o suba una foto nítida de perfil (tipo carnet) con vestimenta adecuada y la foto de su cédula.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                {/* Modal de Cámara en Vivo si está activa */}
+                                {isCameraActive && (
+                                    <div className="bg-slate-950 border border-slate-700 p-4 rounded-2xl space-y-3 flex flex-col items-center">
+                                        <div className="relative rounded-xl overflow-hidden bg-black max-w-md w-full aspect-video border border-slate-700">
+                                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                onClick={capturePhoto}
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                                            >
+                                                <Camera className="w-4 h-4" />
+                                                Capturar Fotografía
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+                                                    setFacingMode(nextMode);
+                                                    startCamera(activeCameraTarget, nextMode);
+                                                }}
+                                                className="border-slate-700 text-slate-300"
+                                            >
+                                                <SwitchCamera className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                onClick={stopCamera}
+                                            >
+                                                Cancelar
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Fotografía de Perfil */}
+                                    <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/60 flex flex-col items-center text-center space-y-4">
+                                        <h4 className="font-bold text-sm text-white flex items-center gap-1.5">
+                                            <User className="w-4 h-4 text-blue-400" />
+                                            Foto de Perfil (Tipo Carnet)
+                                        </h4>
+
+                                        <div className="w-36 h-44 rounded-xl border-2 border-dashed border-slate-600 bg-slate-900 overflow-hidden flex items-center justify-center relative shadow-inner">
+                                            {data.foto ? (
+                                                <img src={data.foto} alt="Foto Perfil" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="text-slate-500 text-xs flex flex-col items-center p-2">
+                                                    <Camera className="w-8 h-8 mb-1 opacity-50" />
+                                                    <span>Sin Foto</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2 justify-center w-full">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={() => startCamera('foto')}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1"
+                                            >
+                                                <Video className="w-3.5 h-3.5" />
+                                                Usar Cámara
+                                            </Button>
+                                            <Label
+                                                htmlFor="upload-foto"
+                                                className="cursor-pointer inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-2 px-3 rounded-md shadow-sm"
+                                            >
+                                                <Upload className="w-3.5 h-3.5" />
+                                                Subir Archivo
+                                            </Label>
+                                            <input
+                                                id="upload-foto"
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFileUpload(e, 'foto')}
+                                            />
+                                            {data.foto && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => setData('foto', '')}
+                                                    className="text-rose-400 hover:text-rose-300 text-xs"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Fotografía de la Cédula */}
+                                    <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/60 flex flex-col items-center text-center space-y-4">
+                                        <h4 className="font-bold text-sm text-white flex items-center gap-1.5">
+                                            <IdCard className="w-4 h-4 text-emerald-400" />
+                                            Foto de la Cédula de Identidad
+                                        </h4>
+
+                                        <div className="w-56 h-36 rounded-xl border-2 border-dashed border-slate-600 bg-slate-900 overflow-hidden flex items-center justify-center relative shadow-inner">
+                                            {data.foto_cedula ? (
+                                                <img src={data.foto_cedula} alt="Cédula" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="text-slate-500 text-xs flex flex-col items-center p-2">
+                                                    <IdCard className="w-8 h-8 mb-1 opacity-50" />
+                                                    <span>Sin Cédula</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2 justify-center w-full">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={() => startCamera('foto_cedula', 'environment')}
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1"
+                                            >
+                                                <Video className="w-3.5 h-3.5" />
+                                                Usar Cámara
+                                            </Button>
+                                            <Label
+                                                htmlFor="upload-cedula"
+                                                className="cursor-pointer inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-2 px-3 rounded-md shadow-sm"
+                                            >
+                                                <Upload className="w-3.5 h-3.5" />
+                                                Subir Archivo
+                                            </Label>
+                                            <input
+                                                id="upload-cedula"
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFileUpload(e, 'foto_cedula')}
+                                            />
+                                            {data.foto_cedula && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => setData('foto_cedula', '')}
+                                                    className="text-rose-400 hover:text-rose-300 text-xs"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-900/80 border-t border-slate-800 flex justify-end">
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3 px-8 rounded-xl shadow-xl text-sm"
+                                >
+                                    <Save className="w-4 h-4 mr-2" />
+                                    {processing ? 'Guardando Registro...' : 'Completar y Enviar Registro'}
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    )}
+                </form>
+            </main>
+
+            {/* Footer Institucional */}
+            <footer className="bg-slate-900 border-t border-slate-800 text-center py-4 text-xs text-slate-500">
+                <p>© {new Date().getFullYear()} Movimiento Misionero Mundial en Venezuela. Todos los derechos reservados.</p>
+            </footer>
+        </div>
     );
 }

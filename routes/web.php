@@ -19,10 +19,11 @@ Route::get('/', function () {
 // Ruta pública de verificación del carnet mediante escaneo de Código QR
 Route::get('/validar-credencial/{codigo}', [PastorCarnetController::class, 'validarCredencial'])->name('pastores.validar-credencial');
 
-// Ruta pública de registro de Pastores y Extensiones
-Route::get('/registro-pastor', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
-Route::post('/registro-pastor', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
-Route::get('/registro-pastor/verificar-cedula/{cedula}', [PastorRegistroPublicoController::class, 'verificarCedula'])->name('registro-pastor.verificar-cedula');
+// Ruta pública de registro de Pastores y Extensiones (Wizard)
+Route::get('/registro', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
+Route::post('/registro', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
+Route::get('/registro/verificar-cedula/{cedula}', [PastorRegistroPublicoController::class, 'verificarCedula'])->name('registro-pastor.verificar-cedula');
+Route::redirect('/registro-pastor', '/registro');
 
 
 Route::middleware(['guest'])->group(function () {
