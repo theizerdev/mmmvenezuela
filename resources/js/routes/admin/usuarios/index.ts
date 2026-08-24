@@ -399,12 +399,92 @@ toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | 
         })
     
     toggleStatus.form = toggleStatusForm
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsapp
+ * @see app/Http/Controllers/Admin/UserController.php:200
+ * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
+ */
+export const sendWelcomeWhatsapp = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sendWelcomeWhatsapp.url(args, options),
+    method: 'post',
+})
+
+sendWelcomeWhatsapp.definition = {
+    methods: ["post"],
+    url: '/admin/usuarios/{user}/send-welcome-whatsapp',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsapp
+ * @see app/Http/Controllers/Admin/UserController.php:200
+ * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
+ */
+sendWelcomeWhatsapp.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return sendWelcomeWhatsapp.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsapp
+ * @see app/Http/Controllers/Admin/UserController.php:200
+ * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
+ */
+sendWelcomeWhatsapp.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sendWelcomeWhatsapp.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsapp
+ * @see app/Http/Controllers/Admin/UserController.php:200
+ * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
+ */
+    const sendWelcomeWhatsappForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: sendWelcomeWhatsapp.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsapp
+ * @see app/Http/Controllers/Admin/UserController.php:200
+ * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
+ */
+        sendWelcomeWhatsappForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: sendWelcomeWhatsapp.url(args, options),
+            method: 'post',
+        })
+    
+    sendWelcomeWhatsapp.form = sendWelcomeWhatsappForm
 const usuarios = {
     index: Object.assign(index, index),
 store: Object.assign(store, store),
 update: Object.assign(update, update),
 destroy: Object.assign(destroy, destroy),
 toggleStatus: Object.assign(toggleStatus, toggleStatus),
+sendWelcomeWhatsapp: Object.assign(sendWelcomeWhatsapp, sendWelcomeWhatsapp),
 }
 
 export default usuarios

@@ -13,6 +13,7 @@ import {
     ShieldAlert,
     Phone,
     Copy,
+    MessageCircle,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -283,6 +284,14 @@ return [];
         router.patch(`/admin/usuarios/${user.id}/toggle-status`, {}, { preserveScroll: true });
     };
 
+    const handleSendWelcomeWhatsApp = (user: User) => {
+        router.post(
+            `/admin/usuarios/${user.id}/send-welcome-whatsapp`,
+            {},
+            { preserveScroll: true }
+        );
+    };
+
     const handleDeleteConfirm = () => {
         if (!deletingUser) {
 return;
@@ -422,28 +431,36 @@ return;
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                            onClick={() => handleSendWelcomeWhatsApp(user)}
+                            className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 dark:text-emerald-400 dark:focus:bg-emerald-950/30"
+                        >
+                            <MessageCircle className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            {__('Enviar Bienvenida (WhatsApp)')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(user)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicateClick(user)}>
-                            <Copy className="mr-2 h-4 w-4" />
-                            {__('Duplicate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {user.status === 'activo' ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingUser(user)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+                            <DropdownMenuItem onClick={() => handleDuplicateClick(user)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                {__('Duplicate')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
+                                <ToggleRight className="mr-2 h-4 w-4" />
+                                {user.status === 'activo' ? __('Deactivate') : __('Activate')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => setDeletingUser(user)}
+                                className="text-red-600 focus:text-red-600 dark:text-red-400"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {__('Delete')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 

@@ -195,7 +195,46 @@ class UserController extends Controller
     }
 
     /**
-     * Envía mensaje de bienvenida por WhatsApp al usuario/presbítero creado.
+     * Reenvía el mensaje de bienvenida institucional por WhatsApp a un usuario.
+     */
+    public function sendWelcomeWhatsApp(User $user)
+    {
+        try {
+            $user->load(['roles', 'empresa', 'sucursal']);
+
+            if (empty($user->telefono)) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => 'El usuario no tiene un número telefónico registrado.',
+                ]);
+            }
+
+            $empresa = $user->empresa_id ? Empresa::find($user->empresa_id) : Empresa::first();
+            if (! $empresa || ! $empresa->whatsapp_active) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => 'El servicio de WhatsApp se encuentra desactivado en la empresa.',
+                ]);
+            }
+
+            $this->notificarBienvenidaWhatsApp($user);
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => "Mensaje de bienvenida enviado exitosamente al WhatsApp de {$user->name}.",
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al enviar WhatsApp a usuario {$user->id}: ".$e->getMessage());
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'Ocurrió un error al enviar el mensaje por WhatsApp.',
+            ]);
+        }
+    }
+
+    /**
+     * Envía mensaje de bienvenida por WhatsApp al usuario creado.
      */
     private function notificarBienvenidaWhatsApp(User $user, ?string $rawPassword = null): void
     {
@@ -209,7 +248,7 @@ class UserController extends Controller
                 return;
             }
 
-            $user->load('roles');
+            $user->load(['roles', 'empresa', 'sucursal']);
             $rolesList = $user->roles->pluck('name')->implode(', ');
             $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
 
@@ -218,7 +257,7 @@ class UserController extends Controller
             if ($isPresbitero) {
                 $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
                          . "Estimado Presbítero *{$user->name}*,\n\n"
-                         . "Se ha creado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
+                         . "Se ha configurado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
                          . "📍 *Asignación:*\n"
                          . "• *Zona:* " . ($user->zona ?: 'Sin asignar') . "\n"
                          . "• *Distrito:* " . ($user->distrito ?: 'Sin asignar') . "\n\n"
@@ -230,16 +269,31 @@ class UserController extends Controller
                          . "Desde su panel administrativo podrá dar seguimiento a las fichas ministeriales de los obreros a su cargo, consultar iglesias y recibir notificaciones automáticas cada vez que un pastor complete su registro.\n\n"
                          . "_Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión._";
             } else {
-                $mensaje = "👋 *¡Bienvenido al Sistema MMM Venezuela!*\n\n"
+                $mensaje = "👋 *¡Bienvenido a la Plataforma MMM Venezuela!*\n\n"
                          . "Estimado(a) *{$user->name}*,\n\n"
-                         . "Se ha creado su cuenta de acceso institucional con el rol de *{$rolesList}*.\n\n"
+                         . "Se ha configurado su cuenta de acceso institucional a la plataforma administrativa.\n\n"
+                         . "📋 *Detalles de su cuenta:*\n"
+                         . "• *Rol asignado:* " . ($rolesList ?: 'Usuario del Sistema') . "\n"
+                         . ($user->empresa ? "• *Institución:* {$user->empresa->razon_social}\n" : "")
+                         . ($user->sucursal ? "• *Sede:* {$user->sucursal->nombre}\n" : "") . "\n"
                          . "🔐 *Sus credenciales de acceso:*\n"
                          . "• *Usuario / Correo:* {$user->email}\n"
                          . ($rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "") . "\n"
                          . "🌐 *Enlace para ingresar al sistema:*\n"
                          . "{$loginUrl}\n\n"
-                         . "_Por seguridad, le recomendamos cambiar su contraseña al iniciar sesión._";
+                         . "Ya puede ingresar para acceder a los módulos y herramientas correspondientes a sus funciones.\n\n"
+                         . "_Por seguridad, le recomendamos mantener sus credenciales en resguardo y cambiar su contraseña periódicamente._";
             }
+
+            $whatsappService = new WhatsAppService($empresa);
+            $whatsappService->sendMessage($user->telefono, $mensaje);
+        } catch (\Throwable $e) {
+            Log::error('Error al enviar WhatsApp de bienvenida a usuario: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 
             $whatsappService = new WhatsAppService($empresa);
             $whatsappService->sendMessage($user->telefono, $mensaje);
