@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -85,12 +86,16 @@ class UserController extends Controller
         ]);
 
         try {
+            $rawPassword = $validated['password'];
             $validated['password'] = Hash::make($validated['password']);
             $user = User::create($validated);
 
             if (isset($validated['roles'])) {
                 $user->syncRoles($validated['roles']);
             }
+
+            // Enviar mensaje de bienvenida por WhatsApp si tiene teléfono
+            $this->notificarBienvenidaWhatsApp($user, $rawPassword);
 
             return back()->with('notification', [
                 'type' => 'success',
@@ -185,6 +190,63 @@ class UserController extends Controller
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('There was an error updating the status. Please try again.'),
+            ]);
+        }
+    }
+
+    /**
+     * Envía mensaje de bienvenida por WhatsApp al usuario/presbítero creado.
+     */
+    private function notificarBienvenidaWhatsApp(User $user, ?string $rawPassword = null): void
+    {
+        try {
+            if (empty($user->telefono)) {
+                return;
+            }
+
+            $empresa = $user->empresa_id ? Empresa::find($user->empresa_id) : Empresa::first();
+            if (!$empresa || !$empresa->whatsapp_active) {
+                return;
+            }
+
+            $user->load('roles');
+            $rolesList = $user->roles->pluck('name')->implode(', ');
+            $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
+
+            $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
+
+            if ($isPresbitero) {
+                $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
+                         . "Estimado Presbítero *{$user->name}*,\n\n"
+                         . "Se ha creado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
+                         . "📍 *Jurisdicción Asignada:*\n"
+                         . "• *Zona:* " . ($user->zona ?: 'Sin asignar') . "\n"
+                         . "• *Distrito:* " . ($user->distrito ?: 'Sin asignar') . "\n\n"
+                         . "🔐 *Sus credenciales de acceso:*\n"
+                         . "• *Usuario / Correo:* {$user->email}\n"
+                         . ($rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "") . "\n"
+                         . "🌐 *Enlace para ingresar al sistema:*\n"
+                         . "{$loginUrl}\n\n"
+                         . "Desde su panel administrativo podrá dar seguimiento a las fichas ministeriales de los obreros a su cargo, consultar iglesias y recibir notificaciones automáticas cada vez que un pastor complete su registro.\n\n"
+                         . "_Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión._";
+            } else {
+                $mensaje = "👋 *¡Bienvenido al Sistema MMM Venezuela!*\n\n"
+                         . "Estimado(a) *{$user->name}*,\n\n"
+                         . "Se ha creado su cuenta de acceso institucional con el rol de *{$rolesList}*.\n\n"
+                         . "🔐 *Sus credenciales de acceso:*\n"
+                         . "• *Usuario / Correo:* {$user->email}\n"
+                         . ($rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "") . "\n"
+                         . "🌐 *Enlace para ingresar al sistema:*\n"
+                         . "{$loginUrl}\n\n"
+                         . "_Por seguridad, le recomendamos cambiar su contraseña al iniciar sesión._";
+            }
+
+            $whatsappService = new WhatsAppService($empresa);
+            $whatsappService->sendMessage($user->telefono, $mensaje);
+        } catch (\Throwable $e) {
+            Log::error('Error al enviar WhatsApp de bienvenida a usuario: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
             ]);
         }
     }
