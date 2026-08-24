@@ -19,6 +19,8 @@ class WhatsAppService
 
     private $timeout;
 
+    protected $countryCode = '+58';
+
     public function setTimeout(int $seconds): self
     {
         $this->timeout = $seconds;
@@ -62,13 +64,16 @@ class WhatsAppService
         $this->apiKey = $credentials['api_key'] ?? $credentials['apiKey'] ?? null;
         $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? null;
 
-        if (! $this->apiKey && $this->companyId) {
-            $empresaModel = Empresa::find($this->companyId);
+        if ($this->companyId) {
+            $empresaModel = Empresa::with('pais')->find($this->companyId);
             if ($empresaModel) {
-                $this->apiKey = $empresaModel->whatsapp_api_key;
+                if (! $this->apiKey) {
+                    $this->apiKey = $empresaModel->whatsapp_api_key;
+                }
                 if (! $this->instanceName && ! empty($empresaModel->whatsapp_instance)) {
                     $this->instanceName = $empresaModel->whatsapp_instance;
                 }
+                $this->countryCode = $empresaModel->pais?->codigo_telefonico ?? '+58';
             }
         }
 
@@ -91,13 +96,13 @@ class WhatsAppService
         if ($empresa instanceof Empresa) {
             $empresaModel = $empresa;
         } elseif (is_numeric($empresa)) {
-            $empresaModel = Empresa::find($empresa);
+            $empresaModel = Empresa::with('pais')->find($empresa);
         } elseif (auth()->check() && auth()->user()->empresa_id) {
-            $empresaModel = Empresa::find(auth()->user()->empresa_id);
+            $empresaModel = Empresa::with('pais')->find(auth()->user()->empresa_id);
         }
 
         if (! $empresaModel) {
-            $empresaModel = Empresa::find(1);
+            $empresaModel = Empresa::with('pais')->find(1);
         }
 
         if ($empresaModel) {
@@ -110,12 +115,16 @@ class WhatsAppService
                 ? $empresaModel->whatsapp_instance
                 : 'empresa_'.$empresaModel->id;
 
+            $pais = $empresaModel->relationLoaded('pais') ? $empresaModel->pais : $empresaModel->pais()->first();
+            $this->countryCode = $pais?->codigo_telefonico ?? '+58';
+
             return;
         }
 
         $this->companyId = 1;
         $this->apiKey = config('whatsapp.api_key', 'test-api-key-vargas-centro');
         $this->instanceName = 'empresa_1';
+        $this->countryCode = '+58';
     }
 
     /**
@@ -227,9 +236,9 @@ class WhatsAppService
 
     /**
      * Normaliza y formatea el número de teléfono con código de país.
-     * En México (+52), la API de WhatsApp requiere el prefijo 521 para números móviles de 10 dígitos.
+     * Soporta Venezuela (+58) por defecto y códigos de país configurados en la Empresa.
      */
-    public static function formatPhoneNumber(string $phone): string
+    public static function formatPhoneNumber(string $phone, ?string $defaultCountryCode = '+58'): string
     {
         $digits = preg_replace('/[^0-9]/', '', $phone);
 
@@ -237,24 +246,45 @@ class WhatsAppService
             return '';
         }
 
+        // Si empieza con 0 (ej. 04241234567 o 04121234567), quitar el 0
         if (str_starts_with($digits, '0')) {
             $digits = substr($digits, 1);
         }
 
-        // Formateo automático de móviles en México (+52)
-        if (strlen($digits) === 10) {
-            return '521' . $digits;
-        }
-
-        if (strlen($digits) === 12 && str_starts_with($digits, '52')) {
-            return '521' . substr($digits, 2);
-        }
-
-        if (strlen($digits) === 13 && str_starts_with($digits, '521')) {
+        // Si ya tiene código de país de Venezuela (58) con 12 dígitos
+        if (str_starts_with($digits, '58') && strlen($digits) >= 12) {
             return $digits;
         }
 
-        return $digits;
+        // Si ya tiene código de país de México (521 o 52)
+        if (str_starts_with($digits, '521') && strlen($digits) === 13) {
+            return $digits;
+        }
+        if (str_starts_with($digits, '52') && strlen($digits) === 12) {
+            return '521' . substr($digits, 2);
+        }
+
+        $cleanPrefix = $defaultCountryCode ? preg_replace('/[^0-9]/', '', $defaultCountryCode) : '58';
+
+        // Manejo específico si el país de la empresa es México (52)
+        if ($cleanPrefix === '52') {
+            if (strlen($digits) === 10) {
+                return '521' . $digits;
+            }
+            return $cleanPrefix . $digits;
+        }
+
+        // Si tiene 10 dígitos (típico móvil de Venezuela: 4242885159, 412..., 414...)
+        if (strlen($digits) === 10) {
+            return ($cleanPrefix ?: '58') . $digits;
+        }
+
+        // Si ya incluye el prefijo limpio
+        if ($cleanPrefix && str_starts_with($digits, $cleanPrefix)) {
+            return $digits;
+        }
+
+        return ($cleanPrefix ?: '58') . $digits;
     }
 
     /**
@@ -262,7 +292,7 @@ class WhatsAppService
      */
     public function sendMessage(string $to, string $message, bool $isWelcome = false)
     {
-        $to = self::formatPhoneNumber($to);
+        $to = self::formatPhoneNumber($to, $this->countryCode);
 
         try {
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
@@ -308,7 +338,7 @@ class WhatsAppService
      */
     public function sendMedia(string $to, string $mediaUrl, string $caption = '')
     {
-        $to = self::formatPhoneNumber($to);
+        $to = self::formatPhoneNumber($to, $this->countryCode);
         try {
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
             $response = Http::timeout($this->timeout)

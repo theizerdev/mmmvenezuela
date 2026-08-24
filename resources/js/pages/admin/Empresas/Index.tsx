@@ -63,6 +63,7 @@ interface Pais {
     codigo_telefonico?: string | null;
     latitud?: number | null;
     longitud?: number | null;
+    zona_horaria?: string | null;
 }
 
 interface Empresa {
@@ -76,6 +77,7 @@ interface Empresa {
     direccion?: string | null;
     latitud?: number | null;
     longitud?: number | null;
+    zona_horaria?: string | null;
     representante_legal?: string | null;
     curp_representante_legal?: string | null;
     telefono?: string | null;
@@ -217,7 +219,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
             direccion:                empresa.direccion || '',
             latitud:                  empresa.latitud ?? null,
             longitud:                 empresa.longitud ?? null,
-            zona_horaria:             (empresa as any).zona_horaria || '',
+            zona_horaria:             empresa.zona_horaria || empresa.pais?.zona_horaria || '',
         });
         setLogoFile(null);
         setLogoMiniFile(null);
@@ -389,7 +391,7 @@ formData.append('logo_mini', logoMiniFile);
             cell: (empresa) => (
                 <div className="flex items-center gap-1.5 text-xs font-mono text-slate-600 dark:text-slate-400">
                     <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{(empresa as any).zona_horaria || __('Default')}</span>
+                    <span>{empresa.zona_horaria || empresa.pais?.zona_horaria || __('Default')}</span>
                 </div>
             ),
         },
@@ -701,13 +703,15 @@ formData.append('logo_mini', logoMiniFile);
                                     <Select
                                         value={String(data.pais_id)}
                                         onValueChange={(v) => {
-                                            // Si cambia el país, limpiar coordenadas para centrar el mapa en él
+                                            const selectedCountry = paises.find((p) => String(p.id) === String(v));
+                                            // Si cambia el país, sincronizar zona horaria del país y centrar el mapa
                                             setData({
                                                 ...data,
-                                                pais_id:  v,
-                                                latitud:  null,
-                                                longitud: null,
-                                                direccion: '',
+                                                pais_id:      v,
+                                                latitud:      null,
+                                                longitud:     null,
+                                                direccion:    '',
+                                                zona_horaria: selectedCountry?.zona_horaria || data.zona_horaria,
                                             });
                                         }}
                                     >

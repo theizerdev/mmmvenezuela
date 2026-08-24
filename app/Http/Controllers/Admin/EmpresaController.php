@@ -49,7 +49,7 @@ class EmpresaController extends Controller
             'stats' => $stats,
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre', 'asc')
-                ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico', 'latitud', 'longitud']),
+                ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico', 'latitud', 'longitud', 'zona_horaria']),
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
     }
@@ -71,6 +71,13 @@ class EmpresaController extends Controller
             'curp_representante_legal' => 'nullable|string|max:18',
             'status' => 'boolean',
         ]);
+
+        if (empty($validated['zona_horaria']) && !empty($validated['pais_id'])) {
+            $pais = Pais::find($validated['pais_id']);
+            if ($pais && !empty($pais->zona_horaria)) {
+                $validated['zona_horaria'] = $pais->zona_horaria;
+            }
+        }
 
         try {
             $empresa = new Empresa($validated);
@@ -109,6 +116,13 @@ class EmpresaController extends Controller
             'curp_representante_legal' => 'nullable|string|max:18',
             'status' => 'boolean',
         ]);
+
+        if (empty($validated['zona_horaria']) && !empty($validated['pais_id'])) {
+            $pais = Pais::find($validated['pais_id']);
+            if ($pais && !empty($pais->zona_horaria)) {
+                $validated['zona_horaria'] = $pais->zona_horaria;
+            }
+        }
 
         try {
             DB::transaction(function () use ($empresa, $validated) {
