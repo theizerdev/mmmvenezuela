@@ -68,6 +68,9 @@ interface PastorData {
     apellidos: string;
     nombre_completo: string;
     documento: string;
+    nombre_conyuge?: string;
+    cedula_conyuge?: string;
+    conyuge_id?: number | string;
     nivel_ministerial?: string;
     zona?: string;
     distrito?: string;
@@ -512,6 +515,14 @@ export default function RegistroExtension({
                             <p className="text-xs text-blue-200 mt-0.5">
                                 Cédula: <b>{pastor.documento}</b> {pastor.nivel_ministerial ? `• ${pastor.nivel_ministerial}` : ''}
                             </p>
+                            {pastor.nombre_conyuge && (
+                                <div className="mt-1.5 flex items-center gap-2 flex-wrap text-xs text-emerald-200 bg-emerald-950/40 border border-emerald-500/30 px-2.5 py-1 rounded-xl">
+                                    <span>💍 Cónyuge: <b className="text-white font-bold">{pastor.nombre_conyuge}</b> {pastor.cedula_conyuge ? `(C.I. ${pastor.cedula_conyuge})` : ''}</span>
+                                    <span className="text-[10px] bg-emerald-500/30 text-emerald-100 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                                        Vinculación Automática
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 

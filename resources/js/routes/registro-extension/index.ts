@@ -103,7 +103,7 @@ index.head = (args: { pastor: number | { id: number } } | [pastor: number | { id
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
 export const store = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -118,7 +118,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
 store.url = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -151,7 +151,7 @@ store.url = (args: { pastor: number | { id: number } } | [pastor: number | { id:
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
 store.post = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -161,7 +161,7 @@ store.post = (args: { pastor: number | { id: number } } | [pastor: number | { id
 
     /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
     const storeForm = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -171,7 +171,7 @@ store.post = (args: { pastor: number | { id: number } } | [pastor: number | { id
 
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::store
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
         storeForm.post = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

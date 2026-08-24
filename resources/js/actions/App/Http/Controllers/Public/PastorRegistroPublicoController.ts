@@ -333,7 +333,7 @@ extensionIndex.head = (args: { pastor: number | { id: number } } | [pastor: numb
     extensionIndex.form = extensionIndexForm
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::extensionStore
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
 export const extensionStore = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -348,7 +348,7 @@ extensionStore.definition = {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::extensionStore
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
 extensionStore.url = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -381,7 +381,7 @@ extensionStore.url = (args: { pastor: number | { id: number } } | [pastor: numbe
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::extensionStore
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
 extensionStore.post = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -391,7 +391,7 @@ extensionStore.post = (args: { pastor: number | { id: number } } | [pastor: numb
 
     /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::extensionStore
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
     const extensionStoreForm = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -401,7 +401,7 @@ extensionStore.post = (args: { pastor: number | { id: number } } | [pastor: numb
 
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::extensionStore
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:712
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:721
  * @route '/registro/{pastor}/extension'
  */
         extensionStoreForm.post = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -655,6 +655,12 @@ class PastorRegistroPublicoController extends Controller
             $iglesia = $pastor->conyuge->iglesias->first();
         }
 
+        $nombreConyuge = $pastor->nombre_conyuge;
+        if (empty($nombreConyuge) && $pastor->conyuge) {
+            $nombreConyuge = $pastor->conyuge->nombre_completo;
+        }
+        $cedulaConyuge = $pastor->cedula_conyuge ?: ($pastor->conyuge ? $pastor->conyuge->documento : null);
+
         return Inertia::render('Public/RegistroExtension', [
             'pastor' => [
                 'id' => $pastor->id,
@@ -663,6 +669,9 @@ class PastorRegistroPublicoController extends Controller
                 'apellidos' => $pastor->apellidos,
                 'nombre_completo' => $pastor->nombre_completo,
                 'documento' => $pastor->documento,
+                'nombre_conyuge' => $nombreConyuge ?: '',
+                'cedula_conyuge' => $cedulaConyuge ?: '',
+                'conyuge_id' => $pastor->conyuge_id,
                 'nivel_ministerial' => $pastor->nivel_ministerial,
                 'zona' => $pastor->zona,
                 'distrito' => $pastor->distrito,
@@ -799,13 +808,73 @@ class PastorRegistroPublicoController extends Controller
                 $iglesia = Iglesia::create($extensionPayload);
             }
 
+            // Sincronizar pastor y cónyuge en la tabla pivot iglesia_pastor
+            $this->syncPastorConyuge($iglesia, $pastor->id);
+
             return back()->with('success', [
                 'codigo' => $pastor->codigo,
                 'pastor' => $pastor->nombre_completo,
                 'iglesia' => $iglesia->nombre,
-                'mensaje' => "¡La Iglesia / Extensión '{$iglesia->nombre}' ha sido registrada y vinculada exitosamente al pastor!",
+                'mensaje' => "¡La Iglesia / Extensión '{$iglesia->nombre}' ha sido registrada y vinculada exitosamente al pastor y a su cónyuge!",
             ]);
         });
+    }
+
+    /**
+     * Sincroniza al pastor y a su cónyuge en la tabla pivot iglesia_pastor.
+     */
+    protected function syncPastorConyuge(Iglesia $iglesia, ?int $pastorId): void
+    {
+        if (!$pastorId) {
+            $iglesia->pastores()->detach();
+            return;
+        }
+
+        $pastor = Pastor::find($pastorId);
+        if (!$pastor) {
+            $iglesia->pastores()->detach();
+            return;
+        }
+
+        $idsToSync = [$pastor->id];
+
+        // 1. Si el pastor tiene conyuge_id registrado
+        if ($pastor->conyuge_id) {
+            $idsToSync[] = (int) $pastor->conyuge_id;
+        }
+
+        // 2. Si otro pastor tiene a este pastor como su conyuge_id
+        $conyugesDirectos = Pastor::where('conyuge_id', $pastor->id)->pluck('id')->toArray();
+        $idsToSync = array_merge($idsToSync, $conyugesDirectos);
+
+        // 3. Si tiene cédula de cónyuge registrada, buscar y vincular al cónyuge en BD
+        if (!empty($pastor->cedula_conyuge)) {
+            $cedulaConyuge = trim($pastor->cedula_conyuge);
+            $numericConyuge = preg_replace('/[^\d]/', '', $cedulaConyuge);
+            $pastorConyuge = Pastor::where('documento', $cedulaConyuge)
+                ->when(!empty($numericConyuge), function ($q) use ($numericConyuge) {
+                    $q->orWhere('documento', 'LIKE', "%{$numericConyuge}%")
+                      ->orWhere('codigo', 'LIKE', "%{$numericConyuge}%");
+                })
+                ->first();
+
+            if ($pastorConyuge) {
+                $idsToSync[] = (int) $pastorConyuge->id;
+
+                // Establecer enlace recíproco si no existía
+                if (!$pastor->conyuge_id) {
+                    $pastor->update(['conyuge_id' => $pastorConyuge->id]);
+                }
+                if (!$pastorConyuge->conyuge_id) {
+                    $pastorConyuge->update(['conyuge_id' => $pastor->id]);
+                }
+            }
+        }
+
+        $idsToSync = array_values(array_unique(array_filter($idsToSync)));
+
+        // Sincronizar en la tabla pivot iglesia_pastor
+        $iglesia->pastores()->sync($idsToSync);
     }
 
     /**
