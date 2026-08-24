@@ -565,7 +565,7 @@ class PastorRegistroPublicoController extends Controller
                      . "👤 *Pastor:* {$pastor->nombre_completo}\n"
                      . "🆔 *Cédula:* {$pastor->documento}\n"
                      . "🏷️ *Código Asignado:* {$pastor->codigo}\n"
-                     . "📜 *Nivel Ministerial:* {$pastor->nivel_ministerial}\n"
+                     . "📜 *Grado Ministerial:* {$pastor->nivel_ministerial}\n"
                      . "📍 *Zona:* " . ($pastor->zona ?: 'Sin asignar') . "\n"
                      . "🏛️ *Distrito:* " . ($pastor->distrito ?: 'Sin asignar') . "\n"
                      . "📱 *Teléfono:* " . ($pastor->telefono_tlf ?: 'N/A') . "\n"
