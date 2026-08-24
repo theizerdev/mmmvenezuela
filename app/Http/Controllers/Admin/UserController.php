@@ -219,7 +219,7 @@ class UserController extends Controller
                 $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
                          . "Estimado Presbítero *{$user->name}*,\n\n"
                          . "Se ha creado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
-                         . "📍 *Jurisdicción Asignada:*\n"
+                         . "📍 *Asignación:*\n"
                          . "• *Zona:* " . ($user->zona ?: 'Sin asignar') . "\n"
                          . "• *Distrito:* " . ($user->distrito ?: 'Sin asignar') . "\n\n"
                          . "🔐 *Sus credenciales de acceso:*\n"
