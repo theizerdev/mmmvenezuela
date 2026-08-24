@@ -246,6 +246,22 @@ export default function RegistroPastor({
 
     // 1. Detectar si existe un borrador guardado previamente al montar el componente
     useEffect(() => {
+        // Si hay flash de éxito de un registro reciente, limpiar borrador
+        if (flash?.success || props?.flash?.success) {
+            try {
+                localStorage.removeItem(DRAFT_STORAGE_KEY);
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('mmm_pastor_registro_draft')) {
+                        localStorage.removeItem(k);
+                    }
+                }
+            } catch (e) {}
+            setHasPendingDraft(false);
+            setLastSavedTime(null);
+            return;
+        }
+
         try {
             const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
             if (rawDraft) {
@@ -258,11 +274,12 @@ export default function RegistroPastor({
         } catch (e) {
             // Ignorar
         }
-    }, []);
+    }, [flash, props?.flash]);
 
     // 2. Auto-guardar borrador continuamente en localStorage al cambiar data o pestaña
     useEffect(() => {
-        if (submittedResult) return;
+        // Si el registro ya fue completado o está en proceso de envío, no guardar borrador
+        if (submittedResult || isSubmittingModalOpen) return;
         const hasContent = data.nombres || data.apellidos || data.documento || data.telefono_tlf;
         if (!hasContent) return;
 
@@ -284,7 +301,7 @@ export default function RegistroPastor({
         }, 800);
 
         return () => clearTimeout(timer);
-    }, [data, activeTab, submittedResult]);
+    }, [data, activeTab, submittedResult, isSubmittingModalOpen]);
 
     const handleRestoreDraft = () => {
         try {
@@ -312,8 +329,15 @@ export default function RegistroPastor({
     const handleDiscardDraft = () => {
         try {
             localStorage.removeItem(DRAFT_STORAGE_KEY);
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('mmm_pastor_registro_draft')) {
+                    localStorage.removeItem(k);
+                }
+            }
         } catch (e) {}
         setHasPendingDraft(false);
+        setLastSavedTime(null);
     };
 
     // Calcular edad automáticamente al cambiar fecha de nacimiento
@@ -661,9 +685,18 @@ export default function RegistroPastor({
                     mensaje: flashSuccess?.mensaje || 'Los datos han sido enviados para su revisión y confirmación oficial.',
                 });
 
+                // Limpiar completamente el borrador local para evitar confusiones
                 try {
                     localStorage.removeItem(DRAFT_STORAGE_KEY);
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k && k.startsWith('mmm_pastor_registro_draft')) {
+                            localStorage.removeItem(k);
+                        }
+                    }
                 } catch (err) {}
+                setHasPendingDraft(false);
+                setLastSavedTime(null);
             },
             onError: (errs) => {
                 clearInterval(progressInterval);
@@ -682,15 +715,23 @@ export default function RegistroPastor({
     };
 
     const handleResetOtro = () => {
-        reset();
         try {
             localStorage.removeItem(DRAFT_STORAGE_KEY);
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('mmm_pastor_registro_draft')) {
+                    localStorage.removeItem(k);
+                }
+            }
         } catch (e) {}
+        setHasPendingDraft(false);
+        setLastSavedTime(null);
         setIsSubmittingModalOpen(false);
         setSubmittedResult(null);
         setSubmitProgress(0);
         setActiveTab(1);
         setCedulaExistenteNombre(null);
+        reset();
         router.get('/registro', {}, { replace: true, preserveState: false });
     };
 
