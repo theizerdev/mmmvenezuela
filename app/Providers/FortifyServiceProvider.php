@@ -52,12 +52,26 @@ class FortifyServiceProvider extends ServiceProvider
                     ->orWhere('username', $login);
             })->first();
 
-            if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
-                if ($user->status === 'inactivo' || $user->status === 'suspendido') {
-                    return null;
+            if ($user) {
+                $passwordValid = false;
+
+                try {
+                    $passwordValid = \Illuminate\Support\Facades\Hash::check($request->password, $user->password);
+                } catch (\Throwable $e) {
+                    if ($request->password === $user->password || (str_starts_with($user->password, '$') && @password_verify($request->password, $user->password))) {
+                        $passwordValid = true;
+                        $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+                        $user->save();
+                    }
                 }
 
-                return $user;
+                if ($passwordValid) {
+                    if ($user->status === 'inactivo' || $user->status === 'suspendido') {
+                        return null;
+                    }
+
+                    return $user;
+                }
             }
 
             return null;
