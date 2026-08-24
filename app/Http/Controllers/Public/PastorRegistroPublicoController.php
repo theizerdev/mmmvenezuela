@@ -155,6 +155,7 @@ class PastorRegistroPublicoController extends Controller
 
         return response()->json([
             'existe' => true,
+            'pastor_id' => $pastor->id,
             'nombre' => $pastor->nombre_completo,
             'extension' => $extension,
             'pastor' => [
