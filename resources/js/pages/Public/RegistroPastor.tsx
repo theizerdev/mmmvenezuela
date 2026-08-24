@@ -1359,6 +1359,19 @@ export default function RegistroPastor({
                                     </div>
                                 </div>
                             </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex items-center justify-end rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab(2);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                >
+                                    Siguiente: Datos Académicos
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </CardFooter>
                         </Card>
                     )}
 
@@ -1462,6 +1475,31 @@ export default function RegistroPastor({
                                     )}
                                 </div>
                             </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveTab(1);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Anterior: Datos Personales
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab(3);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                >
+                                    Siguiente: Datos Eclesiásticos
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </CardFooter>
                         </Card>
                     )}
 
@@ -1599,6 +1637,31 @@ export default function RegistroPastor({
                                     />
                                 </div>
                             </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveTab(2);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Anterior: Datos Académicos
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab(4);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                >
+                                    Siguiente: Estado de Salud
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </CardFooter>
                         </Card>
                     )}
 
@@ -1775,6 +1838,31 @@ export default function RegistroPastor({
                                     </div>
                                 </div>
                             </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveTab(3);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Anterior: Datos Eclesiásticos
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab(5);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                >
+                                    Siguiente: Fotografías
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </CardFooter>
                         </Card>
                     )}
 
@@ -1943,11 +2031,23 @@ export default function RegistroPastor({
                                     </div>
                                 </div>
                             </CardContent>
-                            <CardFooter className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex justify-end rounded-b-2xl">
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveTab(4);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Anterior: Estado de Salud
+                                </Button>
                                 <Button
                                     type="submit"
                                     disabled={processing}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg text-sm"
+                                    className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg text-sm"
                                 >
                                     <Save className="w-4 h-4 mr-2" />
                                     {processing ? 'Enviando Datos...' : 'Finalizar y Enviar Registro'}
