@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import {
     User,
     Church,
@@ -118,6 +118,7 @@ export default function RegistroPastor({
     const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
     const [isCameraLoading, setIsCameraLoading] = useState<boolean>(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
+    const [dismissedSuccess, setDismissedSuccess] = useState<boolean>(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -155,7 +156,35 @@ export default function RegistroPastor({
         foto: null as File | null,
     });
 
-    const successData = flash?.success;
+    const successData = !dismissedSuccess ? flash?.success : undefined;
+
+    const handleRegistrarOtro = () => {
+        reset();
+        setFotoCedulaPreview(null);
+        setFotoPerfilPreview(null);
+        setIsOcrAnalyzing(false);
+        setOcrStatusMessage(null);
+        setOcrVerified(false);
+        setOcrMismatch(false);
+        setExtractedCedulaNumber(null);
+        setIsEditorOpen(false);
+        setEditorImageSrc(null);
+        setIsCheckingCedula(false);
+        setCedulaExiste(false);
+        setCedulaEsConyugeVinculado(false);
+        setCedulaExistenteNombre(null);
+        setCedulaExistenteConyuge(null);
+        setExtensionCargadaPorConyuge(false);
+        setIsCheckingCedulaConyuge(false);
+        setCedulaConyugeExiste(false);
+        setCedulaConyugeEsVinculado(false);
+        setCedulaConyugeExistenteNombre(null);
+        setCameraTarget(null);
+        setCameraError(null);
+        setDismissedSuccess(true);
+        setStep(1);
+        router.get('/registro-pastor', {}, { replace: true, preserveState: false });
+    };
 
     // Función utilitaria para calcular la edad automáticamente
     const calculateAge = (dobString: string): number | null => {
@@ -784,6 +813,7 @@ export default function RegistroPastor({
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
+                setDismissedSuccess(false);
                 setStep(4);
             },
         });
@@ -811,7 +841,7 @@ export default function RegistroPastor({
                                     MOVIMIENTO MISIONERO MUNDIAL
                                 </h1>
                                 <p className="text-xs text-slate-500 font-medium">
-                                    Oficina Nacional de Venezuela • Censo Pastoral
+                                    Oficina Nacional de Venezuela • Registro Pastoral
                                 </p>
                             </div>
                         </div>
@@ -839,7 +869,7 @@ export default function RegistroPastor({
                                     {successData?.nombre || `${data.nombres} ${data.apellidos}`}
                                 </h2>
                                 <p className="text-slate-600 text-sm max-w-md mx-auto">
-                                    Tus datos y la información de la extensión han sido registrados en nuestro censo pastoral nacional.
+                                    Tus datos y la información de la extensión han sido registrados en nuestro registro pastoral nacional.
                                 </p>
                             </div>
 
@@ -860,20 +890,7 @@ export default function RegistroPastor({
 
                             <div className="pt-4 flex justify-center gap-4">
                                 <Button
-                                    onClick={() => {
-                                        reset();
-                                        setFotoCedulaPreview(null);
-                                        setFotoPerfilPreview(null);
-                                        setCedulaExiste(false);
-                                        setCedulaEsConyugeVinculado(false);
-                                        setCedulaExistenteNombre(null);
-                                        setCedulaExistenteConyuge(null);
-                                        setCedulaConyugeExiste(false);
-                                        setCedulaConyugeEsVinculado(false);
-                                        setCedulaConyugeExistenteNombre(null);
-                                        setExtensionCargadaPorConyuge(false);
-                                        setStep(1);
-                                    }}
+                                    onClick={handleRegistrarOtro}
                                     variant="outline"
                                     className="border-slate-300 bg-white hover:bg-slate-100 text-slate-700"
                                 >
@@ -889,7 +906,7 @@ export default function RegistroPastor({
                                     <div>
                                         <CardTitle className="text-xl md:text-2xl font-bold flex items-center gap-2 text-white">
                                             <Sparkles className="size-5 text-amber-400" />
-                                            Censo Nacional de Pastores
+                                            Registro Nacional de Pastores
                                         </CardTitle>
                                         <CardDescription className="text-xs text-blue-100 mt-1">
                                             Ingresa la información requerida del pastor y su extensión eclesiástica.
@@ -1012,7 +1029,7 @@ export default function RegistroPastor({
                                                             <Info className="size-4 shrink-0 text-indigo-600 mt-0.5" />
                                                             <div>
                                                                 <p className="font-bold text-indigo-900">
-                                                                    Censo de Cónyuge Pastor Detectado
+                                                                    Registro de Cónyuge Pastor Detectado
                                                                 </p>
                                                                 <p className="text-[11px] text-indigo-800 mt-0.5 leading-relaxed">
                                                                     La cédula <b>{data.documento}</b> fue relacionada previamente al registrar al cónyuge <b>{cedulaExistenteConyuge || 'Pastor'}</b>.
@@ -1356,7 +1373,7 @@ export default function RegistroPastor({
                                                         </Label>
                                                         <Textarea
                                                             id="direccion_extension"
-                                                                    required
+                                                            required
                                                             rows={2}
                                                             value={data.direccion_extension}
                                                             onChange={(e) => setData('direccion_extension', e.target.value)}
@@ -1487,86 +1504,52 @@ export default function RegistroPastor({
 
                                             {/* BLOQUE 2: INFORMACIÓN MINISTERIAL */}
                                             <div className="space-y-4 pt-2">
-                                                <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
-                                                    <Award className="size-4 text-blue-700" />
-                                                    <span>2. Datos Ministeriales del Pastor</span>
-                                                </div>
+                                                        <div className="border-b border-slate-200 pb-3 flex items-center gap-2 text-blue-900 font-bold text-sm">
+                                                            <Award className="size-4 text-blue-700" />
+                                                            <span>2. Datos Ministeriales del Pastor</span>
+                                                        </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                 {/* Apellidos */}
-                                                 <div className="space-y-2">
-                                                     <Label htmlFor="apellidos" className="text-xs font-semibold text-slate-700">
-                                                         Apellidos <span className="text-rose-500">*</span>
-                                                     </Label>
-                                                     <Input
-                                                         id="apellidos"
-                                                         type="text"
-                                                         required
-                                                         value={data.apellidos}
-                                                         onChange={(e) => setData('apellidos', e.target.value)}
-                                                         placeholder="Ej. Pérez Rodríguez"
-                                                         className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                     />
-                                                     {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
-                                                 </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {/* Grado Ministerial (Radix UI Select) */}
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs font-semibold text-slate-700">
+                                                                    Grado Ministerial <span className="text-rose-500">*</span>
+                                                                </Label>
+                                                                <Select
+                                                                    value={data.nivel_ministerial}
+                                                                    onValueChange={(val) => setData('nivel_ministerial', val)}
+                                                                >
+                                                                    <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
+                                                                        <SelectValue placeholder="Selecciona grado ministerial" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent className="bg-white border-slate-200">
+                                                                        {gradosMinisteriales.map((gm) => (
+                                                                            <SelectItem key={gm} value={gm}>
+                                                                                {gm}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                {errors.nivel_ministerial && <p className="text-xs text-rose-500">{errors.nivel_ministerial}</p>}
+                                                            </div>
 
-                                                 {/* Nombres */}
-                                                 <div className="space-y-2">
-                                                     <Label htmlFor="nombres" className="text-xs font-semibold text-slate-700">
-                                                         Nombres <span className="text-rose-500">*</span>
-                                                     </Label>
-                                                     <Input
-                                                         id="nombres"
-                                                         type="text"
-                                                         required
-                                                         value={data.nombres}
-                                                         onChange={(e) => setData('nombres', e.target.value)}
-                                                         placeholder="Ej. Juan Carlos"
-                                                         className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                     />
-                                                     {errors.nombres && <p className="text-xs text-rose-500">{errors.nombres}</p>}
-                                                 </div>
-
-                                                    {/* Grado Ministerial (Radix UI Select) */}
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-semibold text-slate-700">
-                                                            Grado Ministerial <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <Select
-                                                            value={data.nivel_ministerial}
-                                                            onValueChange={(val) => setData('nivel_ministerial', val)}
-                                                        >
-                                                            <SelectTrigger className="bg-slate-50/50 border-slate-300 w-full">
-                                                                <SelectValue placeholder="Selecciona grado ministerial" />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="bg-white border-slate-200">
-                                                                {gradosMinisteriales.map((gm) => (
-                                                                    <SelectItem key={gm} value={gm}>
-                                                                        {gm}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        {errors.nivel_ministerial && <p className="text-xs text-rose-500">{errors.nivel_ministerial}</p>}
+                                                            {/* Último año de promoción */}
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="ano_promocion" className="text-xs font-semibold text-slate-700">
+                                                                    Último Año de Promoción
+                                                                </Label>
+                                                                <Input
+                                                                    id="ano_promocion"
+                                                                    type="text"
+                                                                    value={data.ano_promocion}
+                                                                    onChange={(e) => setData('ano_promocion', e.target.value)}
+                                                                    placeholder="Ej. 2020"
+                                                                    className="bg-slate-50/50 border-slate-300 focus:bg-white"
+                                                                />
+                                                                {errors.ano_promocion && <p className="text-xs text-rose-500">{errors.ano_promocion}</p>}
+                                                            </div>
+                                                        </div>
                                                     </div>
-
-                                                    {/* Último año de promoción */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="ano_promocion" className="text-xs font-semibold text-slate-700">
-                                                            Último Año de Promoción
-                                                        </Label>
-                                                        <Input
-                                                            id="ano_promocion"
-                                                            type="text"
-                                                            value={data.ano_promocion}
-                                                            onChange={(e) => setData('ano_promocion', e.target.value)}
-                                                            placeholder="Ej. 2020"
-                                                            className="bg-slate-50/50 border-slate-300 focus:bg-white"
-                                                        />
-                                                        {errors.ano_promocion && <p className="text-xs text-rose-500">{errors.ano_promocion}</p>}
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     )}
 
@@ -1620,7 +1603,8 @@ export default function RegistroPastor({
                                                                         }}
                                                                         className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-xs transition shadow"
                                                                     >
-
+                                                                        <Edit2 className="size-3 text-blue-400" />
+                                                                        <span>Editar</span>
                                                                     </button>
                                                                     <button
                                                                         type="button"

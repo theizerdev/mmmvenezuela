@@ -75,11 +75,14 @@ class PastorRegistroPublicoController extends Controller
             return response()->json(['existe' => false]);
         }
 
-        // Si fue creado automáticamente como cónyuge o aún no tiene fotos completas de perfil/cédula
-        $esConyugeVinculado = false;
-        if ($pastor->conyuge_id !== null || empty($pastor->foto) || empty($pastor->foto_cedula)) {
-            $esConyugeVinculado = true;
-        }
+        // Si fue creado automáticamente como cónyuge, tiene cónyuge vinculado o aún no tiene fotos completas
+        $esConyugeVinculado = (
+            $pastor->conyuge_id !== null ||
+            !empty($pastor->nombre_conyuge) ||
+            Pastor::where('conyuge_id', $pastor->id)->exists() ||
+            empty($pastor->foto) ||
+            empty($pastor->foto_cedula)
+        );
 
         $nombreConyuge = $pastor->nombre_conyuge;
         if (empty($nombreConyuge) && $pastor->conyuge) {
@@ -140,28 +143,40 @@ class PastorRegistroPublicoController extends Controller
             ? Pastor::where('documento', $cleanedDoc)->first()
             : null;
 
-        // Si no hay coincidencia exacta por documento, buscar registro incompleto/cónyuge pre-creado por dígitos numéricos
+        // Si no hay coincidencia exacta por documento, buscar por dígitos numéricos
         if (!$existingPastor && !empty($numericDoc)) {
             $existingPastor = Pastor::where(function ($q) use ($numericDoc) {
                 $q->where('documento', 'LIKE', "%{$numericDoc}%")
                     ->orWhere('codigo', 'LIKE', "%{$numericDoc}%");
-            })
-            ->where(function ($q) {
-                $q->whereNotNull('conyuge_id')
-                    ->orWhereNull('foto')
-                    ->orWhereNull('foto_cedula');
-            })
-            ->first();
+            })->first();
+        }
+
+        // Determinar si la cédula pertenece a un pastor asociado a un cónyuge o con registro incompleto (actualizable)
+        $esAsociadoConyugeOIncompleto = false;
+        if ($existingPastor) {
+            $esAsociadoConyugeOIncompleto = (
+                $existingPastor->conyuge_id !== null ||
+                !empty($existingPastor->nombre_conyuge) ||
+                Pastor::where('conyuge_id', $existingPastor->id)->exists() ||
+                empty($existingPastor->foto) ||
+                empty($existingPastor->foto_cedula)
+            );
         }
 
         $docValidationRules = ['required', 'string', 'max:30'];
-        if ($existingPastor) {
+        if ($existingPastor && $esAsociadoConyugeOIncompleto) {
+            // Cédula registrada y asociada a cónyuge: se permite modificar el registro
             $rule = Rule::unique('pastores', 'documento')->ignore($existingPastor->id);
             if ($existingPastor->conyuge_id) {
                 $rule->ignore($existingPastor->conyuge_id);
             }
+            $spousePastorId = Pastor::where('conyuge_id', $existingPastor->id)->value('id');
+            if ($spousePastorId) {
+                $rule->ignore($spousePastorId);
+            }
             $docValidationRules[] = $rule;
         } else {
+            // Cédula registrada independientemente o sin asociación a cónyuge: exigir unicidad
             $docValidationRules[] = Rule::unique('pastores', 'documento');
         }
 
@@ -280,12 +295,12 @@ class PastorRegistroPublicoController extends Controller
                 'status' => true,
             ];
 
-            if ($existingPastor) {
-                // Si el pastor ya existía (por ejemplo, creado como cónyuge), actualizamos su registro
+            if ($existingPastor && $esAsociadoConyugeOIncompleto) {
+                // Si la cédula ya existía y se encuentra asociada con un cónyuge (o incompleta), se modifican sus datos
                 $existingPastor->update($pastorData);
                 $pastor = $existingPastor;
             } else {
-                // Generar Código Único de Pastor Principal
+                // Si no está registrada, se registra el nuevo pastor
                 $codigo = Pastor::generateCodigo(
                     $validated['documento'],
                     $validated['zona'] ?? null,
