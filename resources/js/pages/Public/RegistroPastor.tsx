@@ -127,6 +127,7 @@ export default function RegistroPastor({
     const [submittedResult, setSubmittedResult] = useState<{
         codigo: string;
         nombre: string;
+        pastor_id?: number | string | null;
         iglesia?: string | null;
         mensaje: string;
     } | null>(null);
@@ -134,6 +135,7 @@ export default function RegistroPastor({
     // Estados de verificación de Cédula Principal en tiempo real
     const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
     const [cedulaExistenteNombre, setCedulaExistenteNombre] = useState<string | null>(null);
+    const [cedulaExistentePastorId, setCedulaExistentePastorId] = useState<number | string | null>(null);
 
     // Estados de verificación de Cédula Cónyuge en tiempo real
     const [isCheckingCedulaConyuge, setIsCheckingCedulaConyuge] = useState<boolean>(false);
@@ -607,6 +609,7 @@ export default function RegistroPastor({
         const trimmed = doc.trim();
         if (trimmed.length < 5) {
             setCedulaExistenteNombre(null);
+            setCedulaExistentePastorId(null);
             return;
         }
 
@@ -618,6 +621,7 @@ export default function RegistroPastor({
                 if (result.existe && result.pastor) {
                     const p = result.pastor;
                     setCedulaExistenteNombre(result.nombre || `${p.nombres} ${p.apellidos}`);
+                    setCedulaExistentePastorId(result.pastor_id || p.id);
 
                     // Cargar todos los datos registrados del pastor para su edición
                     setData((prev) => ({
@@ -721,6 +725,7 @@ export default function RegistroPastor({
                     }
                 } else {
                     setCedulaExistenteNombre(null);
+                    setCedulaExistentePastorId(null);
                 }
             }
         } catch (e) {
@@ -867,8 +872,8 @@ export default function RegistroPastor({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Si aún no está en el Paso 6, avanzar al siguiente paso sin enviar
-        if (activeTab < 6) {
+        // Si aún no está en el Paso 5, avanzar al siguiente paso sin enviar
+        if (activeTab < 5) {
             setActiveTab((prev) => prev + 1);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
@@ -878,12 +883,6 @@ export default function RegistroPastor({
         if (!data.nombres.trim() || !data.apellidos.trim() || !data.documento.trim()) {
             setActiveTab(1);
             alert('Por favor complete los campos obligatorios del Paso 1 (Nombres, Apellidos y Cédula).');
-            return;
-        }
-
-        if (data.tiene_extension && !data.extension_nombre.trim()) {
-            setActiveTab(6);
-            alert('Por favor complete el nombre de la Iglesia / Extensión o desactive la opción si no tiene una iglesia a su cargo.');
             return;
         }
 
@@ -899,7 +898,7 @@ export default function RegistroPastor({
                 currentP = 88;
                 setSubmitStage('Guardando registros en la base de datos nacional...');
             } else if (currentP > 60) {
-                setSubmitStage('Registrando Iglesia / Extensión ministerial y geolocalización...');
+                setSubmitStage('Registrando ficha ministerial y ubicación...');
             } else if (currentP > 35) {
                 setSubmitStage('Generando código ministerial y procesando fotografías...');
             } else if (currentP > 15) {
@@ -919,7 +918,8 @@ export default function RegistroPastor({
                 setSubmittedResult({
                     codigo: flashSuccess?.codigo || data.codigo || 'GENERADO',
                     nombre: flashSuccess?.nombre || `${data.nombres} ${data.apellidos}`,
-                    iglesia: flashSuccess?.iglesia || (data.tiene_extension ? data.extension_nombre : null),
+                    pastor_id: flashSuccess?.pastor_id || null,
+                    iglesia: flashSuccess?.iglesia || null,
                     mensaje: flashSuccess?.mensaje || 'Los datos han sido enviados para su revisión y confirmación oficial.',
                 });
 
@@ -946,8 +946,6 @@ export default function RegistroPastor({
                     setActiveTab(1);
                 } else if (errs.nivel_ministerial) {
                     setActiveTab(3);
-                } else if (errs.extension_nombre) {
-                    setActiveTab(6);
                 }
                 alert('Hubo observaciones en el formulario. Por favor revise los campos marcados en rojo.');
             },
@@ -971,6 +969,7 @@ export default function RegistroPastor({
         setSubmitProgress(0);
         setActiveTab(1);
         setCedulaExistenteNombre(null);
+        setCedulaExistentePastorId(null);
         reset();
         router.get('/registro', {}, { replace: true, preserveState: false });
     };
@@ -981,7 +980,6 @@ export default function RegistroPastor({
         { id: 3, title: 'Datos Eclesiásticos', icon: Cross, desc: 'Nivel ministerial, zona y distrito' },
         { id: 4, title: 'Estado de Salud', icon: Stethoscope, desc: 'Historial médico y emergencia' },
         { id: 5, title: 'Fotografías', icon: Camera, desc: 'Foto de perfil y cédula de identidad' },
-        { id: 6, title: 'Iglesia / Extensión', icon: Building2, desc: 'Registro de iglesia a su cargo' },
     ];
 
     return (
@@ -1051,22 +1049,28 @@ export default function RegistroPastor({
                                         <p className="font-bold text-base text-slate-900">
                                             {submittedResult?.nombre}
                                         </p>
-                                        {submittedResult?.iglesia && (
-                                            <div className="bg-blue-50 border border-blue-200 px-3.5 py-2 rounded-xl text-blue-900 font-semibold text-xs inline-flex items-center gap-2 mt-1">
-                                                <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
-                                                <span>Iglesia / Extensión: <b>{submittedResult.iglesia}</b></span>
-                                            </div>
-                                        )}
-                                        <p className="text-slate-600 text-xs leading-relaxed mt-2">
+                                        <p className="text-slate-600 text-xs leading-relaxed mt-1">
                                             {submittedResult?.mensaje || 'Los datos han sido recibidos para su revisión y confirmación oficial.'}
                                         </p>
                                     </div>
 
-                                    <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
+                                    <div className="pt-2 flex flex-col gap-2.5 justify-center">
+                                        {submittedResult?.pastor_id && (
+                                            <Button
+                                                type="button"
+                                                onClick={() => router.get(`/registro/${submittedResult.pastor_id}/extension`)}
+                                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-md text-sm flex items-center justify-center gap-2"
+                                            >
+                                                <Building2 className="w-4 h-4" />
+                                                Registrar Extensión
+                                                <ArrowRight className="w-4 h-4" />
+                                            </Button>
+                                        )}
                                         <Button
                                             type="button"
+                                            variant="outline"
                                             onClick={handleResetOtro}
-                                            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                            className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 font-bold py-2.5 px-6 rounded-xl shadow-xs text-sm"
                                         >
                                             <Plus className="w-4 h-4 mr-2" />
                                             Registrar a Otro Pastor
@@ -1196,7 +1200,7 @@ export default function RegistroPastor({
                                     Anterior
                                 </Button>
                             )}
-                            {activeTab < 6 && (
+                            {activeTab < 5 && (
                                 <Button
                                     type="button"
                                     onClick={() => {
@@ -1218,20 +1222,20 @@ export default function RegistroPastor({
                         <div className="block sm:hidden bg-white border border-slate-200 p-3 rounded-xl shadow-xs">
                             <div className="flex items-center justify-between text-xs mb-1.5">
                                 <span className="font-bold text-blue-700">
-                                    Paso {activeTab} de 6: {steps[activeTab - 1].title}
+                                    Paso {activeTab} de 5: {steps[activeTab - 1]?.title}
                                 </span>
-                                <span className="font-mono font-bold text-slate-500">{Math.round((activeTab / 6) * 100)}%</span>
+                                <span className="font-mono font-bold text-slate-500">{Math.round((activeTab / 5) * 100)}%</span>
                             </div>
                             <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                                 <div
                                     className="bg-blue-600 h-full transition-all duration-300 rounded-full"
-                                    style={{ width: `${(activeTab / 6) * 100}%` }}
+                                    style={{ width: `${(activeTab / 5) * 100}%` }}
                                 />
                             </div>
                         </div>
 
                         {/* Grid de Pasos */}
-                        <div className="flex gap-2.5 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 scrollbar-thin">
+                        <div className="flex gap-2.5 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 scrollbar-thin">
                             {steps.map((step) => {
                                 const Icon = step.icon;
                                 const isActive = activeTab === step.id;
@@ -1350,22 +1354,21 @@ export default function RegistroPastor({
                                                 <div className="text-xs text-emerald-900 flex items-start sm:items-center gap-2 font-medium">
                                                     <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5 sm:mt-0" />
                                                     <span>
-                                                        Pastor(a) registrado(a): <b className="font-bold text-emerald-950">{cedulaExistenteNombre}</b>. Se han cargado automáticamente todos sus datos.
+                                                        Pastor(a) registrado(a): <b className="font-bold text-emerald-950">{cedulaExistenteNombre}</b>. Se han cargado automáticamente sus datos.
                                                     </span>
                                                 </div>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setActiveTab(6);
-                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                    }}
-                                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shrink-0 shadow-xs gap-1.5"
-                                                >
-                                                    <Building2 className="w-3.5 h-3.5" />
-                                                    Ir al Paso 6 (Extensión)
-                                                    <ArrowRight className="w-3 h-3" />
-                                                </Button>
+                                                {cedulaExistentePastorId && (
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={() => router.get(`/registro/${cedulaExistentePastorId}/extension`)}
+                                                        className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shrink-0 shadow-xs gap-1.5"
+                                                    >
+                                                        <Building2 className="w-3.5 h-3.5" />
+                                                        Registrar Extensión
+                                                        <ArrowRight className="w-3 h-3" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -2360,555 +2363,12 @@ export default function RegistroPastor({
                                     Anterior: Estado de Salud
                                 </Button>
                                 <Button
-                                    type="button"
-                                    onClick={() => {
-                                        setActiveTab(6);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
-                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
-                                >
-                                    Siguiente: Iglesia / Extensión (Paso 6)
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    )}
-
-                    {/* PASO 6: IGLESIAS / EXTENSIONES A SU CARGO */}
-                    {activeTab === 6 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl animate-in fade-in duration-200">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center justify-between flex-wrap gap-2">
-                                    <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                        <Building2 className="h-5 w-5 text-blue-600" />
-                                        <span>Paso 6: Iglesia o Extensión a su Cargo</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-                                        <Label htmlFor="tiene_extension_toggle" className="text-xs font-bold text-slate-700 cursor-pointer">
-                                            ¿Tiene una Iglesia / Extensión a su cargo?
-                                        </Label>
-                                        <Switch
-                                            id="tiene_extension_toggle"
-                                            checked={data.tiene_extension}
-                                            onCheckedChange={(c) => setData('tiene_extension', c)}
-                                        />
-                                    </div>
-                                </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium mt-1">
-                                    {data.tiene_extension
-                                        ? 'Registro institucional de la sede, ubicación geolocalizada en mapa, datos de membresía y medios de comunicación.'
-                                        : 'Si no pastorea actualmente una iglesia o extensión, puede desactivar esta opción y finalizar su registro.'}
-                                </CardDescription>
-                            </CardHeader>
-
-                            <CardContent className="p-4 sm:p-6 space-y-6">
-                                {!data.tiene_extension ? (
-                                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-3">
-                                        <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center mx-auto">
-                                            <Building2 className="w-6 h-6" />
-                                        </div>
-                                        <h4 className="font-bold text-sm text-slate-800">Sin Iglesia / Extensión asignada</h4>
-                                        <p className="text-xs text-slate-500 max-w-md mx-auto">
-                                            Ha indicado que no está a cargo de una iglesia o extensión actualmente. Puede pulsar el botón de abajo para enviar su ficha ministerial oficial.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {/* Sub-Tabs de la Extensión */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-100/70 p-1.5 rounded-xl border border-slate-200">
-                                            <button
-                                                type="button"
-                                                onClick={() => setExtensionSubTab(1)}
-                                                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                                    extensionSubTab === 1
-                                                        ? 'bg-blue-700 text-white shadow-xs'
-                                                        : 'text-slate-600 hover:bg-white/60'
-                                                }`}
-                                            >
-                                                <Building2 className="w-3.5 h-3.5" />
-                                                <span>1. General</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setExtensionSubTab(2)}
-                                                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                                    extensionSubTab === 2
-                                                        ? 'bg-blue-700 text-white shadow-xs'
-                                                        : 'text-slate-600 hover:bg-white/60'
-                                                }`}
-                                            >
-                                                <MapPin className="w-3.5 h-3.5" />
-                                                <span>2. Ubicación y Mapa</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setExtensionSubTab(3)}
-                                                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                                    extensionSubTab === 3
-                                                        ? 'bg-blue-700 text-white shadow-xs'
-                                                        : 'text-slate-600 hover:bg-white/60'
-                                                }`}
-                                            >
-                                                <Users className="w-3.5 h-3.5" />
-                                                <span>3. Membresía</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setExtensionSubTab(4)}
-                                                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                                    extensionSubTab === 4
-                                                        ? 'bg-blue-700 text-white shadow-xs'
-                                                        : 'text-slate-600 hover:bg-white/60'
-                                                }`}
-                                            >
-                                                <Radio className="w-3.5 h-3.5" />
-                                                <span>4. Medios</span>
-                                            </button>
-                                        </div>
-
-                                        {/* SUB-TAB 1: GENERAL */}
-                                        {extensionSubTab === 1 && (
-                                            <div className="space-y-4 animate-in fade-in duration-150">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="extension_nombre" className="text-xs font-bold uppercase text-slate-700">
-                                                            Nombre de la Iglesia / Extensión <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_nombre"
-                                                            value={data.extension_nombre}
-                                                            onChange={(e) => setData('extension_nombre', e.target.value)}
-                                                            placeholder="Ej. Iglesia Central Barquisimeto"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                            required={data.tiene_extension}
-                                                        />
-                                                        {errors.extension_nombre && (
-                                                            <p className="text-rose-600 text-xs mt-1">{errors.extension_nombre}</p>
-                                                        )}
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_tipo_local_id" className="text-xs font-bold uppercase text-slate-700">
-                                                            Tipo de Local
-                                                        </Label>
-                                                        <Select2
-                                                            id="extension_tipo_local_id"
-                                                            options={tipoLocalOptions}
-                                                            value={data.extension_tipo_local_id}
-                                                            onChange={(val) => setData('extension_tipo_local_id', val)}
-                                                            placeholder="Seleccione Tipo de Local"
-                                                            className="mt-1"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="extension_fecha_fundacion" className="text-xs font-bold uppercase text-slate-700">
-                                                            Fecha de Fundación / Apertura
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_fecha_fundacion"
-                                                            type="date"
-                                                            value={data.extension_fecha_fundacion}
-                                                            onChange={handleExtensionFechaFundacionChange}
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_anios_activa" className="text-xs font-bold uppercase text-slate-700">
-                                                            Años Activa
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_anios_activa"
-                                                            type="number"
-                                                            min="0"
-                                                            value={data.extension_anios_activa}
-                                                            onChange={(e) => setData('extension_anios_activa', e.target.value)}
-                                                            placeholder="Ej. 15"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_tiempo_trabajo" className="text-xs font-bold uppercase text-slate-700">
-                                                            Tiempo de Trabajo Pastoral
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_tiempo_trabajo"
-                                                            value={data.extension_tiempo_trabajo}
-                                                            onChange={(e) => setData('extension_tiempo_trabajo', e.target.value)}
-                                                            placeholder="Ej. 5 años y 3 meses"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="extension_zona" className="text-xs font-bold uppercase text-slate-700">
-                                                            Zona de la Iglesia (Número)
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_zona"
-                                                            type="text"
-                                                            inputMode="numeric"
-                                                            value={data.extension_zona || data.zona}
-                                                            onChange={(e) => setData('extension_zona', e.target.value.replace(/\D/g, ''))}
-                                                            placeholder="Ej. 1"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_distrito" className="text-xs font-bold uppercase text-slate-700">
-                                                            Distrito de la Iglesia
-                                                        </Label>
-                                                        <Select2
-                                                            id="extension_distrito"
-                                                            options={distritoOptions}
-                                                            value={data.extension_distrito ? String(data.extension_distrito).replace(/\D/g, '') : (data.distrito ? String(data.distrito).replace(/\D/g, '') : '')}
-                                                            onChange={(val) => setData('extension_distrito', val)}
-                                                            placeholder="Seleccione Distrito (1 al 5)"
-                                                            className="mt-1"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <Label htmlFor="extension_descripcion" className="text-xs font-bold uppercase text-slate-700">
-                                                        Reseña Histórica / Descripción de la Iglesia
-                                                    </Label>
-                                                    <Textarea
-                                                        id="extension_descripcion"
-                                                        rows={3}
-                                                        value={data.extension_descripcion}
-                                                        onChange={(e) => setData('extension_descripcion', e.target.value)}
-                                                        placeholder="Breve reseña sobre la fundación, crecimiento o características del templo..."
-                                                        className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* SUB-TAB 2: UBICACIÓN Y MAPA GPS */}
-                                        {extensionSubTab === 2 && (
-                                            <div className="space-y-4 animate-in fade-in duration-150">
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="extension_estado_id" className="text-xs font-bold uppercase text-slate-700">
-                                                            Estado <span className="text-rose-500">*</span>
-                                                        </Label>
-                                                        <Select2
-                                                            id="extension_estado_id"
-                                                            options={estadoOptions}
-                                                            value={data.extension_estado_id || data.estado_id}
-                                                            onChange={(val) => setData((prev) => ({ ...prev, extension_estado_id: val, extension_municipio_id: '', extension_parroquia_id: '' }))}
-                                                            placeholder="Seleccione Estado"
-                                                            className="mt-1"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_municipio_id" className="text-xs font-bold uppercase text-slate-700">
-                                                            Municipio
-                                                        </Label>
-                                                        <Select2
-                                                            id="extension_municipio_id"
-                                                            options={extensionMunicipioOptions}
-                                                            value={data.extension_municipio_id || data.municipio_id}
-                                                            onChange={(val) => setData((prev) => ({ ...prev, extension_municipio_id: val, extension_parroquia_id: '' }))}
-                                                            placeholder="Seleccione Municipio"
-                                                            className="mt-1"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_parroquia_id" className="text-xs font-bold uppercase text-slate-700">
-                                                            Parroquia
-                                                        </Label>
-                                                        <Select2
-                                                            id="extension_parroquia_id"
-                                                            options={extensionParroquiaOptions}
-                                                            value={data.extension_parroquia_id || data.parroquia_id}
-                                                            onChange={(val) => setData('extension_parroquia_id', val)}
-                                                            placeholder="Seleccione Parroquia"
-                                                            className="mt-1"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="extension_sector" className="text-xs font-bold uppercase text-slate-700">
-                                                            Sector / Urbanización
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_sector"
-                                                            value={data.extension_sector}
-                                                            onChange={(e) => setData('extension_sector', e.target.value)}
-                                                            placeholder="Ej. Sector Centro / Urb. Los Álamos"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_calle" className="text-xs font-bold uppercase text-slate-700">
-                                                            Calle
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_calle"
-                                                            value={data.extension_calle}
-                                                            onChange={(e) => setData('extension_calle', e.target.value)}
-                                                            placeholder="Ej. Calle 12 con Carrera 20"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_avenida" className="text-xs font-bold uppercase text-slate-700">
-                                                            Avenida / Transversal
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_avenida"
-                                                            value={data.extension_avenida}
-                                                            onChange={(e) => setData('extension_avenida', e.target.value)}
-                                                            placeholder="Ej. Av. Venezuela"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <Label htmlFor="extension_direccion" className="text-xs font-bold uppercase text-slate-700">
-                                                        Punto de Referencia / Dirección Detallada
-                                                    </Label>
-                                                    <Input
-                                                        id="extension_direccion"
-                                                        value={data.extension_direccion}
-                                                        onChange={(e) => setData('extension_direccion', e.target.value)}
-                                                        placeholder="Ej. Frente a la plaza Bolívar, casa esquinera color azul"
-                                                        className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                    />
-                                                </div>
-
-                                                {/* Selector Interactivo de Mapa GPS */}
-                                                <div className="space-y-2 pt-2">
-                                                    <Label className="text-xs font-bold uppercase text-slate-700 flex items-center gap-1.5">
-                                                        <MapPin className="w-4 h-4 text-rose-600" />
-                                                        Ubicación Geográfica en Mapa (GPS)
-                                                    </Label>
-                                                    <LocationMapPicker
-                                                        lat={data.extension_latitud}
-                                                        lng={data.extension_longitud}
-                                                        onLocationSelect={handleExtensionMapLocationSelect}
-                                                        estadoNombre={selectedExtensionEstadoNombre}
-                                                        municipioNombre={selectedExtensionMunicipioNombre}
-                                                        className="h-80 rounded-xl overflow-hidden border border-slate-300 shadow-sm"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* SUB-TAB 3: MEMBRESÍA Y FRUTOS */}
-                                        {extensionSubTab === 3 && (
-                                            <div className="space-y-4 animate-in fade-in duration-150">
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="extension_miembros_activos" className="text-xs font-bold uppercase text-slate-700">
-                                                            Miembros Activos / Bautizados
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_miembros_activos"
-                                                            type="number"
-                                                            min="0"
-                                                            value={data.extension_miembros_activos}
-                                                            onChange={(e) => setData('extension_miembros_activos', e.target.value)}
-                                                            placeholder="Ej. 120"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_cantidad_campos_blancos" className="text-xs font-bold uppercase text-slate-700">
-                                                            Campos Blancos / Anexos
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_cantidad_campos_blancos"
-                                                            type="number"
-                                                            min="0"
-                                                            value={data.extension_cantidad_campos_blancos}
-                                                            onChange={(e) => setData('extension_cantidad_campos_blancos', e.target.value)}
-                                                            placeholder="Ej. 3"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_miembro_probante" className="text-xs font-bold uppercase text-slate-700">
-                                                            Miembros Probantes / Asistentes
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_miembro_probante"
-                                                            type="number"
-                                                            min="0"
-                                                            value={data.extension_miembro_probante}
-                                                            onChange={(e) => setData('extension_miembro_probante', e.target.value)}
-                                                            placeholder="Ej. 45"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="extension_iglesias_fundadas" className="text-xs font-bold uppercase text-slate-700">
-                                                            Iglesias / Obras Fundadas
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_iglesias_fundadas"
-                                                            type="number"
-                                                            min="0"
-                                                            value={data.extension_iglesias_fundadas}
-                                                            onChange={(e) => setData('extension_iglesias_fundadas', e.target.value)}
-                                                            placeholder="Ej. 2"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <Label htmlFor="extension_pastores_ministerio" className="text-xs font-bold uppercase text-slate-700">
-                                                            Pastores Enviados al Ministerio
-                                                        </Label>
-                                                        <Input
-                                                            id="extension_pastores_ministerio"
-                                                            type="number"
-                                                            min="0"
-                                                            value={data.extension_pastores_ministerio}
-                                                            onChange={(e) => setData('extension_pastores_ministerio', e.target.value)}
-                                                            placeholder="Ej. 4"
-                                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <Label htmlFor="extension_logros_obtenidos" className="text-xs font-bold uppercase text-slate-700">
-                                                        Logros, Avances y Frutos Ministeriales
-                                                    </Label>
-                                                    <Textarea
-                                                        id="extension_logros_obtenidos"
-                                                        rows={3}
-                                                        value={data.extension_logros_obtenidos}
-                                                        onChange={(e) => setData('extension_logros_obtenidos', e.target.value)}
-                                                        placeholder="Detalle los avances edilicios, nuevos anexos abiertos, eventos evangelísticos o campañas destacadas..."
-                                                        className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* SUB-TAB 4: MEDIOS DE COMUNICACIÓN */}
-                                        {extensionSubTab === 4 && (
-                                            <div className="space-y-4 animate-in fade-in duration-150">
-                                                <div className="flex items-center justify-between bg-blue-50/70 p-4 rounded-xl border border-blue-200">
-                                                    <div>
-                                                        <p className="font-bold text-sm text-blue-950">¿Posee Medio de Comunicación?</p>
-                                                        <p className="text-xs text-slate-600">Transmisiones por Radio FM/AM, Televisión o Redes Sociales activas</p>
-                                                    </div>
-                                                    <Switch
-                                                        checked={data.extension_posee_medio_comunicacion}
-                                                        onCheckedChange={(c) => setData('extension_posee_medio_comunicacion', c)}
-                                                    />
-                                                </div>
-
-                                                {data.extension_posee_medio_comunicacion && (
-                                                    <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                                        <p className="text-xs font-bold uppercase text-slate-700">Agregar Medio de Transmisión:</p>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                            <Input
-                                                                value={nuevoMedioCual}
-                                                                onChange={(e) => setNuevoMedioCual(e.target.value)}
-                                                                placeholder="Medio (Ej. Radio Impacto 95.1 FM)"
-                                                                className="bg-white text-xs"
-                                                            />
-                                                            <Input
-                                                                value={nuevoMedioDonde}
-                                                                onChange={(e) => setNuevoMedioDonde(e.target.value)}
-                                                                placeholder="Dial / Canal / Red Social"
-                                                                className="bg-white text-xs"
-                                                            />
-                                                            <div className="flex gap-2">
-                                                                <Input
-                                                                    value={nuevoMedioNota}
-                                                                    onChange={(e) => setNuevoMedioNota(e.target.value)}
-                                                                    placeholder="Horario / Días"
-                                                                    className="bg-white text-xs"
-                                                                />
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    onClick={handleAgregarMedio}
-                                                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shrink-0"
-                                                                >
-                                                                    <Plus className="w-3.5 h-3.5" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-
-                                                        {data.extension_medios_lista && data.extension_medios_lista.length > 0 && (
-                                                            <div className="space-y-2 pt-2">
-                                                                <p className="text-xs font-bold text-slate-600">Medios Registrados:</p>
-                                                                <div className="divide-y divide-slate-200 border border-slate-200 rounded-lg bg-white overflow-hidden">
-                                                                    {data.extension_medios_lista.map((item, idx) => (
-                                                                        <div key={idx} className="p-3 flex items-center justify-between text-xs">
-                                                                            <div>
-                                                                                <p className="font-bold text-slate-900">{item.cual}</p>
-                                                                                <p className="text-slate-500">{item.donde} {item.nota ? `• ${item.nota}` : ''}</p>
-                                                                            </div>
-                                                                            <Button
-                                                                                type="button"
-                                                                                size="sm"
-                                                                                variant="ghost"
-                                                                                onClick={() => handleEliminarMedio(idx)}
-                                                                                className="text-rose-600 hover:text-rose-800 h-7 w-7 p-0"
-                                                                            >
-                                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                                            </Button>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </CardContent>
-
-                            <CardFooter className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setActiveTab(5);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
-                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
-                                >
-                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                    Anterior: Fotografías
-                                </Button>
-                                <Button
                                     type="submit"
                                     disabled={processing}
                                     className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg text-sm"
                                 >
                                     <Save className="w-4 h-4 mr-2" />
-                                    {processing ? 'Enviando Ficha Oficial...' : 'Finalizar y Enviar Registro Oficial'}
+                                    {processing ? 'Enviando Ficha Oficial...' : 'Finalizar y Enviar Registro'}
                                 </Button>
                             </CardFooter>
                         </Card>

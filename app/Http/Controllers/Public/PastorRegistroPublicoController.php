@@ -714,7 +714,7 @@ class PastorRegistroPublicoController extends Controller
         $validated = $request->validate([
             'extension_id' => 'nullable|integer',
             'nombre' => 'required|string|max:255',
-            'tipo_local_id' => 'nullable|integer|exists:tipos_local,id',
+            'tipo_local_id' => 'nullable|integer|exists:tipo_locales,id',
             'estado_id' => 'required|integer|exists:estados,id',
             'municipio_id' => 'nullable|integer|exists:municipios,id',
             'parroquia_id' => 'nullable|integer|exists:parroquias,id',
