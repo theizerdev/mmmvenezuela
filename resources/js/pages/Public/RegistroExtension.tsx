@@ -267,29 +267,27 @@ export default function RegistroExtension({
         }));
     };
 
-    const handleFechaFundacionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        if (val) {
-            const fundDate = new Date(val);
-            const today = new Date();
-            if (!isNaN(fundDate.getTime())) {
-                let years = today.getFullYear() - fundDate.getFullYear();
-                let months = today.getMonth() - fundDate.getMonth();
-                if (months < 0 || (months === 0 && today.getDate() < fundDate.getDate())) {
-                    years--;
-                    months += 12;
-                }
-                const tiempoText = years > 0 ? `${years} año(s) y ${months} mes(es)` : `${months} mes(es)`;
-                setData((prev) => ({
-                    ...prev,
-                    fecha_fundacion: val,
-                    anios_activa: String(Math.max(0, years)),
-                    tiempo_trabajo: tiempoText,
-                }));
-                return;
+    const handleAnioFundacionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+        const currentYear = new Date().getFullYear();
+        let computedAnios = '';
+        let tiempoText = '';
+
+        if (val.length === 4) {
+            const numYear = parseInt(val, 10);
+            if (numYear >= 1900 && numYear <= currentYear) {
+                const diff = currentYear - numYear;
+                computedAnios = String(Math.max(0, diff));
+                tiempoText = diff > 0 ? `${diff} año(s)` : 'Menos de 1 año';
             }
         }
-        setData((prev) => ({ ...prev, fecha_fundacion: val }));
+
+        setData((prev) => ({
+            ...prev,
+            fecha_fundacion: val,
+            anios_activa: computedAnios !== '' ? computedAnios : (val.length === 4 ? '' : prev.anios_activa),
+            tiempo_trabajo: tiempoText !== '' ? tiempoText : prev.tiempo_trabajo,
+        }));
     };
 
     const handleAgregarMedio = () => {
@@ -697,14 +695,17 @@ export default function RegistroExtension({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="fecha_fundacion" className="text-xs font-bold uppercase text-slate-700">
-                                            Fecha de Fundación / Apertura
+                                            Año de Fundación / Apertura
                                         </Label>
                                         <Input
                                             id="fecha_fundacion"
-                                            type="date"
+                                            type="number"
+                                            min="1900"
+                                            max={new Date().getFullYear()}
                                             value={data.fecha_fundacion}
-                                            onChange={handleFechaFundacionChange}
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            onChange={handleAnioFundacionChange}
+                                            placeholder="Ej. 1995"
+                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600 font-mono"
                                         />
                                     </div>
 

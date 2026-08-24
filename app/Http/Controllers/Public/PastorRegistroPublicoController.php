@@ -695,8 +695,8 @@ class PastorRegistroPublicoController extends Controller
                 'longitud' => $iglesia->longitud !== null ? (string)$iglesia->longitud : '',
                 'zona' => $iglesia->zona ?: '',
                 'distrito' => $iglesia->distrito ?: '',
-                'fecha_fundacion' => $iglesia->fecha_fundacion ? $iglesia->fecha_fundacion->format('Y-m-d') : '',
-                'anios_activa' => $iglesia->anios_activa !== null ? (string)$iglesia->anios_activa : '',
+                'fecha_fundacion' => $iglesia->fecha_fundacion ? $iglesia->fecha_fundacion->format('Y') : '',
+                'anios_activa' => $iglesia->anios_activa !== null ? (string)$iglesia->anios_activa : ($iglesia->fecha_fundacion ? (string)max(0, (int)date('Y') - (int)$iglesia->fecha_fundacion->format('Y')) : ''),
                 'tiempo_trabajo' => $iglesia->tiempo_trabajo ?: '',
                 'descripcion' => $iglesia->descripcion ?: '',
                 'miembros_activos' => $iglesia->miembros_activos !== null ? (string)$iglesia->miembros_activos : '',
@@ -735,7 +735,7 @@ class PastorRegistroPublicoController extends Controller
             'longitud' => 'nullable|numeric|between:-180,180',
             'zona' => 'nullable|string|max:10',
             'distrito' => 'nullable|string|max:10',
-            'fecha_fundacion' => 'nullable|date',
+            'fecha_fundacion' => 'nullable|string|max:20',
             'anios_activa' => 'nullable|integer|min:0',
             'tiempo_trabajo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
@@ -761,6 +761,23 @@ class PastorRegistroPublicoController extends Controller
                 $medioComunicacionJson = json_encode($validated['medios_lista'], JSON_UNESCAPED_UNICODE);
             }
 
+            $fechaFundacion = null;
+            $aniosActiva = !empty($validated['anios_activa']) ? (int)$validated['anios_activa'] : null;
+            if (!empty($validated['fecha_fundacion'])) {
+                $rawDate = trim((string)$validated['fecha_fundacion']);
+                if (preg_match('/^\d{4}$/', $rawDate)) {
+                    $fechaFundacion = $rawDate . '-01-01';
+                    if ($aniosActiva === null) {
+                        $aniosActiva = max(0, (int)date('Y') - (int)$rawDate);
+                    }
+                } elseif (strtotime($rawDate)) {
+                    $fechaFundacion = date('Y-m-d', strtotime($rawDate));
+                    if ($aniosActiva === null) {
+                        $aniosActiva = max(0, (int)date('Y') - (int)date('Y', strtotime($rawDate)));
+                    }
+                }
+            }
+
             $extensionPayload = [
                 'nombre' => $validated['nombre'],
                 'pastor_id' => $pastor->id,
@@ -776,8 +793,8 @@ class PastorRegistroPublicoController extends Controller
                 'longitud' => $validated['longitud'] ?? null,
                 'zona' => $zonaLimpiada,
                 'distrito' => $distritoLimpiado,
-                'fecha_fundacion' => $validated['fecha_fundacion'] ?? null,
-                'anios_activa' => $validated['anios_activa'] ?? null,
+                'fecha_fundacion' => $fechaFundacion,
+                'anios_activa' => $aniosActiva,
                 'tiempo_trabajo' => $validated['tiempo_trabajo'] ?? null,
                 'descripcion' => $validated['descripcion'] ?? null,
                 'miembros_activos' => $validated['miembros_activos'] ?? null,
