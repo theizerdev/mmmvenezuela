@@ -685,17 +685,17 @@ export default function RegistroPastor({
                             extension_id: ext.id ? String(ext.id) : prev.extension_id,
                             extension_nombre: ext.nombre || prev.extension_nombre,
                             extension_tipo_local_id: ext.tipo_local_id ? String(ext.tipo_local_id) : prev.extension_tipo_local_id,
-                            extension_estado_id: ext.estado_id ? String(ext.estado_id) : prev.extension_estado_id,
-                            extension_municipio_id: ext.municipio_id ? String(ext.municipio_id) : prev.extension_municipio_id,
-                            extension_parroquia_id: ext.parroquia_id ? String(ext.parroquia_id) : prev.extension_parroquia_id,
+                            extension_estado_id: ext.estado_id ? String(ext.estado_id) : (p.estado_id ? String(p.estado_id) : prev.extension_estado_id),
+                            extension_municipio_id: ext.municipio_id ? String(ext.municipio_id) : (p.municipio_id ? String(p.municipio_id) : prev.extension_municipio_id),
+                            extension_parroquia_id: ext.parroquia_id ? String(ext.parroquia_id) : (p.parroquia_id ? String(p.parroquia_id) : prev.extension_parroquia_id),
                             extension_direccion: ext.direccion || prev.extension_direccion,
                             extension_sector: ext.sector || prev.extension_sector,
                             extension_calle: ext.calle || prev.extension_calle,
                             extension_avenida: ext.avenida || prev.extension_avenida,
                             extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
                             extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
-                            extension_zona: ext.zona || prev.extension_zona,
-                            extension_distrito: ext.distrito || prev.extension_distrito,
+                            extension_zona: ext.zona || p.zona || prev.extension_zona,
+                            extension_distrito: ext.distrito || p.distrito || prev.extension_distrito,
                             extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
                             extension_anios_activa: ext.anios_activa ? String(ext.anios_activa) : prev.extension_anios_activa,
                             extension_tiempo_trabajo: ext.tiempo_trabajo || prev.extension_tiempo_trabajo,
@@ -707,6 +707,16 @@ export default function RegistroPastor({
                             extension_iglesias_fundadas: ext.iglesias_fundadas ? String(ext.iglesias_fundadas) : prev.extension_iglesias_fundadas,
                             extension_pastores_ministerio: ext.pastores_ministerio ? String(ext.pastores_ministerio) : prev.extension_pastores_ministerio,
                             extension_posee_medio_comunicacion: Boolean(ext.posee_medio_comunicacion),
+                        }));
+                    } else {
+                        setData((prev) => ({
+                            ...prev,
+                            tiene_extension: true,
+                            extension_estado_id: p.estado_id ? String(p.estado_id) : prev.extension_estado_id,
+                            extension_municipio_id: p.municipio_id ? String(p.municipio_id) : prev.extension_municipio_id,
+                            extension_parroquia_id: p.parroquia_id ? String(p.parroquia_id) : prev.extension_parroquia_id,
+                            extension_zona: p.zona || prev.extension_zona,
+                            extension_distrito: p.distrito || prev.extension_distrito,
                         }));
                     }
                 } else {
@@ -1071,7 +1081,7 @@ export default function RegistroPastor({
 
             {/* Header Institucional en Fondo Claro */}
             <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-                <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div className="max-w-[1480px] mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <img
                             src="/icons/logo_mmm-a-color-sin-fondo.png"
@@ -1118,7 +1128,7 @@ export default function RegistroPastor({
             </header>
 
             {/* Contenido Principal */}
-            <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 space-y-6">
+            <main className="flex-1 max-w-[1480px] w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
                 {/* Banner de Recuperación de Borrador */}
                 {hasPendingDraft && (
                     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -1160,7 +1170,7 @@ export default function RegistroPastor({
                 {/* Formulario Wizard */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Header de Título y Progreso */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div>
                             <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
                                 <Sparkles className="w-5 h-5 text-blue-600" />
@@ -1176,17 +1186,23 @@ export default function RegistroPastor({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => setActiveTab(activeTab - 1)}
+                                    onClick={() => {
+                                        setActiveTab(activeTab - 1);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
                                     className="border-slate-300 text-slate-700 hover:bg-slate-50 flex-1 md:flex-initial font-medium"
                                 >
                                     <ArrowLeft className="w-4 h-4 mr-1.5" />
                                     Anterior
                                 </Button>
                             )}
-                            {activeTab < 5 && (
+                            {activeTab < 6 && (
                                 <Button
                                     type="button"
-                                    onClick={() => setActiveTab(activeTab + 1)}
+                                    onClick={() => {
+                                        setActiveTab(activeTab + 1);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
                                     className="bg-blue-700 hover:bg-blue-800 text-white font-bold flex-1 md:flex-initial shadow-md"
                                 >
                                     Siguiente
@@ -1202,20 +1218,20 @@ export default function RegistroPastor({
                         <div className="block sm:hidden bg-white border border-slate-200 p-3 rounded-xl shadow-xs">
                             <div className="flex items-center justify-between text-xs mb-1.5">
                                 <span className="font-bold text-blue-700">
-                                    Paso {activeTab} de 5: {steps[activeTab - 1].title}
+                                    Paso {activeTab} de 6: {steps[activeTab - 1].title}
                                 </span>
-                                <span className="font-mono font-bold text-slate-500">{Math.round((activeTab / 5) * 100)}%</span>
+                                <span className="font-mono font-bold text-slate-500">{Math.round((activeTab / 6) * 100)}%</span>
                             </div>
                             <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                                 <div
                                     className="bg-blue-600 h-full transition-all duration-300 rounded-full"
-                                    style={{ width: `${(activeTab / 5) * 100}%` }}
+                                    style={{ width: `${(activeTab / 6) * 100}%` }}
                                 />
                             </div>
                         </div>
 
                         {/* Grid de Pasos */}
-                        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-5 scrollbar-thin">
+                        <div className="flex gap-2.5 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 scrollbar-thin">
                             {steps.map((step) => {
                                 const Icon = step.icon;
                                 const isActive = activeTab === step.id;
@@ -1225,7 +1241,10 @@ export default function RegistroPastor({
                                     <button
                                         key={step.id}
                                         type="button"
-                                        onClick={() => setActiveTab(step.id)}
+                                        onClick={() => {
+                                            setActiveTab(step.id);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
                                         className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${isActive
                                                 ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 shadow-xs'
                                                 : isCompleted
@@ -1327,10 +1346,27 @@ export default function RegistroPastor({
                                             className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600 font-mono"
                                         />
                                         {cedulaExistenteNombre && (
-                                            <p className="text-xs text-emerald-700 mt-1.5 flex items-center gap-1 font-semibold">
-                                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                                                Pastor(a) registrado(a): {cedulaExistenteNombre} (Datos cargados para edición/actualización)
-                                            </p>
+                                            <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in">
+                                                <div className="text-xs text-emerald-900 flex items-start sm:items-center gap-2 font-medium">
+                                                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5 sm:mt-0" />
+                                                    <span>
+                                                        Pastor(a) registrado(a): <b className="font-bold text-emerald-950">{cedulaExistenteNombre}</b>. Se han cargado automáticamente todos sus datos.
+                                                    </span>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setActiveTab(6);
+                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    }}
+                                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shrink-0 shadow-xs gap-1.5"
+                                                >
+                                                    <Building2 className="w-3.5 h-3.5" />
+                                                    Ir al Paso 6 (Extensión)
+                                                    <ArrowRight className="w-3 h-3" />
+                                                </Button>
+                                            </div>
                                         )}
                                     </div>
 
