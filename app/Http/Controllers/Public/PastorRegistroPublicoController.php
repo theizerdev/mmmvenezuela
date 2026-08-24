@@ -88,26 +88,22 @@ class PastorRegistroPublicoController extends Controller
         $numeric = preg_replace('/[^\d]/', '', $cleaned);
         $pastor = Pastor::with(['conyuge', 'iglesias'])
             ->where('documento', $cleaned)
-            ->orWhere('documento', 'LIKE', "%{$numeric}%")
+            ->when(!empty($numeric), function ($q) use ($numeric) {
+                $q->orWhere('documento', 'LIKE', "%{$numeric}%")
+                  ->orWhere('codigo', 'LIKE', "%{$numeric}%");
+            })
             ->first();
 
         if (!$pastor) {
             return response()->json(['existe' => false]);
         }
 
-        // Si fue creado automáticamente como cónyuge, tiene cónyuge vinculado o aún no tiene fotos completas
-        $esConyugeVinculado = (
-            $pastor->conyuge_id !== null ||
-            !empty($pastor->nombre_conyuge) ||
-            Pastor::where('conyuge_id', $pastor->id)->exists() ||
-            empty($pastor->foto) ||
-            empty($pastor->foto_cedula)
-        );
-
         $nombreConyuge = $pastor->nombre_conyuge;
         if (empty($nombreConyuge) && $pastor->conyuge) {
             $nombreConyuge = $pastor->conyuge->nombre_completo;
         }
+
+        $cedulaConyuge = $pastor->conyuge ? $pastor->conyuge->documento : null;
 
         // Buscar la extensión cargada por el pastor o por su cónyuge
         $extension = null;
@@ -134,76 +130,90 @@ class PastorRegistroPublicoController extends Controller
 
         return response()->json([
             'existe' => true,
-            'es_conyuge_vinculado' => $esConyugeVinculado,
             'nombre' => $pastor->nombre_completo,
-            'nombres' => $pastor->nombres,
-            'apellidos' => $pastor->apellidos,
-            'genero' => $pastor->genero ?: 'Masculino',
-            'fe_nacimiento' => $pastor->fe_nacimiento ? $pastor->fe_nacimiento->format('Y-m-d') : null,
-            'edad' => $pastor->edad,
-            'codigo' => $pastor->codigo,
-            'estado_civil' => $pastor->estado_civil ?: 'Casado(a)',
-            'nombre_conyuge' => $nombreConyuge,
-            'conyuge_es_pastor' => (bool) $pastor->conyuge_id,
-            'documento_conyuge' => $pastor->conyuge ? $pastor->conyuge->documento : null,
+            'pastor' => [
+                'id' => $pastor->id,
+                'codigo' => $pastor->codigo,
+                'nombres' => $pastor->nombres,
+                'apellidos' => $pastor->apellidos,
+                'documento' => $pastor->documento,
+                'genero' => $pastor->genero ?: 'Masculino',
+                'fe_nacimiento' => $pastor->fe_nacimiento ? $pastor->fe_nacimiento->format('Y-m-d') : '',
+                'edad' => $pastor->edad ? (string)$pastor->edad : '',
+                'estado_civil' => $pastor->estado_civil ?: 'Casado(a)',
+                'nombre_conyuge' => $nombreConyuge ?: '',
+                'cedula_conyuge' => $cedulaConyuge ?: '',
+                'conyuge_pastorea' => (bool)$pastor->conyuge_id,
+                'conyuge_id' => $pastor->conyuge_id ? (string)$pastor->conyuge_id : '',
+                'telefono_tlf' => $pastor->telefono_tlf ?: '',
+                'telefono_hab' => $pastor->telefono_hab ?: '',
+                'telefono_otro' => $pastor->telefono_otro ?: '',
+                'email' => $pastor->email ?: '',
+                'estado_id' => $pastor->estado_id ? (string)$pastor->estado_id : '',
+                'municipio_id' => $pastor->municipio_id ? (string)$pastor->municipio_id : '',
+                'parroquia_id' => $pastor->parroquia_id ? (string)$pastor->parroquia_id : '',
+                'municipio' => $pastor->municipio ?: '',
+                'edificio_casa_quinta' => $pastor->edificio_casa_quinta ?: '',
+                'piso' => $pastor->piso ?: '',
+                'apartamento' => $pastor->apartamento ?: '',
+                'calle_avenida' => $pastor->calle_avenida ?: '',
+                'urbanizacion' => $pastor->urbanizacion ?: '',
+                'grado_instruccion' => $pastor->grado_instruccion ?: 'Universitario',
+                'titulo_obtenido' => $pastor->titulo_obtenido ?: '',
+                'estudio_teologico' => (bool)$pastor->estudio_teologico,
+                'titulo_teologico' => $pastor->titulo_teologico ?: '',
+                'tiempo_de_estudio_teologico' => $pastor->tiempo_de_estudio_teologico ?: '',
+                'instituto_teologico' => $pastor->instituto_teologico ?: '',
+                'nivel_ministerial' => $pastor->nivel_ministerial ?: 'Ministro Ordenado',
+                'zona' => $pastor->zona ?: '',
+                'distrito' => $pastor->distrito ?: '',
+                'ano_promocion' => $pastor->ano_promocion ?: '',
+                'tiempo_colaborando' => $pastor->tiempo_colaborando ?: '',
+                'batizado_espiritu_santo' => (bool)$pastor->batizado_espiritu_santo,
+                'pertenece_ministerio' => (bool)$pastor->pertenece_ministerio,
+                'cargo_nacional' => $pastor->cargo_nacional ?: '',
+                'mencion' => $pastor->mencion ?: '',
+                'nota' => $pastor->nota ?: '',
+                'grupo_sanguineo' => $pastor->grupo_sanguineo ?: 'O+',
+                'condicion_salud' => $pastor->condicion_salud ?: 'Buena',
+                'padece_enfermedad' => (bool)$pastor->padece_enfermedad,
+                'enfermedades_cronicas' => $pastor->enfermedades_cronicas ?: '',
+                'toma_medicamentos' => (bool)$pastor->toma_medicamentos,
+                'medicamentos_recetados' => $pastor->medicamentos_recetados ?: '',
+                'alergias' => $pastor->alergias ?: '',
+                'contacto_emergencia_nombre' => $pastor->contacto_emergencia_nombre ?: '',
+                'contacto_emergencia_telefono' => $pastor->contacto_emergencia_telefono ?: '',
+                'observaciones_salud' => $pastor->observaciones_salud ?: '',
+                'foto' => $pastor->foto ?: '',
+                'foto_cedula' => $pastor->foto_cedula ?: '',
+            ],
             'extension' => $extension,
         ]);
     }
 
     /**
      * Procesa y guarda la solicitud de registro público del pastor (Wizard de 5 Pasos).
+     * Si el pastor ya existe por su cédula, actualiza su ficha; si no existe, lo crea.
      */
     public function store(Request $request)
     {
         $cleanedDoc = trim($request->input('documento', ''));
         $numericDoc = preg_replace('/[^\d]/', '', $cleanedDoc);
 
-        // Buscar primero por cédula exacta
-        $existingPastor = !empty($cleanedDoc)
-            ? Pastor::where('documento', $cleanedDoc)->first()
-            : null;
-
-        // Si no hay coincidencia exacta por documento, buscar por dígitos numéricos
-        if (!$existingPastor && !empty($numericDoc)) {
-            $existingPastor = Pastor::where(function ($q) use ($numericDoc) {
-                $q->where('documento', 'LIKE', "%{$numericDoc}%")
-                    ->orWhere('codigo', 'LIKE', "%{$numericDoc}%");
-            })->first();
-        }
-
-        // Determinar si la cédula pertenece a un pastor asociado a un cónyuge o con registro incompleto (actualizable)
-        $esAsociadoConyugeOIncompleto = false;
-        if ($existingPastor) {
-            $esAsociadoConyugeOIncompleto = (
-                $existingPastor->conyuge_id !== null ||
-                !empty($existingPastor->nombre_conyuge) ||
-                Pastor::where('conyuge_id', $existingPastor->id)->exists() ||
-                empty($existingPastor->foto) ||
-                empty($existingPastor->foto_cedula)
-            );
-        }
-
-        $docValidationRules = ['required', 'string', 'max:50'];
-        if ($existingPastor && $esAsociadoConyugeOIncompleto) {
-            $rule = Rule::unique('pastores', 'documento')->ignore($existingPastor->id);
-            if ($existingPastor->conyuge_id) {
-                $rule->ignore($existingPastor->conyuge_id);
-            }
-            $spousePastorId = Pastor::where('conyuge_id', $existingPastor->id)->value('id');
-            if ($spousePastorId) {
-                $rule->ignore($spousePastorId);
-            }
-            $docValidationRules[] = $rule;
-        } else {
-            $docValidationRules[] = Rule::unique('pastores', 'documento');
-        }
+        // Buscar primero por coincidencia exacta o numérica
+        $existingPastor = Pastor::where('documento', $cleanedDoc)
+            ->when(!empty($numericDoc), function ($q) use ($numericDoc) {
+                $q->orWhere('documento', 'LIKE', "%{$numericDoc}%")
+                  ->orWhere('codigo', 'LIKE', "%{$numericDoc}%");
+            })
+            ->first();
 
         $validated = $request->validate([
             // Paso 1: Personales, Ubicación y Contacto
             'codigo' => ['nullable', 'string', 'max:50'],
             'nombres' => ['required', 'string', 'max:191'],
             'apellidos' => ['required', 'string', 'max:191'],
-            'documento' => $docValidationRules,
+            'documento' => ['required', 'string', 'max:50'],
             'genero' => ['nullable', 'string', 'in:M,F,Masculino,Femenino'],
             'fe_nacimiento' => ['nullable', 'date'],
             'edad' => ['nullable', 'integer', 'min:0', 'max:120'],
@@ -262,14 +272,13 @@ class PastorRegistroPublicoController extends Controller
             'foto' => ['nullable'],
             'foto_cedula' => ['nullable'],
         ], [
-            'documento.unique' => 'Esta cédula de identidad ya se encuentra registrada en el sistema.',
             'documento.required' => 'La Cédula de Identidad es obligatoria.',
             'nombres.required' => 'El nombre es obligatorio.',
             'apellidos.required' => 'El apellido es obligatorio.',
             'nivel_ministerial.required' => 'El grado ministerial es obligatorio.',
         ]);
 
-        return DB::transaction(function () use ($request, $validated, $existingPastor, $esAsociadoConyugeOIncompleto) {
+        return DB::transaction(function () use ($request, $validated, $existingPastor) {
             // Procesar foto de perfil
             $fotoPath = null;
             if ($request->hasFile('foto')) {
@@ -394,7 +403,7 @@ class PastorRegistroPublicoController extends Controller
                 'status' => true,
             ];
 
-            if ($existingPastor && $esAsociadoConyugeOIncompleto) {
+            if ($existingPastor) {
                 $existingPastor->update($pastorData);
                 $pastor = $existingPastor;
             } else {
