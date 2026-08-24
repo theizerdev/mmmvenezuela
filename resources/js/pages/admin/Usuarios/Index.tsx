@@ -14,8 +14,34 @@ import {
     Phone,
     Copy,
     MessageCircle,
+    KeyRound,
+    Sparkles,
+    Eye,
+    EyeOff,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
+
+// Generador de contraseña segura compatible con las políticas (8-12 caracteres, mayúsculas, minúsculas, números y símbolos)
+const generateStrongPassword = (length = 10): string => {
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijkmnopqrstuvwxyz';
+    const numbers = '23456789';
+    const symbols = '@$!%*#?&._-';
+
+    const pass = [
+        uppercase[Math.floor(Math.random() * uppercase.length)],
+        lowercase[Math.floor(Math.random() * lowercase.length)],
+        numbers[Math.floor(Math.random() * numbers.length)],
+        symbols[Math.floor(Math.random() * symbols.length)],
+    ];
+
+    const allChars = uppercase + lowercase + numbers + symbols;
+    for (let i = pass.length; i < length; i++) {
+        pass.push(allChars[Math.floor(Math.random() * allChars.length)]);
+    }
+
+    return pass.sort(() => Math.random() - 0.5).join('');
+};
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -151,6 +177,7 @@ export default function UsersIndexPage({
 
     // ── Estados ────────────────────────────────────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [showModalPassword, setShowModalPassword] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [duplicatingUser, setDuplicatingUser] = useState<User | null>(null);
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -169,8 +196,9 @@ export default function UsersIndexPage({
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
 
         return () => {
- unbindStart(); unbindFinish(); 
-};
+            unbindStart();
+            unbindFinish();
+        };
     }, []);
 
     // Filter Query debouncing
@@ -198,8 +226,8 @@ export default function UsersIndexPage({
     // Filtrar sucursales según la empresa seleccionada
     const filteredSucursales = useMemo(() => {
         if (!data.empresa_id) {
-return [];
-}
+            return [];
+        }
 
         return sucursales.filter((s) => s.empresa_id === Number(data.empresa_id));
     }, [data.empresa_id, sucursales]);
@@ -210,6 +238,12 @@ return [];
         setEditingUser(null);
         setDuplicatingUser(null);
         reset();
+        const autoPass = generateStrongPassword(10);
+        setData({
+            ...initialForm,
+            password: autoPass,
+        });
+        setShowModalPassword(true);
         setIsModalOpen(true);
     };
 
@@ -230,17 +264,19 @@ return [];
             distrito: user.distrito || '',
             roles: user.roles.map((r) => r.name),
         });
+        setShowModalPassword(false);
         setIsModalOpen(true);
     };
 
     const handleDuplicateClick = (user: User) => {
         setEditingUser(null);
         setDuplicatingUser(user);
+        const autoPass = generateStrongPassword(10);
         setData({
             name: `${user.name} (${__('Copy')})`,
             username: user.username ? `${user.username}_copia` : '',
             email: '',
-            password: '',
+            password: autoPass,
             telefono: user.telefono || '',
             pais_telefono_id: user.pais_telefono_id || '',
             status: user.status,
@@ -250,6 +286,7 @@ return [];
             distrito: user.distrito || '',
             roles: user.roles.map((r) => r.name),
         });
+        setShowModalPassword(true);
         setIsModalOpen(true);
     };
 
@@ -442,25 +479,24 @@ return;
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDuplicateClick(user)}>
-                                <Copy className="mr-2 h-4 w-4" />
-                                {__('Duplicate')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                                <ToggleRight className="mr-2 h-4 w-4" />
-                                {user.status === 'activo' ? __('Deactivate') : __('Activate')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => setDeletingUser(user)}
-                                className="text-red-600 focus:text-red-600 dark:text-red-400"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {__('Delete')}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                );
-            },
+                        <DropdownMenuItem onClick={() => handleDuplicateClick(user)}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            {__('Duplicate')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
+                            <ToggleRight className="mr-2 h-4 w-4" />
+                            {user.status === 'activo' ? __('Deactivate') : __('Activate')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => setDeletingUser(user)}
+                            className="text-red-600 focus:text-red-600 dark:text-red-400"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {__('Delete')}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ),
         },
     ];
 
@@ -654,19 +690,49 @@ return;
                             </div>
 
                             {/* Contraseña */}
-                            <div className="md:col-span-2">
-                                <Label htmlFor="password">
-                                    {__('Password')} {editingUser ? `(${__('Leave blank to keep current password')})` : '*'}
-                                </Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={data.password}
-                                    onChange={(e) => setData('password', e.target.value)}
-                                    placeholder="••••••••"
-                                    required={!editingUser}
-                                />
-                                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                            <div className="md:col-span-2 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="password" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                        {__('Password')} {editingUser ? `(${__('Leave blank to keep current password')})` : '*'}
+                                    </Label>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const newPass = generateStrongPassword(10);
+                                            setData('password', newPass);
+                                            setShowModalPassword(true);
+                                        }}
+                                        className="h-7 text-xs text-blue-600 hover:text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/60 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-400 gap-1 font-semibold"
+                                    >
+                                        <Sparkles className="w-3 h-3 text-amber-500" />
+                                        {__('Generar Contraseña Segura')}
+                                    </Button>
+                                </div>
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showModalPassword ? 'text' : 'password'}
+                                        value={data.password}
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        placeholder={editingUser ? '••••••••' : 'Ej. Clave2026*'}
+                                        maxLength={12}
+                                        required={!editingUser}
+                                        className="pr-10 bg-white dark:bg-slate-900"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowModalPassword(!showModalPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                                    >
+                                        {showModalPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    {__('Debe tener entre 8 y 12 caracteres, incluir mayúscula, minúscula, número y símbolo (@, $, !, %, *, #, ?, &, ., _, -).')}
+                                </p>
+                                {errors.password && <p className="text-red-500 text-xs mt-1 font-medium">{errors.password}</p>}
                             </div>
 
                             {/* Teléfono */}

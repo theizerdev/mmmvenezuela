@@ -43,6 +43,13 @@ Route::post('locale', function (Request $request) {
     return back();
 })->name('locale.update');
 
+use App\Http\Controllers\Auth\ForceChangePasswordController;
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/cambiar-contrasena-obligatoria', [ForceChangePasswordController::class, 'show'])->name('password.change.form');
+    Route::post('/cambiar-contrasena-obligatoria', [ForceChangePasswordController::class, 'update'])->name('password.change.update');
+});
+
 Route::middleware(['auth','verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->can('dashboard.view');
 });

@@ -74,7 +74,13 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'username' => 'nullable|string|max:255|unique:users,username',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'max:12',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&._\-])[A-Za-z\d@$!%*#?&._\-]{8,12}$/',
+            ],
             'telefono' => 'nullable|string|max:255',
             'pais_telefono_id' => 'nullable|exists:pais,id',
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
@@ -83,11 +89,17 @@ class UserController extends Controller
             'zona' => 'nullable|string|max:255',
             'distrito' => 'nullable|string|max:255',
             'roles' => 'array',
+        ], [
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.max' => 'La contraseña no puede superar los 12 caracteres.',
+            'password.regex' => 'La contraseña debe tener entre 8 y 12 caracteres, incluir al menos una mayúscula, una minúscula, un número y un símbolo (@, $, !, %, *, #, ?, &, ., _, -).',
         ]);
 
         try {
             $rawPassword = $validated['password'];
             $validated['password'] = Hash::make($validated['password']);
+            $validated['must_change_password'] = true;
             $user = User::create($validated);
 
             if (isset($validated['roles'])) {
@@ -117,7 +129,13 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'username' => ['nullable', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => 'nullable|string|min:8',
+            'password' => [
+                'nullable',
+                'string',
+                'min:8',
+                'max:12',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&._\-])[A-Za-z\d@$!%*#?&._\-]{8,12}$/',
+            ],
             'telefono' => 'nullable|string|max:255',
             'pais_telefono_id' => 'nullable|exists:pais,id',
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
@@ -126,6 +144,10 @@ class UserController extends Controller
             'zona' => 'nullable|string|max:255',
             'distrito' => 'nullable|string|max:255',
             'roles' => 'array',
+        ], [
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.max' => 'La contraseña no puede superar los 12 caracteres.',
+            'password.regex' => 'La contraseña debe tener entre 8 y 12 caracteres, incluir al menos una mayúscula, una minúscula, un número y un símbolo (@, $, !, %, *, #, ?, &, ., _, -).',
         ]);
 
         try {
@@ -284,16 +306,6 @@ class UserController extends Controller
                          . "Ya puede ingresar para acceder a los módulos y herramientas correspondientes a sus funciones.\n\n"
                          . "_Por seguridad, le recomendamos mantener sus credenciales en resguardo y cambiar su contraseña periódicamente._";
             }
-
-            $whatsappService = new WhatsAppService($empresa);
-            $whatsappService->sendMessage($user->telefono, $mensaje);
-        } catch (\Throwable $e) {
-            Log::error('Error al enviar WhatsApp de bienvenida a usuario: ' . $e->getMessage(), [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
 
             $whatsappService = new WhatsAppService($empresa);
             $whatsappService->sendMessage($user->telefono, $mensaje);
