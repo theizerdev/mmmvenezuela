@@ -10,6 +10,8 @@ use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
+use Laravel\Fortify\Features;
+
 class ForceChangePasswordController extends Controller
 {
     /**
@@ -24,14 +26,38 @@ class ForceChangePasswordController extends Controller
             return redirect()->route('dashboard');
         }
 
-        return Inertia::render('auth/ForceChangePassword', [
+        $props = [
             'user' => [
                 'name' => $user->name,
                 'email' => $user->email,
                 'username' => $user->username,
             ],
             'status' => session('status'),
-        ]);
+            'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
+            'canManagePasskeys' => Features::canManagePasskeys(),
+            'passkeys' => Features::canManagePasskeys()
+                ? $user->passkeys()
+                    ->select(['id', 'name', 'credential', 'created_at', 'last_used_at'])
+                    ->latest()
+                    ->get()
+                    ->map(fn ($passkey) => [
+                        'id' => $passkey->id,
+                        'name' => $passkey->name,
+                        'authenticator' => $passkey->authenticator,
+                        'created_at_diff' => $passkey->created_at->diffForHumans(),
+                        'last_used_at_diff' => $passkey->last_used_at?->diffForHumans(),
+                    ])
+                    ->values()
+                    ->all()
+                : [],
+        ];
+
+        if (Features::canManageTwoFactorAuthentication()) {
+            $props['twoFactorEnabled'] = $user->hasEnabledTwoFactorAuthentication();
+            $props['requiresConfirmation'] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
+        }
+
+        return Inertia::render('admin/ForceChangePassword', $props);
     }
 
     /**

@@ -18,11 +18,12 @@ class EnsurePasswordIsChanged
         $user = $request->user();
 
         if ($user && $user->must_change_password) {
-            // Rutas permitidas mientras esté pendiente el cambio obligatorio
             $exemptRoutes = [
                 'password.change.form',
                 'password.change.update',
                 'logout',
+                'profile.layout.update',
+                'appearance.edit',
             ];
 
             $currentRouteName = $request->route() ? $request->route()->getName() : null;
@@ -31,7 +32,18 @@ class EnsurePasswordIsChanged
                 return $next($request);
             }
 
-            if ($request->is('cambiar-contrasena-obligatoria*', 'logout', 'locale')) {
+            if ($request->is(
+                'cambiar-contrasena-obligatoria*',
+                'logout',
+                'locale',
+                'settings/layout*',
+                'user/two-factor*',
+                'two-factor*',
+                'passkeys*',
+                '.well-known/passkey*',
+                'user/confirm-password*',
+                'user/confirmed-password-status'
+            )) {
                 return $next($request);
             }
 

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::show
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:18
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:20
  * @route '/cambiar-contrasena-obligatoria'
  */
 export const show = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::show
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:18
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:20
  * @route '/cambiar-contrasena-obligatoria'
  */
 show.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ show.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::show
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:18
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:20
  * @route '/cambiar-contrasena-obligatoria'
  */
 show.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ show.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::show
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:18
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:20
  * @route '/cambiar-contrasena-obligatoria'
  */
 show.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ show.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::show
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:18
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:20
  * @route '/cambiar-contrasena-obligatoria'
  */
     const showForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ show.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::show
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:18
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:20
  * @route '/cambiar-contrasena-obligatoria'
  */
         showForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ show.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::show
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:18
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:20
  * @route '/cambiar-contrasena-obligatoria'
  */
         showForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ show.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     show.form = showForm
 /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::update
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:40
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:66
  * @route '/cambiar-contrasena-obligatoria'
  */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -94,7 +94,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::update
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:40
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:66
  * @route '/cambiar-contrasena-obligatoria'
  */
 update.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ update.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::update
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:40
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:66
  * @route '/cambiar-contrasena-obligatoria'
  */
 update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -113,7 +113,7 @@ update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::update
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:40
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:66
  * @route '/cambiar-contrasena-obligatoria'
  */
     const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -123,7 +123,7 @@ update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Auth\ForceChangePasswordController::update
- * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:40
+ * @see app/Http/Controllers/Auth/ForceChangePasswordController.php:66
  * @route '/cambiar-contrasena-obligatoria'
  */
         updateForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
