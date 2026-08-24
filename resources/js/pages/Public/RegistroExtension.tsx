@@ -492,6 +492,27 @@ export default function RegistroExtension({
 
             {/* Contenido Principal */}
             <main className="flex-1 max-w-[1480px] w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
+                {/* Banner de Confirmación si viene de completar la ficha del pastor */}
+                {(flash?.success || props?.flash?.success) && (
+                    <div className="bg-emerald-50 border border-emerald-300 p-4 rounded-2xl flex items-center justify-between gap-3 text-emerald-950 shadow-sm animate-in fade-in">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-wider text-emerald-900">
+                                    {(flash?.success?.codigo || props?.flash?.success?.codigo)
+                                        ? `¡Ficha Pastoral Registrada! (Cód: ${flash?.success?.codigo || props?.flash?.success?.codigo})`
+                                        : '¡Ficha Pastoral Registrada Exitosamente!'}
+                                </p>
+                                <p className="text-xs text-emerald-800 mt-0.5 font-medium">
+                                    {flash?.success?.mensaje || props?.flash?.success?.mensaje || 'Ahora complete a continuación los datos de la Iglesia o Extensión.'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* TARJETA DE IDENTIFICACIÓN DEL PASTOR A CARGO */}
                 <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-blue-800/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
                     <div className="flex items-center gap-4">

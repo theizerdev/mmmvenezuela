@@ -613,12 +613,12 @@ class PastorRegistroPublicoController extends Controller
             // Notificar al Presbítero de la misma zona / distrito por WhatsApp
             $this->notificarPresbiteroWhatsApp($pastor);
 
-            return back()->with('success', [
+            return redirect()->route('registro-extension.index', ['pastor' => $pastor->id])->with('success', [
                 'pastor_id' => $pastor->id,
                 'codigo' => $pastor->codigo,
                 'nombre' => $pastor->nombre_completo,
                 'iglesia' => $iglesiaRegistrada ? $iglesiaRegistrada->nombre : null,
-                'mensaje' => '¡Registro completado exitosamente! Los datos han sido recibidos para su validación oficial.',
+                'mensaje' => "¡Ficha del pastor {$pastor->nombre_completo} guardada exitosamente! Ahora puede registrar o verificar los datos de la extensión.",
             ]);
         });
     }
