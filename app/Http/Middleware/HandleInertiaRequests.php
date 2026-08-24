@@ -61,6 +61,10 @@ class HandleInertiaRequests extends Middleware
                 ? json_decode(file_get_contents($path) ?: '{}', true)
                 : [],
             'notification' => fn () => $request->session()->pull('notification'),
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
         ];
     }
 }

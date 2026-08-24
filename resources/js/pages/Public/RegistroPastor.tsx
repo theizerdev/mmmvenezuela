@@ -140,6 +140,7 @@ export default function RegistroPastor({
     // Estados de verificación de Cédula Cónyuge en tiempo real
     const [isCheckingCedulaConyuge, setIsCheckingCedulaConyuge] = useState<boolean>(false);
     const [cedulaConyugeEncontrada, setCedulaConyugeEncontrada] = useState<string | null>(null);
+    const [cedulaConyugePastorId, setCedulaConyugePastorId] = useState<number | string | null>(null);
 
     // Cámara Web para Foto de Perfil y Cédula
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -740,6 +741,7 @@ export default function RegistroPastor({
         const trimmed = doc.trim();
         if (trimmed.length < 5) {
             setCedulaConyugeEncontrada(null);
+            setCedulaConyugePastorId(null);
             return;
         }
 
@@ -750,13 +752,16 @@ export default function RegistroPastor({
                 const result = await res.json();
                 if (result.existe && result.nombre) {
                     setCedulaConyugeEncontrada(result.nombre);
+                    setCedulaConyugePastorId(result.pastor_id || result.pastor?.id || null);
                     setData((prev) => ({
                         ...prev,
                         nombre_conyuge: result.nombre,
                         conyuge_pastorea: true,
+                        conyuge_id: result.pastor_id || result.pastor?.id ? String(result.pastor_id || result.pastor?.id) : prev.conyuge_id,
                     }));
                 } else {
                     setCedulaConyugeEncontrada(null);
+                    setCedulaConyugePastorId(null);
                 }
             }
         } catch (e) {
@@ -915,13 +920,30 @@ export default function RegistroPastor({
                 setSubmitStage('¡Registro completado y recibido exitosamente!');
 
                 const flashSuccess = page?.props?.flash?.success || props?.flash?.success;
+                const finalPastorId = flashSuccess?.pastor_id || cedulaExistentePastorId || null;
+
                 setSubmittedResult({
                     codigo: flashSuccess?.codigo || data.codigo || 'GENERADO',
                     nombre: flashSuccess?.nombre || `${data.nombres} ${data.apellidos}`,
-                    pastor_id: flashSuccess?.pastor_id || null,
+                    pastor_id: finalPastorId,
                     iglesia: flashSuccess?.iglesia || null,
                     mensaje: flashSuccess?.mensaje || 'Los datos han sido enviados para su revisión y confirmación oficial.',
                 });
+
+                // Si pastor_id no vino de inmediato en la sesión, buscarlo por cédula para que el botón de extensión siempre funcione
+                if (!finalPastorId && data.documento) {
+                    fetch(`/registro/verificar-cedula/${encodeURIComponent(data.documento.trim())}`)
+                        .then((res) => res.json())
+                        .then((resJson) => {
+                            if (resJson?.pastor_id || resJson?.pastor?.id) {
+                                setSubmittedResult((prev) => prev ? {
+                                    ...prev,
+                                    pastor_id: resJson.pastor_id || resJson.pastor.id,
+                                } : prev);
+                            }
+                        })
+                        .catch(() => {});
+                }
 
                 // Limpiar completamente el borrador local para evitar confusiones
                 try {
@@ -950,6 +972,31 @@ export default function RegistroPastor({
                 alert('Hubo observaciones en el formulario. Por favor revise los campos marcados en rojo.');
             },
         });
+    };
+
+    const handleIrAExtension = async () => {
+        if (submittedResult?.pastor_id) {
+            router.get(`/registro/${submittedResult.pastor_id}/extension`);
+            return;
+        }
+        if (cedulaExistentePastorId) {
+            router.get(`/registro/${cedulaExistentePastorId}/extension`);
+            return;
+        }
+        if (data.documento) {
+            try {
+                const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(data.documento.trim())}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    const pid = json?.pastor_id || json?.pastor?.id;
+                    if (pid) {
+                        router.get(`/registro/${pid}/extension`);
+                        return;
+                    }
+                }
+            } catch (e) { }
+        }
+        router.get('/registro');
     };
 
     const handleResetOtro = () => {
@@ -1054,27 +1101,31 @@ export default function RegistroPastor({
                                         </p>
                                     </div>
 
-                                    <div className="pt-2 flex flex-col gap-2.5 justify-center">
-                                        {submittedResult?.pastor_id && (
-                                            <Button
-                                                type="button"
-                                                onClick={() => router.get(`/registro/${submittedResult.pastor_id}/extension`)}
-                                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-md text-sm flex items-center justify-center gap-2"
-                                            >
-                                                <Building2 className="w-4 h-4" />
-                                                Registrar Extensión
-                                                <ArrowRight className="w-4 h-4" />
-                                            </Button>
-                                        )}
+                                    <div className="pt-2 flex flex-col gap-3 justify-center">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={handleResetOtro}
-                                            className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 font-bold py-2.5 px-6 rounded-xl shadow-xs text-sm"
+                                            onClick={handleIrAExtension}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
                                         >
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Registrar a Otro Pastor
+                                            <Building2 className="w-4 h-4" />
+                                            Registrar Extensión
+                                            <ArrowRight className="w-4 h-4" />
                                         </Button>
+
+                                        <div className="space-y-1">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={handleResetOtro}
+                                                className="w-full border-blue-300 text-blue-800 hover:bg-blue-50 font-bold py-2.5 px-6 rounded-xl shadow-xs text-sm flex items-center justify-center gap-2"
+                                            >
+                                                <Plus className="w-4 h-4 text-blue-600" />
+                                                Registrar a Cónyuge u Otro Pastor
+                                            </Button>
+                                            <p className="text-[11px] text-slate-500 text-center">
+                                                Permite iniciar una nueva ficha y luego registrar su extensión.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1506,12 +1557,32 @@ export default function RegistroPastor({
                                                         className="mt-1 w-full bg-white border-slate-300 text-slate-900 focus:border-blue-600 font-mono"
                                                     />
                                                     {errors.cedula_conyuge && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.cedula_conyuge}</p>}
-                                                    {cedulaConyugeEncontrada && (
-                                                        <p className="text-xs text-emerald-700 mt-1.5 flex items-center gap-1 font-semibold">
-                                                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                                                            Pastor(a) encontrado(a): {cedulaConyugeEncontrada} (Vinculación ministerial automática)
+                                                    {cedulaConyugeEncontrada ? (
+                                                        <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in">
+                                                            <div className="text-xs text-emerald-900 flex items-start sm:items-center gap-2 font-medium">
+                                                                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5 sm:mt-0" />
+                                                                <span>
+                                                                    Pastor(a) encontrado(a): <b className="font-bold text-emerald-950">{cedulaConyugeEncontrada}</b>. Vinculación ministerial mutua activa.
+                                                                </span>
+                                                            </div>
+                                                            {cedulaConyugePastorId && (
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={() => router.get(`/registro/${cedulaConyugePastorId}/extension`)}
+                                                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shrink-0 shadow-xs gap-1.5"
+                                                                >
+                                                                    <Building2 className="w-3.5 h-3.5" />
+                                                                    Registrar Extensión
+                                                                    <ArrowRight className="w-3 h-3" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    ) : data.cedula_conyuge.trim().length >= 5 ? (
+                                                        <p className="text-[11px] text-slate-500 mt-1.5 italic">
+                                                            ℹ️ Si su cónyuge aún no está registrado(a) o no tiene todos los datos cargados, puede continuar con este registro; la extensión quedará vinculada automáticamente cuando se registre.
                                                         </p>
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             )}
                                         </div>
