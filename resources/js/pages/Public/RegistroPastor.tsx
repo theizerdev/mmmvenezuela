@@ -153,6 +153,8 @@ export default function RegistroPastor({
         codigo: '',
         nombres: '',
         apellidos: '',
+        tipo_documento: 'V',
+        numero_documento: '',
         documento: '',
         genero: 'Masculino',
         edad: '',
@@ -161,6 +163,8 @@ export default function RegistroPastor({
         foto_cedula: '',
         estado_civil: 'Casado(a)',
         nombre_conyuge: '',
+        tipo_documento_conyuge: 'V',
+        numero_documento_conyuge: '',
         cedula_conyuge: '',
         conyuge_pastorea: false,
         conyuge_id: '',
@@ -491,15 +495,41 @@ export default function RegistroPastor({
         return () => clearTimeout(timer);
     }, [data, activeTab, submittedResult, isSubmittingModalOpen]);
 
+    // Helper para separar cédula entre Tipo (V o E) y Número
+    const parseCedula = (raw?: string): { tipo: string; numero: string } => {
+        if (!raw) return { tipo: 'V', numero: '' };
+        const trimmed = raw.trim().toUpperCase();
+        let tipo = 'V';
+        let numero = '';
+        if (trimmed.startsWith('E-') || trimmed.startsWith('E')) {
+            tipo = 'E';
+            numero = trimmed.replace(/^E[-]?/, '').replace(/\D/g, '');
+        } else if (trimmed.startsWith('V-') || trimmed.startsWith('V')) {
+            tipo = 'V';
+            numero = trimmed.replace(/^V[-]?/, '').replace(/\D/g, '');
+        } else {
+            numero = trimmed.replace(/\D/g, '');
+        }
+        return { tipo: tipo || 'V', numero };
+    };
+
     const handleRestoreDraft = () => {
         try {
             const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
             if (rawDraft) {
                 const parsed = JSON.parse(rawDraft);
                 if (parsed.data) {
+                    const parsedDoc = parseCedula(parsed.data.documento || parsed.data.numero_documento);
+                    const parsedDocConyuge = parseCedula(parsed.data.cedula_conyuge || parsed.data.numero_documento_conyuge);
                     setData((prev) => ({
                         ...prev,
                         ...parsed.data,
+                        tipo_documento: parsed.data.tipo_documento || parsedDoc.tipo,
+                        numero_documento: parsed.data.numero_documento !== undefined ? parsed.data.numero_documento : parsedDoc.numero,
+                        documento: parsed.data.documento || (parsedDoc.numero ? `${parsedDoc.tipo}-${parsedDoc.numero}` : ''),
+                        tipo_documento_conyuge: parsed.data.tipo_documento_conyuge || parsedDocConyuge.tipo,
+                        numero_documento_conyuge: parsed.data.numero_documento_conyuge !== undefined ? parsed.data.numero_documento_conyuge : parsedDocConyuge.numero,
+                        cedula_conyuge: parsed.data.cedula_conyuge || (parsedDocConyuge.numero ? `${parsedDocConyuge.tipo}-${parsedDocConyuge.numero}` : ''),
                     }));
                 }
                 if (parsed.activeTab) {
@@ -608,7 +638,8 @@ export default function RegistroPastor({
     // Búsqueda y Carga de Datos de Cédula en tiempo real (Crear o Editar)
     const checkCedulaDuplicada = async (doc: string) => {
         const trimmed = doc.trim();
-        if (trimmed.length < 5) {
+        const numOnly = trimmed.replace(/\D/g, '');
+        if (numOnly.length < 4) {
             setCedulaExistenteNombre(null);
             setCedulaExistentePastorId(null);
             return;
@@ -621,6 +652,8 @@ export default function RegistroPastor({
                 const result = await res.json();
                 if (result.existe && result.pastor) {
                     const p = result.pastor;
+                    const parsedDoc = parseCedula(p.documento || trimmed);
+                    const parsedConyugeDoc = parseCedula(p.cedula_conyuge);
                     setCedulaExistenteNombre(result.nombre || `${p.nombres} ${p.apellidos}`);
                     setCedulaExistentePastorId(result.pastor_id || p.id);
 
@@ -630,13 +663,17 @@ export default function RegistroPastor({
                         codigo: p.codigo || prev.codigo,
                         nombres: p.nombres || prev.nombres,
                         apellidos: p.apellidos || prev.apellidos,
-                        documento: p.documento || prev.documento,
+                        tipo_documento: parsedDoc.tipo,
+                        numero_documento: parsedDoc.numero,
+                        documento: p.documento || `${parsedDoc.tipo}-${parsedDoc.numero}`,
                         genero: p.genero || prev.genero,
                         fe_nacimiento: p.fe_nacimiento || prev.fe_nacimiento,
                         edad: p.edad || prev.edad,
                         estado_civil: p.estado_civil || prev.estado_civil,
                         nombre_conyuge: p.nombre_conyuge || prev.nombre_conyuge,
-                        cedula_conyuge: p.cedula_conyuge || prev.cedula_conyuge,
+                        tipo_documento_conyuge: parsedConyugeDoc.tipo,
+                        numero_documento_conyuge: parsedConyugeDoc.numero,
+                        cedula_conyuge: p.cedula_conyuge || (parsedConyugeDoc.numero ? `${parsedConyugeDoc.tipo}-${parsedConyugeDoc.numero}` : ''),
                         conyuge_pastorea: Boolean(p.conyuge_pastorea || p.cedula_conyuge),
                         conyuge_id: p.conyuge_id || prev.conyuge_id,
                         telefono_tlf: p.telefono_tlf || prev.telefono_tlf,
@@ -739,7 +776,8 @@ export default function RegistroPastor({
     // Validación de Cédula Cónyuge en tiempo real
     const checkCedulaConyuge = async (doc: string) => {
         const trimmed = doc.trim();
-        if (trimmed.length < 5) {
+        const numOnly = trimmed.replace(/\D/g, '');
+        if (numOnly.length < 4) {
             setCedulaConyugeEncontrada(null);
             setCedulaConyugePastorId(null);
             return;
@@ -751,12 +789,16 @@ export default function RegistroPastor({
             if (res.ok) {
                 const result = await res.json();
                 if (result.existe && result.nombre) {
+                    const parsedConyugeDoc = parseCedula(result.pastor?.documento || trimmed);
                     setCedulaConyugeEncontrada(result.nombre);
                     setCedulaConyugePastorId(result.pastor_id || result.pastor?.id || null);
                     setData((prev) => ({
                         ...prev,
                         nombre_conyuge: result.nombre,
                         conyuge_pastorea: true,
+                        tipo_documento_conyuge: parsedConyugeDoc.tipo,
+                        numero_documento_conyuge: parsedConyugeDoc.numero,
+                        cedula_conyuge: result.pastor?.documento || `${parsedConyugeDoc.tipo}-${parsedConyugeDoc.numero}`,
                         conyuge_id: result.pastor_id || result.pastor?.id ? String(result.pastor_id || result.pastor?.id) : prev.conyuge_id,
                     }));
                 } else {
@@ -885,7 +927,8 @@ export default function RegistroPastor({
         }
 
         // Validaciones básicas de campos requeridos antes de abrir modal
-        if (!data.nombres.trim() || !data.apellidos.trim() || !data.documento.trim()) {
+        const docNumero = data.numero_documento.trim() || data.documento.replace(/^[VEve]-?/, '').trim();
+        if (!data.nombres.trim() || !data.apellidos.trim() || !docNumero) {
             setActiveTab(1);
             alert('Por favor complete los campos obligatorios del Paso 1 (Nombres, Apellidos y Cédula).');
             return;
@@ -1378,7 +1421,7 @@ export default function RegistroPastor({
 
                                     <div>
                                         <div className="flex items-center justify-between">
-                                            <Label htmlFor="documento" className="text-xs font-bold uppercase text-slate-700">
+                                            <Label htmlFor="numero_documento" className="text-xs font-bold uppercase text-slate-700">
                                                 Cédula de Identidad <span className="text-rose-500">*</span>
                                             </Label>
                                             {isCheckingCedula && (
@@ -1388,18 +1431,56 @@ export default function RegistroPastor({
                                                 </span>
                                             )}
                                         </div>
-                                        <Input
-                                            id="documento"
-                                            required
-                                            value={data.documento}
-                                            onChange={(e) => {
-                                                setData('documento', e.target.value);
-                                                checkCedulaDuplicada(e.target.value);
-                                            }}
-                                            onBlur={(e) => checkCedulaDuplicada(e.target.value)}
-                                            placeholder="Ej. V-12345678"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600 font-mono"
-                                        />
+                                        <div className="mt-1 flex gap-2">
+                                            <div className="w-24 shrink-0">
+                                                <select
+                                                    id="tipo_documento"
+                                                    aria-label="Tipo de documento"
+                                                    value={data.tipo_documento}
+                                                    onChange={(e) => {
+                                                        const nuevoTipo = e.target.value;
+                                                        const fullDoc = data.numero_documento ? `${nuevoTipo}-${data.numero_documento}` : '';
+                                                        setData((prev) => ({
+                                                            ...prev,
+                                                            tipo_documento: nuevoTipo,
+                                                            documento: fullDoc,
+                                                        }));
+                                                        if (data.numero_documento.trim().length >= 4) {
+                                                            checkCedulaDuplicada(`${nuevoTipo}-${data.numero_documento}`);
+                                                        }
+                                                    }}
+                                                    className="w-full h-10 px-2.5 bg-white border border-slate-300 text-slate-900 rounded-md text-sm font-bold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:border-blue-600 shadow-xs cursor-pointer"
+                                                >
+                                                    <option value="V">V (Ven)</option>
+                                                    <option value="E">E (Ext)</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <Input
+                                                    id="numero_documento"
+                                                    required
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={data.numero_documento}
+                                                    onChange={(e) => {
+                                                        const numOnly = e.target.value.replace(/\D/g, '');
+                                                        const fullDoc = numOnly ? `${data.tipo_documento}-${numOnly}` : '';
+                                                        setData((prev) => ({
+                                                            ...prev,
+                                                            numero_documento: numOnly,
+                                                            documento: fullDoc,
+                                                        }));
+                                                        checkCedulaDuplicada(`${data.tipo_documento}-${numOnly}`);
+                                                    }}
+                                                    onBlur={() => checkCedulaDuplicada(`${data.tipo_documento}-${data.numero_documento}`)}
+                                                    placeholder="Ej. 12345678"
+                                                    className="w-full bg-white border-slate-300 text-slate-900 focus:border-blue-600 font-mono tracking-wider"
+                                                />
+                                            </div>
+                                        </div>
+                                        {(errors.documento || errors.numero_documento) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium">{errors.documento || errors.numero_documento}</p>
+                                        )}
                                         {cedulaExistenteNombre && (
                                             <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in">
                                                 <div className="text-xs text-emerald-900 flex items-start sm:items-center gap-2 font-medium">
