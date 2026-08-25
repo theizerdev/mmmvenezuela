@@ -237,7 +237,7 @@ export function LocationMapPicker({
                 </Button>
             </div>
 
-            <div className="relative">
+            <div className="relative isolate z-0 overflow-hidden rounded-2xl">
                 <div ref={mapContainerRef} className={className} />
 
                 {loadingReverse && (
