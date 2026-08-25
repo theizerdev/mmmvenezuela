@@ -122,12 +122,28 @@ trait Multitenantable
                 ]);
 
                 if (! $hasNationalAccess) {
-                    if (Schema::hasColumn($table, 'zona') && ! empty($user->zona)) {
-                        $builder->where("{$table}.zona", $user->zona);
+                    $zonas = method_exists($user, 'getZonasList')
+                        ? $user->getZonasList()
+                        : array_values(array_filter([$user->zona ?? null, $user->zona_2 ?? null], fn ($val) => $val !== null && $val !== ''));
+
+                    if (Schema::hasColumn($table, 'zona') && ! empty($zonas)) {
+                        if (count($zonas) === 1) {
+                            $builder->where("{$table}.zona", $zonas[0]);
+                        } else {
+                            $builder->whereIn("{$table}.zona", $zonas);
+                        }
                     }
 
-                    if (Schema::hasColumn($table, 'distrito') && ! empty($user->distrito)) {
-                        $builder->where("{$table}.distrito", $user->distrito);
+                    $distritos = method_exists($user, 'getDistritosList')
+                        ? $user->getDistritosList()
+                        : array_values(array_filter([$user->distrito ?? null, $user->distrito_2 ?? null], fn ($val) => $val !== null && $val !== ''));
+
+                    if (Schema::hasColumn($table, 'distrito') && ! empty($distritos)) {
+                        if (count($distritos) === 1) {
+                            $builder->where("{$table}.distrito", $distritos[0]);
+                        } else {
+                            $builder->whereIn("{$table}.distrito", $distritos);
+                        }
                     }
                 }
             } finally {

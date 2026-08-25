@@ -123,6 +123,8 @@ interface User {
     sucursal_id?: number | null;
     zona?: string | null;
     distrito?: string | null;
+    zona_2?: string | null;
+    distrito_2?: string | null;
     empresa?: Empresa | null;
     sucursal?: Sucursal | null;
     roles: Role[];
@@ -162,6 +164,8 @@ const initialForm = {
     sucursal_id: '' as string | number,
     zona: '',
     distrito: '',
+    zona_2: '',
+    distrito_2: '',
     roles: [] as string[],
 };
 
@@ -262,6 +266,8 @@ export default function UsersIndexPage({
             sucursal_id: user.sucursal_id || '',
             zona: user.zona || '',
             distrito: user.distrito || '',
+            zona_2: user.zona_2 || '',
+            distrito_2: user.distrito_2 || '',
             roles: user.roles.map((r) => r.name),
         });
         setShowModalPassword(false);
@@ -284,6 +290,8 @@ export default function UsersIndexPage({
             sucursal_id: user.sucursal_id || '',
             zona: user.zona || '',
             distrito: user.distrito || '',
+            zona_2: user.zona_2 || '',
+            distrito_2: user.distrito_2 || '',
             roles: user.roles.map((r) => r.name),
         });
         setShowModalPassword(true);
@@ -419,19 +427,42 @@ return;
         {
             header: __('Zona / Distrito'),
             hideOn: 'mobile',
-            cell: (user) => (
-                <div className="text-xs text-muted-foreground">
-                    {user.zona || user.distrito ? (
-                        <span>
-                            {user.zona && <span className="font-medium text-slate-700 dark:text-slate-300">{user.zona}</span>}
-                            {user.zona && user.distrito && ' - '}
-                            {user.distrito && <span>{user.distrito}</span>}
-                        </span>
-                    ) : (
-                        <span>—</span>
-                    )}
-                </div>
-            ),
+            cell: (user) => {
+                const asignaciones: { label: string; zona?: string | null; distrito?: string | null }[] = [];
+                if (user.zona || user.distrito) {
+                    asignaciones.push({
+                        label: 'Principal',
+                        zona: user.zona,
+                        distrito: user.distrito,
+                    });
+                }
+                if (user.zona_2 || user.distrito_2) {
+                    asignaciones.push({
+                        label: 'Secundaria',
+                        zona: user.zona_2,
+                        distrito: user.distrito_2,
+                    });
+                }
+
+                if (asignaciones.length === 0) {
+                    return <span className="text-xs text-muted-foreground">—</span>;
+                }
+
+                return (
+                    <div className="text-xs space-y-1">
+                        {asignaciones.map((asig, idx) => (
+                            <div key={idx} className="flex items-center gap-1">
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                    <span className="font-semibold text-slate-500 mr-1">{idx === 0 ? '1:' : '2:'}</span>
+                                    {asig.distrito ? `Dist. ${asig.distrito}` : ''}
+                                    {asig.distrito && asig.zona ? ' | ' : ''}
+                                    {asig.zona ? `Zona ${asig.zona}` : ''}
+                                </Badge>
+                            </div>
+                        ))}
+                    </div>
+                );
+            },
         },
         {
             header: __('Status'),
@@ -800,39 +831,94 @@ return;
                                 {errors.sucursal_id && <p className="text-red-500 text-xs mt-1">{errors.sucursal_id}</p>}
                             </div>
 
-                            {/* Zona */}
-                            <div>
-                                <Label htmlFor="zona">{__('Zona')} (Número)</Label>
-                                <Input
-                                    id="zona"
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={data.zona}
-                                    onChange={(e) => setData('zona', e.target.value.replace(/\D/g, ''))}
-                                    placeholder="Ej: 1"
-                                />
-                                {errors.zona && <p className="text-red-500 text-xs mt-1">{errors.zona}</p>}
+                            {/* Jurisdicción / Asignación 1 (Principal) */}
+                            <div className="md:col-span-2 p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                        {__('Asignación Principal (Distrito y Zona 1)')}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <Label htmlFor="distrito" className="text-xs">{__('Distrito Principal')}</Label>
+                                        <Select
+                                            value={data.distrito ? String(data.distrito).replace(/\D/g, '') : '__NONE__'}
+                                            onValueChange={(v) => setData('distrito', v === '__NONE__' ? '' : v)}
+                                        >
+                                            <SelectTrigger id="distrito" className="w-full bg-white dark:bg-slate-900">
+                                                <SelectValue placeholder={__('Seleccione Distrito')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__NONE__">{__('Ninguno / Sin asignar')}</SelectItem>
+                                                <SelectItem value="1">Distrito 1</SelectItem>
+                                                <SelectItem value="2">Distrito 2</SelectItem>
+                                                <SelectItem value="3">Distrito 3</SelectItem>
+                                                <SelectItem value="4">Distrito 4</SelectItem>
+                                                <SelectItem value="5">Distrito 5</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.distrito && <p className="text-red-500 text-xs mt-1">{errors.distrito}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="zona" className="text-xs">{__('Zona Principal')} (Número)</Label>
+                                        <Input
+                                            id="zona"
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={data.zona}
+                                            onChange={(e) => setData('zona', e.target.value.replace(/\D/g, ''))}
+                                            placeholder="Ej: 1"
+                                            className="bg-white dark:bg-slate-900"
+                                        />
+                                        {errors.zona && <p className="text-red-500 text-xs mt-1">{errors.zona}</p>}
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Distrito */}
-                            <div>
-                                <Label htmlFor="distrito">{__('Distrito')}</Label>
-                                <Select
-                                    value={data.distrito ? String(data.distrito).replace(/\D/g, '') : ''}
-                                    onValueChange={(v) => setData('distrito', v)}
-                                >
-                                    <SelectTrigger id="distrito" className="w-full">
-                                        <SelectValue placeholder={__('Seleccione Distrito (1 al 5)')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="1">Distrito 1</SelectItem>
-                                        <SelectItem value="2">Distrito 2</SelectItem>
-                                        <SelectItem value="3">Distrito 3</SelectItem>
-                                        <SelectItem value="4">Distrito 4</SelectItem>
-                                        <SelectItem value="5">Distrito 5</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                {errors.distrito && <p className="text-red-500 text-xs mt-1">{errors.distrito}</p>}
+                            {/* Jurisdicción / Asignación 2 (Secundaria / Opcional) */}
+                            <div className="md:col-span-2 p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-violet-500"></span>
+                                        {__('Asignación Secundaria (Distrito y Zona 2 - Opcional)')}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <Label htmlFor="distrito_2" className="text-xs">{__('Distrito Secundario')}</Label>
+                                        <Select
+                                            value={data.distrito_2 ? String(data.distrito_2).replace(/\D/g, '') : '__NONE__'}
+                                            onValueChange={(v) => setData('distrito_2', v === '__NONE__' ? '' : v)}
+                                        >
+                                            <SelectTrigger id="distrito_2" className="w-full bg-white dark:bg-slate-900">
+                                                <SelectValue placeholder={__('Seleccione Distrito 2')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__NONE__">{__('Ninguno / Sin asignar')}</SelectItem>
+                                                <SelectItem value="1">Distrito 1</SelectItem>
+                                                <SelectItem value="2">Distrito 2</SelectItem>
+                                                <SelectItem value="3">Distrito 3</SelectItem>
+                                                <SelectItem value="4">Distrito 4</SelectItem>
+                                                <SelectItem value="5">Distrito 5</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.distrito_2 && <p className="text-red-500 text-xs mt-1">{errors.distrito_2}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="zona_2" className="text-xs">{__('Zona Secundaria')} (Número)</Label>
+                                        <Input
+                                            id="zona_2"
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={data.zona_2}
+                                            onChange={(e) => setData('zona_2', e.target.value.replace(/\D/g, ''))}
+                                            placeholder="Ej: 2"
+                                            className="bg-white dark:bg-slate-900"
+                                        />
+                                        {errors.zona_2 && <p className="text-red-500 text-xs mt-1">{errors.zona_2}</p>}
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Estado */}

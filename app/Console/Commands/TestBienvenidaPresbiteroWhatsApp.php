@@ -29,7 +29,12 @@ class TestBienvenidaPresbiteroWhatsApp extends Command
         $empresa = Empresa::first();
         $this->info("Presbítero: {$presbitero->name} ({$presbitero->email})");
         $this->info("Teléfono: {$presbitero->telefono}");
-        $this->info("Zona: {$presbitero->zona} | Distrito: {$presbitero->distrito}");
+        $zonasTexto = implode(', ', $presbitero->getZonasList()) ?: 'Sin asignar';
+        $distritosTexto = !empty($presbitero->getDistritosList())
+            ? implode(', ', array_map(fn ($d) => "Distrito {$d}", $presbitero->getDistritosList()))
+            : 'Sin asignar';
+
+        $this->info("Zonas: {$zonasTexto} | Distritos: {$distritosTexto}");
 
         $loginUrl = url('/login');
         $rawPassword = 'Password123*';
@@ -38,8 +43,8 @@ class TestBienvenidaPresbiteroWhatsApp extends Command
                  . "Estimado Presbítero *{$presbitero->name}*,\n\n"
                  . "Se ha creado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
                  . "📍 *Jurisdicción Asignada:*\n"
-                 . "• *Zona:* " . ($presbitero->zona ?: 'Sin asignar') . "\n"
-                 . "• *Distrito:* " . ($presbitero->distrito ?: 'Sin asignar') . "\n\n"
+                 . "• *Zona(s):* {$zonasTexto}\n"
+                 . "• *Distrito(s):* {$distritosTexto}\n\n"
                  . "🔐 *Sus credenciales de acceso:*\n"
                  . "• *Usuario / Correo:* {$presbitero->email}\n"
                  . "• *Contraseña:* {$rawPassword}\n\n"

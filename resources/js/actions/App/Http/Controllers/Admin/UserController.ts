@@ -134,7 +134,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
- * @see app/Http/Controllers/Admin/UserController.php:126
+ * @see app/Http/Controllers/Admin/UserController.php:128
  * @route '/admin/usuarios/{user}'
  */
 export const update = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -149,7 +149,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
- * @see app/Http/Controllers/Admin/UserController.php:126
+ * @see app/Http/Controllers/Admin/UserController.php:128
  * @route '/admin/usuarios/{user}'
  */
 update.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -182,7 +182,7 @@ update.url = (args: { user: number | { id: number } } | [user: number | { id: nu
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::update
- * @see app/Http/Controllers/Admin/UserController.php:126
+ * @see app/Http/Controllers/Admin/UserController.php:128
  * @route '/admin/usuarios/{user}'
  */
 update.put = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -192,7 +192,7 @@ update.put = (args: { user: number | { id: number } } | [user: number | { id: nu
 
     /**
 * @see \App\Http\Controllers\Admin\UserController::update
- * @see app/Http/Controllers/Admin/UserController.php:126
+ * @see app/Http/Controllers/Admin/UserController.php:128
  * @route '/admin/usuarios/{user}'
  */
     const updateForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -207,7 +207,7 @@ update.put = (args: { user: number | { id: number } } | [user: number | { id: nu
 
             /**
 * @see \App\Http\Controllers\Admin\UserController::update
- * @see app/Http/Controllers/Admin/UserController.php:126
+ * @see app/Http/Controllers/Admin/UserController.php:128
  * @route '/admin/usuarios/{user}'
  */
         updateForm.put = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -223,7 +223,7 @@ update.put = (args: { user: number | { id: number } } | [user: number | { id: nu
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
- * @see app/Http/Controllers/Admin/UserController.php:180
+ * @see app/Http/Controllers/Admin/UserController.php:184
  * @route '/admin/usuarios/{user}'
  */
 export const destroy = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -238,7 +238,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
- * @see app/Http/Controllers/Admin/UserController.php:180
+ * @see app/Http/Controllers/Admin/UserController.php:184
  * @route '/admin/usuarios/{user}'
  */
 destroy.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -271,7 +271,7 @@ destroy.url = (args: { user: number | { id: number } } | [user: number | { id: n
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
- * @see app/Http/Controllers/Admin/UserController.php:180
+ * @see app/Http/Controllers/Admin/UserController.php:184
  * @route '/admin/usuarios/{user}'
  */
 destroy.delete = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -281,7 +281,7 @@ destroy.delete = (args: { user: number | { id: number } } | [user: number | { id
 
     /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
- * @see app/Http/Controllers/Admin/UserController.php:180
+ * @see app/Http/Controllers/Admin/UserController.php:184
  * @route '/admin/usuarios/{user}'
  */
     const destroyForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -296,7 +296,7 @@ destroy.delete = (args: { user: number | { id: number } } | [user: number | { id
 
             /**
 * @see \App\Http\Controllers\Admin\UserController::destroy
- * @see app/Http/Controllers/Admin/UserController.php:180
+ * @see app/Http/Controllers/Admin/UserController.php:184
  * @route '/admin/usuarios/{user}'
  */
         destroyForm.delete = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -312,7 +312,7 @@ destroy.delete = (args: { user: number | { id: number } } | [user: number | { id
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
- * @see app/Http/Controllers/Admin/UserController.php:199
+ * @see app/Http/Controllers/Admin/UserController.php:203
  * @route '/admin/usuarios/{user}/toggle-status'
  */
 export const toggleStatus = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -327,7 +327,7 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
- * @see app/Http/Controllers/Admin/UserController.php:199
+ * @see app/Http/Controllers/Admin/UserController.php:203
  * @route '/admin/usuarios/{user}/toggle-status'
  */
 toggleStatus.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -360,7 +360,7 @@ toggleStatus.url = (args: { user: number | { id: number } } | [user: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
- * @see app/Http/Controllers/Admin/UserController.php:199
+ * @see app/Http/Controllers/Admin/UserController.php:203
  * @route '/admin/usuarios/{user}/toggle-status'
  */
 toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -370,7 +370,7 @@ toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | 
 
     /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
- * @see app/Http/Controllers/Admin/UserController.php:199
+ * @see app/Http/Controllers/Admin/UserController.php:203
  * @route '/admin/usuarios/{user}/toggle-status'
  */
     const toggleStatusForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -385,7 +385,7 @@ toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | 
 
             /**
 * @see \App\Http\Controllers\Admin\UserController::toggleStatus
- * @see app/Http/Controllers/Admin/UserController.php:199
+ * @see app/Http/Controllers/Admin/UserController.php:203
  * @route '/admin/usuarios/{user}/toggle-status'
  */
         toggleStatusForm.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -401,7 +401,7 @@ toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | 
     toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsApp
- * @see app/Http/Controllers/Admin/UserController.php:222
+ * @see app/Http/Controllers/Admin/UserController.php:226
  * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
  */
 export const sendWelcomeWhatsApp = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -416,7 +416,7 @@ sendWelcomeWhatsApp.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsApp
- * @see app/Http/Controllers/Admin/UserController.php:222
+ * @see app/Http/Controllers/Admin/UserController.php:226
  * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
  */
 sendWelcomeWhatsApp.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -449,7 +449,7 @@ sendWelcomeWhatsApp.url = (args: { user: number | { id: number } } | [user: numb
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsApp
- * @see app/Http/Controllers/Admin/UserController.php:222
+ * @see app/Http/Controllers/Admin/UserController.php:226
  * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
  */
 sendWelcomeWhatsApp.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -459,7 +459,7 @@ sendWelcomeWhatsApp.post = (args: { user: number | { id: number } } | [user: num
 
     /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsApp
- * @see app/Http/Controllers/Admin/UserController.php:222
+ * @see app/Http/Controllers/Admin/UserController.php:226
  * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
  */
     const sendWelcomeWhatsAppForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -469,7 +469,7 @@ sendWelcomeWhatsApp.post = (args: { user: number | { id: number } } | [user: num
 
             /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeWhatsApp
- * @see app/Http/Controllers/Admin/UserController.php:222
+ * @see app/Http/Controllers/Admin/UserController.php:226
  * @route '/admin/usuarios/{user}/send-welcome-whatsapp'
  */
         sendWelcomeWhatsAppForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

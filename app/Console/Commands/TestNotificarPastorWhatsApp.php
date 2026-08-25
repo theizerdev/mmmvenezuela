@@ -37,10 +37,12 @@ class TestNotificarPastorWhatsApp extends Command
             })
             ->where(function ($query) use ($zonaPastor, $distritoPastor) {
                 if (!empty($zonaPastor)) {
-                    $query->where('zona', $zonaPastor);
+                    $query->where('zona', $zonaPastor)
+                          ->orWhere('zona_2', $zonaPastor);
                 }
                 if (!empty($distritoPastor)) {
-                    $query->orWhere('distrito', $distritoPastor);
+                    $query->orWhere('distrito', $distritoPastor)
+                          ->orWhere('distrito_2', $distritoPastor);
                 }
             })
             ->whereNotNull('telefono')
@@ -60,7 +62,9 @@ class TestNotificarPastorWhatsApp extends Command
 
         $this->info("Presbíteros encontrados: " . $presbiteros->count());
         foreach ($presbiteros as $presbitero) {
-            $this->line("- {$presbitero->name} | Tlf: {$presbitero->telefono} | Zona: {$presbitero->zona} | Distrito: {$presbitero->distrito}");
+            $zonasInfo = implode(', ', $presbitero->getZonasList()) ?: 'N/A';
+            $distritosInfo = implode(', ', $presbitero->getDistritosList()) ?: 'N/A';
+            $this->line("- {$presbitero->name} | Tlf: {$presbitero->telefono} | Zonas: {$zonasInfo} | Distritos: {$distritosInfo}");
         }
 
         if ($presbiteros->isEmpty()) {

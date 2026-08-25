@@ -88,6 +88,8 @@ class UserController extends Controller
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'zona' => 'nullable|string|max:255',
             'distrito' => 'nullable|string|max:255',
+            'zona_2' => 'nullable|string|max:255',
+            'distrito_2' => 'nullable|string|max:255',
             'roles' => 'array',
         ], [
             'password.required' => 'La contraseña es obligatoria.',
@@ -143,6 +145,8 @@ class UserController extends Controller
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'zona' => 'nullable|string|max:255',
             'distrito' => 'nullable|string|max:255',
+            'zona_2' => 'nullable|string|max:255',
+            'distrito_2' => 'nullable|string|max:255',
             'roles' => 'array',
         ], [
             'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
@@ -277,12 +281,22 @@ class UserController extends Controller
             $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
 
             if ($isPresbitero) {
+                $zonasTexto = $user->zona ?: 'Sin asignar';
+                if (!empty($user->zona_2)) {
+                    $zonasTexto .= ", {$user->zona_2}";
+                }
+
+                $distritosTexto = $user->distrito ? "Distrito {$user->distrito}" : 'Sin asignar';
+                if (!empty($user->distrito_2)) {
+                    $distritosTexto .= ", Distrito {$user->distrito_2}";
+                }
+
                 $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
                          . "Estimado Presbítero *{$user->name}*,\n\n"
                          . "Se ha configurado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
                          . "📍 *Asignación:*\n"
-                         . "• *Zona:* " . ($user->zona ?: 'Sin asignar') . "\n"
-                         . "• *Distrito:* " . ($user->distrito ?: 'Sin asignar') . "\n\n"
+                         . "• *Zona(s):* {$zonasTexto}\n"
+                         . "• *Distrito(s):* {$distritosTexto}\n\n"
                          . "🔐 *Sus credenciales de acceso:*\n"
                          . "• *Usuario / Correo:* {$user->email}\n"
                          . ($rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "") . "\n"

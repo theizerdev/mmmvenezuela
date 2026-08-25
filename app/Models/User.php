@@ -36,13 +36,15 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int|null $sucursal_id
  * @property string|null $zona
  * @property string|null $distrito
+ * @property string|null $zona_2
+ * @property string|null $distrito_2
  * @property string|null $whatsapp_otp
  * @property Carbon|null $phone_verified_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  */
-#[Fillable(['name', 'username', 'status', 'must_change_password', 'password_changed_at', 'email', 'password', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'zona', 'distrito', 'layout_settings'])]
+#[Fillable(['name', 'username', 'status', 'must_change_password', 'password_changed_at', 'email', 'password', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'zona', 'distrito', 'zona_2', 'distrito_2', 'layout_settings'])]
 #[Hidden(['password', 'remember_token', 'whatsapp_otp', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -97,6 +99,26 @@ class User extends Authenticatable implements PasskeyUser
     public function paisTelefono()
     {
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
+    }
+
+    /**
+     * Obtener array de zonas asignadas al usuario (sin valores nulos/vacíos).
+     *
+     * @return array<string>
+     */
+    public function getZonasList(): array
+    {
+        return array_values(array_filter([$this->zona, $this->zona_2], fn ($val) => $val !== null && $val !== ''));
+    }
+
+    /**
+     * Obtener array de distritos asignados al usuario (sin valores nulos/vacíos).
+     *
+     * @return array<string>
+     */
+    public function getDistritosList(): array
+    {
+        return array_values(array_filter([$this->distrito, $this->distrito_2], fn ($val) => $val !== null && $val !== ''));
     }
 }
 

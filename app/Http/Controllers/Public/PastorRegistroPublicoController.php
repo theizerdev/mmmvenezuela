@@ -974,10 +974,12 @@ class PastorRegistroPublicoController extends Controller
                 })
                 ->where(function ($query) use ($zonaPastor, $distritoPastor) {
                     if (!empty($zonaPastor)) {
-                        $query->where('zona', $zonaPastor);
+                        $query->where('zona', $zonaPastor)
+                              ->orWhere('zona_2', $zonaPastor);
                     }
                     if (!empty($distritoPastor)) {
-                        $query->orWhere('distrito', $distritoPastor);
+                        $query->orWhere('distrito', $distritoPastor)
+                              ->orWhere('distrito_2', $distritoPastor);
                     }
                 })
                 ->whereNotNull('telefono')
