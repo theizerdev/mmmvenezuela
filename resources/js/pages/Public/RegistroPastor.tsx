@@ -144,6 +144,8 @@ export default function RegistroPastor({
     const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
     const [cedulaExistenteNombre, setCedulaExistenteNombre] = useState<string | null>(null);
     const [cedulaExistentePastorId, setCedulaExistentePastorId] = useState<number | null>(null);
+    const [isCheckingConyugeCedula, setIsCheckingConyugeCedula] = useState<boolean>(false);
+    const [conyugeExtensionData, setConyugeExtensionData] = useState<any>(null);
 
     // Estados para borrador automático
     const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
@@ -943,6 +945,77 @@ export default function RegistroPastor({
         }
     };
 
+    // Búsqueda y Carga de Datos de la Cédula del Cónyuge
+    const checkConyugeCedula = async (doc: string) => {
+        const trimmed = doc.trim();
+        const numOnly = trimmed.replace(/\D/g, '');
+        if (numOnly.length < 4) {
+            setConyugeExtensionData(null);
+            return;
+        }
+
+        setIsCheckingConyugeCedula(true);
+        try {
+            const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(trimmed)}`);
+            if (res.ok) {
+                const result = await res.json();
+                if (result.existe) {
+                    if (!data.nombre_conyuge && result.nombre) {
+                        setData((prev) => ({
+                            ...prev,
+                            nombre_conyuge: result.nombre,
+                        }));
+                    }
+                    if (result.extension) {
+                        setConyugeExtensionData(result.extension);
+                        const ext = result.extension;
+                        let parsedMeds: MediaItem[] = [];
+                        if (ext.medio_comunicacion) {
+                            try {
+                                const m = JSON.parse(ext.medio_comunicacion);
+                                if (Array.isArray(m)) parsedMeds = m;
+                            } catch (e) { }
+                        }
+                        setData((prev) => ({
+                            ...prev,
+                            extension_rol_pastor: 'conyuge_principal',
+                            extension_id: ext.id ? String(ext.id) : prev.extension_id,
+                            extension_nombre: ext.nombre || prev.extension_nombre,
+                            extension_tipo_local_id: ext.tipo_local_id ? String(ext.tipo_local_id) : prev.extension_tipo_local_id,
+                            extension_estado_id: ext.estado_id ? String(ext.estado_id) : prev.extension_estado_id,
+                            extension_municipio_id: ext.municipio_id ? String(ext.municipio_id) : prev.extension_municipio_id,
+                            extension_parroquia_id: ext.parroquia_id ? String(ext.parroquia_id) : prev.extension_parroquia_id,
+                            extension_direccion: ext.direccion || prev.extension_direccion,
+                            extension_sector: ext.sector || prev.extension_sector,
+                            extension_calle: ext.calle || prev.extension_calle,
+                            extension_avenida: ext.avenida || prev.extension_avenida,
+                            extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
+                            extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
+                            extension_zona: ext.zona || prev.extension_zona,
+                            extension_distrito: ext.distrito || prev.extension_distrito,
+                            extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
+                            extension_anios_activa: ext.anios_activa ? String(ext.anios_activa) : prev.extension_anios_activa,
+                            extension_tiempo_trabajo: ext.tiempo_trabajo || prev.extension_tiempo_trabajo,
+                            extension_descripcion: ext.descripcion || prev.extension_descripcion,
+                            extension_miembros_activos: ext.miembros_activos ? String(ext.miembros_activos) : prev.extension_miembros_activos,
+                            extension_cantidad_campos_blancos: ext.cantidad_campos_blancos ? String(ext.cantidad_campos_blancos) : prev.extension_cantidad_campos_blancos,
+                            extension_miembro_probante: ext.miembro_probante ? String(ext.miembro_probante) : prev.extension_miembro_probante,
+                            extension_logros_obtenidos: ext.logros_obtenidos || prev.extension_logros_obtenidos,
+                            extension_iglesias_fundadas: ext.iglesias_fundadas ? String(ext.iglesias_fundadas) : prev.extension_iglesias_fundadas,
+                            extension_pastores_ministerio: ext.pastores_ministerio ? String(ext.pastores_ministerio) : prev.extension_pastores_ministerio,
+                            extension_posee_medio_comunicacion: Boolean(ext.posee_medio_comunicacion),
+                            extension_medios_lista: parsedMeds.length > 0 ? parsedMeds : prev.extension_medios_lista,
+                        }));
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error al verificar cédula del cónyuge:', e);
+        } finally {
+            setIsCheckingConyugeCedula(false);
+        }
+    };
+
     // Cámara Web
     const startCamera = async (target: 'foto' | 'foto_cedula', customFacing?: 'user' | 'environment') => {
         setActiveCameraTarget(target);
@@ -1047,6 +1120,10 @@ export default function RegistroPastor({
 
     // Validación exhaustiva en tiempo real (Paso a Paso)
     const getFieldError = (fieldName: string): string | null => {
+        if ((data.extension_rol_pastor === 'conyuge_principal' || data.extension_rol_pastor === 'asistente') && fieldName.startsWith('extension_')) {
+            return null;
+        }
+
         const docNumero = data.numero_documento.trim() || data.documento.replace(/^[VEPvep]-?/, '').trim();
         const conyugeDocNum = data.numero_documento_conyuge.trim() || data.cedula_conyuge.replace(/^[VEPvep]-?/, '').trim();
 
@@ -1250,6 +1327,10 @@ export default function RegistroPastor({
     };
 
     const isStepValid = (stepNumber: number): boolean => {
+        if (stepNumber >= 6 && (data.extension_rol_pastor === 'conyuge_principal' || data.extension_rol_pastor === 'asistente')) {
+            return true;
+        }
+
         const fieldsByStep: Record<number, string[]> = {
             1: [
                 'nombres', 'apellidos', 'numero_documento', 'genero', 'fe_nacimiento', 'estado_civil',
@@ -1674,9 +1755,14 @@ export default function RegistroPastor({
             <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
                 <div className="w-full max-w-[1750px] mx-auto px-4 sm:px-8 lg:px-12 h-16 sm:h-20 flex items-center justify-between">
                     <div className="flex items-center gap-3.5">
-                        <div className="h-11 w-11 rounded-2xl bg-blue-700 flex items-center justify-center text-white font-black text-2xl shadow-md">
-                            M
-                        </div>
+                        <img
+                            src="/icons/logo_mmm-a-color-sin-fondo.png"
+                            alt="Logo MMM Venezuela"
+                            className="h-11 w-11 sm:h-14 sm:w-14 object-contain shrink-0 drop-shadow-xs"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/icons/logo_mmm.png';
+                            }}
+                        />
                         <div>
                             <h1 className="font-black text-sm sm:text-lg text-slate-900 leading-tight">
                                 MOVIMIENTO MISIONERO MUNDIAL
@@ -1826,18 +1912,18 @@ export default function RegistroPastor({
                                         type="button"
                                         onClick={() => handleTabClick(step.id)}
                                         className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl border transition-all text-left min-w-[165px] sm:min-w-0 shrink-0 sm:shrink ${isActive
-                                                ? 'bg-blue-50/90 border-blue-600 ring-2 ring-blue-600/20 shadow-sm'
-                                                : isCompleted
-                                                    ? 'bg-white border-emerald-300 hover:border-emerald-400'
-                                                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                                            ? 'bg-blue-50/90 border-blue-600 ring-2 ring-blue-600/20 shadow-sm'
+                                            : isCompleted
+                                                ? 'bg-white border-emerald-300 hover:border-emerald-400'
+                                                : 'bg-white border-slate-200 hover:bg-slate-50'
                                             }`}
                                     >
                                         <div
                                             className={`flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-xl shrink-0 font-bold text-xs sm:text-sm ${isActive
-                                                    ? 'bg-blue-700 text-white shadow-xs'
-                                                    : isCompleted
-                                                        ? 'bg-emerald-600 text-white'
-                                                        : 'bg-slate-100 text-slate-500'
+                                                ? 'bg-blue-700 text-white shadow-xs'
+                                                : isCompleted
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : 'bg-slate-100 text-slate-500'
                                                 }`}
                                         >
                                             {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
@@ -2129,6 +2215,9 @@ export default function RegistroPastor({
                                                                     tipo_documento_conyuge: val,
                                                                     cedula_conyuge: `${val}-${prev.numero_documento_conyuge}`,
                                                                 }));
+                                                                if (data.numero_documento_conyuge) {
+                                                                    checkConyugeCedula(`${val}-${data.numero_documento_conyuge}`);
+                                                                }
                                                             }}
                                                         >
                                                             <SelectTrigger className="w-[62px] h-full rounded-none border-0 border-r border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-800 shadow-none focus:ring-0 focus:ring-offset-0 focus:outline-hidden shrink-0">
@@ -2157,6 +2246,7 @@ export default function RegistroPastor({
                                                                     numero_documento_conyuge: cleanNum,
                                                                     cedula_conyuge: `${prev.tipo_documento_conyuge}-${cleanNum}`,
                                                                 }));
+                                                                checkConyugeCedula(`${data.tipo_documento_conyuge}-${cleanNum}`);
                                                             }}
                                                             placeholder={data.tipo_documento_conyuge === 'P' ? 'Ej. PAS987654' : 'Ej. 98765432'}
                                                             className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden border-0 shadow-none"
@@ -2168,6 +2258,13 @@ export default function RegistroPastor({
                                                             <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                                                             {isFieldVisibleError('numero_documento_conyuge', 1)}
                                                         </p>
+                                                    )}
+
+                                                    {conyugeExtensionData && (
+                                                        <div className="mt-1 p-1.5 bg-emerald-50 border border-emerald-200 rounded-md text-[11px] text-emerald-800 font-medium flex items-center gap-1">
+                                                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                            <span>Iglesia detectada: <b>{conyugeExtensionData.nombre}</b> (Se vinculará sin duplicar)</span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -3298,129 +3395,288 @@ export default function RegistroPastor({
                                     <span>Paso 6: Información General de la Iglesia / Extensión</span>
                                 </div>
                                 <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
-                                    Datos institucionales de la obra, tipo de inmueble y tiempo de trabajo ministerial.
+                                    Diferencie su rol ministerial en la obra o vincúlese a la extensión de su cónyuge para evitar duplicar registros.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <Label htmlFor="extension_nombre" className="text-xs font-bold uppercase text-slate-700">
-                                            Nombre de la Iglesia / Anexo / Extensión <span className="text-rose-500">*</span>
+                                {/* Selector de Rol Ministerial en la Iglesia / Extensión */}
+                                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                                            <Crown className="w-4 h-4 text-amber-600" />
+                                            ¿Cuál es su rol en esta Iglesia / Extensión?
                                         </Label>
-                                        <Input
-                                            id="extension_nombre"
-                                            value={data.extension_nombre}
-                                            onChange={(e) => {
-                                                markFieldTouched('extension_nombre');
-                                                setData('extension_nombre', e.target.value);
-                                            }}
-                                            placeholder="Ej. Iglesia Central MMM Barquisimeto"
-                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_nombre', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
-                                        />
-                                        {isFieldVisibleError('extension_nombre', 6) && (
-                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                                                {isFieldVisibleError('extension_nombre', 6)}
-                                            </p>
+                                        {isCheckingConyugeCedula && (
+                                            <span className="text-xs text-blue-600 flex items-center gap-1">
+                                                <Loader2 className="w-3 h-3 animate-spin" /> Verificando cónyuge...
+                                            </span>
                                         )}
                                     </div>
 
-                                    <div>
-                                        <Label htmlFor="extension_tipo_local_id" className="text-xs font-bold uppercase text-slate-700">
-                                            Tipo de Local / Inmueble <span className="text-rose-500">*</span>
-                                        </Label>
-                                        <Select2
-                                            id="extension_tipo_local_id"
-                                            options={tipoLocalOptions}
-                                            value={data.extension_tipo_local_id}
-                                            onChange={(val) => {
-                                                markFieldTouched('extension_tipo_local_id');
-                                                setData('extension_tipo_local_id', val);
-                                            }}
-                                            placeholder="Seleccione Tipo de Local (Propio, Alquilado...)"
-                                            className="mt-1"
-                                        />
-                                        {isFieldVisibleError('extension_tipo_local_id', 6) && (
-                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                                                {isFieldVisibleError('extension_tipo_local_id', 6)}
-                                            </p>
-                                        )}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setData('extension_rol_pastor', 'principal')}
+                                            className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${data.extension_rol_pastor === 'principal'
+                                                ? 'border-blue-600 bg-blue-50/70 shadow-sm'
+                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                                }`}
+                                        >
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <span className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                                                        <Building2 className="w-4 h-4 text-blue-700" />
+                                                        Pastor Principal
+                                                    </span>
+                                                    {data.extension_rol_pastor === 'principal' && (
+                                                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                                                    )}
+                                                </div>
+                                                <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                                                    Estoy a cargo de la dirección general y registro de esta obra.
+                                                </p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setData('extension_rol_pastor', 'conyuge_principal')}
+                                            className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${data.extension_rol_pastor === 'conyuge_principal'
+                                                ? 'border-emerald-600 bg-emerald-50/70 shadow-sm'
+                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                                }`}
+                                        >
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <span className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                                                        <Heart className="w-4 h-4 text-emerald-700" />
+                                                        Mi Cónyuge es el Pastor Principal
+                                                    </span>
+                                                    {data.extension_rol_pastor === 'conyuge_principal' && (
+                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                    )}
+                                                </div>
+                                                <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                                                    {data.nombre_conyuge
+                                                        ? `Vincularme a la iglesia de ${data.nombre_conyuge} sin duplicar datos.`
+                                                        : 'Mi cónyuge ya registró o registrará la obra.'}
+                                                </p>
+                                            </div>
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <Label htmlFor="extension_fecha_fundacion" className="text-xs font-bold uppercase text-slate-700">
-                                            Año de Fundación <span className="text-rose-500">*</span>
-                                        </Label>
-                                        <Input
-                                            id="extension_fecha_fundacion"
-                                            type="text"
-                                            inputMode="numeric"
-                                            maxLength={4}
-                                            value={data.extension_fecha_fundacion ? (String(data.extension_fecha_fundacion).includes('-') ? String(data.extension_fecha_fundacion).split('-')[0] : data.extension_fecha_fundacion) : ''}
-                                            onChange={handleExtensionAnoFundacionChange}
-                                            placeholder="Ej. 1995"
-                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_fecha_fundacion', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
-                                        />
-                                        {isFieldVisibleError('extension_fecha_fundacion', 6) && (
-                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                                                {isFieldVisibleError('extension_fecha_fundacion', 6)}
-                                            </p>
+                                {/* CASO 1: CÓNYUGE ES EL PASTOR PRINCIPAL */}
+                                {data.extension_rol_pastor === 'conyuge_principal' && (
+                                    <div className="bg-emerald-50 border-2 border-emerald-300 p-6 rounded-2xl space-y-4 animate-in fade-in duration-300">
+                                        <div className="flex items-start gap-3.5">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                                <CheckCircle2 className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm sm:text-base font-black text-emerald-950">
+                                                    Vinculación Automática con la Extensión de su Cónyuge
+                                                </h4>
+                                                <p className="text-xs sm:text-sm text-emerald-800 mt-1 leading-relaxed">
+                                                    Su ficha ministerial quedará vinculada automáticamente a la obra{' '}
+                                                    <b>{data.extension_nombre || 'de su cónyuge'}</b> a cargo de{' '}
+                                                    <b>{data.nombre_conyuge || 'su cónyuge'}</b>.
+                                                    <span className="block mt-0.5 text-emerald-700 font-medium">
+                                                        No es necesario volver a ingresar la dirección, mapa satelital ni estadísticas de congregación para evitar registros duplicados.
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {data.extension_nombre && (
+                                            <div className="bg-white/80 p-4 rounded-xl border border-emerald-200 text-xs text-slate-700 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                                                <div>
+                                                    <span className="font-bold uppercase text-[10px] text-slate-400 block">Iglesia / Extensión</span>
+                                                    <span className="font-bold text-slate-900">{data.extension_nombre}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold uppercase text-[10px] text-slate-400 block">Pastor Principal</span>
+                                                    <span className="font-bold text-emerald-800">{data.nombre_conyuge || 'Cónyuge'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold uppercase text-[10px] text-slate-400 block">Estado / Municipio</span>
+                                                    <span className="font-medium text-slate-800">{selectedExtensionEstadoNombre || 'Registrado'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold uppercase text-[10px] text-slate-400 block">Años de Fundada</span>
+                                                    <span className="font-bold text-slate-800">{data.extension_anios_activa ? `${data.extension_anios_activa} años` : 'Registrado'}</span>
+                                                </div>
+                                            </div>
                                         )}
-                                    </div>
 
-                                    <div>
-                                        <Label htmlFor="extension_anios_activa" className="text-xs font-bold uppercase text-slate-700">
-                                            Años de Fundada
-                                        </Label>
-                                        <Input
-                                            id="extension_anios_activa"
-                                            readOnly
-                                            value={data.extension_anios_activa ? `${data.extension_anios_activa} año(s)` : ''}
-                                            placeholder="Calculado automáticamente"
-                                            className="mt-1 bg-slate-100 border-slate-300 text-slate-700 font-bold cursor-not-allowed"
-                                        />
+                                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-md text-sm"
+                                            >
+                                                <Save className="w-4 h-4 mr-2" />
+                                                {processing ? 'Guardando Registro Completo...' : 'Finalizar y Enviar Registro Ahora'}
+                                            </Button>
+                                        </div>
                                     </div>
+                                )}
 
-                                    <div>
-                                        <Label htmlFor="extension_tiempo_trabajo" className="text-xs font-bold uppercase text-slate-700">
-                                            Tiempo de Trabajo Activo <span className="text-rose-500">*</span>
-                                        </Label>
-                                        <Input
-                                            id="extension_tiempo_trabajo"
-                                            value={data.extension_tiempo_trabajo}
-                                            onChange={(e) => {
-                                                markFieldTouched('extension_tiempo_trabajo');
-                                                setData('extension_tiempo_trabajo', e.target.value);
-                                            }}
-                                            placeholder="Ej. 5 años y 3 meses"
-                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_tiempo_trabajo', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
-                                        />
-                                        {isFieldVisibleError('extension_tiempo_trabajo', 6) && (
-                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                                                {isFieldVisibleError('extension_tiempo_trabajo', 6)}
-                                            </p>
-                                        )}
+                                {/* CASO 2: PASTOR ASISTENTE */}
+                                {data.extension_rol_pastor === 'asistente' && (
+                                    <div className="bg-indigo-50 border-2 border-indigo-200 p-6 rounded-2xl space-y-4 animate-in fade-in duration-300">
+                                        <div className="flex items-start gap-3.5">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                                <Users className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm sm:text-base font-black text-indigo-950">
+                                                    Pastor Asistente / Sin Extensión a Cargo
+                                                </h4>
+                                                <p className="text-xs sm:text-sm text-indigo-800 mt-1 leading-relaxed">
+                                                    Ha indicado que labora como colaborador o pastor asistente sin tener una extensión propia a su cargo.
+                                                    Su ficha ministerial será registrada con su grado y datos eclesiásticos.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-md text-sm"
+                                            >
+                                                <Save className="w-4 h-4 mr-2" />
+                                                {processing ? 'Guardando Registro...' : 'Finalizar y Enviar Registro Ministerial'}
+                                            </Button>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
-                                <div>
-                                    <Label htmlFor="extension_descripcion" className="text-xs font-bold uppercase text-slate-700">
-                                        Descripción o Reseña de la Obra <span className="text-slate-400 font-normal text-[10px] lowercase">(opcional)</span>
-                                    </Label>
-                                    <Textarea
-                                        id="extension_descripcion"
-                                        rows={2}
-                                        value={data.extension_descripcion}
-                                        onChange={(e) => setData('extension_descripcion', e.target.value)}
-                                        placeholder="Breve reseña sobre el inicio y desarrollo de la obra..."
-                                        className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                    />
-                                </div>
+                                {/* CASO 3: PASTOR PRINCIPAL (FORMULARIO COMPLETO) */}
+                                {data.extension_rol_pastor === 'principal' && (
+                                    <>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <Label htmlFor="extension_nombre" className="text-xs font-bold uppercase text-slate-700">
+                                                    Nombre de la Iglesia / Anexo / Extensión <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="extension_nombre"
+                                                    value={data.extension_nombre}
+                                                    onChange={(e) => {
+                                                        markFieldTouched('extension_nombre');
+                                                        setData('extension_nombre', e.target.value);
+                                                    }}
+                                                    placeholder="Ej. Iglesia Central MMM Barquisimeto"
+                                                    className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_nombre', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                                />
+                                                {isFieldVisibleError('extension_nombre', 6) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('extension_nombre', 6)}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="extension_tipo_local_id" className="text-xs font-bold uppercase text-slate-700">
+                                                    Tipo de Local / Inmueble <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Select2
+                                                    id="extension_tipo_local_id"
+                                                    options={tipoLocalOptions}
+                                                    value={data.extension_tipo_local_id}
+                                                    onChange={(val) => {
+                                                        markFieldTouched('extension_tipo_local_id');
+                                                        setData('extension_tipo_local_id', val);
+                                                    }}
+                                                    placeholder="Seleccione Tipo de Local (Propio, Alquilado...)"
+                                                    className="mt-1"
+                                                />
+                                                {isFieldVisibleError('extension_tipo_local_id', 6) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('extension_tipo_local_id', 6)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <Label htmlFor="extension_fecha_fundacion" className="text-xs font-bold uppercase text-slate-700">
+                                                    Año de Fundación <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="extension_fecha_fundacion"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    maxLength={4}
+                                                    value={data.extension_fecha_fundacion ? (String(data.extension_fecha_fundacion).includes('-') ? String(data.extension_fecha_fundacion).split('-')[0] : data.extension_fecha_fundacion) : ''}
+                                                    onChange={handleExtensionAnoFundacionChange}
+                                                    placeholder="Ej. 1995"
+                                                    className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_fecha_fundacion', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                                />
+                                                {isFieldVisibleError('extension_fecha_fundacion', 6) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('extension_fecha_fundacion', 6)}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="extension_anios_activa" className="text-xs font-bold uppercase text-slate-700">
+                                                    Años de Fundada
+                                                </Label>
+                                                <Input
+                                                    id="extension_anios_activa"
+                                                    readOnly
+                                                    value={data.extension_anios_activa ? `${data.extension_anios_activa} año(s)` : ''}
+                                                    placeholder="Calculado automáticamente"
+                                                    className="mt-1 bg-slate-100 border-slate-300 text-slate-700 font-bold cursor-not-allowed"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="extension_tiempo_trabajo" className="text-xs font-bold uppercase text-slate-700">
+                                                    Tiempo de Trabajo Activo <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="extension_tiempo_trabajo"
+                                                    value={data.extension_tiempo_trabajo}
+                                                    onChange={(e) => {
+                                                        markFieldTouched('extension_tiempo_trabajo');
+                                                        setData('extension_tiempo_trabajo', e.target.value);
+                                                    }}
+                                                    placeholder="Ej. 5 años y 3 meses"
+                                                    className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_tiempo_trabajo', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                                />
+                                                {isFieldVisibleError('extension_tiempo_trabajo', 6) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('extension_tiempo_trabajo', 6)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="extension_descripcion" className="text-xs font-bold uppercase text-slate-700">
+                                                Descripción o Reseña de la Obra <span className="text-slate-400 font-normal text-[10px] lowercase">(opcional)</span>
+                                            </Label>
+                                            <Textarea
+                                                id="extension_descripcion"
+                                                rows={2}
+                                                value={data.extension_descripcion}
+                                                onChange={(e) => setData('extension_descripcion', e.target.value)}
+                                                placeholder="Breve reseña sobre el inicio y desarrollo de la obra..."
+                                                className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </CardContent>
                             <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
                                 <Button
@@ -3435,14 +3691,25 @@ export default function RegistroPastor({
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     Anterior: Fotografías
                                 </Button>
-                                <Button
-                                    type="button"
-                                    onClick={() => handleNextStep(6)}
-                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
-                                >
-                                    Siguiente: Ubicación GPS
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
+                                {data.extension_rol_pastor === 'principal' ? (
+                                    <Button
+                                        type="button"
+                                        onClick={() => handleNextStep(6)}
+                                        className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                    >
+                                        Siguiente: Ubicación GPS
+                                        <ArrowRight className="w-4 h-4 ml-2" />
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                    >
+                                        <Save className="w-4 h-4 mr-2" />
+                                        {processing ? 'Guardando...' : 'Finalizar y Enviar Registro'}
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
                     )}
