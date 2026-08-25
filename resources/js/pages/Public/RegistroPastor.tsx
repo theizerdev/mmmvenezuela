@@ -919,22 +919,120 @@ export default function RegistroPastor({
         }
     };
 
+    // Validación exhaustiva por pasos (Todos los datos requeridos excepto las fotos)
+    const validateStep = (stepNumber: number): { valid: boolean; message?: string } => {
+        if (stepNumber === 1) {
+            const docNum = data.numero_documento.trim() || data.documento.replace(/^[VEPvep]-?/, '').trim();
+            if (!data.nombres.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese sus Nombres.' };
+            if (!data.apellidos.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese sus Apellidos.' };
+            if (!docNum) return { valid: false, message: 'Paso 1: Por favor ingrese su Cédula / Documento de Identidad.' };
+            if (!data.genero) return { valid: false, message: 'Paso 1: Por favor seleccione su Género.' };
+            if (!data.fe_nacimiento) return { valid: false, message: 'Paso 1: Por favor ingrese su Fecha de Nacimiento.' };
+            if (!data.estado_civil) return { valid: false, message: 'Paso 1: Por favor seleccione su Estado Civil.' };
+
+            if (esCasado) {
+                if (!data.nombre_conyuge.trim()) {
+                    return { valid: false, message: 'Paso 1: Por favor ingrese el Nombre Completo de su Cónyuge.' };
+                }
+                if (data.conyuge_pastorea) {
+                    const conyugeDocNum = data.numero_documento_conyuge.trim() || data.cedula_conyuge.replace(/^[VEPvep]-?/, '').trim();
+                    if (!conyugeDocNum) {
+                        return { valid: false, message: 'Paso 1: Por favor ingrese la Cédula de Identidad de su Cónyuge.' };
+                    }
+                }
+            }
+
+            if (!data.telefono_tlf.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese su Teléfono Celular / WhatsApp.' };
+            if (!data.email.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese su Correo Electrónico.' };
+            if (!data.estado_id) return { valid: false, message: 'Paso 1: Por favor seleccione el Estado de su ubicación.' };
+            if (!data.municipio_id && !data.municipio) return { valid: false, message: 'Paso 1: Por favor seleccione el Municipio de su ubicación.' };
+            if (!data.parroquia_id) return { valid: false, message: 'Paso 1: Por favor seleccione la Parroquia de su ubicación.' };
+            if (!data.urbanizacion.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese el Sector / Urbanización de su dirección.' };
+            if (!data.calle_avenida.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese la Calle / Avenida de su dirección.' };
+            if (!data.edificio_casa_quinta.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese la Casa / Edificio / Quinta de su dirección.' };
+
+            return { valid: true };
+        }
+
+        if (stepNumber === 2) {
+            if (!data.grado_instruccion) return { valid: false, message: 'Paso 2: Por favor seleccione el Grado de Instrucción Académica.' };
+            if (!data.titulo_obtenido.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Título Secular Obtenido.' };
+            if (data.estudio_teologico) {
+                if (!data.titulo_teologico.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Título Teológico obtenido.' };
+                if (!data.instituto_teologico.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Instituto o Seminario Bíblico.' };
+                if (!data.tiempo_de_estudio_teologico.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Tiempo de Estudio Teológico.' };
+            }
+            return { valid: true };
+        }
+
+        if (stepNumber === 3) {
+            if (!data.nivel_ministerial) return { valid: false, message: 'Paso 3: Por favor seleccione el Grado Ministerial.' };
+            if (!data.zona.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese la Zona.' };
+            if (!data.distrito) return { valid: false, message: 'Paso 3: Por favor seleccione el Distrito.' };
+            if (!data.ano_promocion.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese el Año de Promoción / Ordenación.' };
+            if (!data.tiempo_colaborando.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese el Tiempo en el Ministerio.' };
+            if (!data.cargo_nacional.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese el Cargo Nacional / Responsabilidad.' };
+            return { valid: true };
+        }
+
+        if (stepNumber === 4) {
+            if (!data.grupo_sanguineo) return { valid: false, message: 'Paso 4: Por favor seleccione el Grupo Sanguíneo.' };
+            if (!data.condicion_salud) return { valid: false, message: 'Paso 4: Por favor seleccione la Condición General de Salud.' };
+            if (!data.alergias.trim()) return { valid: false, message: 'Paso 4: Por favor indique sus Alergias Conocidas (o escriba "Ninguna").' };
+            if (data.padece_enfermedad && !data.enfermedades_cronicas.trim()) {
+                return { valid: false, message: 'Paso 4: Por favor describa la enfermedad crónica diagnosticada.' };
+            }
+            if (data.toma_medicamentos && medicamentosList.length === 0 && !nuevoMedicamentoNombre.trim()) {
+                return { valid: false, message: 'Paso 4: Por favor agregue al menos un medicamento recetado en la lista.' };
+            }
+            if (!data.contacto_emergencia_nombre.trim()) return { valid: false, message: 'Paso 4: Por favor ingrese el Nombre del Contacto de Emergencia.' };
+            if (!data.contacto_emergencia_telefono.trim()) return { valid: false, message: 'Paso 4: Por favor ingrese el Teléfono del Contacto de Emergencia.' };
+            return { valid: true };
+        }
+
+        // Paso 5: Las fotos son opcionales
+        return { valid: true };
+    };
+
+    const handleTabClick = (targetStep: number) => {
+        if (targetStep === activeTab) return;
+
+        // Si intenta saltar a un paso posterior, validar todos los pasos intermedios
+        if (targetStep > activeTab) {
+            for (let s = 1; s < targetStep; s++) {
+                const check = validateStep(s);
+                if (!check.valid) {
+                    alert(check.message);
+                    setActiveTab(s);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return;
+                }
+            }
+        }
+
+        setActiveTab(targetStep);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     // Envío del Formulario con Modal de Progreso (0% a 100%)
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Si aún no está en el Paso 5, avanzar al siguiente paso sin enviar
-        if (activeTab < 5) {
-            setActiveTab((prev) => prev + 1);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
+        // Validar rigurosamente los pasos anteriores (1 al 4)
+        for (let s = 1; s <= 4; s++) {
+            const check = validateStep(s);
+            if (!check.valid) {
+                setActiveTab(s);
+                alert(check.message);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
         }
 
-        // Validaciones básicas de campos requeridos antes de abrir modal
-        const docNumero = data.numero_documento.trim() || data.documento.replace(/^[VEve]-?/, '').trim();
-        if (!data.nombres.trim() || !data.apellidos.trim() || !docNumero) {
-            setActiveTab(1);
-            alert('Por favor complete los campos obligatorios del Paso 1 (Nombres, Apellidos y Cédula).');
+        // Si aún no está en el Paso 5, avanzar al paso 5
+        if (activeTab < 5) {
+            setActiveTab(5);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
@@ -1343,10 +1441,7 @@ export default function RegistroPastor({
                                     <button
                                         key={step.id}
                                         type="button"
-                                        onClick={() => {
-                                            setActiveTab(step.id);
-                                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                                        }}
+                                        onClick={() => handleTabClick(step.id)}
                                         className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${isActive
                                                 ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 shadow-xs'
                                                 : isCompleted
@@ -1737,11 +1832,12 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="email" className="text-xs font-bold uppercase text-slate-700">
-                                            Correo Electrónico
+                                            Correo Electrónico <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="email"
                                             type="email"
+                                            required
                                             value={data.email}
                                             onChange={(e) => setData('email', e.target.value)}
                                             placeholder="pastor@ejemplo.com"
@@ -1775,7 +1871,7 @@ export default function RegistroPastor({
 
                                         <div>
                                             <Label htmlFor="municipio_id" className="text-xs font-bold uppercase text-slate-700">
-                                                Municipio
+                                                Municipio <span className="text-rose-500">*</span>
                                             </Label>
                                             <Select2
                                                 id="municipio_id"
@@ -1791,7 +1887,7 @@ export default function RegistroPastor({
 
                                         <div>
                                             <Label htmlFor="parroquia_id" className="text-xs font-bold uppercase text-slate-700">
-                                                Parroquia
+                                                Parroquia <span className="text-rose-500">*</span>
                                             </Label>
                                             <Select2
                                                 id="parroquia_id"
@@ -1809,10 +1905,11 @@ export default function RegistroPastor({
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
                                             <Label htmlFor="urbanizacion" className="text-xs font-bold uppercase text-slate-700">
-                                                Sector / Urbanización
+                                                Sector / Urbanización <span className="text-rose-500">*</span>
                                             </Label>
                                             <Input
                                                 id="urbanizacion"
+                                                required
                                                 value={data.urbanizacion}
                                                 onChange={(e) => setData('urbanizacion', e.target.value)}
                                                 placeholder="Ej. Urb. La Concordia"
@@ -1822,10 +1919,11 @@ export default function RegistroPastor({
 
                                         <div>
                                             <Label htmlFor="calle_avenida" className="text-xs font-bold uppercase text-slate-700">
-                                                Calle / Avenida
+                                                Calle / Avenida <span className="text-rose-500">*</span>
                                             </Label>
                                             <Input
                                                 id="calle_avenida"
+                                                required
                                                 value={data.calle_avenida}
                                                 onChange={(e) => setData('calle_avenida', e.target.value)}
                                                 placeholder="Ej. Av. Principal"
@@ -1835,10 +1933,11 @@ export default function RegistroPastor({
 
                                         <div>
                                             <Label htmlFor="edificio_casa_quinta" className="text-xs font-bold uppercase text-slate-700">
-                                                Casa / Edificio / Quinta
+                                                Casa / Edificio / Quinta <span className="text-rose-500">*</span>
                                             </Label>
                                             <Input
                                                 id="edificio_casa_quinta"
+                                                required
                                                 value={data.edificio_casa_quinta}
                                                 onChange={(e) => setData('edificio_casa_quinta', e.target.value)}
                                                 placeholder="Ej. Casa N° 12-A"
@@ -1848,7 +1947,7 @@ export default function RegistroPastor({
 
                                         <div>
                                             <Label htmlFor="piso" className="text-xs font-bold uppercase text-slate-700">
-                                                Piso / Apto
+                                                Piso / Apto <span className="text-slate-400 font-normal text-[10px] lowercase">(opcional)</span>
                                             </Label>
                                             <Input
                                                 id="piso"
@@ -1865,6 +1964,11 @@ export default function RegistroPastor({
                                 <Button
                                     type="button"
                                     onClick={() => {
+                                        const check = validateStep(1);
+                                        if (!check.valid) {
+                                            alert(check.message);
+                                            return;
+                                        }
                                         setActiveTab(2);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -1893,7 +1997,7 @@ export default function RegistroPastor({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <Label htmlFor="grado_instruccion" className="text-xs font-bold uppercase text-slate-700">
-                                            Grado de Instrucción Académica
+                                            Grado de Instrucción Académica <span className="text-rose-500">*</span>
                                         </Label>
                                         <Select2
                                             id="grado_instruccion"
@@ -1907,10 +2011,11 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="titulo_obtenido" className="text-xs font-bold uppercase text-slate-700">
-                                            Título Secular Obtenido
+                                            Título Secular Obtenido <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="titulo_obtenido"
+                                            required
                                             value={data.titulo_obtenido}
                                             onChange={(e) => setData('titulo_obtenido', e.target.value)}
                                             placeholder="Ej. Lic. en Educación, Ing. Civil, Bachiller"
@@ -1937,10 +2042,11 @@ export default function RegistroPastor({
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                                             <div>
                                                 <Label htmlFor="titulo_teologico" className="text-xs font-bold uppercase text-slate-700">
-                                                    Título Teológico
+                                                    Título Teológico <span className="text-rose-500">*</span>
                                                 </Label>
                                                 <Input
                                                     id="titulo_teologico"
+                                                    required={data.estudio_teologico}
                                                     value={data.titulo_teologico}
                                                     onChange={(e) => setData('titulo_teologico', e.target.value)}
                                                     placeholder="Ej. Bachiller en Teología"
@@ -1950,10 +2056,11 @@ export default function RegistroPastor({
 
                                             <div>
                                                 <Label htmlFor="instituto_teologico" className="text-xs font-bold uppercase text-slate-700">
-                                                    Instituto / Seminario
+                                                    Instituto / Seminario <span className="text-rose-500">*</span>
                                                 </Label>
                                                 <Input
                                                     id="instituto_teologico"
+                                                    required={data.estudio_teologico}
                                                     value={data.instituto_teologico}
                                                     onChange={(e) => setData('instituto_teologico', e.target.value)}
                                                     placeholder="Ej. Instituto Bíblico Elim"
@@ -1963,10 +2070,11 @@ export default function RegistroPastor({
 
                                             <div>
                                                 <Label htmlFor="tiempo_de_estudio_teologico" className="text-xs font-bold uppercase text-slate-700">
-                                                    Tiempo de Estudio
+                                                    Tiempo de Estudio <span className="text-rose-500">*</span>
                                                 </Label>
                                                 <Input
                                                     id="tiempo_de_estudio_teologico"
+                                                    required={data.estudio_teologico}
                                                     value={data.tiempo_de_estudio_teologico}
                                                     onChange={(e) => setData('tiempo_de_estudio_teologico', e.target.value)}
                                                     placeholder="Ej. 3 Años"
@@ -1993,6 +2101,11 @@ export default function RegistroPastor({
                                 <Button
                                     type="button"
                                     onClick={() => {
+                                        const check = validateStep(2);
+                                        if (!check.valid) {
+                                            alert(check.message);
+                                            return;
+                                        }
                                         setActiveTab(3);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -2035,11 +2148,12 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="zona" className="text-xs font-bold uppercase text-slate-700">
-                                            Zona
+                                            Zona <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="zona"
                                             type="text"
+                                            required
                                             inputMode="numeric"
                                             value={data.zona}
                                             onChange={(e) => setData('zona', e.target.value.replace(/\D/g, ''))}
@@ -2050,7 +2164,7 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="distrito" className="text-xs font-bold uppercase text-slate-700">
-                                            Distrito
+                                            Distrito <span className="text-rose-500">*</span>
                                         </Label>
                                         <Select2
                                             id="distrito"
@@ -2066,10 +2180,11 @@ export default function RegistroPastor({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="ano_promocion" className="text-xs font-bold uppercase text-slate-700">
-                                            Año de Promoción / Ordenación
+                                            Año de Promoción / Ordenación <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="ano_promocion"
+                                            required
                                             value={data.ano_promocion}
                                             onChange={(e) => setData('ano_promocion', e.target.value)}
                                             placeholder="Ej. 2018"
@@ -2079,10 +2194,11 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="tiempo_colaborando" className="text-xs font-bold uppercase text-slate-700">
-                                            Tiempo en el Ministerio
+                                            Tiempo en el Ministerio <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="tiempo_colaborando"
+                                            required
                                             value={data.tiempo_colaborando}
                                             onChange={(e) => setData('tiempo_colaborando', e.target.value)}
                                             placeholder="Ej. 12 Años y 4 Meses"
@@ -2092,10 +2208,11 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="cargo_nacional" className="text-xs font-bold uppercase text-slate-700">
-                                            Cargo Nacional / Responsabilidad
+                                            Cargo Nacional / Responsabilidad <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="cargo_nacional"
+                                            required
                                             value={data.cargo_nacional}
                                             onChange={(e) => setData('cargo_nacional', e.target.value)}
                                             placeholder="Ej. Supervisor de Zona / Presbítero"
@@ -2130,7 +2247,7 @@ export default function RegistroPastor({
 
                                 <div>
                                     <Label htmlFor="nota" className="text-xs font-bold uppercase text-slate-700">
-                                        Observaciones o Notas Ministeriales
+                                        Observaciones o Notas Ministeriales <span className="text-slate-400 font-normal text-[10px] lowercase">(opcional)</span>
                                     </Label>
                                     <Textarea
                                         id="nota"
@@ -2158,6 +2275,11 @@ export default function RegistroPastor({
                                 <Button
                                     type="button"
                                     onClick={() => {
+                                        const check = validateStep(3);
+                                        if (!check.valid) {
+                                            alert(check.message);
+                                            return;
+                                        }
                                         setActiveTab(4);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -2186,7 +2308,7 @@ export default function RegistroPastor({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="grupo_sanguineo" className="text-xs font-bold uppercase text-slate-700">
-                                            Grupo Sanguíneo
+                                            Grupo Sanguíneo <span className="text-rose-500">*</span>
                                         </Label>
                                         <Select2
                                             id="grupo_sanguineo"
@@ -2200,7 +2322,7 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="condicion_salud" className="text-xs font-bold uppercase text-slate-700">
-                                            Condición General de Salud
+                                            Condición General de Salud <span className="text-rose-500">*</span>
                                         </Label>
                                         <Select2
                                             id="condicion_salud"
@@ -2214,13 +2336,14 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="alergias" className="text-xs font-bold uppercase text-slate-700">
-                                            Alergias Conocidas
+                                            Alergias Conocidas <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="alergias"
+                                            required
                                             value={data.alergias}
                                             onChange={(e) => setData('alergias', e.target.value)}
-                                            placeholder="Ej. Penicilina, polen, ninguna"
+                                            placeholder="Ej. Ninguna, polen, penicilina"
                                             className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
                                         />
                                     </div>
@@ -2241,6 +2364,7 @@ export default function RegistroPastor({
                                         {data.padece_enfermedad && (
                                             <Textarea
                                                 rows={2}
+                                                required={data.padece_enfermedad}
                                                 value={data.enfermedades_cronicas}
                                                 onChange={(e) => setData('enfermedades_cronicas', e.target.value)}
                                                 placeholder="Describa el diagnóstico o enfermedad crónica..."
@@ -2317,10 +2441,11 @@ export default function RegistroPastor({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <Label htmlFor="contacto_emergencia_nombre" className="text-xs font-bold uppercase text-slate-700">
-                                                Nombre del Contacto
+                                                Nombre del Contacto <span className="text-rose-500">*</span>
                                             </Label>
                                             <Input
                                                 id="contacto_emergencia_nombre"
+                                                required
                                                 value={data.contacto_emergencia_nombre}
                                                 onChange={(e) => setData('contacto_emergencia_nombre', e.target.value)}
                                                 placeholder="Ej. María Pérez (Esposa / Familiar)"
@@ -2330,10 +2455,11 @@ export default function RegistroPastor({
 
                                         <div>
                                             <Label htmlFor="contacto_emergencia_telefono" className="text-xs font-bold uppercase text-slate-700">
-                                                Teléfono de Emergencia
+                                                Teléfono de Emergencia <span className="text-rose-500">*</span>
                                             </Label>
                                             <Input
                                                 id="contacto_emergencia_telefono"
+                                                required
                                                 value={data.contacto_emergencia_telefono}
                                                 onChange={(e) => setData('contacto_emergencia_telefono', e.target.value)}
                                                 placeholder="Ej. 0412-9876543"
@@ -2359,6 +2485,11 @@ export default function RegistroPastor({
                                 <Button
                                     type="button"
                                     onClick={() => {
+                                        const check = validateStep(4);
+                                        if (!check.valid) {
+                                            alert(check.message);
+                                            return;
+                                        }
                                         setActiveTab(5);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -2422,12 +2553,17 @@ export default function RegistroPastor({
                                     </div>
                                 )}
 
+                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 text-xs text-blue-900 font-medium">
+                                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                                    <span>Las fotografías son <b>opcionales</b>. Puede completar y finalizar su registro ahora mismo sin cargarlas o tomarlas.</span>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Fotografía de Perfil */}
                                     <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center space-y-4">
                                         <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                                             <User className="w-4 h-4 text-blue-600" />
-                                            Foto de Perfil (Tipo Carnet)
+                                            Foto de Perfil (Tipo Carnet) <span className="text-slate-400 font-normal text-xs">(Opcional)</span>
                                         </h4>
 
                                         <div className="w-36 h-44 rounded-xl border-2 border-dashed border-slate-300 bg-white overflow-hidden flex items-center justify-center relative shadow-inner">
@@ -2483,7 +2619,7 @@ export default function RegistroPastor({
                                     <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center space-y-4">
                                         <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                                             <IdCard className="w-4 h-4 text-blue-600" />
-                                            Foto de la Cédula de Identidad
+                                            Foto de la Cédula de Identidad <span className="text-slate-400 font-normal text-xs">(Opcional)</span>
                                         </h4>
 
                                         <div className="w-56 h-36 rounded-xl border-2 border-dashed border-slate-300 bg-white overflow-hidden flex items-center justify-center relative shadow-inner">
