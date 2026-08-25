@@ -600,8 +600,14 @@ class PastorRegistroPublicoController extends Controller
                     'longitud' => !empty($validated['extension_longitud']) ? (float)$validated['extension_longitud'] : null,
                     'zona' => !empty($validated['extension_zona']) ? preg_replace('/\D/', '', $validated['extension_zona']) : ($pastor->zona ?? null),
                     'distrito' => !empty($validated['extension_distrito']) ? preg_replace('/\D/', '', $validated['extension_distrito']) : ($pastor->distrito ?? null),
-                    'fecha_fundacion' => !empty($validated['extension_fecha_fundacion']) ? $validated['extension_fecha_fundacion'] : null,
-                    'anios_activa' => !empty($validated['extension_anios_activa']) ? (int)$validated['extension_anios_activa'] : null,
+                    'fecha_fundacion' => !empty($validated['extension_fecha_fundacion'])
+                        ? (preg_match('/^\d{4}$/', trim((string)$validated['extension_fecha_fundacion']))
+                            ? trim((string)$validated['extension_fecha_fundacion']) . '-01-01'
+                            : $validated['extension_fecha_fundacion'])
+                        : null,
+                    'anios_activa' => !empty($validated['extension_fecha_fundacion']) && preg_match('/^\d{4}/', trim((string)$validated['extension_fecha_fundacion']), $mY)
+                        ? max(0, (int)date('Y') - (int)$mY[0])
+                        : (!empty($validated['extension_anios_activa']) ? (int)$validated['extension_anios_activa'] : null),
                     'tiempo_trabajo' => $validated['extension_tiempo_trabajo'] ?? null,
                     'descripcion' => $validated['extension_descripcion'] ?? null,
                     'miembros_activos' => !empty($validated['extension_miembros_activos']) ? (int)$validated['extension_miembros_activos'] : 0,
@@ -991,4 +997,83 @@ class PastorRegistroPublicoController extends Controller
             ]);
         }
     }
+
+    /**
+     * Permite registrar rápidamente un municipio que no se encuentre en el listado.
+     */
+    public function crearMunicipioRapido(Request $request)
+    {
+        $request->validate([
+            'estado_id' => ['required', 'exists:estados,id'],
+            'nombre' => ['required', 'string', 'max:191'],
+        ]);
+
+        $nombre = trim($request->input('nombre'));
+        $estadoId = $request->input('estado_id');
+
+        $municipio = Municipio::where('estado_id', $estadoId)
+            ->where(function ($q) use ($nombre) {
+                $q->where('nombre', $nombre)
+                  ->orWhereRaw('LOWER(nombre) = ?', [mb_strtolower($nombre)]);
+            })
+            ->first();
+
+        if (!$municipio) {
+            $municipio = Municipio::create([
+                'estado_id' => $estadoId,
+                'nombre' => $nombre,
+                'activo' => true,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'municipio' => [
+                'id' => $municipio->id,
+                'estado_id' => (int)$municipio->estado_id,
+                'nombre' => $municipio->nombre,
+            ],
+            'mensaje' => 'Municipio registrado exitosamente.',
+        ]);
+    }
+
+    /**
+     * Permite registrar rápidamente una parroquia que no se encuentre en el listado.
+     */
+    public function crearParroquiaRapida(Request $request)
+    {
+        $request->validate([
+            'municipio_id' => ['required', 'exists:municipios,id'],
+            'nombre' => ['required', 'string', 'max:191'],
+        ]);
+
+        $nombre = trim($request->input('nombre'));
+        $municipioId = $request->input('municipio_id');
+
+        $parroquia = Parroquia::where('municipio_id', $municipioId)
+            ->where(function ($q) use ($nombre) {
+                $q->where('nombre', $nombre)
+                  ->orWhereRaw('LOWER(nombre) = ?', [mb_strtolower($nombre)]);
+            })
+            ->first();
+
+        if (!$parroquia) {
+            $parroquia = Parroquia::create([
+                'municipio_id' => $municipioId,
+                'nombre' => $nombre,
+                'activo' => true,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'parroquia' => [
+                'id' => $parroquia->id,
+                'municipio_id' => (int)$parroquia->municipio_id,
+                'nombre' => $parroquia->nombre,
+            ],
+            'mensaje' => 'Parroquia registrada exitosamente.',
+        ]);
+    }
 }
+

@@ -23,6 +23,8 @@ Route::get('/validar-credencial/{codigo}', [PastorCarnetController::class, 'vali
 Route::get('/registro', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
 Route::post('/registro', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
 Route::get('/registro/verificar-cedula/{cedula}', [PastorRegistroPublicoController::class, 'verificarCedula'])->name('registro-pastor.verificar-cedula');
+Route::post('/registro/crear-municipio', [PastorRegistroPublicoController::class, 'crearMunicipioRapido'])->name('registro-pastor.crear-municipio');
+Route::post('/registro/crear-parroquia', [PastorRegistroPublicoController::class, 'crearParroquiaRapida'])->name('registro-pastor.crear-parroquia');
 Route::redirect('/registro-pastor', '/registro');
 
 // Ruta pública dedicada de registro de Extensiones por Pastor (/registro/{pastor}/extension)

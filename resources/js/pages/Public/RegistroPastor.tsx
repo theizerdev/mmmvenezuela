@@ -30,7 +30,6 @@ import {
     CheckCircle2,
     IdCard,
     ShieldCheck,
-    Info,
     Sparkles,
     Loader2,
     Cloud,
@@ -38,7 +37,8 @@ import {
     Send,
     Building2,
     Users,
-    Radio
+    Radio,
+    X
 } from 'lucide-react';
 import LocationMapPicker, { GeocodedAddressDetails } from '@/components/location-map-picker';
 
@@ -119,6 +119,24 @@ export default function RegistroPastor({
     const [activeTab, setActiveTab] = useState<number>(1);
     const [attemptedSteps, setAttemptedSteps] = useState<Record<number, boolean>>({});
     const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+
+    // Listas dinámicas locales de municipios y parroquias
+    const [localMunicipios, setLocalMunicipios] = useState<MunicipioItem[]>(municipios);
+    const [localParroquias, setLocalParroquias] = useState<ParroquiaItem[]>(parroquias);
+
+    // Modal de agregar municipio rápido
+    const [isAddMunicipioModalOpen, setIsAddMunicipioModalOpen] = useState<boolean>(false);
+    const [addMunicipioTarget, setAddMunicipioTarget] = useState<'pastor' | 'extension'>('pastor');
+    const [nuevoMunicipioNombre, setNuevoMunicipioNombre] = useState<string>('');
+    const [isSavingMunicipio, setIsSavingMunicipio] = useState<boolean>(false);
+    const [addMunicipioError, setAddMunicipioError] = useState<string | null>(null);
+
+    // Modal de agregar parroquia rápida
+    const [isAddParroquiaModalOpen, setIsAddParroquiaModalOpen] = useState<boolean>(false);
+    const [addParroquiaTarget, setAddParroquiaTarget] = useState<'pastor' | 'extension'>('pastor');
+    const [nuevaParroquiaNombre, setNuevaParroquiaNombre] = useState<string>('');
+    const [isSavingParroquia, setIsSavingParroquia] = useState<boolean>(false);
+    const [addParroquiaError, setAddParroquiaError] = useState<string | null>(null);
 
     // Estados para búsqueda de cédula
     const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
@@ -325,17 +343,17 @@ export default function RegistroPastor({
 
     const municipioOptions: Select2Option[] = useMemo(() => {
         if (!data.estado_id) return [];
-        return municipios
+        return localMunicipios
             .filter((m) => String(m.estado_id) === String(data.estado_id))
             .map((m) => ({ value: String(m.id), label: m.nombre }));
-    }, [municipios, data.estado_id]);
+    }, [localMunicipios, data.estado_id]);
 
     const parroquiaOptions: Select2Option[] = useMemo(() => {
         if (!data.municipio_id) return [];
-        return parroquias
+        return localParroquias
             .filter((p) => String(p.municipio_id) === String(data.municipio_id))
             .map((p) => ({ value: String(p.id), label: p.nombre }));
-    }, [parroquias, data.municipio_id]);
+    }, [localParroquias, data.municipio_id]);
 
     const tipoLocalOptions: Select2Option[] = useMemo(() => {
         return tiposLocal.map((t) => ({ value: String(t.id), label: t.nombre }));
@@ -344,18 +362,30 @@ export default function RegistroPastor({
     const extensionMunicipioOptions: Select2Option[] = useMemo(() => {
         const estId = data.extension_estado_id || data.estado_id;
         if (!estId) return [];
-        return municipios
+        return localMunicipios
             .filter((m) => String(m.estado_id) === String(estId))
             .map((m) => ({ value: String(m.id), label: m.nombre }));
-    }, [municipios, data.extension_estado_id, data.estado_id]);
+    }, [localMunicipios, data.extension_estado_id, data.estado_id]);
 
     const extensionParroquiaOptions: Select2Option[] = useMemo(() => {
         const munId = data.extension_municipio_id || data.municipio_id;
         if (!munId) return [];
-        return parroquias
+        return localParroquias
             .filter((p) => String(p.municipio_id) === String(munId))
             .map((p) => ({ value: String(p.id), label: p.nombre }));
-    }, [parroquias, data.extension_municipio_id, data.municipio_id]);
+    }, [localParroquias, data.extension_municipio_id, data.municipio_id]);
+
+    const selectedPastorEstadoNombre = useMemo(() => {
+        if (!data.estado_id) return undefined;
+        const found = estados.find((e) => String(e.id) === String(data.estado_id));
+        return found?.nombre;
+    }, [data.estado_id, estados]);
+
+    const selectedPastorMunicipioNombre = useMemo(() => {
+        if (!data.municipio_id) return undefined;
+        const found = localMunicipios.find((m) => String(m.id) === String(data.municipio_id));
+        return found?.nombre;
+    }, [data.municipio_id, localMunicipios]);
 
     const selectedExtensionEstadoNombre = useMemo(() => {
         const estId = data.extension_estado_id || data.estado_id;
@@ -367,9 +397,9 @@ export default function RegistroPastor({
     const selectedExtensionMunicipioNombre = useMemo(() => {
         const munId = data.extension_municipio_id || data.municipio_id;
         if (!munId) return undefined;
-        const found = municipios.find((m) => String(m.id) === String(munId));
+        const found = localMunicipios.find((m) => String(m.id) === String(munId));
         return found?.nombre;
-    }, [data.extension_municipio_id, data.municipio_id, municipios]);
+    }, [data.extension_municipio_id, data.municipio_id, localMunicipios]);
 
     const cleanText = (str?: string) => {
         if (!str) return '';
@@ -422,30 +452,32 @@ export default function RegistroPastor({
         }));
     };
 
-    const handleExtensionFechaFundacionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
+    const handleExtensionAnoFundacionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawVal = e.target.value;
+        const cleanAno = rawVal.replace(/\D/g, '').slice(0, 4);
         markFieldTouched('extension_fecha_fundacion');
-        if (val) {
-            const fundDate = new Date(val);
-            const today = new Date();
-            if (!isNaN(fundDate.getTime())) {
-                let years = today.getFullYear() - fundDate.getFullYear();
-                let months = today.getMonth() - fundDate.getMonth();
-                if (months < 0 || (months === 0 && today.getDate() < fundDate.getDate())) {
-                    years--;
-                    months += 12;
-                }
-                const tiempoText = years > 0 ? `${years} año(s) y ${months} mes(es)` : `${months} mes(es)`;
-                setData((prev) => ({
-                    ...prev,
-                    extension_fecha_fundacion: val,
-                    extension_anios_activa: String(Math.max(0, years)),
-                    extension_tiempo_trabajo: tiempoText,
-                }));
-                return;
-            }
+
+        if (cleanAno.length === 4) {
+            const fundYear = parseInt(cleanAno, 10);
+            const currentYear = new Date().getFullYear();
+            const years = Math.max(0, currentYear - fundYear);
+            const tiempoText = years === 1 ? '1 año' : `${years} años`;
+
+            setData((prev) => ({
+                ...prev,
+                extension_fecha_fundacion: `${cleanAno}-01-01`,
+                extension_anios_activa: String(years),
+                extension_tiempo_trabajo: tiempoText,
+            }));
+            return;
         }
-        setData((prev) => ({ ...prev, extension_fecha_fundacion: val }));
+
+        setData((prev) => ({
+            ...prev,
+            extension_fecha_fundacion: cleanAno,
+            extension_anios_activa: '',
+            extension_tiempo_trabajo: '',
+        }));
     };
 
     const handleAgregarMedio = () => {
@@ -461,6 +493,160 @@ export default function RegistroPastor({
     const handleEliminarMedio = (idx: number) => {
         const list = (data.extension_medios_lista || []).filter((_, i) => i !== idx);
         setData('extension_medios_lista', list);
+    };
+
+    // Funciones para registrar Municipio / Parroquia en caliente
+    const openAddMunicipioModal = (target: 'pastor' | 'extension') => {
+        const currentEstadoId = target === 'pastor' ? data.estado_id : (data.extension_estado_id || data.estado_id);
+        if (!currentEstadoId) {
+            alert('Por favor seleccione primero un Estado.');
+            return;
+        }
+        setAddMunicipioTarget(target);
+        setNuevoMunicipioNombre('');
+        setAddMunicipioError(null);
+        setIsAddMunicipioModalOpen(true);
+    };
+
+    const openAddParroquiaModal = (target: 'pastor' | 'extension') => {
+        const currentMunicipioId = target === 'pastor' ? data.municipio_id : (data.extension_municipio_id || data.municipio_id);
+        if (!currentMunicipioId) {
+            alert('Por favor seleccione primero un Municipio.');
+            return;
+        }
+        setAddParroquiaTarget(target);
+        setNuevaParroquiaNombre('');
+        setAddParroquiaError(null);
+        setIsAddParroquiaModalOpen(true);
+    };
+
+    const handleCrearMunicipio = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const targetEstadoId = addMunicipioTarget === 'pastor' ? data.estado_id : (data.extension_estado_id || data.estado_id);
+        if (!targetEstadoId) {
+            setAddMunicipioError('Primero debe seleccionar un Estado.');
+            return;
+        }
+        if (!nuevoMunicipioNombre.trim()) {
+            setAddMunicipioError('Ingrese el nombre del Municipio.');
+            return;
+        }
+
+        setIsSavingMunicipio(true);
+        setAddMunicipioError(null);
+
+        try {
+            const res = await fetch('/registro/crear-municipio', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    estado_id: targetEstadoId,
+                    nombre: nuevoMunicipioNombre.trim(),
+                }),
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success && result.municipio) {
+                const newMun = result.municipio;
+                setLocalMunicipios((prev) => {
+                    if (prev.some((m) => String(m.id) === String(newMun.id))) return prev;
+                    return [...prev, newMun].sort((a, b) => a.nombre.localeCompare(b.nombre));
+                });
+
+                if (addMunicipioTarget === 'pastor') {
+                    markFieldTouched('municipio_id');
+                    setData((prev) => ({
+                        ...prev,
+                        municipio_id: String(newMun.id),
+                        municipio: newMun.nombre,
+                        parroquia_id: '',
+                    }));
+                } else {
+                    markFieldTouched('extension_municipio_id');
+                    setData((prev) => ({
+                        ...prev,
+                        extension_municipio_id: String(newMun.id),
+                        extension_parroquia_id: '',
+                    }));
+                }
+
+                setIsAddMunicipioModalOpen(false);
+                setNuevoMunicipioNombre('');
+            } else {
+                setAddMunicipioError(result.message || 'No se pudo registrar el municipio.');
+            }
+        } catch (err) {
+            setAddMunicipioError('Error de conexión al registrar el municipio.');
+        } finally {
+            setIsSavingMunicipio(false);
+        }
+    };
+
+    const handleCrearParroquia = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const targetMunicipioId = addParroquiaTarget === 'pastor' ? data.municipio_id : (data.extension_municipio_id || data.municipio_id);
+        if (!targetMunicipioId) {
+            setAddParroquiaError('Primero debe seleccionar un Municipio.');
+            return;
+        }
+        if (!nuevaParroquiaNombre.trim()) {
+            setAddParroquiaError('Ingrese el nombre de la Parroquia.');
+            return;
+        }
+
+        setIsSavingParroquia(true);
+        setAddParroquiaError(null);
+
+        try {
+            const res = await fetch('/registro/crear-parroquia', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    municipio_id: targetMunicipioId,
+                    nombre: nuevaParroquiaNombre.trim(),
+                }),
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success && result.parroquia) {
+                const newParr = result.parroquia;
+                setLocalParroquias((prev) => {
+                    if (prev.some((p) => String(p.id) === String(newParr.id))) return prev;
+                    return [...prev, newParr].sort((a, b) => a.nombre.localeCompare(b.nombre));
+                });
+
+                if (addParroquiaTarget === 'pastor') {
+                    markFieldTouched('parroquia_id');
+                    setData((prev) => ({
+                        ...prev,
+                        parroquia_id: String(newParr.id),
+                    }));
+                } else {
+                    markFieldTouched('extension_parroquia_id');
+                    setData((prev) => ({
+                        ...prev,
+                        extension_parroquia_id: String(newParr.id),
+                    }));
+                }
+
+                setIsAddParroquiaModalOpen(false);
+                setNuevaParroquiaNombre('');
+            } else {
+                setAddParroquiaError(result.message || 'No se pudo registrar la parroquia.');
+            }
+        } catch (err) {
+            setAddParroquiaError('Error de conexión al registrar la parroquia.');
+        } finally {
+            setIsSavingParroquia(false);
+        }
     };
 
     // Auto-Save Draft
@@ -592,7 +778,7 @@ export default function RegistroPastor({
 
     const handleMunicipioChange = (val: string) => {
         markFieldTouched('municipio_id');
-        const munFound = municipios.find((m) => String(m.id) === val);
+        const munFound = localMunicipios.find((m) => String(m.id) === val);
         setData((prev) => ({
             ...prev,
             municipio_id: val,
@@ -989,9 +1175,14 @@ export default function RegistroPastor({
             case 'extension_tipo_local_id':
                 if (!data.extension_tipo_local_id) return 'Seleccione el tipo de local.';
                 break;
-            case 'extension_fecha_fundacion':
-                if (!data.extension_fecha_fundacion.trim()) return 'La fecha o año de fundación es requerido.';
+            case 'extension_fecha_fundacion': {
+                const rawAno = String(data.extension_fecha_fundacion || '').replace(/\D/g, '').slice(0, 4);
+                if (!rawAno || rawAno.length < 4) return 'El año de fundación es requerido (Ej. 1995).';
+                const yr = parseInt(rawAno, 10);
+                const currentYear = new Date().getFullYear();
+                if (yr < 1920 || yr > currentYear) return `Ingrese un año válido entre 1920 y ${currentYear}.`;
                 break;
+            }
             case 'extension_tiempo_trabajo':
                 if (!data.extension_tiempo_trabajo.trim()) return 'El tiempo de trabajo activo es requerido.';
                 break;
@@ -1236,6 +1427,156 @@ export default function RegistroPastor({
     return (
         <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans relative">
             <Head title="Registro Ministerial y de Extensión - MMM Venezuela" />
+
+            {/* MODAL AGREGAR MUNICIPIO RÁPIDO */}
+            {isAddMunicipioModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+                    <Card className="w-full max-w-md bg-white border-slate-200 shadow-2xl rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-5 h-5" />
+                                <h3 className="font-bold text-sm">Agregar Nuevo Municipio</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsAddMunicipioModalOpen(false)}
+                                className="text-white/80 hover:text-white"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCrearMunicipio} className="p-5 space-y-4">
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
+                                Estado seleccionado:{' '}
+                                <b>
+                                    {addMunicipioTarget === 'pastor'
+                                        ? selectedPastorEstadoNombre
+                                        : selectedExtensionEstadoNombre}
+                                </b>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="nuevo_municipio" className="text-xs font-bold text-slate-700">
+                                    Nombre del Municipio <span className="text-rose-500">*</span>
+                                </Label>
+                                <Input
+                                    id="nuevo_municipio"
+                                    value={nuevoMunicipioNombre}
+                                    onChange={(e) => setNuevoMunicipioNombre(e.target.value)}
+                                    placeholder="Ej. Iribarren, Valencia, Caroní..."
+                                    autoFocus
+                                    className="mt-1 bg-white text-slate-900 border-slate-300 focus:border-blue-600"
+                                />
+                                {addMunicipioError && (
+                                    <p className="text-xs text-rose-600 font-medium mt-1.5 flex items-center gap-1">
+                                        <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                        {addMunicipioError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsAddMunicipioModalOpen(false)}
+                                    className="text-xs border-slate-300 text-slate-700"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={isSavingMunicipio}
+                                    className="text-xs bg-blue-700 hover:bg-blue-800 text-white font-bold"
+                                >
+                                    {isSavingMunicipio ? (
+                                        <>
+                                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Guardando...
+                                        </>
+                                    ) : (
+                                        'Guardar y Seleccionar'
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
+
+            {/* MODAL AGREGAR PARROQUIA RÁPIDA */}
+            {isAddParroquiaModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+                    <Card className="w-full max-w-md bg-white border-slate-200 shadow-2xl rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-5 h-5" />
+                                <h3 className="font-bold text-sm">Agregar Nueva Parroquia</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsAddParroquiaModalOpen(false)}
+                                className="text-white/80 hover:text-white"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCrearParroquia} className="p-5 space-y-4">
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
+                                Municipio seleccionado:{' '}
+                                <b>
+                                    {addParroquiaTarget === 'pastor'
+                                        ? selectedPastorMunicipioNombre
+                                        : selectedExtensionMunicipioNombre}
+                                </b>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="nueva_parroquia" className="text-xs font-bold text-slate-700">
+                                    Nombre de la Parroquia <span className="text-rose-500">*</span>
+                                </Label>
+                                <Input
+                                    id="nueva_parroquia"
+                                    value={nuevaParroquiaNombre}
+                                    onChange={(e) => setNuevaParroquiaNombre(e.target.value)}
+                                    placeholder="Ej. Catedral, Santa Rosa, Juan de Villegas..."
+                                    autoFocus
+                                    className="mt-1 bg-white text-slate-900 border-slate-300 focus:border-blue-600"
+                                />
+                                {addParroquiaError && (
+                                    <p className="text-xs text-rose-600 font-medium mt-1.5 flex items-center gap-1">
+                                        <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                        {addParroquiaError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsAddParroquiaModalOpen(false)}
+                                    className="text-xs border-slate-300 text-slate-700"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={isSavingParroquia}
+                                    className="text-xs bg-blue-700 hover:bg-blue-800 text-white font-bold"
+                                >
+                                    {isSavingParroquia ? (
+                                        <>
+                                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Guardando...
+                                        </>
+                                    ) : (
+                                        'Guardar y Seleccionar'
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
 
             {/* MODAL DE PROGRESO Y CONFIRMACIÓN */}
             {isSubmittingModalOpen && (
@@ -1921,9 +2262,20 @@ export default function RegistroPastor({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="municipio_id" className="text-xs font-bold uppercase text-slate-700">
-                                                Municipio <span className="text-rose-500">*</span>
-                                            </Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="municipio_id" className="text-xs font-bold uppercase text-slate-700">
+                                                    Municipio <span className="text-rose-500">*</span>
+                                                </Label>
+                                                {data.estado_id && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openAddMunicipioModal('pastor')}
+                                                        className="text-[11px] text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-0.5"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Agregar
+                                                    </button>
+                                                )}
+                                            </div>
                                             <Select2
                                                 id="municipio_id"
                                                 options={municipioOptions}
@@ -1943,9 +2295,20 @@ export default function RegistroPastor({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="parroquia_id" className="text-xs font-bold uppercase text-slate-700">
-                                                Parroquia <span className="text-rose-500">*</span>
-                                            </Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="parroquia_id" className="text-xs font-bold uppercase text-slate-700">
+                                                    Parroquia <span className="text-rose-500">*</span>
+                                                </Label>
+                                                {data.municipio_id && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openAddParroquiaModal('pastor')}
+                                                        className="text-[11px] text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-0.5"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Agregar
+                                                    </button>
+                                                )}
+                                            </div>
                                             <Select2
                                                 id="parroquia_id"
                                                 options={parroquiaOptions}
@@ -2986,13 +3349,16 @@ export default function RegistroPastor({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="extension_fecha_fundacion" className="text-xs font-bold uppercase text-slate-700">
-                                            Fecha de Fundación <span className="text-rose-500">*</span>
+                                            Año de Fundación <span className="text-rose-500">*</span>
                                         </Label>
                                         <Input
                                             id="extension_fecha_fundacion"
-                                            type="date"
-                                            value={data.extension_fecha_fundacion}
-                                            onChange={handleExtensionFechaFundacionChange}
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={4}
+                                            value={data.extension_fecha_fundacion ? (String(data.extension_fecha_fundacion).includes('-') ? String(data.extension_fecha_fundacion).split('-')[0] : data.extension_fecha_fundacion) : ''}
+                                            onChange={handleExtensionAnoFundacionChange}
+                                            placeholder="Ej. 1995"
                                             className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_fecha_fundacion', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
                                         {isFieldVisibleError('extension_fecha_fundacion', 6) && (
@@ -3005,13 +3371,13 @@ export default function RegistroPastor({
 
                                     <div>
                                         <Label htmlFor="extension_anios_activa" className="text-xs font-bold uppercase text-slate-700">
-                                            Años Activa
+                                            Años de Fundada
                                         </Label>
                                         <Input
                                             id="extension_anios_activa"
                                             readOnly
-                                            value={data.extension_anios_activa}
-                                            placeholder="Calculado"
+                                            value={data.extension_anios_activa ? `${data.extension_anios_activa} año(s)` : ''}
+                                            placeholder="Calculado automáticamente"
                                             className="mt-1 bg-slate-100 border-slate-300 text-slate-700 font-bold cursor-not-allowed"
                                         />
                                     </div>
@@ -3122,9 +3488,20 @@ export default function RegistroPastor({
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="extension_municipio_id" className="text-xs font-bold uppercase text-slate-700">
-                                            Municipio <span className="text-rose-500">*</span>
-                                        </Label>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="extension_municipio_id" className="text-xs font-bold uppercase text-slate-700">
+                                                Municipio <span className="text-rose-500">*</span>
+                                            </Label>
+                                            {(data.extension_estado_id || data.estado_id) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openAddMunicipioModal('extension')}
+                                                    className="text-[11px] text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-0.5"
+                                                >
+                                                    <Plus className="w-3 h-3" /> Agregar
+                                                </button>
+                                            )}
+                                        </div>
                                         <Select2
                                             id="extension_municipio_id"
                                             options={extensionMunicipioOptions}
@@ -3151,9 +3528,20 @@ export default function RegistroPastor({
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="extension_parroquia_id" className="text-xs font-bold uppercase text-slate-700">
-                                            Parroquia <span className="text-rose-500">*</span>
-                                        </Label>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="extension_parroquia_id" className="text-xs font-bold uppercase text-slate-700">
+                                                Parroquia <span className="text-rose-500">*</span>
+                                            </Label>
+                                            {(data.extension_municipio_id || data.municipio_id) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openAddParroquiaModal('extension')}
+                                                    className="text-[11px] text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-0.5"
+                                                >
+                                                    <Plus className="w-3 h-3" /> Agregar
+                                                </button>
+                                            )}
+                                        </div>
                                         <Select2
                                             id="extension_parroquia_id"
                                             options={extensionParroquiaOptions}

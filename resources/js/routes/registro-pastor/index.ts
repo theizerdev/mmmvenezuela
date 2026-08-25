@@ -229,10 +229,122 @@ verificarCedula.head = (args: { cedula: string | number } | [cedula: string | nu
         })
     
     verificarCedula.form = verificarCedulaForm
+/**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @route '/registro/crear-municipio'
+ */
+export const crearMunicipio = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearMunicipio.url(options),
+    method: 'post',
+})
+
+crearMunicipio.definition = {
+    methods: ["post"],
+    url: '/registro/crear-municipio',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @route '/registro/crear-municipio'
+ */
+crearMunicipio.url = (options?: RouteQueryOptions) => {
+    return crearMunicipio.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @route '/registro/crear-municipio'
+ */
+crearMunicipio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearMunicipio.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @route '/registro/crear-municipio'
+ */
+    const crearMunicipioForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearMunicipio.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @route '/registro/crear-municipio'
+ */
+        crearMunicipioForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearMunicipio.url(options),
+            method: 'post',
+        })
+    
+    crearMunicipio.form = crearMunicipioForm
+/**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @route '/registro/crear-parroquia'
+ */
+export const crearParroquia = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearParroquia.url(options),
+    method: 'post',
+})
+
+crearParroquia.definition = {
+    methods: ["post"],
+    url: '/registro/crear-parroquia',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @route '/registro/crear-parroquia'
+ */
+crearParroquia.url = (options?: RouteQueryOptions) => {
+    return crearParroquia.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @route '/registro/crear-parroquia'
+ */
+crearParroquia.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearParroquia.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @route '/registro/crear-parroquia'
+ */
+    const crearParroquiaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearParroquia.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @route '/registro/crear-parroquia'
+ */
+        crearParroquiaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearParroquia.url(options),
+            method: 'post',
+        })
+    
+    crearParroquia.form = crearParroquiaForm
 const registroPastor = {
     index: Object.assign(index, index),
 store: Object.assign(store, store),
 verificarCedula: Object.assign(verificarCedula, verificarCedula),
+crearMunicipio: Object.assign(crearMunicipio, crearMunicipio),
+crearParroquia: Object.assign(crearParroquia, crearParroquia),
 }
 
 export default registroPastor
