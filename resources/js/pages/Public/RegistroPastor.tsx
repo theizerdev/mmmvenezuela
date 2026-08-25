@@ -1753,18 +1753,18 @@ export default function RegistroPastor({
                 {/* Formulario Wizard */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Header de Título y Progreso */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div>
-                            <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-blue-600" />
+                            <h2 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2.5">
+                                <Sparkles className="w-6 h-6 text-blue-600" />
                                 Registro Unificado de Pastor & Extensión
                             </h2>
-                            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                            <p className="text-xs sm:text-sm text-slate-500 mt-1">
                                 Complete los 8 pasos de la ficha ministerial y los datos de su Iglesia / Extensión.
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
                             {activeTab > 1 && (
                                 <Button
                                     type="button"
@@ -1773,7 +1773,7 @@ export default function RegistroPastor({
                                         setActiveTab(activeTab - 1);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
-                                    className="border-slate-300 text-slate-700 hover:bg-slate-50 flex-1 md:flex-initial font-medium text-xs sm:text-sm"
+                                    className="border-slate-300 text-slate-700 hover:bg-slate-50 flex-1 md:flex-initial font-bold text-xs sm:text-sm py-2.5 px-5 rounded-xl"
                                 >
                                     <ArrowLeft className="w-4 h-4 mr-1.5" />
                                     Anterior
@@ -1783,7 +1783,7 @@ export default function RegistroPastor({
                                 <Button
                                     type="button"
                                     onClick={() => handleNextStep(activeTab)}
-                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold flex-1 md:flex-initial shadow-md text-xs sm:text-sm"
+                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold flex-1 md:flex-initial shadow-md text-xs sm:text-sm py-2.5 px-6 rounded-xl"
                                 >
                                     Siguiente
                                     <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -1795,14 +1795,14 @@ export default function RegistroPastor({
                     {/* Barra de Pasos */}
                     <div className="space-y-3">
                         {/* Versión Móvil */}
-                        <div className="block sm:hidden bg-white border border-slate-200 p-3 rounded-xl shadow-xs">
-                            <div className="flex items-center justify-between text-xs mb-1.5">
-                                <span className="font-bold text-blue-700">
+                        <div className="block sm:hidden bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
+                            <div className="flex items-center justify-between text-xs mb-2">
+                                <span className="font-bold text-blue-700 text-sm">
                                     Paso {activeTab} de 8: {steps[activeTab - 1]?.title}
                                 </span>
-                                <span className="font-mono font-bold text-slate-500">{Math.round((activeTab / 8) * 100)}%</span>
+                                <span className="font-mono font-bold text-slate-600">{Math.round((activeTab / 8) * 100)}%</span>
                             </div>
-                            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                            <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
                                 <div
                                     className="bg-blue-600 h-full transition-all duration-300 rounded-full"
                                     style={{ width: `${(activeTab / 8) * 100}%` }}
@@ -1811,7 +1811,7 @@ export default function RegistroPastor({
                         </div>
 
                         {/* Grid de Pasos */}
-                        <div className="flex gap-2.5 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 scrollbar-thin">
+                        <div className="flex gap-3 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 scrollbar-thin">
                             {steps.map((step) => {
                                 const Icon = step.icon;
                                 const isActive = activeTab === step.id;
@@ -1822,28 +1822,28 @@ export default function RegistroPastor({
                                         key={step.id}
                                         type="button"
                                         onClick={() => handleTabClick(step.id)}
-                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[155px] sm:min-w-0 shrink-0 sm:shrink ${isActive
-                                                ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 shadow-xs'
+                                        className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl border transition-all text-left min-w-[165px] sm:min-w-0 shrink-0 sm:shrink ${isActive
+                                                ? 'bg-blue-50/90 border-blue-600 ring-2 ring-blue-600/20 shadow-sm'
                                                 : isCompleted
                                                     ? 'bg-white border-emerald-300 hover:border-emerald-400'
                                                     : 'bg-white border-slate-200 hover:bg-slate-50'
                                             }`}
                                     >
                                         <div
-                                            className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 font-bold text-xs ${isActive
+                                            className={`flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-xl shrink-0 font-bold text-xs sm:text-sm ${isActive
                                                     ? 'bg-blue-700 text-white shadow-xs'
                                                     : isCompleted
                                                         ? 'bg-emerald-600 text-white'
                                                         : 'bg-slate-100 text-slate-500'
                                                 }`}
                                         >
-                                            {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                                            {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
                                                 Paso {step.id}
                                             </span>
-                                            <h3 className="font-bold text-xs truncate text-slate-900">
+                                            <h3 className="font-bold text-xs sm:text-sm truncate text-slate-900">
                                                 {step.title}
                                             </h3>
                                         </div>
@@ -1855,17 +1855,17 @@ export default function RegistroPastor({
 
                     {/* PASO 1: DATOS PERSONALES, CÓNYUGE, CONTACTO Y DIRECCIÓN */}
                     {activeTab === 1 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <User className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <User className="h-6 w-6 text-blue-600" />
                                     <span>Paso 1: Información Personal, Cónyuge y Ubicación</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Ingrese sus datos de identidad, datos del cónyuge para vinculación ministerial y su dirección.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 {/* Fila 1: Nombres, Apellidos, Cédula, Género */}
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                                     <div>
@@ -2428,17 +2428,17 @@ export default function RegistroPastor({
 
                     {/* PASO 2: DATOS ACADÉMICOS Y TEOLÓGICOS */}
                     {activeTab === 2 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <GraduationCap className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <GraduationCap className="h-6 w-6 text-blue-600" />
                                     <span>Paso 2: Formación Académica & Estudios Teológicos</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Nivel de instrucción académica secular y preparación teológica o bíblica.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <Label htmlFor="grado_instruccion" className="text-xs font-bold uppercase text-slate-700">
@@ -2598,17 +2598,17 @@ export default function RegistroPastor({
 
                     {/* PASO 3: DATOS ECLESIÁSTICOS */}
                     {activeTab === 3 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <Cross className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <Cross className="h-6 w-6 text-blue-600" />
                                     <span>Paso 3: Trayectoria y Datos Eclesiásticos</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Grado ministerial, zona, distrito y responsabilidades dentro de la obra.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="nivel_ministerial" className="text-xs font-bold uppercase text-slate-700">
@@ -2823,17 +2823,17 @@ export default function RegistroPastor({
 
                     {/* PASO 4: ESTADO DE SALUD */}
                     {activeTab === 4 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <Stethoscope className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <Stethoscope className="h-6 w-6 text-blue-600" />
                                     <span>Paso 4: Ficha de Salud & Contacto de Emergencia</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Datos médicos vitales para atención preventiva y asistencia en eventos nacionales.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="grupo_sanguineo" className="text-xs font-bold uppercase text-slate-700">
@@ -3084,17 +3084,17 @@ export default function RegistroPastor({
 
                     {/* PASO 5: FOTOGRAFÍA DEL PASTOR Y CÉDULA (OBLIGATORIAS) */}
                     {activeTab === 5 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <Camera className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <Camera className="h-6 w-6 text-blue-600" />
                                     <span>Paso 5: Fotografía Tipo Carnet y Foto de la Cédula</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Tome o suba una foto nítida de perfil (tipo carnet) y la foto de su documento de identidad.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 {/* Modal de Cámara en Vivo si está activa */}
                                 {isCameraActive && (
                                     <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3 flex flex-col items-center shadow-lg">
@@ -3288,17 +3288,17 @@ export default function RegistroPastor({
 
                     {/* PASO 6: DATOS DE LA IGLESIA / EXTENSIÓN */}
                     {activeTab === 6 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <Building2 className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <Building2 className="h-6 w-6 text-blue-600" />
                                     <span>Paso 6: Información General de la Iglesia / Extensión</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Datos institucionales de la obra, tipo de inmueble y tiempo de trabajo ministerial.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <Label htmlFor="extension_nombre" className="text-xs font-bold uppercase text-slate-700">
@@ -3446,17 +3446,17 @@ export default function RegistroPastor({
 
                     {/* PASO 7: UBICACIÓN Y MAPA GPS DE LA IGLESIA */}
                     {activeTab === 7 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <MapPin className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <MapPin className="h-6 w-6 text-blue-600" />
                                     <span>Paso 7: Ubicación Geográfica & Mapa GPS de la Iglesia</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Dirección detallada y fijación satelital en el mapa nacional de Venezuela.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="extension_estado_id" className="text-xs font-bold uppercase text-slate-700">
@@ -3690,17 +3690,17 @@ export default function RegistroPastor({
 
                     {/* PASO 8: MEMBRESÍA, FRUTOS Y MEDIOS DE COMUNICACIÓN */}
                     {activeTab === 8 && (
-                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
-                                    <Users className="h-5 w-5 text-blue-600" />
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                    <Users className="h-6 w-6 text-blue-600" />
                                     <span>Paso 8: Membresía, Frutos y Medios de Comunicación</span>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
                                     Estadísticas de congregación, obras anexas, frutos ministeriales y medios de difusión.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-6">
+                            <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label htmlFor="extension_miembros_activos" className="text-xs font-bold uppercase text-slate-700">
