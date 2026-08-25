@@ -32,16 +32,13 @@ import {
     ShieldCheck,
     Info,
     Sparkles,
-    Heart,
     Loader2,
     Cloud,
     RotateCcw,
     Send,
-    FileCheck2,
     Building2,
     Users,
-    Radio,
-    Tv
+    Radio
 } from 'lucide-react';
 import LocationMapPicker, { GeocodedAddressDetails } from '@/components/location-map-picker';
 
@@ -76,81 +73,93 @@ interface MediaItem {
     nota?: string;
 }
 
+interface PastorItem {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    codigo?: string;
+    documento: string;
+    genero?: string;
+}
+
 interface RegistroPastorProps {
     estados: EstadoItem[];
     municipios: MunicipioItem[];
     parroquias: ParroquiaItem[];
     tiposLocal?: TipoLocalItem[];
-    gradosMinisteriales?: string[];
-    estadosCiviles?: string[];
-    generos?: string[];
+    pastoresDisponibles: PastorItem[];
+    gradosMinisteriales: string[];
+    estadosCiviles: string[];
+    generos: string[];
     flash?: {
         success?: {
             codigo: string;
             nombre: string;
-            iglesia?: string | null;
+            pastor_id?: number;
+            iglesia?: string;
             mensaje: string;
         };
+        error?: string;
     };
 }
 
-const DRAFT_STORAGE_KEY = 'mmm_pastor_registro_draft_v6';
+const DRAFT_STORAGE_KEY = 'mmm_pastor_registro_draft_v2';
 
 export default function RegistroPastor({
     estados = [],
     municipios = [],
     parroquias = [],
     tiposLocal = [],
-    gradosMinisteriales = ['Colaborador', 'Laico', 'Licenciado', 'Ministro Ordenado'],
-    estadosCiviles = ['Soltero(a)', 'Casado(a)', 'Viudo(a)', 'Divorciado(a)'],
-    generos = ['Masculino', 'Femenino'],
+    pastoresDisponibles = [],
+    gradosMinisteriales = [],
+    estadosCiviles = [],
     flash,
 }: RegistroPastorProps) {
     const { props } = usePage<any>();
     const [activeTab, setActiveTab] = useState<number>(1);
-    const [extensionSubTab, setExtensionSubTab] = useState<number>(1);
+    const [attemptedSteps, setAttemptedSteps] = useState<Record<number, boolean>>({});
+    const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
 
-    // Estados de Borrador Local (Auto-Save)
+    // Estados para búsqueda de cédula
+    const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
+    const [cedulaExistenteNombre, setCedulaExistenteNombre] = useState<string | null>(null);
+    const [cedulaExistentePastorId, setCedulaExistentePastorId] = useState<number | null>(null);
+
+    // Estados para borrador automático
+    const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
+    const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
     const [hasPendingDraft, setHasPendingDraft] = useState<boolean>(false);
     const [draftStep, setDraftStep] = useState<number>(1);
-    const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
-    const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
 
-    // Estados de medios de comunicación para extensión
+    // Estados para Cámara Web
+    const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+    const [activeCameraTarget, setActiveCameraTarget] = useState<'foto' | 'foto_cedula'>('foto');
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+
+    // Estados para Medicamentos Dinámicos
+    const [nuevoMedicamentoNombre, setNuevoMedicamentoNombre] = useState<string>('');
+    const [nuevoMedicamentoDosis, setNuevoMedicamentoDosis] = useState<string>('');
+
+    // Estados para Medios de Comunicación Dinámicos de la Iglesia
     const [nuevoMedioCual, setNuevoMedioCual] = useState<string>('');
     const [nuevoMedioDonde, setNuevoMedioDonde] = useState<string>('');
     const [nuevoMedioNota, setNuevoMedioNota] = useState<string>('');
 
-    // Estados del Modal de Envío y Progreso (0% a 100%)
+    // Estados de envío y progreso
     const [isSubmittingModalOpen, setIsSubmittingModalOpen] = useState<boolean>(false);
     const [submitProgress, setSubmitProgress] = useState<number>(0);
-    const [submitStage, setSubmitStage] = useState<string>('Iniciando envío...');
+    const [submitStage, setSubmitStage] = useState<string>('Iniciando validación ministerial...');
     const [submittedResult, setSubmittedResult] = useState<{
         codigo: string;
         nombre: string;
-        pastor_id?: number | string | null;
+        pastor_id?: number | null;
         iglesia?: string | null;
         mensaje: string;
     } | null>(null);
 
-    // Estados de verificación de Cédula Principal en tiempo real
-    const [isCheckingCedula, setIsCheckingCedula] = useState<boolean>(false);
-    const [cedulaExistenteNombre, setCedulaExistenteNombre] = useState<string | null>(null);
-    const [cedulaExistentePastorId, setCedulaExistentePastorId] = useState<number | string | null>(null);
-
-    // Estados de verificación de Cédula Cónyuge en tiempo real
-    const [isCheckingCedulaConyuge, setIsCheckingCedulaConyuge] = useState<boolean>(false);
-    const [cedulaConyugeEncontrada, setCedulaConyugeEncontrada] = useState<string | null>(null);
-    const [cedulaConyugePastorId, setCedulaConyugePastorId] = useState<number | string | null>(null);
-
-    // Cámara Web para Foto de Perfil y Cédula
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
-    const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-    const [activeCameraTarget, setActiveCameraTarget] = useState<'foto' | 'foto_cedula'>('foto');
-
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         codigo: '',
         nombres: '',
         apellidos: '',
@@ -158,10 +167,8 @@ export default function RegistroPastor({
         numero_documento: '',
         documento: '',
         genero: 'Masculino',
-        edad: '',
         fe_nacimiento: '',
-        foto: '',
-        foto_cedula: '',
+        edad: '',
         estado_civil: 'Casado(a)',
         nombre_conyuge: '',
         tipo_documento_conyuge: 'V',
@@ -169,6 +176,14 @@ export default function RegistroPastor({
         cedula_conyuge: '',
         conyuge_pastorea: false,
         conyuge_id: '',
+
+        // Académicos
+        grado_instruccion: 'Universitario',
+        titulo_obtenido: '',
+        estudio_teologico: false,
+        titulo_teologico: '',
+        tiempo_de_estudio_teologico: '',
+        instituto_teologico: '',
 
         // Eclesiásticos
         nivel_ministerial: 'Ministro Ordenado',
@@ -182,21 +197,17 @@ export default function RegistroPastor({
         mencion: '',
         nota: '',
 
-        // Académicos
-        grado_instruccion: 'Universitario',
-        titulo_obtenido: '',
-        estudio_teologico: false,
-        titulo_teologico: '',
-        tiempo_de_estudio_teologico: '',
-        instituto_teologico: '',
+        // Fotografías
+        foto: '',
+        foto_cedula: '',
 
-        // Ubicación y Contacto
+        // Contacto y Ubicación Pastor
         edificio_casa_quinta: '',
         piso: '',
         apartamento: '',
         calle_avenida: '',
         urbanizacion: '',
-        estado_id: estados?.[0]?.id ? String(estados[0].id) : '',
+        estado_id: '',
         municipio_id: '',
         parroquia_id: '',
         municipio: '',
@@ -217,7 +228,7 @@ export default function RegistroPastor({
         contacto_emergencia_telefono: '',
         observaciones_salud: '',
 
-        // Paso 6: Iglesias / Extensiones a su Cargo
+        // Iglesia / Extensión a su Cargo
         tiene_extension: true,
         extension_id: '',
         extension_nombre: '',
@@ -248,6 +259,17 @@ export default function RegistroPastor({
     });
 
     const esCasado = data.estado_civil.toLowerCase().includes('casad');
+
+    // Parse de medicamentos si existen
+    const medicamentosList = useMemo(() => {
+        if (!data.medicamentos_recetados) return [];
+        try {
+            const parsed = JSON.parse(data.medicamentos_recetados);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }, [data.medicamentos_recetados]);
 
     // Opciones para Select2
     const generoOptions: Select2Option[] = useMemo(() => [
@@ -383,6 +405,9 @@ export default function RegistroPastor({
             matchedEstadoId = String(foundState.id);
         }
 
+        markFieldTouched('extension_latitud');
+        markFieldTouched('extension_longitud');
+
         setData((prev) => ({
             ...prev,
             extension_latitud: String(newLat),
@@ -399,6 +424,7 @@ export default function RegistroPastor({
 
     const handleExtensionFechaFundacionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
+        markFieldTouched('extension_fecha_fundacion');
         if (val) {
             const fundDate = new Date(val);
             const today = new Date();
@@ -437,18 +463,11 @@ export default function RegistroPastor({
         setData('extension_medios_lista', list);
     };
 
-    // 1. Detectar si existe un borrador guardado previamente al montar el componente
+    // Auto-Save Draft
     useEffect(() => {
-        // Si hay flash de éxito de un registro reciente, limpiar borrador
         if (flash?.success || props?.flash?.success) {
             try {
                 localStorage.removeItem(DRAFT_STORAGE_KEY);
-                for (let i = 0; i < localStorage.length; i++) {
-                    const k = localStorage.key(i);
-                    if (k && k.startsWith('mmm_pastor_registro_draft')) {
-                        localStorage.removeItem(k);
-                    }
-                }
             } catch (e) { }
             setHasPendingDraft(false);
             setLastSavedTime(null);
@@ -464,14 +483,10 @@ export default function RegistroPastor({
                     setDraftStep(parsed.activeTab || 1);
                 }
             }
-        } catch (e) {
-            // Ignorar
-        }
+        } catch (e) { }
     }, [flash, props?.flash]);
 
-    // 2. Auto-guardar borrador continuamente en localStorage al cambiar data o pestaña
     useEffect(() => {
-        // Si el registro ya fue completado o está en proceso de envío, no guardar borrador
         if (submittedResult || isSubmittingModalOpen) return;
         const hasContent = data.nombres || data.apellidos || data.documento || data.telefono_tlf;
         if (!hasContent) return;
@@ -486,9 +501,7 @@ export default function RegistroPastor({
                 };
                 localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
                 setLastSavedTime(payload.savedAt);
-            } catch (e) {
-                // Quota exceeded fallback
-            } finally {
+            } catch (e) { } finally {
                 setIsSavingDraft(false);
             }
         }, 800);
@@ -496,7 +509,6 @@ export default function RegistroPastor({
         return () => clearTimeout(timer);
     }, [data, activeTab, submittedResult, isSubmittingModalOpen]);
 
-    // Helper para separar cédula entre Tipo (V, E o P) y Número
     const parseCedula = (raw?: string): { tipo: string; numero: string } => {
         if (!raw) return { tipo: 'V', numero: '' };
         const trimmed = raw.trim().toUpperCase();
@@ -523,27 +535,14 @@ export default function RegistroPastor({
             if (rawDraft) {
                 const parsed = JSON.parse(rawDraft);
                 if (parsed.data) {
-                    const parsedDoc = parseCedula(parsed.data.documento || parsed.data.numero_documento);
-                    const parsedDocConyuge = parseCedula(parsed.data.cedula_conyuge || parsed.data.numero_documento_conyuge);
-                    setData((prev) => ({
-                        ...prev,
-                        ...parsed.data,
-                        tipo_documento: parsed.data.tipo_documento || parsedDoc.tipo,
-                        numero_documento: parsed.data.numero_documento !== undefined ? parsed.data.numero_documento : parsedDoc.numero,
-                        documento: parsed.data.documento || (parsedDoc.numero ? `${parsedDoc.tipo}-${parsedDoc.numero}` : ''),
-                        tipo_documento_conyuge: parsed.data.tipo_documento_conyuge || parsedDocConyuge.tipo,
-                        numero_documento_conyuge: parsed.data.numero_documento_conyuge !== undefined ? parsed.data.numero_documento_conyuge : parsedDocConyuge.numero,
-                        cedula_conyuge: parsed.data.cedula_conyuge || (parsedDocConyuge.numero ? `${parsedDocConyuge.tipo}-${parsedDocConyuge.numero}` : ''),
-                    }));
+                    setData((prev) => ({ ...prev, ...parsed.data }));
                 }
                 if (parsed.activeTab) {
                     setActiveTab(parsed.activeTab);
                 }
                 setLastSavedTime(parsed.savedAt || 'Reciente');
             }
-        } catch (e) {
-            console.error('Error al restaurar borrador', e);
-        } finally {
+        } catch (e) { } finally {
             setHasPendingDraft(false);
         }
     };
@@ -551,18 +550,11 @@ export default function RegistroPastor({
     const handleDiscardDraft = () => {
         try {
             localStorage.removeItem(DRAFT_STORAGE_KEY);
-            for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (k && k.startsWith('mmm_pastor_registro_draft')) {
-                    localStorage.removeItem(k);
-                }
-            }
         } catch (e) { }
         setHasPendingDraft(false);
         setLastSavedTime(null);
     };
 
-    // Calcular edad automáticamente al cambiar fecha de nacimiento
     const calculateAge = (birthDateString: string): string => {
         if (!birthDateString) return '';
         const birthDate = new Date(birthDateString);
@@ -578,6 +570,7 @@ export default function RegistroPastor({
 
     const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
+        markFieldTouched('fe_nacimiento');
         const computedAge = calculateAge(val);
         setData((prev) => ({
             ...prev,
@@ -587,41 +580,27 @@ export default function RegistroPastor({
     };
 
     const handleEstadoChange = (val: string) => {
+        markFieldTouched('estado_id');
         setData((prev) => ({
             ...prev,
             estado_id: val,
             municipio_id: '',
             parroquia_id: '',
+            extension_estado_id: prev.extension_estado_id || val,
         }));
     };
 
     const handleMunicipioChange = (val: string) => {
+        markFieldTouched('municipio_id');
         const munFound = municipios.find((m) => String(m.id) === val);
         setData((prev) => ({
             ...prev,
             municipio_id: val,
             parroquia_id: '',
-            municipio: munFound ? munFound.nombre : prev.municipio,
+            municipio: munFound ? munFound.nombre : '',
+            extension_municipio_id: prev.extension_municipio_id || val,
         }));
     };
-
-    // Manejo de Medicamentos
-    const [nuevoMedicamentoNombre, setNuevoMedicamentoNombre] = useState('');
-    const [nuevoMedicamentoDosis, setNuevoMedicamentoDosis] = useState('');
-
-    const medicamentosList = useMemo(() => {
-        const raw = data.medicamentos_recetados;
-        if (!raw) return [];
-        if (Array.isArray(raw)) return raw;
-        if (typeof raw === 'string') {
-            try {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) return parsed;
-            } catch (e) { }
-            return raw.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean).map((nombre) => ({ nombre, dosis: '' }));
-        }
-        return [];
-    }, [data.medicamentos_recetados]);
 
     const handleAgregarMedicamento = () => {
         if (!nuevoMedicamentoNombre.trim()) return;
@@ -639,7 +618,7 @@ export default function RegistroPastor({
         setData('medicamentos_recetados', nuevaLista.length > 0 ? JSON.stringify(nuevaLista) : '');
     };
 
-    // Búsqueda y Carga de Datos de Cédula en tiempo real (Crear o Editar)
+    // Búsqueda y Carga de Datos de Cédula en tiempo real
     const checkCedulaDuplicada = async (doc: string) => {
         const trimmed = doc.trim();
         const numOnly = trimmed.replace(/\D/g, '');
@@ -661,7 +640,6 @@ export default function RegistroPastor({
                     setCedulaExistenteNombre(result.nombre || `${p.nombres} ${p.apellidos}`);
                     setCedulaExistentePastorId(result.pastor_id || p.id);
 
-                    // Cargar todos los datos registrados del pastor para su edición
                     setData((prev) => ({
                         ...prev,
                         codigo: p.codigo || prev.codigo,
@@ -725,6 +703,14 @@ export default function RegistroPastor({
 
                     if (result.extension) {
                         const ext = result.extension;
+                        let parsedMeds: MediaItem[] = [];
+                        if (ext.medio_comunicacion) {
+                            try {
+                                const m = JSON.parse(ext.medio_comunicacion);
+                                if (Array.isArray(m)) parsedMeds = m;
+                            } catch (e) { }
+                        }
+
                         setData((prev) => ({
                             ...prev,
                             tiene_extension: true,
@@ -753,16 +739,7 @@ export default function RegistroPastor({
                             extension_iglesias_fundadas: ext.iglesias_fundadas ? String(ext.iglesias_fundadas) : prev.extension_iglesias_fundadas,
                             extension_pastores_ministerio: ext.pastores_ministerio ? String(ext.pastores_ministerio) : prev.extension_pastores_ministerio,
                             extension_posee_medio_comunicacion: Boolean(ext.posee_medio_comunicacion),
-                        }));
-                    } else {
-                        setData((prev) => ({
-                            ...prev,
-                            tiene_extension: true,
-                            extension_estado_id: p.estado_id ? String(p.estado_id) : prev.extension_estado_id,
-                            extension_municipio_id: p.municipio_id ? String(p.municipio_id) : prev.extension_municipio_id,
-                            extension_parroquia_id: p.parroquia_id ? String(p.parroquia_id) : prev.extension_parroquia_id,
-                            extension_zona: p.zona || prev.extension_zona,
-                            extension_distrito: p.distrito || prev.extension_distrito,
+                            extension_medios_lista: parsedMeds.length > 0 ? parsedMeds : prev.extension_medios_lista,
                         }));
                     }
                 } else {
@@ -771,133 +748,87 @@ export default function RegistroPastor({
                 }
             }
         } catch (e) {
-            // Ignorar errores de red
+            console.error('Error al verificar cédula', e);
         } finally {
             setIsCheckingCedula(false);
         }
     };
 
-    // Validación de Cédula Cónyuge en tiempo real
-    const checkCedulaConyuge = async (doc: string) => {
-        const trimmed = doc.trim();
-        const numOnly = trimmed.replace(/\D/g, '');
-        if (numOnly.length < 4) {
-            setCedulaConyugeEncontrada(null);
-            setCedulaConyugePastorId(null);
-            return;
-        }
-
-        setIsCheckingCedulaConyuge(true);
-        try {
-            const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(trimmed)}`);
-            if (res.ok) {
-                const result = await res.json();
-                if (result.existe && result.nombre) {
-                    const parsedConyugeDoc = parseCedula(result.pastor?.documento || trimmed);
-                    setCedulaConyugeEncontrada(result.nombre);
-                    setCedulaConyugePastorId(result.pastor_id || result.pastor?.id || null);
-                    setData((prev) => ({
-                        ...prev,
-                        nombre_conyuge: result.nombre,
-                        conyuge_pastorea: true,
-                        tipo_documento_conyuge: parsedConyugeDoc.tipo,
-                        numero_documento_conyuge: parsedConyugeDoc.numero,
-                        cedula_conyuge: result.pastor?.documento || `${parsedConyugeDoc.tipo}-${parsedConyugeDoc.numero}`,
-                        conyuge_id: result.pastor_id || result.pastor?.id ? String(result.pastor_id || result.pastor?.id) : prev.conyuge_id,
-                    }));
-                } else {
-                    setCedulaConyugeEncontrada(null);
-                    setCedulaConyugePastorId(null);
-                }
-            }
-        } catch (e) {
-            // Ignorar
-        } finally {
-            setIsCheckingCedulaConyuge(false);
-        }
-    };
-
-    // Cámara Web y Compresión de Fotos
-    const resizeAndCompressImage = (imageSrc: string, targetW = 400, targetH = 480, quality = 0.85): Promise<string> => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = imageSrc;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = targetW;
-                canvas.height = targetH;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    const imgRatio = img.width / img.height;
-                    const targetRatio = targetW / targetH;
-
-                    let sourceW = img.width;
-                    let sourceH = img.height;
-                    let sourceX = 0;
-                    let sourceY = 0;
-
-                    if (imgRatio > targetRatio) {
-                        sourceW = img.height * targetRatio;
-                        sourceX = (img.width - sourceW) / 2;
-                    } else {
-                        sourceH = img.width / targetRatio;
-                        sourceY = (img.height - sourceH) / 2;
-                    }
-
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(0, 0, targetW, targetH);
-                    ctx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, targetW, targetH);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
-                } else {
-                    resolve(imageSrc);
-                }
-            };
-            img.onerror = () => resolve(imageSrc);
-        });
-    };
-
-    const startCamera = async (target: 'foto' | 'foto_cedula', overrideFacingMode?: 'user' | 'environment') => {
+    // Cámara Web
+    const startCamera = async (target: 'foto' | 'foto_cedula', customFacing?: 'user' | 'environment') => {
         setActiveCameraTarget(target);
-        const mode = overrideFacingMode || facingMode;
-        if (mediaStream) {
-            mediaStream.getTracks().forEach((t) => t.stop());
-        }
+        setIsCameraActive(true);
+        const mode = customFacing || facingMode;
+
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: mode },
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach((t) => t.stop());
+            }
+            const mediaStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false,
             });
-            setMediaStream(stream);
-            setIsCameraActive(true);
-            setTimeout(() => {
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                }
-            }, 100);
+            streamRef.current = mediaStream;
+            if (videoRef.current) {
+                videoRef.current.srcObject = mediaStream;
+            }
         } catch (err) {
-            alert('No se pudo acceder a la cámara web. Verifique los permisos en su navegador.');
+            console.error('Error al acceder a la cámara:', err);
         }
     };
 
     const stopCamera = () => {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach((t) => t.stop());
-            setMediaStream(null);
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
         }
         setIsCameraActive(false);
     };
 
+    const resizeAndCompressImage = (base64Str: string): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64Str;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1000;
+                const MAX_HEIGHT = 1000;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.82));
+            };
+            img.onerror = () => resolve(base64Str);
+        });
+    };
+
     const capturePhoto = async () => {
         if (videoRef.current) {
-            const video = videoRef.current;
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
+            canvas.width = videoRef.current.videoWidth || 640;
+            canvas.height = videoRef.current.videoHeight || 480;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
                 const raw = canvas.toDataURL('image/jpeg', 0.9);
                 const compressed = await resizeAndCompressImage(raw);
+                markFieldTouched(activeCameraTarget);
                 setData(activeCameraTarget, compressed);
                 stopCamera();
             }
@@ -907,6 +838,7 @@ export default function RegistroPastor({
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'foto' | 'foto_cedula') => {
         const file = e.target.files?.[0];
         if (file) {
+            markFieldTouched(target);
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const result = event.target?.result as string;
@@ -919,90 +851,265 @@ export default function RegistroPastor({
         }
     };
 
-    // Validación exhaustiva por pasos (Todos los datos requeridos excepto las fotos)
-    const validateStep = (stepNumber: number): { valid: boolean; message?: string } => {
-        if (stepNumber === 1) {
-            const docNum = data.numero_documento.trim() || data.documento.replace(/^[VEPvep]-?/, '').trim();
-            if (!data.nombres.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese sus Nombres.' };
-            if (!data.apellidos.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese sus Apellidos.' };
-            if (!docNum) return { valid: false, message: 'Paso 1: Por favor ingrese su Cédula / Documento de Identidad.' };
-            if (!data.genero) return { valid: false, message: 'Paso 1: Por favor seleccione su Género.' };
-            if (!data.fe_nacimiento) return { valid: false, message: 'Paso 1: Por favor ingrese su Fecha de Nacimiento.' };
-            if (!data.estado_civil) return { valid: false, message: 'Paso 1: Por favor seleccione su Estado Civil.' };
+    // Helper de rastreo de campos tocados
+    const markFieldTouched = (fieldName: string) => {
+        setTouchedFields((prev) => ({ ...prev, [fieldName]: true }));
+    };
 
-            if (esCasado) {
-                if (!data.nombre_conyuge.trim()) {
-                    return { valid: false, message: 'Paso 1: Por favor ingrese el Nombre Completo de su Cónyuge.' };
+    // Validación exhaustiva en tiempo real (Paso a Paso)
+    const getFieldError = (fieldName: string): string | null => {
+        const docNumero = data.numero_documento.trim() || data.documento.replace(/^[VEPvep]-?/, '').trim();
+        const conyugeDocNum = data.numero_documento_conyuge.trim() || data.cedula_conyuge.replace(/^[VEPvep]-?/, '').trim();
+
+        switch (fieldName) {
+            // Paso 1
+            case 'nombres':
+                if (!data.nombres.trim()) return 'Los nombres son requeridos.';
+                break;
+            case 'apellidos':
+                if (!data.apellidos.trim()) return 'Los apellidos son requeridos.';
+                break;
+            case 'numero_documento':
+                if (!docNumero) return 'El número de cédula / documento es requerido.';
+                break;
+            case 'genero':
+                if (!data.genero) return 'Seleccione el género.';
+                break;
+            case 'fe_nacimiento':
+                if (!data.fe_nacimiento) return 'La fecha de nacimiento es requerida.';
+                break;
+            case 'estado_civil':
+                if (!data.estado_civil) return 'Seleccione el estado civil.';
+                break;
+            case 'nombre_conyuge':
+                if (esCasado && !data.nombre_conyuge.trim()) return 'El nombre del cónyuge es requerido.';
+                break;
+            case 'numero_documento_conyuge':
+                if (esCasado && data.conyuge_pastorea && !conyugeDocNum) return 'La cédula del cónyuge es requerida.';
+                break;
+            case 'telefono_tlf':
+                if (!data.telefono_tlf.trim()) return 'El teléfono celular / WhatsApp es requerido.';
+                break;
+            case 'email':
+                if (!data.email.trim()) return 'El correo electrónico es requerido.';
+                break;
+            case 'estado_id':
+                if (!data.estado_id) return 'Seleccione el estado de su ubicación.';
+                break;
+            case 'municipio_id':
+                if (!data.municipio_id && !data.municipio) return 'Seleccione el municipio de su ubicación.';
+                break;
+            case 'parroquia_id':
+                if (!data.parroquia_id) return 'Seleccione la parroquia de su ubicación.';
+                break;
+            case 'urbanizacion':
+                if (!data.urbanizacion.trim()) return 'El sector o urbanización es requerido.';
+                break;
+            case 'calle_avenida':
+                if (!data.calle_avenida.trim()) return 'La calle o avenida es requerida.';
+                break;
+            case 'edificio_casa_quinta':
+                if (!data.edificio_casa_quinta.trim()) return 'La casa, edificio o quinta es requerida.';
+                break;
+
+            // Paso 2
+            case 'grado_instruccion':
+                if (!data.grado_instruccion) return 'Seleccione el grado de instrucción académica.';
+                break;
+            case 'titulo_obtenido':
+                if (!data.titulo_obtenido.trim()) return 'El título secular obtenido es requerido.';
+                break;
+            case 'titulo_teologico':
+                if (data.estudio_teologico && !data.titulo_teologico.trim()) return 'El título teológico es requerido.';
+                break;
+            case 'instituto_teologico':
+                if (data.estudio_teologico && !data.instituto_teologico.trim()) return 'El instituto teológico es requerido.';
+                break;
+            case 'tiempo_de_estudio_teologico':
+                if (data.estudio_teologico && !data.tiempo_de_estudio_teologico.trim()) return 'El tiempo de estudio teológico es requerido.';
+                break;
+
+            // Paso 3
+            case 'nivel_ministerial':
+                if (!data.nivel_ministerial) return 'Seleccione el grado ministerial.';
+                break;
+            case 'zona':
+                if (!data.zona.trim()) return 'La zona ministerial es requerida.';
+                break;
+            case 'distrito':
+                if (!data.distrito) return 'Seleccione el distrito.';
+                break;
+            case 'ano_promocion':
+                if (!data.ano_promocion.trim()) return 'El año de ordenación / promoción es requerido.';
+                break;
+            case 'tiempo_colaborando':
+                if (!data.tiempo_colaborando.trim()) return 'El tiempo en el ministerio es requerido.';
+                break;
+            case 'cargo_nacional':
+                if (!data.cargo_nacional.trim()) return 'El cargo o responsabilidad nacional es requerido.';
+                break;
+
+            // Paso 4
+            case 'grupo_sanguineo':
+                if (!data.grupo_sanguineo) return 'Seleccione el grupo sanguíneo.';
+                break;
+            case 'condicion_salud':
+                if (!data.condicion_salud) return 'Seleccione la condición general de salud.';
+                break;
+            case 'alergias':
+                if (!data.alergias.trim()) return 'Indique alergias conocidas o escriba "Ninguna".';
+                break;
+            case 'enfermedades_cronicas':
+                if (data.padece_enfermedad && !data.enfermedades_cronicas.trim()) return 'Describa el diagnóstico o enfermedad crónica.';
+                break;
+            case 'medicamentos_recetados':
+                if (data.toma_medicamentos && medicamentosList.length === 0 && !nuevoMedicamentoNombre.trim()) {
+                    return 'Agregue al menos un medicamento a la lista.';
                 }
-                if (data.conyuge_pastorea) {
-                    const conyugeDocNum = data.numero_documento_conyuge.trim() || data.cedula_conyuge.replace(/^[VEPvep]-?/, '').trim();
-                    if (!conyugeDocNum) {
-                        return { valid: false, message: 'Paso 1: Por favor ingrese la Cédula de Identidad de su Cónyuge.' };
-                    }
+                break;
+            case 'contacto_emergencia_nombre':
+                if (!data.contacto_emergencia_nombre.trim()) return 'El nombre del contacto de emergencia es requerido.';
+                break;
+            case 'contacto_emergencia_telefono':
+                if (!data.contacto_emergencia_telefono.trim()) return 'El teléfono de emergencia es requerido.';
+                break;
+
+            // Paso 5 (Fotografías OBLIGATORIAS)
+            case 'foto':
+                if (!data.foto) return 'La fotografía tipo carnet es obligatoria.';
+                break;
+            case 'foto_cedula':
+                if (!data.foto_cedula) return 'La fotografía de la cédula es obligatoria.';
+                break;
+
+            // Paso 6 (Iglesia)
+            case 'extension_nombre':
+                if (!data.extension_nombre.trim()) return 'El nombre de la Iglesia / Extensión es requerido.';
+                break;
+            case 'extension_tipo_local_id':
+                if (!data.extension_tipo_local_id) return 'Seleccione el tipo de local.';
+                break;
+            case 'extension_fecha_fundacion':
+                if (!data.extension_fecha_fundacion.trim()) return 'La fecha o año de fundación es requerido.';
+                break;
+            case 'extension_tiempo_trabajo':
+                if (!data.extension_tiempo_trabajo.trim()) return 'El tiempo de trabajo activo es requerido.';
+                break;
+
+            // Paso 7 (Ubicación GPS Iglesia)
+            case 'extension_estado_id':
+                if (!data.extension_estado_id) return 'Seleccione el estado de la iglesia.';
+                break;
+            case 'extension_municipio_id':
+                if (!data.extension_municipio_id) return 'Seleccione el municipio de la iglesia.';
+                break;
+            case 'extension_parroquia_id':
+                if (!data.extension_parroquia_id) return 'Seleccione la parroquia de la iglesia.';
+                break;
+            case 'extension_direccion':
+                if (!data.extension_direccion.trim() && !data.extension_sector.trim()) return 'La dirección o sector de la iglesia es requerida.';
+                break;
+            case 'extension_latitud':
+            case 'extension_longitud':
+                if (!data.extension_latitud || !data.extension_longitud) return 'Seleccione la ubicación en el mapa GPS.';
+                break;
+
+            // Paso 8 (Membresía y Medios)
+            case 'extension_miembros_activos':
+                if (!data.extension_miembros_activos.trim()) return 'La cantidad de miembros activos es requerida.';
+                break;
+            case 'extension_cantidad_campos_blancos':
+                if (!data.extension_cantidad_campos_blancos.trim()) return 'La cantidad de campos blancos es requerida (o 0).';
+                break;
+            case 'extension_miembro_probante':
+                if (!data.extension_miembro_probante.trim()) return 'La cantidad de miembros probantes es requerida (o 0).';
+                break;
+            case 'extension_iglesias_fundadas':
+                if (!data.extension_iglesias_fundadas.trim()) return 'Indique cantidad de iglesias fundadas (o 0).';
+                break;
+            case 'extension_pastores_ministerio':
+                if (!data.extension_pastores_ministerio.trim()) return 'Indique pastores levantados (o 0).';
+                break;
+            case 'extension_logros_obtenidos':
+                if (!data.extension_logros_obtenidos.trim()) return 'Indique logros o testimonios relevantes.';
+                break;
+            case 'extension_medios_lista':
+                if (data.extension_posee_medio_comunicacion && (data.extension_medios_lista?.length || 0) === 0 && !nuevoMedioCual.trim()) {
+                    return 'Agregue al menos un medio de comunicación en la lista.';
                 }
-            }
+                break;
 
-            if (!data.telefono_tlf.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese su Teléfono Celular / WhatsApp.' };
-            if (!data.email.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese su Correo Electrónico.' };
-            if (!data.estado_id) return { valid: false, message: 'Paso 1: Por favor seleccione el Estado de su ubicación.' };
-            if (!data.municipio_id && !data.municipio) return { valid: false, message: 'Paso 1: Por favor seleccione el Municipio de su ubicación.' };
-            if (!data.parroquia_id) return { valid: false, message: 'Paso 1: Por favor seleccione la Parroquia de su ubicación.' };
-            if (!data.urbanizacion.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese el Sector / Urbanización de su dirección.' };
-            if (!data.calle_avenida.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese la Calle / Avenida de su dirección.' };
-            if (!data.edificio_casa_quinta.trim()) return { valid: false, message: 'Paso 1: Por favor ingrese la Casa / Edificio / Quinta de su dirección.' };
-
-            return { valid: true };
+            default:
+                break;
         }
 
-        if (stepNumber === 2) {
-            if (!data.grado_instruccion) return { valid: false, message: 'Paso 2: Por favor seleccione el Grado de Instrucción Académica.' };
-            if (!data.titulo_obtenido.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Título Secular Obtenido.' };
-            if (data.estudio_teologico) {
-                if (!data.titulo_teologico.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Título Teológico obtenido.' };
-                if (!data.instituto_teologico.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Instituto o Seminario Bíblico.' };
-                if (!data.tiempo_de_estudio_teologico.trim()) return { valid: false, message: 'Paso 2: Por favor ingrese el Tiempo de Estudio Teológico.' };
-            }
-            return { valid: true };
-        }
+        return null;
+    };
 
-        if (stepNumber === 3) {
-            if (!data.nivel_ministerial) return { valid: false, message: 'Paso 3: Por favor seleccione el Grado Ministerial.' };
-            if (!data.zona.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese la Zona.' };
-            if (!data.distrito) return { valid: false, message: 'Paso 3: Por favor seleccione el Distrito.' };
-            if (!data.ano_promocion.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese el Año de Promoción / Ordenación.' };
-            if (!data.tiempo_colaborando.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese el Tiempo en el Ministerio.' };
-            if (!data.cargo_nacional.trim()) return { valid: false, message: 'Paso 3: Por favor ingrese el Cargo Nacional / Responsabilidad.' };
-            return { valid: true };
+    const isFieldVisibleError = (fieldName: string, stepOfField: number): string | null => {
+        const error = getFieldError(fieldName);
+        if (!error) return null;
+        if (attemptedSteps[stepOfField] || touchedFields[fieldName]) {
+            return error;
         }
+        return null;
+    };
 
-        if (stepNumber === 4) {
-            if (!data.grupo_sanguineo) return { valid: false, message: 'Paso 4: Por favor seleccione el Grupo Sanguíneo.' };
-            if (!data.condicion_salud) return { valid: false, message: 'Paso 4: Por favor seleccione la Condición General de Salud.' };
-            if (!data.alergias.trim()) return { valid: false, message: 'Paso 4: Por favor indique sus Alergias Conocidas (o escriba "Ninguna").' };
-            if (data.padece_enfermedad && !data.enfermedades_cronicas.trim()) {
-                return { valid: false, message: 'Paso 4: Por favor describa la enfermedad crónica diagnosticada.' };
+    const isStepValid = (stepNumber: number): boolean => {
+        const fieldsByStep: Record<number, string[]> = {
+            1: [
+                'nombres', 'apellidos', 'numero_documento', 'genero', 'fe_nacimiento', 'estado_civil',
+                ...(esCasado ? ['nombre_conyuge'] : []),
+                ...(esCasado && data.conyuge_pastorea ? ['numero_documento_conyuge'] : []),
+                'telefono_tlf', 'email', 'estado_id', 'municipio_id', 'parroquia_id',
+                'urbanizacion', 'calle_avenida', 'edificio_casa_quinta'
+            ],
+            2: [
+                'grado_instruccion', 'titulo_obtenido',
+                ...(data.estudio_teologico ? ['titulo_teologico', 'instituto_teologico', 'tiempo_de_estudio_teologico'] : [])
+            ],
+            3: [
+                'nivel_ministerial', 'zona', 'distrito', 'ano_promocion', 'tiempo_colaborando', 'cargo_nacional'
+            ],
+            4: [
+                'grupo_sanguineo', 'condicion_salud', 'alergias',
+                ...(data.padece_enfermedad ? ['enfermedades_cronicas'] : []),
+                ...(data.toma_medicamentos ? ['medicamentos_recetados'] : []),
+                'contacto_emergencia_nombre', 'contacto_emergencia_telefono'
+            ],
+            5: [
+                'foto', 'foto_cedula'
+            ],
+            6: [
+                'extension_nombre', 'extension_tipo_local_id', 'extension_fecha_fundacion', 'extension_tiempo_trabajo'
+            ],
+            7: [
+                'extension_estado_id', 'extension_municipio_id', 'extension_parroquia_id', 'extension_direccion',
+                'extension_latitud', 'extension_longitud'
+            ],
+            8: [
+                'extension_miembros_activos', 'extension_cantidad_campos_blancos', 'extension_miembro_probante',
+                'extension_iglesias_fundadas', 'extension_pastores_ministerio', 'extension_logros_obtenidos',
+                ...(data.extension_posee_medio_comunicacion ? ['extension_medios_lista'] : [])
+            ],
+        };
+
+        const list = fieldsByStep[stepNumber] || [];
+        for (const field of list) {
+            if (getFieldError(field) !== null) {
+                return false;
             }
-            if (data.toma_medicamentos && medicamentosList.length === 0 && !nuevoMedicamentoNombre.trim()) {
-                return { valid: false, message: 'Paso 4: Por favor agregue al menos un medicamento recetado en la lista.' };
-            }
-            if (!data.contacto_emergencia_nombre.trim()) return { valid: false, message: 'Paso 4: Por favor ingrese el Nombre del Contacto de Emergencia.' };
-            if (!data.contacto_emergencia_telefono.trim()) return { valid: false, message: 'Paso 4: Por favor ingrese el Teléfono del Contacto de Emergencia.' };
-            return { valid: true };
         }
-
-        // Paso 5: Las fotos son opcionales
-        return { valid: true };
+        return true;
     };
 
     const handleTabClick = (targetStep: number) => {
         if (targetStep === activeTab) return;
 
-        // Si intenta saltar a un paso posterior, validar todos los pasos intermedios
         if (targetStep > activeTab) {
             for (let s = 1; s < targetStep; s++) {
-                const check = validateStep(s);
-                if (!check.valid) {
-                    alert(check.message);
+                if (!isStepValid(s)) {
+                    setAttemptedSteps((prev) => ({ ...prev, [s]: true }));
                     setActiveTab(s);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     return;
@@ -1014,48 +1121,50 @@ export default function RegistroPastor({
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const handleNextStep = (currentStepNumber: number) => {
+        if (!isStepValid(currentStepNumber)) {
+            setAttemptedSteps((prev) => ({ ...prev, [currentStepNumber]: true }));
+            window.scrollTo({ top: 120, behavior: 'smooth' });
+            return;
+        }
+
+        setActiveTab(currentStepNumber + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     // Envío del Formulario con Modal de Progreso (0% a 100%)
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validar rigurosamente los pasos anteriores (1 al 4)
-        for (let s = 1; s <= 4; s++) {
-            const check = validateStep(s);
-            if (!check.valid) {
+        // Validar rigurosamente los 8 pasos
+        for (let s = 1; s <= 8; s++) {
+            if (!isStepValid(s)) {
+                setAttemptedSteps((prev) => ({ ...prev, [s]: true }));
                 setActiveTab(s);
-                alert(check.message);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 120, behavior: 'smooth' });
                 return;
             }
         }
 
-        // Si aún no está en el Paso 5, avanzar al paso 5
-        if (activeTab < 5) {
-            setActiveTab(5);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
-
         setIsSubmittingModalOpen(true);
         setSubmitProgress(10);
-        setSubmitStage('Validando datos ministeriales y estructura...');
+        setSubmitStage('Validando ficha pastoral y datos ministeriales...');
 
-        // Simulación visual fluida del avance mientras el backend procesa
         let currentP = 10;
         const progressInterval = setInterval(() => {
             currentP += Math.floor(Math.random() * 12) + 5;
             if (currentP > 88) {
                 currentP = 88;
                 setSubmitStage('Guardando registros en la base de datos nacional...');
-            } else if (currentP > 60) {
-                setSubmitStage('Registrando ficha ministerial y ubicación...');
-            } else if (currentP > 35) {
+            } else if (currentP > 65) {
+                setSubmitStage('Registrando Iglesia / Extensión y geolocalización GPS...');
+            } else if (currentP > 40) {
                 setSubmitStage('Generando código ministerial y procesando fotografías...');
             } else if (currentP > 15) {
-                setSubmitStage('Enviando datos para su revisión y confirmación oficial...');
+                setSubmitStage('Enviando datos para revisión y confirmación oficial...');
             }
             setSubmitProgress(currentP);
-        }, 300);
+        }, 280);
 
         post('/registro', {
             preserveScroll: true,
@@ -1071,118 +1180,67 @@ export default function RegistroPastor({
                     codigo: flashSuccess?.codigo || data.codigo || 'GENERADO',
                     nombre: flashSuccess?.nombre || `${data.nombres} ${data.apellidos}`,
                     pastor_id: finalPastorId,
-                    iglesia: flashSuccess?.iglesia || null,
-                    mensaje: flashSuccess?.mensaje || 'Los datos han sido enviados para su revisión y confirmación oficial.',
+                    iglesia: flashSuccess?.iglesia || data.extension_nombre || null,
+                    mensaje: flashSuccess?.mensaje || 'Su ficha ministerial y los datos de su Iglesia/Extensión han sido registrados satisfactoriamente.',
                 });
 
-                // Si pastor_id no vino de inmediato en la sesión, buscarlo por cédula para que el botón de extensión siempre funcione
-                if (!finalPastorId && data.documento) {
-                    fetch(`/registro/verificar-cedula/${encodeURIComponent(data.documento.trim())}`)
-                        .then((res) => res.json())
-                        .then((resJson) => {
-                            if (resJson?.pastor_id || resJson?.pastor?.id) {
-                                setSubmittedResult((prev) => prev ? {
-                                    ...prev,
-                                    pastor_id: resJson.pastor_id || resJson.pastor.id,
-                                } : prev);
-                            }
-                        })
-                        .catch(() => {});
-                }
-
-                // Limpiar completamente el borrador local para evitar confusiones
                 try {
                     localStorage.removeItem(DRAFT_STORAGE_KEY);
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const k = localStorage.key(i);
-                        if (k && k.startsWith('mmm_pastor_registro_draft')) {
-                            localStorage.removeItem(k);
-                        }
-                    }
-                } catch (err) { }
-                setHasPendingDraft(false);
-                setLastSavedTime(null);
+                } catch (e) { }
             },
             onError: (errs) => {
                 clearInterval(progressInterval);
                 setIsSubmittingModalOpen(false);
                 setSubmitProgress(0);
 
-                // Si hay error en campos específicos, llevar al paso correspondiente
-                if (errs.nombres || errs.apellidos || errs.documento || errs.estado_id || errs.telefono_tlf) {
+                if (errs.nombres || errs.apellidos || errs.documento || errs.telefono_tlf) {
                     setActiveTab(1);
-                } else if (errs.nivel_ministerial) {
+                    setAttemptedSteps((prev) => ({ ...prev, 1: true }));
+                } else if (errs.grado_instruccion || errs.titulo_obtenido) {
+                    setActiveTab(2);
+                    setAttemptedSteps((prev) => ({ ...prev, 2: true }));
+                } else if (errs.nivel_ministerial || errs.distrito || errs.zona) {
                     setActiveTab(3);
+                    setAttemptedSteps((prev) => ({ ...prev, 3: true }));
+                } else if (errs.grupo_sanguineo || errs.contacto_emergencia_nombre) {
+                    setActiveTab(4);
+                    setAttemptedSteps((prev) => ({ ...prev, 4: true }));
+                } else if (errs.foto || errs.foto_cedula) {
+                    setActiveTab(5);
+                    setAttemptedSteps((prev) => ({ ...prev, 5: true }));
+                } else if (errs.extension_nombre || errs.extension_tipo_local_id) {
+                    setActiveTab(6);
+                    setAttemptedSteps((prev) => ({ ...prev, 6: true }));
+                } else if (errs.extension_estado_id || errs.extension_latitud) {
+                    setActiveTab(7);
+                    setAttemptedSteps((prev) => ({ ...prev, 7: true }));
+                } else if (errs.extension_miembros_activos) {
+                    setActiveTab(8);
+                    setAttemptedSteps((prev) => ({ ...prev, 8: true }));
                 }
-                alert('Hubo observaciones en el formulario. Por favor revise los campos marcados en rojo.');
             },
         });
     };
 
-    const handleIrAExtension = async () => {
-        if (submittedResult?.pastor_id) {
-            router.get(`/registro/${submittedResult.pastor_id}/extension`);
-            return;
-        }
-        if (cedulaExistentePastorId) {
-            router.get(`/registro/${cedulaExistentePastorId}/extension`);
-            return;
-        }
-        if (data.documento) {
-            try {
-                const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(data.documento.trim())}`);
-                if (res.ok) {
-                    const json = await res.json();
-                    const pid = json?.pastor_id || json?.pastor?.id;
-                    if (pid) {
-                        router.get(`/registro/${pid}/extension`);
-                        return;
-                    }
-                }
-            } catch (e) { }
-        }
-        router.get('/registro');
-    };
-
-    const handleResetOtro = () => {
-        try {
-            localStorage.removeItem(DRAFT_STORAGE_KEY);
-            for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (k && k.startsWith('mmm_pastor_registro_draft')) {
-                    localStorage.removeItem(k);
-                }
-            }
-        } catch (e) { }
-        setHasPendingDraft(false);
-        setLastSavedTime(null);
-        setIsSubmittingModalOpen(false);
-        setSubmittedResult(null);
-        setSubmitProgress(0);
-        setActiveTab(1);
-        setCedulaExistenteNombre(null);
-        setCedulaExistentePastorId(null);
-        reset();
-        router.get('/registro', {}, { replace: true, preserveState: false });
-    };
-
     const steps = [
-        { id: 1, title: 'Datos Personales', icon: User, desc: 'Identificación, cónyuge y dirección' },
-        { id: 2, title: 'Datos Académicos', icon: GraduationCap, desc: 'Nivel de estudio y teología' },
-        { id: 3, title: 'Datos Eclesiásticos', icon: Cross, desc: 'Nivel ministerial, zona y distrito' },
-        { id: 4, title: 'Estado de Salud', icon: Stethoscope, desc: 'Historial médico y emergencia' },
-        { id: 5, title: 'Fotografías', icon: Camera, desc: 'Foto de perfil y cédula de identidad' },
+        { id: 1, title: 'Datos Personales', icon: User, desc: 'Identidad, cónyuge y contacto' },
+        { id: 2, title: 'Formación Académica', icon: GraduationCap, desc: 'Nivel secular y teología' },
+        { id: 3, title: 'Datos Eclesiásticos', icon: Cross, desc: 'Grado, zona y ordenación' },
+        { id: 4, title: 'Estado de Salud', icon: Stethoscope, desc: 'Ficha médica y emergencia' },
+        { id: 5, title: 'Fotografías', icon: Camera, desc: 'Carnet y foto cédula (Obligatorias)' },
+        { id: 6, title: 'Datos de la Iglesia', icon: Building2, desc: 'Nombre, local y fundación' },
+        { id: 7, title: 'Ubicación GPS Iglesia', icon: MapPin, desc: 'Dirección y mapa satelital' },
+        { id: 8, title: 'Membresía y Medios', icon: Radio, desc: 'Miembros, frutos y medios' },
     ];
 
     return (
         <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans relative">
-            <Head title="Registro Oficial de Pastores - MMM Venezuela" />
+            <Head title="Registro Ministerial y de Extensión - MMM Venezuela" />
 
-            {/* MODAL DE ENVÍO Y PROGRESO (0% a 100%) */}
+            {/* MODAL DE PROGRESO Y CONFIRMACIÓN */}
             {isSubmittingModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
                     <Card className="w-full max-w-lg bg-white border-slate-200 shadow-2xl rounded-3xl overflow-hidden text-slate-800 animate-in zoom-in-95 duration-300">
-                        {/* Cabecera del Modal */}
                         <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 p-6 text-white text-center relative">
                             <div className="mx-auto w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-xs shadow-inner">
                                 {submitProgress === 100 ? (
@@ -1192,7 +1250,7 @@ export default function RegistroPastor({
                                 )}
                             </div>
                             <h3 className="text-xl font-black tracking-tight">
-                                {submitProgress === 100 ? '¡Datos Enviados Satisfactoriamente!' : 'Enviando Registro Ministerial'}
+                                {submitProgress === 100 ? '¡Registro Oficial Completado!' : 'Enviando Registro Nacional'}
                             </h3>
                             <p className="text-blue-200 text-xs mt-1">
                                 Movimiento Misionero Mundial en Venezuela
@@ -1200,7 +1258,6 @@ export default function RegistroPastor({
                         </div>
 
                         <CardContent className="p-6 sm:p-8 space-y-6">
-                            {/* Progreso del 0% al 100% */}
                             {submitProgress < 100 ? (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between text-sm">
@@ -1213,64 +1270,54 @@ export default function RegistroPastor({
                                         </span>
                                     </div>
 
-                                    {/* Barra de progreso */}
                                     <div className="w-full bg-slate-100 rounded-full h-3.5 p-0.5 border border-slate-200 overflow-hidden shadow-inner">
                                         <div
                                             className="bg-gradient-to-r from-blue-600 to-indigo-600 h-full rounded-full transition-all duration-300 shadow-sm"
                                             style={{ width: `${submitProgress}%` }}
                                         />
                                     </div>
-
-                                    <p className="text-xs text-slate-500 text-center leading-relaxed">
-                                        Sus datos y fotografías se están procesando y enviando para su <b>revisión y confirmación</b> ante el presbiterio y secretaría nacional.
-                                    </p>
                                 </div>
                             ) : (
-                                /* Pantalla de Confirmación Exitosa al llegar a 100% */
                                 <div className="space-y-5 text-center">
-                                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
-                                        <p className="text-xs uppercase tracking-wider text-emerald-800 font-bold mb-0.5">
-                                            Código Ministerial Asignado
+                                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-2">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-wider text-emerald-800 font-bold mb-0.5">
+                                                Código Ministerial Asignado
+                                            </p>
+                                            <span className="font-mono text-2xl font-black text-emerald-950 tracking-tight">
+                                                {submittedResult?.codigo}
+                                            </span>
+                                        </div>
+
+                                        <p className="text-sm text-emerald-900 font-bold">
+                                            Pastor: {submittedResult?.nombre}
                                         </p>
-                                        <span className="font-mono text-3xl font-black text-emerald-900 tracking-wider">
-                                            {submittedResult?.codigo || 'ASIGNADO'}
-                                        </span>
+
+                                        {submittedResult?.iglesia && (
+                                            <div className="pt-1 border-t border-emerald-200/80">
+                                                <p className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">
+                                                    Iglesia / Extensión Vinculada
+                                                </p>
+                                                <p className="text-xs font-bold text-emerald-950">
+                                                    {submittedResult?.iglesia}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <div className="space-y-1.5 text-slate-600 text-sm">
-                                        <p className="font-bold text-base text-slate-900">
-                                            {submittedResult?.nombre}
-                                        </p>
-                                        <p className="text-slate-600 text-xs leading-relaxed mt-1">
-                                            {submittedResult?.mensaje || 'Los datos han sido recibidos para su revisión y confirmación oficial.'}
-                                        </p>
-                                    </div>
+                                    <p className="text-slate-600 text-xs leading-relaxed">
+                                        {submittedResult?.mensaje}
+                                    </p>
 
-                                    <div className="pt-2 flex flex-col gap-3 justify-center">
+                                    <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
                                         <Button
                                             type="button"
-                                            onClick={handleIrAExtension}
-                                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                                            onClick={() => router.get('/registro')}
+                                            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
                                         >
-                                            <Building2 className="w-4 h-4" />
-                                            Registrar Extensión
-                                            <ArrowRight className="w-4 h-4" />
+                                            <ArrowLeft className="w-4 h-4 mr-2" />
+                                            Realizar Otro Registro
                                         </Button>
-
-                                        <div className="space-y-1">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={handleResetOtro}
-                                                className="w-full border-blue-300 text-blue-800 hover:bg-blue-50 font-bold py-2.5 px-6 rounded-xl shadow-xs text-sm flex items-center justify-center gap-2"
-                                            >
-                                                <Plus className="w-4 h-4 text-blue-600" />
-                                                Registrar a Cónyuge u Otro Pastor
-                                            </Button>
-                                            <p className="text-[11px] text-slate-500 text-center">
-                                                Permite iniciar una nueva ficha y luego registrar su extensión.
-                                            </p>
-                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1279,24 +1326,19 @@ export default function RegistroPastor({
                 </div>
             )}
 
-            {/* Header Institucional en Fondo Claro */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-                <div className="max-w-[1480px] mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between">
+            {/* Topbar Institucional */}
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+                <div className="max-w-[1480px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img
-                            src="/icons/logo_mmm-a-color-sin-fondo.png"
-                            alt="Logo MMM Venezuela"
-                            className="h-10 sm:h-12 w-auto object-contain drop-shadow-xs"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/icons/logo_mmm.png';
-                            }}
-                        />
+                        <div className="h-10 w-10 rounded-xl bg-blue-700 flex items-center justify-center text-white font-black text-xl shadow-md">
+                            M
+                        </div>
                         <div>
-                            <h1 className="font-black text-sm sm:text-base text-slate-900 tracking-tight leading-tight">
-                                Movimiento Misionero Mundial
+                            <h1 className="font-black text-sm sm:text-base text-slate-900 leading-tight">
+                                MOVIMIENTO MISIONERO MUNDIAL
                             </h1>
-                            <p className="text-[11px] sm:text-xs text-blue-700 font-bold">
-                                Ficha de Registro Ministerial Oficial
+                            <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wider">
+                                República Bolivariana de Venezuela
                             </p>
                         </div>
                     </div>
@@ -1374,10 +1416,10 @@ export default function RegistroPastor({
                         <div>
                             <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
                                 <Sparkles className="w-5 h-5 text-blue-600" />
-                                Formulario de Registro de Pastor
+                                Registro Unificado de Pastor & Extensión
                             </h2>
                             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                                Su avance se guarda de forma continua para evitar pérdidas de información.
+                                Complete los 8 pasos de la ficha ministerial y los datos de su Iglesia / Extensión.
                             </p>
                         </div>
 
@@ -1390,20 +1432,17 @@ export default function RegistroPastor({
                                         setActiveTab(activeTab - 1);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
-                                    className="border-slate-300 text-slate-700 hover:bg-slate-50 flex-1 md:flex-initial font-medium"
+                                    className="border-slate-300 text-slate-700 hover:bg-slate-50 flex-1 md:flex-initial font-medium text-xs sm:text-sm"
                                 >
                                     <ArrowLeft className="w-4 h-4 mr-1.5" />
                                     Anterior
                                 </Button>
                             )}
-                            {activeTab < 5 && (
+                            {activeTab < 8 && (
                                 <Button
                                     type="button"
-                                    onClick={() => {
-                                        setActiveTab(activeTab + 1);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
-                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold flex-1 md:flex-initial shadow-md"
+                                    onClick={() => handleNextStep(activeTab)}
+                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold flex-1 md:flex-initial shadow-md text-xs sm:text-sm"
                                 >
                                     Siguiente
                                     <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -1412,26 +1451,26 @@ export default function RegistroPastor({
                         </div>
                     </div>
 
-                    {/* Stepper Tabs - Modo Claro */}
+                    {/* Barra de Pasos */}
                     <div className="space-y-3">
-                        {/* Barra Móvil */}
+                        {/* Versión Móvil */}
                         <div className="block sm:hidden bg-white border border-slate-200 p-3 rounded-xl shadow-xs">
                             <div className="flex items-center justify-between text-xs mb-1.5">
                                 <span className="font-bold text-blue-700">
-                                    Paso {activeTab} de 5: {steps[activeTab - 1]?.title}
+                                    Paso {activeTab} de 8: {steps[activeTab - 1]?.title}
                                 </span>
-                                <span className="font-mono font-bold text-slate-500">{Math.round((activeTab / 5) * 100)}%</span>
+                                <span className="font-mono font-bold text-slate-500">{Math.round((activeTab / 8) * 100)}%</span>
                             </div>
                             <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                                 <div
                                     className="bg-blue-600 h-full transition-all duration-300 rounded-full"
-                                    style={{ width: `${(activeTab / 5) * 100}%` }}
+                                    style={{ width: `${(activeTab / 8) * 100}%` }}
                                 />
                             </div>
                         </div>
 
                         {/* Grid de Pasos */}
-                        <div className="flex gap-2.5 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 scrollbar-thin">
+                        <div className="flex gap-2.5 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 scrollbar-thin">
                             {steps.map((step) => {
                                 const Icon = step.icon;
                                 const isActive = activeTab === step.id;
@@ -1442,7 +1481,7 @@ export default function RegistroPastor({
                                         key={step.id}
                                         type="button"
                                         onClick={() => handleTabClick(step.id)}
-                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${isActive
+                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left min-w-[155px] sm:min-w-0 shrink-0 sm:shrink ${isActive
                                                 ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20 shadow-xs'
                                                 : isCompleted
                                                     ? 'bg-white border-emerald-300 hover:border-emerald-400'
@@ -1450,7 +1489,7 @@ export default function RegistroPastor({
                                             }`}
                                     >
                                         <div
-                                            className={`flex items-center justify-center h-9 w-9 rounded-lg shrink-0 font-bold text-xs sm:text-sm ${isActive
+                                            className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 font-bold text-xs ${isActive
                                                     ? 'bg-blue-700 text-white shadow-xs'
                                                     : isCompleted
                                                         ? 'bg-emerald-600 text-white'
@@ -1460,10 +1499,10 @@ export default function RegistroPastor({
                                             {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                                            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">
                                                 Paso {step.id}
                                             </span>
-                                            <h3 className="font-bold text-xs sm:text-sm truncate text-slate-900">
+                                            <h3 className="font-bold text-xs truncate text-slate-900">
                                                 {step.title}
                                             </h3>
                                         </div>
@@ -1494,13 +1533,20 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="nombres"
-                                            required
                                             value={data.nombres}
-                                            onChange={(e) => setData('nombres', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('nombres');
+                                                setData('nombres', e.target.value);
+                                            }}
                                             placeholder="Ej. Juan Carlos"
-                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 h-10 bg-white text-slate-900 ${isFieldVisibleError('nombres', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
-                                        {errors.nombres && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.nombres}</p>}
+                                        {isFieldVisibleError('nombres', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('nombres', 1)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -1509,94 +1555,93 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="apellidos"
-                                            required
                                             value={data.apellidos}
-                                            onChange={(e) => setData('apellidos', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('apellidos');
+                                                setData('apellidos', e.target.value);
+                                            }}
                                             placeholder="Ej. Pérez Rodríguez"
-                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 h-10 bg-white text-slate-900 ${isFieldVisibleError('apellidos', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
-                                        {errors.apellidos && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.apellidos}</p>}
+                                        {isFieldVisibleError('apellidos', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('apellidos', 1)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
-                                        <div className="flex items-center justify-between h-5">
+                                        <div className="h-5 flex items-center justify-between">
                                             <Label htmlFor="numero_documento" className="text-xs font-bold uppercase text-slate-700 flex items-center">
                                                 Cédula de Identidad <span className="text-rose-500 ml-0.5">*</span>
                                             </Label>
                                             {isCheckingCedula && (
-                                                <span className="text-[10px] text-blue-600 flex items-center gap-1 font-medium">
-                                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                                    Verificando...
+                                                <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
+                                                    <Loader2 className="w-3 h-3 animate-spin" /> Verificando...
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="mt-1 flex w-full h-10 rounded-md border border-slate-300 bg-white shadow-xs focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600 overflow-hidden">
+
+                                        <div className={`mt-1 flex items-center w-full h-10 border rounded-md shadow-xs overflow-hidden transition-all ${isFieldVisibleError('numero_documento', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600'}`}>
                                             <Select
-                                                value={data.tipo_documento}
+                                                value={data.tipo_documento || 'V'}
                                                 onValueChange={(val) => {
-                                                    const fullDoc = data.numero_documento ? `${val}-${data.numero_documento}` : '';
+                                                    markFieldTouched('numero_documento');
                                                     setData((prev) => ({
                                                         ...prev,
                                                         tipo_documento: val,
-                                                        documento: fullDoc,
+                                                        documento: `${val}-${prev.numero_documento}`,
                                                     }));
-                                                    if (data.numero_documento.trim().length >= 4) {
+                                                    if (data.numero_documento) {
                                                         checkCedulaDuplicada(`${val}-${data.numero_documento}`);
                                                     }
                                                 }}
                                             >
-                                                <SelectTrigger className="w-[62px] h-full shrink-0 rounded-none border-0 border-r border-slate-300 bg-slate-50 text-slate-900 font-bold focus:ring-0 focus:ring-offset-0 px-2.5 shadow-none cursor-pointer">
+                                                <SelectTrigger className="w-[62px] h-full rounded-none border-0 border-r border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-800 shadow-none focus:ring-0 focus:ring-offset-0 focus:outline-hidden shrink-0">
                                                     <SelectValue placeholder="V" />
                                                 </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="V" className="font-bold">V</SelectItem>
-                                                    <SelectItem value="E" className="font-bold">E</SelectItem>
-                                                    <SelectItem value="P" className="font-bold">P</SelectItem>
+                                                <SelectContent className="min-w-[70px] bg-white border-slate-200">
+                                                    <SelectItem value="V" className="text-xs font-bold">V</SelectItem>
+                                                    <SelectItem value="E" className="text-xs font-bold">E</SelectItem>
+                                                    <SelectItem value="P" className="text-xs font-bold">P</SelectItem>
                                                 </SelectContent>
                                             </Select>
+
                                             <input
                                                 id="numero_documento"
-                                                required
                                                 type="text"
                                                 value={data.numero_documento}
                                                 onChange={(e) => {
-                                                    const numOnly = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
-                                                    const fullDoc = numOnly ? `${data.tipo_documento}-${numOnly}` : '';
+                                                    const rawVal = e.target.value;
+                                                    const cleanNum = data.tipo_documento === 'P'
+                                                        ? rawVal.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                                                        : rawVal.replace(/\D/g, '');
+
+                                                    markFieldTouched('numero_documento');
                                                     setData((prev) => ({
                                                         ...prev,
-                                                        numero_documento: numOnly,
-                                                        documento: fullDoc,
+                                                        numero_documento: cleanNum,
+                                                        documento: `${prev.tipo_documento}-${cleanNum}`,
                                                     }));
-                                                    checkCedulaDuplicada(`${data.tipo_documento}-${numOnly}`);
+                                                    checkCedulaDuplicada(`${data.tipo_documento}-${cleanNum}`);
                                                 }}
-                                                onBlur={() => checkCedulaDuplicada(`${data.tipo_documento}-${data.numero_documento}`)}
-                                                placeholder="12345678"
-                                                className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-wider"
+                                                placeholder={data.tipo_documento === 'P' ? 'Ej. PAS123456' : 'Ej. 12345678'}
+                                                className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden border-0 shadow-none"
                                             />
                                         </div>
-                                        {(errors.documento || errors.numero_documento) && (
-                                            <p className="text-xs text-rose-600 mt-1 font-medium">{errors.documento || errors.numero_documento}</p>
+
+                                        {isFieldVisibleError('numero_documento', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('numero_documento', 1)}
+                                            </p>
                                         )}
+
                                         {cedulaExistenteNombre && (
-                                            <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in">
-                                                <div className="text-xs text-emerald-900 flex items-start sm:items-center gap-2 font-medium">
-                                                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5 sm:mt-0" />
-                                                    <span>
-                                                        Pastor(a) registrado(a): <b className="font-bold text-emerald-950">{cedulaExistenteNombre}</b>. Se han cargado automáticamente sus datos.
-                                                    </span>
-                                                </div>
-                                                {cedulaExistentePastorId && (
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        onClick={() => router.get(`/registro/${cedulaExistentePastorId}/extension`)}
-                                                        className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shrink-0 shadow-xs gap-1.5"
-                                                    >
-                                                        <Building2 className="w-3.5 h-3.5" />
-                                                        Registrar Extensión
-                                                        <ArrowRight className="w-3 h-3" />
-                                                    </Button>
-                                                )}
+                                            <div className="mt-1 p-1.5 bg-emerald-50 border border-emerald-200 rounded-md text-[11px] text-emerald-800 font-medium flex items-center gap-1">
+                                                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                <span>Ficha encontrada: <b>{cedulaExistenteNombre}</b> (Modo Edición)</span>
                                             </div>
                                         )}
                                     </div>
@@ -1609,26 +1654,41 @@ export default function RegistroPastor({
                                             id="genero"
                                             options={generoOptions}
                                             value={data.genero}
-                                            onChange={(val) => setData('genero', val)}
+                                            onChange={(val) => {
+                                                markFieldTouched('genero');
+                                                setData('genero', val);
+                                            }}
                                             placeholder="Seleccione Género"
                                             className="mt-1"
                                         />
+                                        {isFieldVisibleError('genero', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('genero', 1)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Fila 2: Fecha Nacimiento, Edad, Estado Civil */}
+                                {/* Fila 2: Fecha de Nacimiento, Edad, Estado Civil */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                                     <div>
                                         <Label htmlFor="fe_nacimiento" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
-                                            Fecha de Nacimiento
+                                            Fecha de Nacimiento <span className="text-rose-500 ml-0.5">*</span>
                                         </Label>
                                         <Input
                                             id="fe_nacimiento"
                                             type="date"
                                             value={data.fe_nacimiento}
                                             onChange={handleBirthDateChange}
-                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 h-10 bg-white text-slate-900 ${isFieldVisibleError('fe_nacimiento', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
+                                        {isFieldVisibleError('fe_nacimiento', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('fe_nacimiento', 1)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -1638,10 +1698,10 @@ export default function RegistroPastor({
                                         <Input
                                             id="edad"
                                             type="number"
+                                            readOnly
                                             value={data.edad}
-                                            onChange={(e) => setData('edad', e.target.value)}
-                                            placeholder="Calculada autom."
-                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            placeholder="Automático"
+                                            className="mt-1 h-10 bg-slate-100 border-slate-300 text-slate-700 cursor-not-allowed font-bold"
                                         />
                                     </div>
 
@@ -1653,147 +1713,118 @@ export default function RegistroPastor({
                                             id="estado_civil"
                                             options={estadoCivilOptions}
                                             value={data.estado_civil}
-                                            onChange={(val) => setData('estado_civil', val)}
+                                            onChange={(val) => {
+                                                markFieldTouched('estado_civil');
+                                                setData('estado_civil', val);
+                                            }}
                                             placeholder="Seleccione Estado Civil"
                                             className="mt-1"
                                         />
+                                        {isFieldVisibleError('estado_civil', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('estado_civil', 1)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* SECCIÓN DEDICADA DE CÓNYUGE */}
+                                {/* Bloque Condicional de Cónyuge */}
                                 {esCasado && (
-                                    <div className="p-5 bg-blue-50/70 rounded-2xl border border-blue-200 space-y-4 shadow-xs">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-200/80">
-                                            <div className="flex items-center gap-2 text-sm font-bold text-blue-900">
-                                                <Heart className="h-4 w-4 text-rose-500 shrink-0 fill-rose-500/20" />
-                                                <span>Información del Cónyuge y Vinculación</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-blue-200">
-                                                <Label htmlFor="conyuge_pastorea" className="text-xs font-bold cursor-pointer text-slate-700">
-                                                    ¿El cónyuge también pastorea o pertenece al ministerio?
-                                                </Label>
+                                    <div className="bg-blue-50/50 p-4 sm:p-5 rounded-2xl border border-blue-200 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-xs uppercase font-bold text-blue-900 tracking-wider flex items-center gap-1.5">
+                                                <User className="w-4 h-4 text-blue-600" />
+                                                Datos del Cónyuge Ministerial
+                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-semibold text-slate-700">¿Es Pastor/Pastora?</span>
                                                 <Switch
-                                                    id="conyuge_pastorea"
                                                     checked={data.conyuge_pastorea}
-                                                    onCheckedChange={(checked) => {
-                                                        setData((prev) => ({
-                                                            ...prev,
-                                                            conyuge_pastorea: checked,
-                                                            cedula_conyuge: checked ? prev.cedula_conyuge : '',
-                                                            conyuge_id: checked ? prev.conyuge_id : '',
-                                                        }));
-                                                        if (!checked) {
-                                                            setCedulaConyugeEncontrada(null);
-                                                        }
-                                                    }}
+                                                    onCheckedChange={(checked) => setData('conyuge_pastorea', checked)}
                                                 />
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            {/* 1. Nombre Completo del Cónyuge - Ancho Completo */}
-                                            <div className="w-full">
-                                                <Label htmlFor="nombre_conyuge" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
-                                                    Nombre Completo del Cónyuge <span className="text-rose-500 ml-0.5">*</span>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <Label htmlFor="nombre_conyuge" className="text-xs font-bold uppercase text-slate-700">
+                                                    Nombre Completo del Cónyuge <span className="text-rose-500">*</span>
                                                 </Label>
                                                 <Input
                                                     id="nombre_conyuge"
-                                                    required={esCasado}
                                                     value={data.nombre_conyuge}
-                                                    onChange={(e) => setData('nombre_conyuge', e.target.value)}
-                                                    placeholder="Nombres y Apellidos completos de su esposo(a)"
-                                                    className="mt-1 h-10 w-full bg-white border-slate-300 text-slate-900 focus:border-blue-600 text-sm"
+                                                    onChange={(e) => {
+                                                        markFieldTouched('nombre_conyuge');
+                                                        setData('nombre_conyuge', e.target.value);
+                                                    }}
+                                                    placeholder="Ej. Carmen Elena de Pérez"
+                                                    className={`mt-1 h-10 bg-white text-slate-900 ${isFieldVisibleError('nombre_conyuge', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                                 />
-                                                {errors.nombre_conyuge && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.nombre_conyuge}</p>}
+                                                {isFieldVisibleError('nombre_conyuge', 1) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('nombre_conyuge', 1)}
+                                                    </p>
+                                                )}
                                             </div>
 
-                                            {/* 2. Cédula del Cónyuge - Solo visible si es pastor, ancho completo y sin texto rojo */}
                                             {data.conyuge_pastorea && (
-                                                <div className="w-full">
-                                                    <div className="flex items-center justify-between h-5">
-                                                        <Label htmlFor="numero_documento_conyuge" className="text-xs font-bold uppercase text-slate-700 flex items-center">
-                                                            Cédula de Identidad del Cónyuge <span className="text-rose-500 ml-0.5">*</span>
-                                                        </Label>
-                                                        {isCheckingCedulaConyuge && (
-                                                            <span className="text-[10px] text-blue-600 flex items-center gap-1 font-medium">
-                                                                <Loader2 className="w-3 h-3 animate-spin" />
-                                                                Verificando...
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="mt-1 flex w-full h-10 rounded-md border border-slate-300 bg-white shadow-xs focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600 overflow-hidden">
+                                                <div>
+                                                    <Label htmlFor="numero_documento_conyuge" className="text-xs font-bold uppercase text-slate-700">
+                                                        Cédula de Identidad del Cónyuge <span className="text-rose-500">*</span>
+                                                    </Label>
+
+                                                    <div className={`mt-1 flex items-center w-full h-10 border rounded-md shadow-xs overflow-hidden transition-all ${isFieldVisibleError('numero_documento_conyuge', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600'}`}>
                                                         <Select
-                                                            value={data.tipo_documento_conyuge}
+                                                            value={data.tipo_documento_conyuge || 'V'}
                                                             onValueChange={(val) => {
-                                                                const fullDoc = data.numero_documento_conyuge ? `${val}-${data.numero_documento_conyuge}` : '';
+                                                                markFieldTouched('numero_documento_conyuge');
                                                                 setData((prev) => ({
                                                                     ...prev,
                                                                     tipo_documento_conyuge: val,
-                                                                    cedula_conyuge: fullDoc,
+                                                                    cedula_conyuge: `${val}-${prev.numero_documento_conyuge}`,
                                                                 }));
-                                                                if (data.numero_documento_conyuge.trim().length >= 4) {
-                                                                    checkCedulaConyuge(`${val}-${data.numero_documento_conyuge}`);
-                                                                }
                                                             }}
                                                         >
-                                                            <SelectTrigger className="w-[62px] h-full shrink-0 rounded-none border-0 border-r border-slate-300 bg-slate-50 text-slate-900 font-bold focus:ring-0 focus:ring-offset-0 px-2.5 shadow-none cursor-pointer">
+                                                            <SelectTrigger className="w-[62px] h-full rounded-none border-0 border-r border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-800 shadow-none focus:ring-0 focus:ring-offset-0 focus:outline-hidden shrink-0">
                                                                 <SelectValue placeholder="V" />
                                                             </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="V" className="font-bold">V</SelectItem>
-                                                                <SelectItem value="E" className="font-bold">E</SelectItem>
-                                                                <SelectItem value="P" className="font-bold">P</SelectItem>
+                                                            <SelectContent className="min-w-[70px] bg-white border-slate-200">
+                                                                <SelectItem value="V" className="text-xs font-bold">V</SelectItem>
+                                                                <SelectItem value="E" className="text-xs font-bold">E</SelectItem>
+                                                                <SelectItem value="P" className="text-xs font-bold">P</SelectItem>
                                                             </SelectContent>
                                                         </Select>
+
                                                         <input
                                                             id="numero_documento_conyuge"
-                                                            required={data.conyuge_pastorea}
                                                             type="text"
                                                             value={data.numero_documento_conyuge}
                                                             onChange={(e) => {
-                                                                const numOnly = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
-                                                                const fullDoc = numOnly ? `${data.tipo_documento_conyuge}-${numOnly}` : '';
+                                                                const rawVal = e.target.value;
+                                                                const cleanNum = data.tipo_documento_conyuge === 'P'
+                                                                    ? rawVal.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                                                                    : rawVal.replace(/\D/g, '');
+
+                                                                markFieldTouched('numero_documento_conyuge');
                                                                 setData((prev) => ({
                                                                     ...prev,
-                                                                    numero_documento_conyuge: numOnly,
-                                                                    cedula_conyuge: fullDoc,
+                                                                    numero_documento_conyuge: cleanNum,
+                                                                    cedula_conyuge: `${prev.tipo_documento_conyuge}-${cleanNum}`,
                                                                 }));
-                                                                checkCedulaConyuge(`${data.tipo_documento_conyuge}-${numOnly}`);
                                                             }}
-                                                            onBlur={() => checkCedulaConyuge(`${data.tipo_documento_conyuge}-${data.numero_documento_conyuge}`)}
-                                                            placeholder="23456789"
-                                                            className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-wider"
+                                                            placeholder={data.tipo_documento_conyuge === 'P' ? 'Ej. PAS987654' : 'Ej. 98765432'}
+                                                            className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden border-0 shadow-none"
                                                         />
                                                     </div>
-                                                    {(errors.cedula_conyuge || errors.numero_documento_conyuge) && (
-                                                        <p className="text-xs text-rose-600 mt-1 font-medium">{errors.cedula_conyuge || errors.numero_documento_conyuge}</p>
-                                                    )}
-                                                    {cedulaConyugeEncontrada ? (
-                                                        <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in">
-                                                            <div className="text-xs text-emerald-900 flex items-start sm:items-center gap-2 font-medium">
-                                                                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5 sm:mt-0" />
-                                                                <span>
-                                                                    Pastor(a) encontrado(a): <b className="font-bold text-emerald-950">{cedulaConyugeEncontrada}</b>. Vinculación ministerial mutua activa.
-                                                                </span>
-                                                            </div>
-                                                            {cedulaConyugePastorId && (
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    onClick={() => router.get(`/registro/${cedulaConyugePastorId}/extension`)}
-                                                                    className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shrink-0 shadow-xs gap-1.5"
-                                                                >
-                                                                    <Building2 className="w-3.5 h-3.5" />
-                                                                    Registrar Extensión
-                                                                    <ArrowRight className="w-3 h-3" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    ) : (data.numero_documento_conyuge.trim().length >= 4 || data.cedula_conyuge.trim().length >= 5) ? (
-                                                        <p className="text-[11px] text-slate-500 mt-1.5 italic">
-                                                            ℹ️ Si su cónyuge aún no está registrado(a) o no tiene todos los datos cargados, puede continuar con este registro; la extensión quedará vinculada automáticamente cuando se registre.
+
+                                                    {isFieldVisibleError('numero_documento_conyuge', 1) && (
+                                                        <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                            <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                            {isFieldVisibleError('numero_documento_conyuge', 1)}
                                                         </p>
-                                                    ) : null}
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -1808,18 +1839,25 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="telefono_tlf"
-                                            required
                                             value={data.telefono_tlf}
-                                            onChange={(e) => setData('telefono_tlf', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('telefono_tlf');
+                                                setData('telefono_tlf', e.target.value);
+                                            }}
                                             placeholder="0414-1234567"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('telefono_tlf', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
-                                        {errors.telefono_tlf && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.telefono_tlf}</p>}
+                                        {isFieldVisibleError('telefono_tlf', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('telefono_tlf', 1)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
                                         <Label htmlFor="telefono_hab" className="text-xs font-bold uppercase text-slate-700">
-                                            Teléfono de Habitación / Fijo
+                                            Teléfono de Habitación / Fijo <span className="text-slate-400 font-normal text-[10px] lowercase">(opcional)</span>
                                         </Label>
                                         <Input
                                             id="telefono_hab"
@@ -1837,21 +1875,28 @@ export default function RegistroPastor({
                                         <Input
                                             id="email"
                                             type="email"
-                                            required
                                             value={data.email}
-                                            onChange={(e) => setData('email', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('email');
+                                                setData('email', e.target.value);
+                                            }}
                                             placeholder="pastor@ejemplo.com"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('email', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
-                                        {errors.email && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.email}</p>}
+                                        {isFieldVisibleError('email', 1) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('email', 1)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Fila 4: Dirección Territorial */}
+                                {/* Fila 4: Dirección Territorial Pastor */}
                                 <div className="border-t border-slate-200 pt-5">
                                     <h4 className="text-xs uppercase font-bold text-blue-900 tracking-wider mb-3 flex items-center gap-1.5">
                                         <MapPin className="w-4 h-4 text-blue-600" />
-                                        Dirección y Ubicación Geográfica
+                                        Dirección y Residencia Personal del Pastor
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                         <div>
@@ -1867,6 +1912,12 @@ export default function RegistroPastor({
                                                 searchPlaceholder="Buscar estado..."
                                                 className="mt-1"
                                             />
+                                            {isFieldVisibleError('estado_id', 1) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('estado_id', 1)}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -1883,6 +1934,12 @@ export default function RegistroPastor({
                                                 searchPlaceholder="Buscar municipio..."
                                                 className="mt-1"
                                             />
+                                            {isFieldVisibleError('municipio_id', 1) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('municipio_id', 1)}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -1893,12 +1950,21 @@ export default function RegistroPastor({
                                                 id="parroquia_id"
                                                 options={parroquiaOptions}
                                                 value={data.parroquia_id}
-                                                onChange={(val) => setData('parroquia_id', val)}
+                                                onChange={(val) => {
+                                                    markFieldTouched('parroquia_id');
+                                                    setData('parroquia_id', val);
+                                                }}
                                                 disabled={!data.municipio_id}
                                                 placeholder={data.municipio_id ? "Seleccione Parroquia" : "Primero seleccione Municipio"}
                                                 searchPlaceholder="Buscar parroquia..."
                                                 className="mt-1"
                                             />
+                                            {isFieldVisibleError('parroquia_id', 1) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('parroquia_id', 1)}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1909,12 +1975,20 @@ export default function RegistroPastor({
                                             </Label>
                                             <Input
                                                 id="urbanizacion"
-                                                required
                                                 value={data.urbanizacion}
-                                                onChange={(e) => setData('urbanizacion', e.target.value)}
+                                                onChange={(e) => {
+                                                    markFieldTouched('urbanizacion');
+                                                    setData('urbanizacion', e.target.value);
+                                                }}
                                                 placeholder="Ej. Urb. La Concordia"
-                                                className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('urbanizacion', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                             />
+                                            {isFieldVisibleError('urbanizacion', 1) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('urbanizacion', 1)}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -1923,12 +1997,20 @@ export default function RegistroPastor({
                                             </Label>
                                             <Input
                                                 id="calle_avenida"
-                                                required
                                                 value={data.calle_avenida}
-                                                onChange={(e) => setData('calle_avenida', e.target.value)}
+                                                onChange={(e) => {
+                                                    markFieldTouched('calle_avenida');
+                                                    setData('calle_avenida', e.target.value);
+                                                }}
                                                 placeholder="Ej. Av. Principal"
-                                                className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('calle_avenida', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                             />
+                                            {isFieldVisibleError('calle_avenida', 1) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('calle_avenida', 1)}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -1937,12 +2019,20 @@ export default function RegistroPastor({
                                             </Label>
                                             <Input
                                                 id="edificio_casa_quinta"
-                                                required
                                                 value={data.edificio_casa_quinta}
-                                                onChange={(e) => setData('edificio_casa_quinta', e.target.value)}
+                                                onChange={(e) => {
+                                                    markFieldTouched('edificio_casa_quinta');
+                                                    setData('edificio_casa_quinta', e.target.value);
+                                                }}
                                                 placeholder="Ej. Casa N° 12-A"
-                                                className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('edificio_casa_quinta', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                             />
+                                            {isFieldVisibleError('edificio_casa_quinta', 1) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('edificio_casa_quinta', 1)}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -1963,15 +2053,7 @@ export default function RegistroPastor({
                             <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex items-center justify-end rounded-b-2xl">
                                 <Button
                                     type="button"
-                                    onClick={() => {
-                                        const check = validateStep(1);
-                                        if (!check.valid) {
-                                            alert(check.message);
-                                            return;
-                                        }
-                                        setActiveTab(2);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
+                                    onClick={() => handleNextStep(1)}
                                     className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
                                 >
                                     Siguiente: Datos Académicos
@@ -2003,10 +2085,19 @@ export default function RegistroPastor({
                                             id="grado_instruccion"
                                             options={gradoInstruccionOptions}
                                             value={data.grado_instruccion}
-                                            onChange={(val) => setData('grado_instruccion', val)}
+                                            onChange={(val) => {
+                                                markFieldTouched('grado_instruccion');
+                                                setData('grado_instruccion', val);
+                                            }}
                                             placeholder="Seleccione Grado de Instrucción"
                                             className="mt-1"
                                         />
+                                        {isFieldVisibleError('grado_instruccion', 2) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('grado_instruccion', 2)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2015,12 +2106,20 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="titulo_obtenido"
-                                            required
                                             value={data.titulo_obtenido}
-                                            onChange={(e) => setData('titulo_obtenido', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('titulo_obtenido');
+                                                setData('titulo_obtenido', e.target.value);
+                                            }}
                                             placeholder="Ej. Lic. en Educación, Ing. Civil, Bachiller"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('titulo_obtenido', 2) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
+                                        {isFieldVisibleError('titulo_obtenido', 2) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('titulo_obtenido', 2)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2046,12 +2145,20 @@ export default function RegistroPastor({
                                                 </Label>
                                                 <Input
                                                     id="titulo_teologico"
-                                                    required={data.estudio_teologico}
                                                     value={data.titulo_teologico}
-                                                    onChange={(e) => setData('titulo_teologico', e.target.value)}
+                                                    onChange={(e) => {
+                                                        markFieldTouched('titulo_teologico');
+                                                        setData('titulo_teologico', e.target.value);
+                                                    }}
                                                     placeholder="Ej. Bachiller en Teología"
-                                                    className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                    className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('titulo_teologico', 2) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                                 />
+                                                {isFieldVisibleError('titulo_teologico', 2) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('titulo_teologico', 2)}
+                                                    </p>
+                                                )}
                                             </div>
 
                                             <div>
@@ -2060,12 +2167,20 @@ export default function RegistroPastor({
                                                 </Label>
                                                 <Input
                                                     id="instituto_teologico"
-                                                    required={data.estudio_teologico}
                                                     value={data.instituto_teologico}
-                                                    onChange={(e) => setData('instituto_teologico', e.target.value)}
+                                                    onChange={(e) => {
+                                                        markFieldTouched('instituto_teologico');
+                                                        setData('instituto_teologico', e.target.value);
+                                                    }}
                                                     placeholder="Ej. Instituto Bíblico Elim"
-                                                    className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                    className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('instituto_teologico', 2) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                                 />
+                                                {isFieldVisibleError('instituto_teologico', 2) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('instituto_teologico', 2)}
+                                                    </p>
+                                                )}
                                             </div>
 
                                             <div>
@@ -2074,12 +2189,20 @@ export default function RegistroPastor({
                                                 </Label>
                                                 <Input
                                                     id="tiempo_de_estudio_teologico"
-                                                    required={data.estudio_teologico}
                                                     value={data.tiempo_de_estudio_teologico}
-                                                    onChange={(e) => setData('tiempo_de_estudio_teologico', e.target.value)}
+                                                    onChange={(e) => {
+                                                        markFieldTouched('tiempo_de_estudio_teologico');
+                                                        setData('tiempo_de_estudio_teologico', e.target.value);
+                                                    }}
                                                     placeholder="Ej. 3 Años"
-                                                    className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                    className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('tiempo_de_estudio_teologico', 2) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                                 />
+                                                {isFieldVisibleError('tiempo_de_estudio_teologico', 2) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('tiempo_de_estudio_teologico', 2)}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -2100,15 +2223,7 @@ export default function RegistroPastor({
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={() => {
-                                        const check = validateStep(2);
-                                        if (!check.valid) {
-                                            alert(check.message);
-                                            return;
-                                        }
-                                        setActiveTab(3);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
+                                    onClick={() => handleNextStep(2)}
                                     className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
                                 >
                                     Siguiente: Datos Eclesiásticos
@@ -2140,10 +2255,19 @@ export default function RegistroPastor({
                                             id="nivel_ministerial"
                                             options={nivelMinisterialOptions}
                                             value={data.nivel_ministerial}
-                                            onChange={(val) => setData('nivel_ministerial', val)}
+                                            onChange={(val) => {
+                                                markFieldTouched('nivel_ministerial');
+                                                setData('nivel_ministerial', val);
+                                            }}
                                             placeholder="Seleccione Grado Ministerial"
                                             className="mt-1"
                                         />
+                                        {isFieldVisibleError('nivel_ministerial', 3) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('nivel_ministerial', 3)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2153,13 +2277,26 @@ export default function RegistroPastor({
                                         <Input
                                             id="zona"
                                             type="text"
-                                            required
                                             inputMode="numeric"
                                             value={data.zona}
-                                            onChange={(e) => setData('zona', e.target.value.replace(/\D/g, ''))}
+                                            onChange={(e) => {
+                                                const clean = e.target.value.replace(/\D/g, '');
+                                                markFieldTouched('zona');
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    zona: clean,
+                                                    extension_zona: prev.extension_zona || clean,
+                                                }));
+                                            }}
                                             placeholder="Ej. 1"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('zona', 3) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
+                                        {isFieldVisibleError('zona', 3) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('zona', 3)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2170,10 +2307,23 @@ export default function RegistroPastor({
                                             id="distrito"
                                             options={distritoOptions}
                                             value={data.distrito ? String(data.distrito).replace(/\D/g, '') : ''}
-                                            onChange={(val) => setData('distrito', val)}
+                                            onChange={(val) => {
+                                                markFieldTouched('distrito');
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    distrito: val,
+                                                    extension_distrito: prev.extension_distrito || val,
+                                                }));
+                                            }}
                                             placeholder="Seleccione Distrito (1 al 5)"
                                             className="mt-1"
                                         />
+                                        {isFieldVisibleError('distrito', 3) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('distrito', 3)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2184,12 +2334,20 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="ano_promocion"
-                                            required
                                             value={data.ano_promocion}
-                                            onChange={(e) => setData('ano_promocion', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('ano_promocion');
+                                                setData('ano_promocion', e.target.value);
+                                            }}
                                             placeholder="Ej. 2018"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('ano_promocion', 3) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
+                                        {isFieldVisibleError('ano_promocion', 3) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('ano_promocion', 3)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2198,12 +2356,20 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="tiempo_colaborando"
-                                            required
                                             value={data.tiempo_colaborando}
-                                            onChange={(e) => setData('tiempo_colaborando', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('tiempo_colaborando');
+                                                setData('tiempo_colaborando', e.target.value);
+                                            }}
                                             placeholder="Ej. 12 Años y 4 Meses"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('tiempo_colaborando', 3) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
+                                        {isFieldVisibleError('tiempo_colaborando', 3) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('tiempo_colaborando', 3)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2212,12 +2378,20 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="cargo_nacional"
-                                            required
                                             value={data.cargo_nacional}
-                                            onChange={(e) => setData('cargo_nacional', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('cargo_nacional');
+                                                setData('cargo_nacional', e.target.value);
+                                            }}
                                             placeholder="Ej. Supervisor de Zona / Presbítero"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('cargo_nacional', 3) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
+                                        {isFieldVisibleError('cargo_nacional', 3) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('cargo_nacional', 3)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2274,15 +2448,7 @@ export default function RegistroPastor({
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={() => {
-                                        const check = validateStep(3);
-                                        if (!check.valid) {
-                                            alert(check.message);
-                                            return;
-                                        }
-                                        setActiveTab(4);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
+                                    onClick={() => handleNextStep(3)}
                                     className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
                                 >
                                     Siguiente: Estado de Salud
@@ -2314,10 +2480,19 @@ export default function RegistroPastor({
                                             id="grupo_sanguineo"
                                             options={grupoSanguineoOptions}
                                             value={data.grupo_sanguineo}
-                                            onChange={(val) => setData('grupo_sanguineo', val)}
+                                            onChange={(val) => {
+                                                markFieldTouched('grupo_sanguineo');
+                                                setData('grupo_sanguineo', val);
+                                            }}
                                             placeholder="Seleccione Grupo"
                                             className="mt-1"
                                         />
+                                        {isFieldVisibleError('grupo_sanguineo', 4) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('grupo_sanguineo', 4)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2328,10 +2503,19 @@ export default function RegistroPastor({
                                             id="condicion_salud"
                                             options={condicionSaludOptions}
                                             value={data.condicion_salud}
-                                            onChange={(val) => setData('condicion_salud', val)}
+                                            onChange={(val) => {
+                                                markFieldTouched('condicion_salud');
+                                                setData('condicion_salud', val);
+                                            }}
                                             placeholder="Seleccione Condición"
                                             className="mt-1"
                                         />
+                                        {isFieldVisibleError('condicion_salud', 4) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('condicion_salud', 4)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2340,12 +2524,20 @@ export default function RegistroPastor({
                                         </Label>
                                         <Input
                                             id="alergias"
-                                            required
                                             value={data.alergias}
-                                            onChange={(e) => setData('alergias', e.target.value)}
+                                            onChange={(e) => {
+                                                markFieldTouched('alergias');
+                                                setData('alergias', e.target.value);
+                                            }}
                                             placeholder="Ej. Ninguna, polen, penicilina"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('alergias', 4) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                         />
+                                        {isFieldVisibleError('alergias', 4) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('alergias', 4)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2362,14 +2554,24 @@ export default function RegistroPastor({
                                             />
                                         </div>
                                         {data.padece_enfermedad && (
-                                            <Textarea
-                                                rows={2}
-                                                required={data.padece_enfermedad}
-                                                value={data.enfermedades_cronicas}
-                                                onChange={(e) => setData('enfermedades_cronicas', e.target.value)}
-                                                placeholder="Describa el diagnóstico o enfermedad crónica..."
-                                                className="bg-white border-slate-300 text-slate-900 focus:border-blue-600"
-                                            />
+                                            <div>
+                                                <Textarea
+                                                    rows={2}
+                                                    value={data.enfermedades_cronicas}
+                                                    onChange={(e) => {
+                                                        markFieldTouched('enfermedades_cronicas');
+                                                        setData('enfermedades_cronicas', e.target.value);
+                                                    }}
+                                                    placeholder="Describa el diagnóstico o enfermedad crónica..."
+                                                    className={`bg-white text-slate-900 ${isFieldVisibleError('enfermedades_cronicas', 4) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                                />
+                                                {isFieldVisibleError('enfermedades_cronicas', 4) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('enfermedades_cronicas', 4)}
+                                                    </p>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
 
@@ -2428,6 +2630,13 @@ export default function RegistroPastor({
                                                         ))}
                                                     </div>
                                                 )}
+
+                                                {isFieldVisibleError('medicamentos_recetados', 4) && (
+                                                    <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        {isFieldVisibleError('medicamentos_recetados', 4)}
+                                                    </p>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -2445,12 +2654,20 @@ export default function RegistroPastor({
                                             </Label>
                                             <Input
                                                 id="contacto_emergencia_nombre"
-                                                required
                                                 value={data.contacto_emergencia_nombre}
-                                                onChange={(e) => setData('contacto_emergencia_nombre', e.target.value)}
+                                                onChange={(e) => {
+                                                    markFieldTouched('contacto_emergencia_nombre');
+                                                    setData('contacto_emergencia_nombre', e.target.value);
+                                                }}
                                                 placeholder="Ej. María Pérez (Esposa / Familiar)"
-                                                className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('contacto_emergencia_nombre', 4) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                             />
+                                            {isFieldVisibleError('contacto_emergencia_nombre', 4) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('contacto_emergencia_nombre', 4)}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -2459,12 +2676,20 @@ export default function RegistroPastor({
                                             </Label>
                                             <Input
                                                 id="contacto_emergencia_telefono"
-                                                required
                                                 value={data.contacto_emergencia_telefono}
-                                                onChange={(e) => setData('contacto_emergencia_telefono', e.target.value)}
+                                                onChange={(e) => {
+                                                    markFieldTouched('contacto_emergencia_telefono');
+                                                    setData('contacto_emergencia_telefono', e.target.value);
+                                                }}
                                                 placeholder="Ej. 0412-9876543"
-                                                className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                                className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('contacto_emergencia_telefono', 4) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
                                             />
+                                            {isFieldVisibleError('contacto_emergencia_telefono', 4) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('contacto_emergencia_telefono', 4)}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -2484,15 +2709,7 @@ export default function RegistroPastor({
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={() => {
-                                        const check = validateStep(4);
-                                        if (!check.valid) {
-                                            alert(check.message);
-                                            return;
-                                        }
-                                        setActiveTab(5);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
+                                    onClick={() => handleNextStep(4)}
                                     className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
                                 >
                                     Siguiente: Fotografías
@@ -2502,7 +2719,7 @@ export default function RegistroPastor({
                         </Card>
                     )}
 
-                    {/* PASO 5: FOTOGRAFÍA DEL PASTOR Y CÉDULA */}
+                    {/* PASO 5: FOTOGRAFÍA DEL PASTOR Y CÉDULA (OBLIGATORIAS) */}
                     {activeTab === 5 && (
                         <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
                             <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
@@ -2511,7 +2728,7 @@ export default function RegistroPastor({
                                     <span>Paso 5: Fotografía Tipo Carnet y Foto de la Cédula</span>
                                 </div>
                                 <CardDescription className="text-slate-500 text-xs font-medium">
-                                    Tome o suba una foto nítida de perfil (tipo carnet) con vestimenta adecuada y la foto de su cédula de identidad.
+                                    Tome o suba una foto nítida de perfil (tipo carnet) y la foto de su documento de identidad.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-4 sm:p-6 space-y-6">
@@ -2553,20 +2770,15 @@ export default function RegistroPastor({
                                     </div>
                                 )}
 
-                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 text-xs text-blue-900 font-medium">
-                                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                                    <span>Las fotografías son <b>opcionales</b>. Puede completar y finalizar su registro ahora mismo sin cargarlas o tomarlas.</span>
-                                </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Fotografía de Perfil */}
-                                    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center space-y-4">
+                                    <div className={`bg-slate-50 p-5 rounded-2xl border flex flex-col items-center text-center space-y-4 ${isFieldVisibleError('foto', 5) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/10' : 'border-slate-200'}`}>
                                         <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                                             <User className="w-4 h-4 text-blue-600" />
-                                            Foto de Perfil (Tipo Carnet) <span className="text-slate-400 font-normal text-xs">(Opcional)</span>
+                                            Foto de Perfil (Tipo Carnet) <span className="text-rose-500 ml-0.5">*</span>
                                         </h4>
 
-                                        <div className="w-36 h-44 rounded-xl border-2 border-dashed border-slate-300 bg-white overflow-hidden flex items-center justify-center relative shadow-inner">
+                                        <div className={`w-36 h-44 rounded-xl border-2 border-dashed bg-white overflow-hidden flex items-center justify-center relative shadow-inner ${isFieldVisibleError('foto', 5) ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'}`}>
                                             {data.foto ? (
                                                 <img src={data.foto} alt="Foto Perfil" className="w-full h-full object-cover" />
                                             ) : (
@@ -2613,16 +2825,23 @@ export default function RegistroPastor({
                                                 </Button>
                                             )}
                                         </div>
+
+                                        {isFieldVisibleError('foto', 5) && (
+                                            <p className="text-xs text-rose-600 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('foto', 5)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Fotografía de la Cédula */}
-                                    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center space-y-4">
+                                    <div className={`bg-slate-50 p-5 rounded-2xl border flex flex-col items-center text-center space-y-4 ${isFieldVisibleError('foto_cedula', 5) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/10' : 'border-slate-200'}`}>
                                         <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                                             <IdCard className="w-4 h-4 text-blue-600" />
-                                            Foto de la Cédula de Identidad <span className="text-slate-400 font-normal text-xs">(Opcional)</span>
+                                            Foto de la Cédula de Identidad <span className="text-rose-500 ml-0.5">*</span>
                                         </h4>
 
-                                        <div className="w-56 h-36 rounded-xl border-2 border-dashed border-slate-300 bg-white overflow-hidden flex items-center justify-center relative shadow-inner">
+                                        <div className={`w-56 h-36 rounded-xl border-2 border-dashed bg-white overflow-hidden flex items-center justify-center relative shadow-inner ${isFieldVisibleError('foto_cedula', 5) ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'}`}>
                                             {data.foto_cedula ? (
                                                 <img src={data.foto_cedula} alt="Cédula" className="w-full h-full object-cover" />
                                             ) : (
@@ -2669,10 +2888,17 @@ export default function RegistroPastor({
                                                 </Button>
                                             )}
                                         </div>
+
+                                        {isFieldVisibleError('foto_cedula', 5) && (
+                                            <p className="text-xs text-rose-600 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('foto_cedula', 5)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>
-                            <CardFooter className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -2686,12 +2912,664 @@ export default function RegistroPastor({
                                     Anterior: Estado de Salud
                                 </Button>
                                 <Button
+                                    type="button"
+                                    onClick={() => handleNextStep(5)}
+                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                >
+                                    Siguiente: Datos de la Iglesia
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    )}
+
+                    {/* PASO 6: DATOS DE LA IGLESIA / EXTENSIÓN */}
+                    {activeTab === 6 && (
+                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
+                                    <Building2 className="h-5 w-5 text-blue-600" />
+                                    <span>Paso 6: Información General de la Iglesia / Extensión</span>
+                                </div>
+                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                    Datos institucionales de la obra, tipo de inmueble y tiempo de trabajo ministerial.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <Label htmlFor="extension_nombre" className="text-xs font-bold uppercase text-slate-700">
+                                            Nombre de la Iglesia / Anexo / Extensión <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_nombre"
+                                            value={data.extension_nombre}
+                                            onChange={(e) => {
+                                                markFieldTouched('extension_nombre');
+                                                setData('extension_nombre', e.target.value);
+                                            }}
+                                            placeholder="Ej. Iglesia Central MMM Barquisimeto"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_nombre', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_nombre', 6) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_nombre', 6)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_tipo_local_id" className="text-xs font-bold uppercase text-slate-700">
+                                            Tipo de Local / Inmueble <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Select2
+                                            id="extension_tipo_local_id"
+                                            options={tipoLocalOptions}
+                                            value={data.extension_tipo_local_id}
+                                            onChange={(val) => {
+                                                markFieldTouched('extension_tipo_local_id');
+                                                setData('extension_tipo_local_id', val);
+                                            }}
+                                            placeholder="Seleccione Tipo de Local (Propio, Alquilado...)"
+                                            className="mt-1"
+                                        />
+                                        {isFieldVisibleError('extension_tipo_local_id', 6) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_tipo_local_id', 6)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="extension_fecha_fundacion" className="text-xs font-bold uppercase text-slate-700">
+                                            Fecha de Fundación <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_fecha_fundacion"
+                                            type="date"
+                                            value={data.extension_fecha_fundacion}
+                                            onChange={handleExtensionFechaFundacionChange}
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_fecha_fundacion', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_fecha_fundacion', 6) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_fecha_fundacion', 6)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_anios_activa" className="text-xs font-bold uppercase text-slate-700">
+                                            Años Activa
+                                        </Label>
+                                        <Input
+                                            id="extension_anios_activa"
+                                            readOnly
+                                            value={data.extension_anios_activa}
+                                            placeholder="Calculado"
+                                            className="mt-1 bg-slate-100 border-slate-300 text-slate-700 font-bold cursor-not-allowed"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_tiempo_trabajo" className="text-xs font-bold uppercase text-slate-700">
+                                            Tiempo de Trabajo Activo <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_tiempo_trabajo"
+                                            value={data.extension_tiempo_trabajo}
+                                            onChange={(e) => {
+                                                markFieldTouched('extension_tiempo_trabajo');
+                                                setData('extension_tiempo_trabajo', e.target.value);
+                                            }}
+                                            placeholder="Ej. 5 años y 3 meses"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_tiempo_trabajo', 6) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_tiempo_trabajo', 6) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_tiempo_trabajo', 6)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="extension_descripcion" className="text-xs font-bold uppercase text-slate-700">
+                                        Descripción o Reseña de la Obra <span className="text-slate-400 font-normal text-[10px] lowercase">(opcional)</span>
+                                    </Label>
+                                    <Textarea
+                                        id="extension_descripcion"
+                                        rows={2}
+                                        value={data.extension_descripcion}
+                                        onChange={(e) => setData('extension_descripcion', e.target.value)}
+                                        placeholder="Breve reseña sobre el inicio y desarrollo de la obra..."
+                                        className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                    />
+                                </div>
+                            </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveTab(5);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Anterior: Fotografías
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => handleNextStep(6)}
+                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                >
+                                    Siguiente: Ubicación GPS
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    )}
+
+                    {/* PASO 7: UBICACIÓN Y MAPA GPS DE LA IGLESIA */}
+                    {activeTab === 7 && (
+                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
+                                    <MapPin className="h-5 w-5 text-blue-600" />
+                                    <span>Paso 7: Ubicación Geográfica & Mapa GPS de la Iglesia</span>
+                                </div>
+                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                    Dirección detallada y fijación satelital en el mapa nacional de Venezuela.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="extension_estado_id" className="text-xs font-bold uppercase text-slate-700">
+                                            Estado de la Iglesia <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Select2
+                                            id="extension_estado_id"
+                                            options={estadoOptions}
+                                            value={data.extension_estado_id || data.estado_id}
+                                            onChange={(val) => {
+                                                markFieldTouched('extension_estado_id');
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    extension_estado_id: val,
+                                                    extension_municipio_id: '',
+                                                    extension_parroquia_id: '',
+                                                }));
+                                            }}
+                                            placeholder="Seleccione Estado"
+                                            searchPlaceholder="Buscar estado..."
+                                            className="mt-1"
+                                        />
+                                        {isFieldVisibleError('extension_estado_id', 7) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_estado_id', 7)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_municipio_id" className="text-xs font-bold uppercase text-slate-700">
+                                            Municipio <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Select2
+                                            id="extension_municipio_id"
+                                            options={extensionMunicipioOptions}
+                                            value={data.extension_municipio_id || data.municipio_id}
+                                            onChange={(val) => {
+                                                markFieldTouched('extension_municipio_id');
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    extension_municipio_id: val,
+                                                    extension_parroquia_id: '',
+                                                }));
+                                            }}
+                                            disabled={!(data.extension_estado_id || data.estado_id)}
+                                            placeholder="Seleccione Municipio"
+                                            searchPlaceholder="Buscar municipio..."
+                                            className="mt-1"
+                                        />
+                                        {isFieldVisibleError('extension_municipio_id', 7) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_municipio_id', 7)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_parroquia_id" className="text-xs font-bold uppercase text-slate-700">
+                                            Parroquia <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Select2
+                                            id="extension_parroquia_id"
+                                            options={extensionParroquiaOptions}
+                                            value={data.extension_parroquia_id || data.parroquia_id}
+                                            onChange={(val) => {
+                                                markFieldTouched('extension_parroquia_id');
+                                                setData('extension_parroquia_id', val);
+                                            }}
+                                            disabled={!(data.extension_municipio_id || data.municipio_id)}
+                                            placeholder="Seleccione Parroquia"
+                                            searchPlaceholder="Buscar parroquia..."
+                                            className="mt-1"
+                                        />
+                                        {isFieldVisibleError('extension_parroquia_id', 7) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_parroquia_id', 7)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="extension_sector" className="text-xs font-bold uppercase text-slate-700">
+                                            Sector / Urbanización
+                                        </Label>
+                                        <Input
+                                            id="extension_sector"
+                                            value={data.extension_sector}
+                                            onChange={(e) => setData('extension_sector', e.target.value)}
+                                            placeholder="Ej. Sector Centro"
+                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_calle" className="text-xs font-bold uppercase text-slate-700">
+                                            Calle
+                                        </Label>
+                                        <Input
+                                            id="extension_calle"
+                                            value={data.extension_calle}
+                                            onChange={(e) => setData('extension_calle', e.target.value)}
+                                            placeholder="Ej. Calle Bolívar"
+                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_avenida" className="text-xs font-bold uppercase text-slate-700">
+                                            Avenida
+                                        </Label>
+                                        <Input
+                                            id="extension_avenida"
+                                            value={data.extension_avenida}
+                                            onChange={(e) => setData('extension_avenida', e.target.value)}
+                                            placeholder="Ej. Av. 5 de Julio"
+                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="extension_direccion" className="text-xs font-bold uppercase text-slate-700">
+                                        Dirección Completa / Punto de Referencia <span className="text-rose-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="extension_direccion"
+                                        value={data.extension_direccion}
+                                        onChange={(e) => {
+                                            markFieldTouched('extension_direccion');
+                                            setData('extension_direccion', e.target.value);
+                                        }}
+                                        placeholder="Ej. Frente a la Plaza Bolívar, al lado del ambulatorio"
+                                        className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_direccion', 7) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                    />
+                                    {isFieldVisibleError('extension_direccion', 7) && (
+                                        <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                            {isFieldVisibleError('extension_direccion', 7)}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* MAPA GPS INTERACTIVO */}
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-bold uppercase text-slate-800 flex items-center gap-1.5">
+                                            <MapPin className="w-4 h-4 text-blue-600" />
+                                            Geolocalización Satelital GPS de la Iglesia <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <span className="text-xs text-slate-500">Haga clic en el mapa para ubicar el local</span>
+                                    </div>
+
+                                    <div className={`rounded-2xl overflow-hidden border shadow-inner ${isFieldVisibleError('extension_latitud', 7) ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-300'}`}>
+                                        <LocationMapPicker
+                                            lat={data.extension_latitud}
+                                            lng={data.extension_longitud}
+                                            onLocationSelect={handleExtensionMapLocationSelect}
+                                            estadoNombre={selectedExtensionEstadoNombre}
+                                            municipioNombre={selectedExtensionMunicipioNombre}
+                                            className="h-[360px] w-full"
+                                        />
+                                    </div>
+
+                                    {isFieldVisibleError('extension_latitud', 7) && (
+                                        <p className="text-xs text-rose-600 font-medium flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                            {isFieldVisibleError('extension_latitud', 7)}
+                                        </p>
+                                    )}
+
+                                    {data.extension_latitud && data.extension_longitud && (
+                                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-semibold flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>Coordenadas fijadas: Lat: <b>{Number(data.extension_latitud).toFixed(6)}</b>, Lng: <b>{Number(data.extension_longitud).toFixed(6)}</b></span>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveTab(6);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Anterior: Datos de la Iglesia
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => handleNextStep(7)}
+                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                >
+                                    Siguiente: Membresía y Medios
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    )}
+
+                    {/* PASO 8: MEMBRESÍA, FRUTOS Y MEDIOS DE COMUNICACIÓN */}
+                    {activeTab === 8 && (
+                        <Card className="bg-white border-slate-200 shadow-sm text-slate-800 rounded-2xl">
+                            <CardHeader className="border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+                                <div className="flex items-center gap-2 text-blue-800 font-bold text-base">
+                                    <Users className="h-5 w-5 text-blue-600" />
+                                    <span>Paso 8: Membresía, Frutos y Medios de Comunicación</span>
+                                </div>
+                                <CardDescription className="text-slate-500 text-xs font-medium">
+                                    Estadísticas de congregación, obras anexas, frutos ministeriales y medios de difusión.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="extension_miembros_activos" className="text-xs font-bold uppercase text-slate-700">
+                                            Miembros Activos <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_miembros_activos"
+                                            type="number"
+                                            min="0"
+                                            value={data.extension_miembros_activos}
+                                            onChange={(e) => {
+                                                markFieldTouched('extension_miembros_activos');
+                                                setData('extension_miembros_activos', e.target.value);
+                                            }}
+                                            placeholder="Ej. 65"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_miembros_activos', 8) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_miembros_activos', 8) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_miembros_activos', 8)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_cantidad_campos_blancos" className="text-xs font-bold uppercase text-slate-700">
+                                            Campos Blancos / Obras Anexas <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_cantidad_campos_blancos"
+                                            type="number"
+                                            min="0"
+                                            value={data.extension_cantidad_campos_blancos}
+                                            onChange={(e) => {
+                                                markFieldTouched('extension_cantidad_campos_blancos');
+                                                setData('extension_cantidad_campos_blancos', e.target.value);
+                                            }}
+                                            placeholder="Ej. 2 (o 0 si no tiene)"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_cantidad_campos_blancos', 8) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_cantidad_campos_blancos', 8) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_cantidad_campos_blancos', 8)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_miembro_probante" className="text-xs font-bold uppercase text-slate-700">
+                                            Miembros Probantes <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_miembro_probante"
+                                            type="number"
+                                            min="0"
+                                            value={data.extension_miembro_probante}
+                                            onChange={(e) => {
+                                                markFieldTouched('extension_miembro_probante');
+                                                setData('extension_miembro_probante', e.target.value);
+                                            }}
+                                            placeholder="Ej. 10 (o 0 si no tiene)"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_miembro_probante', 8) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_miembro_probante', 8) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_miembro_probante', 8)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="extension_iglesias_fundadas" className="text-xs font-bold uppercase text-slate-700">
+                                            Iglesias Fundadas desde esta Obra <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_iglesias_fundadas"
+                                            type="number"
+                                            min="0"
+                                            value={data.extension_iglesias_fundadas}
+                                            onChange={(e) => {
+                                                markFieldTouched('extension_iglesias_fundadas');
+                                                setData('extension_iglesias_fundadas', e.target.value);
+                                            }}
+                                            placeholder="Ej. 1 (o 0)"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_iglesias_fundadas', 8) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_iglesias_fundadas', 8) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_iglesias_fundadas', 8)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="extension_pastores_ministerio" className="text-xs font-bold uppercase text-slate-700">
+                                            Pastores / Obreros Levantados <span className="text-rose-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="extension_pastores_ministerio"
+                                            type="number"
+                                            min="0"
+                                            value={data.extension_pastores_ministerio}
+                                            onChange={(e) => {
+                                                markFieldTouched('extension_pastores_ministerio');
+                                                setData('extension_pastores_ministerio', e.target.value);
+                                            }}
+                                            placeholder="Ej. 3 (o 0)"
+                                            className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_pastores_ministerio', 8) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                        />
+                                        {isFieldVisibleError('extension_pastores_ministerio', 8) && (
+                                            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                {isFieldVisibleError('extension_pastores_ministerio', 8)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="extension_logros_obtenidos" className="text-xs font-bold uppercase text-slate-700">
+                                        Logros y Frutos Obtenidos <span className="text-rose-500">*</span>
+                                    </Label>
+                                    <Textarea
+                                        id="extension_logros_obtenidos"
+                                        rows={2}
+                                        value={data.extension_logros_obtenidos}
+                                        onChange={(e) => {
+                                            markFieldTouched('extension_logros_obtenidos');
+                                            setData('extension_logros_obtenidos', e.target.value);
+                                        }}
+                                        placeholder="Ej. Construcción de templo propio, apertura de escuela bíblica, impacto en la comunidad..."
+                                        className={`mt-1 bg-white text-slate-900 ${isFieldVisibleError('extension_logros_obtenidos', 8) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600'}`}
+                                    />
+                                    {isFieldVisibleError('extension_logros_obtenidos', 8) && (
+                                        <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                            {isFieldVisibleError('extension_logros_obtenidos', 8)}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Medios de Comunicación */}
+                                <div className="border-t border-slate-200 pt-4 space-y-4">
+                                    <div className="flex items-center justify-between bg-blue-50/60 p-4 rounded-xl border border-blue-200">
+                                        <div>
+                                            <p className="font-bold text-sm text-blue-950 flex items-center gap-1.5">
+                                                <Radio className="w-4 h-4 text-blue-600" />
+                                                ¿Cuenta con Medios de Comunicación?
+                                            </p>
+                                            <p className="text-xs text-slate-600">
+                                                Radio FM/AM, canal de TV, programa semanal o transmisión por internet.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={data.extension_posee_medio_comunicacion}
+                                            onCheckedChange={(checked) => setData('extension_posee_medio_comunicacion', checked)}
+                                        />
+                                    </div>
+
+                                    {data.extension_posee_medio_comunicacion && (
+                                        <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div>
+                                                    <Label className="text-xs font-bold text-slate-700">Tipo de Medio</Label>
+                                                    <Input
+                                                        value={nuevoMedioCual}
+                                                        onChange={(e) => setNuevoMedioCual(e.target.value)}
+                                                        placeholder="Ej. Radio Bethel / Streaming"
+                                                        className="mt-1 bg-white text-xs text-slate-900 border-slate-300"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs font-bold text-slate-700">Frecuencia / Enlace / Canal</Label>
+                                                    <Input
+                                                        value={nuevoMedioDonde}
+                                                        onChange={(e) => setNuevoMedioDonde(e.target.value)}
+                                                        placeholder="Ej. 104.5 FM / Facebook Live"
+                                                        className="mt-1 bg-white text-xs text-slate-900 border-slate-300"
+                                                    />
+                                                </div>
+                                                <div className="flex items-end gap-2">
+                                                    <div className="flex-1">
+                                                        <Label className="text-xs font-bold text-slate-700">Horario / Observación</Label>
+                                                        <Input
+                                                            value={nuevoMedioNota}
+                                                            onChange={(e) => setNuevoMedioNota(e.target.value)}
+                                                            placeholder="Ej. Domingos 8:00 AM"
+                                                            className="mt-1 bg-white text-xs text-slate-900 border-slate-300"
+                                                        />
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={handleAgregarMedio}
+                                                        className="bg-blue-700 hover:bg-blue-800 text-white shrink-0"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {data.extension_medios_lista && data.extension_medios_lista.length > 0 && (
+                                                <div className="space-y-2 pt-2">
+                                                    {data.extension_medios_lista.map((m, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 text-xs shadow-xs">
+                                                            <div>
+                                                                <span className="font-bold text-slate-900">{m.cual}</span>
+                                                                {m.donde && <span className="text-blue-700 ml-2">({m.donde})</span>}
+                                                                {m.nota && <span className="text-slate-500 ml-2">- {m.nota}</span>}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleEliminarMedio(idx)}
+                                                                className="text-rose-600 hover:text-rose-800 p-1"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {isFieldVisibleError('extension_medios_lista', 8) && (
+                                                <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                                    {isFieldVisibleError('extension_medios_lista', 8)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                            <CardFooter className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveTab(7);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Anterior: Ubicación GPS
+                                </Button>
+                                <Button
                                     type="submit"
                                     disabled={processing}
                                     className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg text-sm"
                                 >
                                     <Save className="w-4 h-4 mr-2" />
-                                    {processing ? 'Enviando Ficha Oficial...' : 'Finalizar y Enviar Registro'}
+                                    {processing ? 'Guardando Registro Completo...' : 'Finalizar y Enviar Registro'}
                                 </Button>
                             </CardFooter>
                         </Card>
