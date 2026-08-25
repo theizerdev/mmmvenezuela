@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select2, Select2Option } from '@/components/ui/select2';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     User,
     GraduationCap,
@@ -495,13 +496,16 @@ export default function RegistroPastor({
         return () => clearTimeout(timer);
     }, [data, activeTab, submittedResult, isSubmittingModalOpen]);
 
-    // Helper para separar cédula entre Tipo (V o E) y Número
+    // Helper para separar cédula entre Tipo (V, E o P) y Número
     const parseCedula = (raw?: string): { tipo: string; numero: string } => {
         if (!raw) return { tipo: 'V', numero: '' };
         const trimmed = raw.trim().toUpperCase();
         let tipo = 'V';
         let numero = '';
-        if (trimmed.startsWith('E-') || trimmed.startsWith('E')) {
+        if (trimmed.startsWith('P-') || trimmed.startsWith('P')) {
+            tipo = 'P';
+            numero = trimmed.replace(/^P[-]?/, '').replace(/[^A-Z0-9]/g, '');
+        } else if (trimmed.startsWith('E-') || trimmed.startsWith('E')) {
             tipo = 'E';
             numero = trimmed.replace(/^E[-]?/, '').replace(/\D/g, '');
         } else if (trimmed.startsWith('V-') || trimmed.startsWith('V')) {
@@ -1388,10 +1392,10 @@ export default function RegistroPastor({
                             </CardHeader>
                             <CardContent className="p-4 sm:p-6 space-y-6">
                                 {/* Fila 1: Nombres, Apellidos, Cédula, Género */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                                     <div>
-                                        <Label htmlFor="nombres" className="text-xs font-bold uppercase text-slate-700">
-                                            Nombres <span className="text-rose-500">*</span>
+                                        <Label htmlFor="nombres" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
+                                            Nombres <span className="text-rose-500 ml-0.5">*</span>
                                         </Label>
                                         <Input
                                             id="nombres"
@@ -1399,14 +1403,14 @@ export default function RegistroPastor({
                                             value={data.nombres}
                                             onChange={(e) => setData('nombres', e.target.value)}
                                             placeholder="Ej. Juan Carlos"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
                                         />
                                         {errors.nombres && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.nombres}</p>}
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="apellidos" className="text-xs font-bold uppercase text-slate-700">
-                                            Apellidos <span className="text-rose-500">*</span>
+                                        <Label htmlFor="apellidos" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
+                                            Apellidos <span className="text-rose-500 ml-0.5">*</span>
                                         </Label>
                                         <Input
                                             id="apellidos"
@@ -1414,15 +1418,15 @@ export default function RegistroPastor({
                                             value={data.apellidos}
                                             onChange={(e) => setData('apellidos', e.target.value)}
                                             placeholder="Ej. Pérez Rodríguez"
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
                                         />
                                         {errors.apellidos && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.apellidos}</p>}
                                     </div>
 
                                     <div>
-                                        <div className="flex items-center justify-between">
-                                            <Label htmlFor="numero_documento" className="text-xs font-bold uppercase text-slate-700">
-                                                Cédula de Identidad <span className="text-rose-500">*</span>
+                                        <div className="flex items-center justify-between h-5">
+                                            <Label htmlFor="numero_documento" className="text-xs font-bold uppercase text-slate-700 flex items-center">
+                                                Cédula de Identidad <span className="text-rose-500 ml-0.5">*</span>
                                             </Label>
                                             {isCheckingCedula && (
                                                 <span className="text-[10px] text-blue-600 flex items-center gap-1 font-medium">
@@ -1431,52 +1435,49 @@ export default function RegistroPastor({
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="mt-1 flex gap-2">
-                                            <div className="w-24 shrink-0">
-                                                <select
-                                                    id="tipo_documento"
-                                                    aria-label="Tipo de documento"
-                                                    value={data.tipo_documento}
-                                                    onChange={(e) => {
-                                                        const nuevoTipo = e.target.value;
-                                                        const fullDoc = data.numero_documento ? `${nuevoTipo}-${data.numero_documento}` : '';
-                                                        setData((prev) => ({
-                                                            ...prev,
-                                                            tipo_documento: nuevoTipo,
-                                                            documento: fullDoc,
-                                                        }));
-                                                        if (data.numero_documento.trim().length >= 4) {
-                                                            checkCedulaDuplicada(`${nuevoTipo}-${data.numero_documento}`);
-                                                        }
-                                                    }}
-                                                    className="w-full h-10 px-2.5 bg-white border border-slate-300 text-slate-900 rounded-md text-sm font-bold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:border-blue-600 shadow-xs cursor-pointer"
-                                                >
-                                                    <option value="V">V (Ven)</option>
-                                                    <option value="E">E (Ext)</option>
-                                                </select>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <Input
-                                                    id="numero_documento"
-                                                    required
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    value={data.numero_documento}
-                                                    onChange={(e) => {
-                                                        const numOnly = e.target.value.replace(/\D/g, '');
-                                                        const fullDoc = numOnly ? `${data.tipo_documento}-${numOnly}` : '';
-                                                        setData((prev) => ({
-                                                            ...prev,
-                                                            numero_documento: numOnly,
-                                                            documento: fullDoc,
-                                                        }));
-                                                        checkCedulaDuplicada(`${data.tipo_documento}-${numOnly}`);
-                                                    }}
-                                                    onBlur={() => checkCedulaDuplicada(`${data.tipo_documento}-${data.numero_documento}`)}
-                                                    placeholder="Ej. 12345678"
-                                                    className="w-full bg-white border-slate-300 text-slate-900 focus:border-blue-600 font-mono tracking-wider"
-                                                />
-                                            </div>
+                                        <div className="mt-1 flex w-full h-10 rounded-md border border-slate-300 bg-white shadow-xs focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600 overflow-hidden">
+                                            <Select
+                                                value={data.tipo_documento}
+                                                onValueChange={(val) => {
+                                                    const fullDoc = data.numero_documento ? `${val}-${data.numero_documento}` : '';
+                                                    setData((prev) => ({
+                                                        ...prev,
+                                                        tipo_documento: val,
+                                                        documento: fullDoc,
+                                                    }));
+                                                    if (data.numero_documento.trim().length >= 4) {
+                                                        checkCedulaDuplicada(`${val}-${data.numero_documento}`);
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className="w-[62px] h-full shrink-0 rounded-none border-0 border-r border-slate-300 bg-slate-50 text-slate-900 font-bold focus:ring-0 focus:ring-offset-0 px-2.5 shadow-none cursor-pointer">
+                                                    <SelectValue placeholder="V" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="V" className="font-bold">V</SelectItem>
+                                                    <SelectItem value="E" className="font-bold">E</SelectItem>
+                                                    <SelectItem value="P" className="font-bold">P</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <input
+                                                id="numero_documento"
+                                                required
+                                                type="text"
+                                                value={data.numero_documento}
+                                                onChange={(e) => {
+                                                    const numOnly = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                                                    const fullDoc = numOnly ? `${data.tipo_documento}-${numOnly}` : '';
+                                                    setData((prev) => ({
+                                                        ...prev,
+                                                        numero_documento: numOnly,
+                                                        documento: fullDoc,
+                                                    }));
+                                                    checkCedulaDuplicada(`${data.tipo_documento}-${numOnly}`);
+                                                }}
+                                                onBlur={() => checkCedulaDuplicada(`${data.tipo_documento}-${data.numero_documento}`)}
+                                                placeholder="12345678"
+                                                className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-wider"
+                                            />
                                         </div>
                                         {(errors.documento || errors.numero_documento) && (
                                             <p className="text-xs text-rose-600 mt-1 font-medium">{errors.documento || errors.numero_documento}</p>
@@ -1506,8 +1507,8 @@ export default function RegistroPastor({
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="genero" className="text-xs font-bold uppercase text-slate-700">
-                                            Género <span className="text-rose-500">*</span>
+                                        <Label htmlFor="genero" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
+                                            Género <span className="text-rose-500 ml-0.5">*</span>
                                         </Label>
                                         <Select2
                                             id="genero"
@@ -1521,9 +1522,9 @@ export default function RegistroPastor({
                                 </div>
 
                                 {/* Fila 2: Fecha Nacimiento, Edad, Estado Civil */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                                     <div>
-                                        <Label htmlFor="fe_nacimiento" className="text-xs font-bold uppercase text-slate-700">
+                                        <Label htmlFor="fe_nacimiento" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
                                             Fecha de Nacimiento
                                         </Label>
                                         <Input
@@ -1531,12 +1532,12 @@ export default function RegistroPastor({
                                             type="date"
                                             value={data.fe_nacimiento}
                                             onChange={handleBirthDateChange}
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
                                         />
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="edad" className="text-xs font-bold uppercase text-slate-700">
+                                        <Label htmlFor="edad" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
                                             Edad (Años)
                                         </Label>
                                         <Input
@@ -1545,13 +1546,13 @@ export default function RegistroPastor({
                                             value={data.edad}
                                             onChange={(e) => setData('edad', e.target.value)}
                                             placeholder="Calculada autom."
-                                            className="mt-1 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
+                                            className="mt-1 h-10 bg-white border-slate-300 text-slate-900 focus:border-blue-600"
                                         />
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="estado_civil" className="text-xs font-bold uppercase text-slate-700">
-                                            Estado Civil <span className="text-rose-500">*</span>
+                                        <Label htmlFor="estado_civil" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
+                                            Estado Civil <span className="text-rose-500 ml-0.5">*</span>
                                         </Label>
                                         <Select2
                                             id="estado_civil"
@@ -1597,8 +1598,8 @@ export default function RegistroPastor({
                                         <div className="space-y-4">
                                             {/* 1. Nombre Completo del Cónyuge - Ancho Completo */}
                                             <div className="w-full">
-                                                <Label htmlFor="nombre_conyuge" className="text-xs font-bold uppercase text-slate-700">
-                                                    Nombre Completo del Cónyuge <span className="text-rose-500">*</span>
+                                                <Label htmlFor="nombre_conyuge" className="text-xs font-bold uppercase text-slate-700 h-5 flex items-center">
+                                                    Nombre Completo del Cónyuge <span className="text-rose-500 ml-0.5">*</span>
                                                 </Label>
                                                 <Input
                                                     id="nombre_conyuge"
@@ -1606,7 +1607,7 @@ export default function RegistroPastor({
                                                     value={data.nombre_conyuge}
                                                     onChange={(e) => setData('nombre_conyuge', e.target.value)}
                                                     placeholder="Nombres y Apellidos completos de su esposo(a)"
-                                                    className="mt-1 w-full bg-white border-slate-300 text-slate-900 focus:border-blue-600 text-sm"
+                                                    className="mt-1 h-10 w-full bg-white border-slate-300 text-slate-900 focus:border-blue-600 text-sm"
                                                 />
                                                 {errors.nombre_conyuge && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.nombre_conyuge}</p>}
                                             </div>
@@ -1614,9 +1615,9 @@ export default function RegistroPastor({
                                             {/* 2. Cédula del Cónyuge - Solo visible si es pastor, ancho completo y sin texto rojo */}
                                             {data.conyuge_pastorea && (
                                                 <div className="w-full">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label htmlFor="cedula_conyuge" className="text-xs font-bold uppercase text-slate-700">
-                                                            Cédula de Identidad del Cónyuge <span className="text-rose-500">*</span>
+                                                    <div className="flex items-center justify-between h-5">
+                                                        <Label htmlFor="numero_documento_conyuge" className="text-xs font-bold uppercase text-slate-700 flex items-center">
+                                                            Cédula de Identidad del Cónyuge <span className="text-rose-500 ml-0.5">*</span>
                                                         </Label>
                                                         {isCheckingCedulaConyuge && (
                                                             <span className="text-[10px] text-blue-600 flex items-center gap-1 font-medium">
@@ -1625,19 +1626,53 @@ export default function RegistroPastor({
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <Input
-                                                        id="cedula_conyuge"
-                                                        required={data.conyuge_pastorea}
-                                                        value={data.cedula_conyuge}
-                                                        onChange={(e) => {
-                                                            setData('cedula_conyuge', e.target.value);
-                                                            checkCedulaConyuge(e.target.value);
-                                                        }}
-                                                        onBlur={(e) => checkCedulaConyuge(e.target.value)}
-                                                        placeholder="Ej. V-23456789"
-                                                        className="mt-1 w-full bg-white border-slate-300 text-slate-900 focus:border-blue-600 font-mono"
-                                                    />
-                                                    {errors.cedula_conyuge && <p className="text-xs text-rose-600 mt-1 font-medium">{errors.cedula_conyuge}</p>}
+                                                    <div className="mt-1 flex w-full h-10 rounded-md border border-slate-300 bg-white shadow-xs focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600 overflow-hidden">
+                                                        <Select
+                                                            value={data.tipo_documento_conyuge}
+                                                            onValueChange={(val) => {
+                                                                const fullDoc = data.numero_documento_conyuge ? `${val}-${data.numero_documento_conyuge}` : '';
+                                                                setData((prev) => ({
+                                                                    ...prev,
+                                                                    tipo_documento_conyuge: val,
+                                                                    cedula_conyuge: fullDoc,
+                                                                }));
+                                                                if (data.numero_documento_conyuge.trim().length >= 4) {
+                                                                    checkCedulaConyuge(`${val}-${data.numero_documento_conyuge}`);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <SelectTrigger className="w-[62px] h-full shrink-0 rounded-none border-0 border-r border-slate-300 bg-slate-50 text-slate-900 font-bold focus:ring-0 focus:ring-offset-0 px-2.5 shadow-none cursor-pointer">
+                                                                <SelectValue placeholder="V" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="V" className="font-bold">V</SelectItem>
+                                                                <SelectItem value="E" className="font-bold">E</SelectItem>
+                                                                <SelectItem value="P" className="font-bold">P</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <input
+                                                            id="numero_documento_conyuge"
+                                                            required={data.conyuge_pastorea}
+                                                            type="text"
+                                                            value={data.numero_documento_conyuge}
+                                                            onChange={(e) => {
+                                                                const numOnly = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                                                                const fullDoc = numOnly ? `${data.tipo_documento_conyuge}-${numOnly}` : '';
+                                                                setData((prev) => ({
+                                                                    ...prev,
+                                                                    numero_documento_conyuge: numOnly,
+                                                                    cedula_conyuge: fullDoc,
+                                                                }));
+                                                                checkCedulaConyuge(`${data.tipo_documento_conyuge}-${numOnly}`);
+                                                            }}
+                                                            onBlur={() => checkCedulaConyuge(`${data.tipo_documento_conyuge}-${data.numero_documento_conyuge}`)}
+                                                            placeholder="23456789"
+                                                            className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-wider"
+                                                        />
+                                                    </div>
+                                                    {(errors.cedula_conyuge || errors.numero_documento_conyuge) && (
+                                                        <p className="text-xs text-rose-600 mt-1 font-medium">{errors.cedula_conyuge || errors.numero_documento_conyuge}</p>
+                                                    )}
                                                     {cedulaConyugeEncontrada ? (
                                                         <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in">
                                                             <div className="text-xs text-emerald-900 flex items-start sm:items-center gap-2 font-medium">
@@ -1659,7 +1694,7 @@ export default function RegistroPastor({
                                                                 </Button>
                                                             )}
                                                         </div>
-                                                    ) : data.cedula_conyuge.trim().length >= 5 ? (
+                                                    ) : (data.numero_documento_conyuge.trim().length >= 4 || data.cedula_conyuge.trim().length >= 5) ? (
                                                         <p className="text-[11px] text-slate-500 mt-1.5 italic">
                                                             ℹ️ Si su cónyuge aún no está registrado(a) o no tiene todos los datos cargados, puede continuar con este registro; la extensión quedará vinculada automáticamente cuando se registre.
                                                         </p>

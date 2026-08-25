@@ -225,8 +225,8 @@ class PastorRegistroPublicoController extends Controller
     public function store(Request $request)
     {
         if ($request->filled('tipo_documento') && $request->filled('numero_documento')) {
-            $tipo = in_array(strtoupper($request->tipo_documento), ['V', 'E']) ? strtoupper($request->tipo_documento) : 'V';
-            $num = preg_replace('/\D/', '', $request->numero_documento);
+            $tipo = in_array(strtoupper($request->tipo_documento), ['V', 'E', 'P']) ? strtoupper($request->tipo_documento) : 'V';
+            $num = preg_replace('/[^a-zA-Z0-9]/', '', $request->numero_documento);
             if (!empty($num)) {
                 $request->merge([
                     'documento' => "{$tipo}-{$num}",
@@ -235,8 +235,8 @@ class PastorRegistroPublicoController extends Controller
         }
 
         if ($request->filled('tipo_documento_conyuge') && $request->filled('numero_documento_conyuge')) {
-            $tipoConyuge = in_array(strtoupper($request->tipo_documento_conyuge), ['V', 'E']) ? strtoupper($request->tipo_documento_conyuge) : 'V';
-            $numConyuge = preg_replace('/\D/', '', $request->numero_documento_conyuge);
+            $tipoConyuge = in_array(strtoupper($request->tipo_documento_conyuge), ['V', 'E', 'P']) ? strtoupper($request->tipo_documento_conyuge) : 'V';
+            $numConyuge = preg_replace('/[^a-zA-Z0-9]/', '', $request->numero_documento_conyuge);
             if (!empty($numConyuge)) {
                 $request->merge([
                     'cedula_conyuge' => "{$tipoConyuge}-{$numConyuge}",
@@ -260,7 +260,7 @@ class PastorRegistroPublicoController extends Controller
             'codigo' => ['nullable', 'string', 'max:50'],
             'nombres' => ['required', 'string', 'max:191'],
             'apellidos' => ['required', 'string', 'max:191'],
-            'tipo_documento' => ['nullable', 'string', 'in:V,E,v,e'],
+            'tipo_documento' => ['nullable', 'string', 'in:V,E,P,v,e,p'],
             'numero_documento' => ['nullable', 'string', 'max:50'],
             'documento' => ['required', 'string', 'max:50'],
             'genero' => ['nullable', 'string', 'in:M,F,Masculino,Femenino'],
@@ -268,7 +268,7 @@ class PastorRegistroPublicoController extends Controller
             'edad' => ['nullable', 'integer', 'min:0', 'max:120'],
             'estado_civil' => ['nullable', 'string', 'max:100'],
             'nombre_conyuge' => ['nullable', 'string', 'max:191'],
-            'tipo_documento_conyuge' => ['nullable', 'string', 'in:V,E,v,e'],
+            'tipo_documento_conyuge' => ['nullable', 'string', 'in:V,E,P,v,e,p'],
             'numero_documento_conyuge' => ['nullable', 'string', 'max:50'],
             'cedula_conyuge' => ['nullable', 'string', 'max:50'],
             'conyuge_pastorea' => ['nullable', 'boolean'],
