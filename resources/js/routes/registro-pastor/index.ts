@@ -231,7 +231,7 @@ verificarCedula.head = (args: { cedula: string | number } | [cedula: string | nu
     verificarCedula.form = verificarCedulaForm
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1033
  * @route '/registro/crear-municipio'
  */
 export const crearMunicipio = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -246,7 +246,7 @@ crearMunicipio.definition = {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1033
  * @route '/registro/crear-municipio'
  */
 crearMunicipio.url = (options?: RouteQueryOptions) => {
@@ -255,7 +255,7 @@ crearMunicipio.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1033
  * @route '/registro/crear-municipio'
  */
 crearMunicipio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -265,7 +265,7 @@ crearMunicipio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
 
     /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1033
  * @route '/registro/crear-municipio'
  */
     const crearMunicipioForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -275,7 +275,7 @@ crearMunicipio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
 
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearMunicipio
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1004
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1033
  * @route '/registro/crear-municipio'
  */
         crearMunicipioForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -286,7 +286,7 @@ crearMunicipio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
     crearMunicipio.form = crearMunicipioForm
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1072
  * @route '/registro/crear-parroquia'
  */
 export const crearParroquia = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -301,7 +301,7 @@ crearParroquia.definition = {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1072
  * @route '/registro/crear-parroquia'
  */
 crearParroquia.url = (options?: RouteQueryOptions) => {
@@ -310,7 +310,7 @@ crearParroquia.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1072
  * @route '/registro/crear-parroquia'
  */
 crearParroquia.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -320,7 +320,7 @@ crearParroquia.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
 
     /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1072
  * @route '/registro/crear-parroquia'
  */
     const crearParroquiaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -330,7 +330,7 @@ crearParroquia.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
 
             /**
 * @see \App\Http\Controllers\Public\PastorRegistroPublicoController::crearParroquia
- * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1043
+ * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:1072
  * @route '/registro/crear-parroquia'
  */
         crearParroquiaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

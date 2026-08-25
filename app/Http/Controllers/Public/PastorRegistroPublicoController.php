@@ -351,6 +351,7 @@ class PastorRegistroPublicoController extends Controller
             'extension_pastores_ministerio' => ['nullable'],
             'extension_posee_medio_comunicacion' => ['nullable', 'boolean'],
             'extension_medios_lista' => ['nullable'],
+            'extension_rol_pastor' => ['nullable', 'string', 'in:principal,conyuge_principal,asistente'],
         ], [
             'documento.required' => 'La Cédula de Identidad es obligatoria.',
             'nombres.required' => 'El nombre es obligatorio.',
@@ -418,11 +419,15 @@ class PastorRegistroPublicoController extends Controller
                 $validated['edad'] = Carbon::parse($validated['fe_nacimiento'])->age;
             }
 
-            // Normalizar género a 'M' o 'F'
-            $genero = $validated['genero'] ?? 'M';
-            if ($genero === 'Masculino') $genero = 'M';
-            if ($genero === 'Femenino') $genero = 'F';
+            // Normalización de Género
+            $generoInput = $validated['genero'] ?? '';
+            $genero = (str_starts_with(strtolower($generoInput), 'm')) ? 'M' : 'F';
 
+            // Normalización de Zona y Distrito
+            $zonaLimpiada = !empty($validated['zona']) ? preg_replace('/\D/', '', $validated['zona']) : null;
+            $distritoLimpiado = !empty($validated['distrito']) ? preg_replace('/\D/', '', $validated['distrito']) : null;
+
+            // Datos del Pastor a crear / actualizar
             $pastorData = [
                 'empresa_id' => 1,
                 'sucursal_id' => 1,
@@ -432,43 +437,40 @@ class PastorRegistroPublicoController extends Controller
                 'genero' => $genero,
                 'fe_nacimiento' => $validated['fe_nacimiento'] ?? null,
                 'edad' => $validated['edad'] ?? null,
-                'estado_civil' => $validated['estado_civil'] ?? 'Casado',
+                'estado_civil' => $validated['estado_civil'] ?? null,
                 'nombre_conyuge' => $validated['nombre_conyuge'] ?? null,
-                'conyuge_id' => !empty($validated['conyuge_id']) ? (int)$validated['conyuge_id'] : null,
-                'telefono_hab' => $validated['telefono_hab'] ?? null,
+                'cedula_conyuge' => $validated['cedula_conyuge'] ?? null,
                 'telefono_tlf' => $validated['telefono_tlf'] ?? null,
+                'telefono_hab' => $validated['telefono_hab'] ?? null,
                 'telefono_otro' => $validated['telefono_otro'] ?? null,
                 'email' => $validated['email'] ?? null,
+                'estado_id' => $validated['estado_id'] ?? null,
+                'municipio_id' => $validated['municipio_id'] ?? null,
+                'parroquia_id' => $validated['parroquia_id'] ?? null,
+                'municipio' => $validated['municipio'] ?? null,
                 'edificio_casa_quinta' => $validated['edificio_casa_quinta'] ?? null,
                 'piso' => $validated['piso'] ?? null,
                 'apartamento' => $validated['apartamento'] ?? null,
                 'calle_avenida' => $validated['calle_avenida'] ?? null,
                 'urbanizacion' => $validated['urbanizacion'] ?? null,
-                'estado_id' => !empty($validated['estado_id']) ? (int)$validated['estado_id'] : null,
-                'municipio_id' => !empty($validated['municipio_id']) ? (int)$validated['municipio_id'] : null,
-                'parroquia_id' => !empty($validated['parroquia_id']) ? (int)$validated['parroquia_id'] : null,
-                'municipio' => $validated['municipio'] ?? null,
-
                 'grado_instruccion' => $validated['grado_instruccion'] ?? null,
                 'titulo_obtenido' => $validated['titulo_obtenido'] ?? null,
                 'estudio_teologico' => filter_var($validated['estudio_teologico'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'titulo_teologico' => $validated['titulo_teologico'] ?? null,
                 'tiempo_de_estudio_teologico' => $validated['tiempo_de_estudio_teologico'] ?? null,
                 'instituto_teologico' => $validated['instituto_teologico'] ?? null,
-
-                'nivel_ministerial' => $validated['nivel_ministerial'],
-                'zona' => !empty($validated['zona']) ? preg_replace('/\D/', '', $validated['zona']) : null,
-                'distrito' => !empty($validated['distrito']) ? preg_replace('/\D/', '', $validated['distrito']) : null,
+                'nivel_ministerial' => $validated['nivel_ministerial'] ?? 'Colaborador',
+                'zona' => $zonaLimpiada,
+                'distrito' => $distritoLimpiado,
                 'ano_promocion' => $validated['ano_promocion'] ?? null,
                 'tiempo_colaborando' => $validated['tiempo_colaborando'] ?? null,
-                'batizado_espiritu_santo' => filter_var($validated['batizado_espiritu_santo'] ?? true, FILTER_VALIDATE_BOOLEAN),
-                'pertenece_ministerio' => filter_var($validated['pertenece_ministerio'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'batizado_espiritu_santo' => filter_var($validated['batizado_espiritu_santo'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'pertenece_ministerio' => filter_var($validated['pertenece_ministerio'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'cargo_nacional' => $validated['cargo_nacional'] ?? null,
                 'mencion' => $validated['mencion'] ?? null,
                 'nota' => $validated['nota'] ?? null,
-
-                'grupo_sanguineo' => $validated['grupo_sanguineo'] ?? 'O+',
-                'condicion_salud' => $validated['condicion_salud'] ?? 'Buena',
+                'grupo_sanguineo' => $validated['grupo_sanguineo'] ?? null,
+                'condicion_salud' => $validated['condicion_salud'] ?? null,
                 'padece_enfermedad' => filter_var($validated['padece_enfermedad'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'enfermedades_cronicas' => $validated['enfermedades_cronicas'] ?? null,
                 'toma_medicamentos' => filter_var($validated['toma_medicamentos'] ?? false, FILTER_VALIDATE_BOOLEAN),
@@ -477,26 +479,24 @@ class PastorRegistroPublicoController extends Controller
                 'contacto_emergencia_nombre' => $validated['contacto_emergencia_nombre'] ?? null,
                 'contacto_emergencia_telefono' => $validated['contacto_emergencia_telefono'] ?? null,
                 'observaciones_salud' => $validated['observaciones_salud'] ?? null,
-
                 'foto' => $fotoPath,
                 'foto_cedula' => $fotoCedulaPath,
                 'status' => true,
             ];
 
-            if ($existingPastor) {
-                $existingPastor->update($pastorData);
-                $pastor = $existingPastor;
+            // Buscar si ya existe el pastor por cédula
+            $pastor = $existingPastor;
+
+            if ($pastor) {
+                $pastor->update($pastorData);
             } else {
-                if (empty($validated['codigo'])) {
-                    $nextId = (int) Pastor::max('id') + 1;
-                    $pastorData['codigo'] = Pastor::generateCodigo(
-                        $validated['documento'],
-                        $validated['zona'] ?? null,
-                        $validated['distrito'] ?? null,
-                        $nextId
-                    );
-                } else {
-                    $pastorData['codigo'] = $validated['codigo'];
+                $pastorData['codigo'] = Pastor::generateCodigo(
+                    $validated['documento'],
+                    $zonaLimpiada,
+                    $distritoLimpiado
+                );
+                if (empty($pastorData['usuario_id'])) {
+                    $pastorData['usuario_id'] = 1;
                 }
                 $pastor = Pastor::create($pastorData);
             }
@@ -506,10 +506,9 @@ class PastorRegistroPublicoController extends Controller
             $cedulaConyuge = trim($request->input('cedula_conyuge', ''));
             $conyugeId = !empty($validated['conyuge_id']) ? (int)$validated['conyuge_id'] : null;
             $conyugePastorea = $request->boolean('conyuge_pastorea');
+            $pastorConyuge = null;
 
             if ($esCasado) {
-                $pastorConyuge = null;
-
                 // 1. Si se seleccionó un conyuge_id existente
                 if ($conyugeId) {
                     $pastorConyuge = Pastor::find($conyugeId);
@@ -548,8 +547,8 @@ class PastorRegistroPublicoController extends Controller
                     $generoConyuge = ($genero === 'M') ? 'F' : 'M';
                     $codigoConyuge = Pastor::generateCodigo(
                         $docConyuge,
-                        $validated['zona'] ?? null,
-                        $validated['distrito'] ?? null
+                        $zonaLimpiada,
+                        $distritoLimpiado
                     );
 
                     $nuevoConyuge = Pastor::create([
@@ -564,8 +563,8 @@ class PastorRegistroPublicoController extends Controller
                         'nombre_conyuge' => $pastor->nombre_completo,
                         'conyuge_id' => $pastor->id,
                         'nivel_ministerial' => $validated['nivel_ministerial'] ?? 'Colaborador',
-                        'zona' => $validated['zona'] ?? null,
-                        'distrito' => $validated['distrito'] ?? null,
+                        'zona' => $zonaLimpiada,
+                        'distrito' => $distritoLimpiado,
                         'estado_id' => $validated['estado_id'] ?? null,
                         'telefono_tlf' => $validated['telefono_tlf'] ?? null,
                         'status' => true,
@@ -574,70 +573,100 @@ class PastorRegistroPublicoController extends Controller
                     $pastor->update([
                         'conyuge_id' => $nuevoConyuge->id,
                     ]);
+                    $pastorConyuge = $nuevoConyuge;
                 }
             }
 
-            // 5. Creación / Actualización de la Iglesia / Extensión a su cargo (Paso 6)
+            // 5. Creación / Actualización / Vinculación de la Iglesia / Extensión (Paso 6)
+            $rolPastorExtension = $validated['extension_rol_pastor'] ?? 'principal';
             $registraExtension = filter_var($validated['tiene_extension'] ?? true, FILTER_VALIDATE_BOOLEAN);
             $extensionNombre = trim($validated['extension_nombre'] ?? '');
             $iglesiaRegistrada = null;
 
-            if ($registraExtension && !empty($extensionNombre)) {
-                $extensionData = [
-                    'nombre' => $extensionNombre,
-                    'pastor_id' => $pastor->id,
-                    'empresa_id' => 1,
-                    'sucursal_id' => 1,
-                    'estado_id' => !empty($validated['extension_estado_id']) ? (int)$validated['extension_estado_id'] : ($pastor->estado_id ?? null),
-                    'municipio_id' => !empty($validated['extension_municipio_id']) ? (int)$validated['extension_municipio_id'] : ($pastor->municipio_id ?? null),
-                    'parroquia_id' => !empty($validated['extension_parroquia_id']) ? (int)$validated['extension_parroquia_id'] : ($pastor->parroquia_id ?? null),
-                    'tipo_local_id' => !empty($validated['extension_tipo_local_id']) ? (int)$validated['extension_tipo_local_id'] : null,
-                    'direccion' => $validated['extension_direccion'] ?? null,
-                    'sector' => $validated['extension_sector'] ?? null,
-                    'calle' => $validated['extension_calle'] ?? null,
-                    'avenida' => $validated['extension_avenida'] ?? null,
-                    'latitud' => !empty($validated['extension_latitud']) ? (float)$validated['extension_latitud'] : null,
-                    'longitud' => !empty($validated['extension_longitud']) ? (float)$validated['extension_longitud'] : null,
-                    'zona' => !empty($validated['extension_zona']) ? preg_replace('/\D/', '', $validated['extension_zona']) : ($pastor->zona ?? null),
-                    'distrito' => !empty($validated['extension_distrito']) ? preg_replace('/\D/', '', $validated['extension_distrito']) : ($pastor->distrito ?? null),
-                    'fecha_fundacion' => !empty($validated['extension_fecha_fundacion'])
-                        ? (preg_match('/^\d{4}$/', trim((string)$validated['extension_fecha_fundacion']))
-                            ? trim((string)$validated['extension_fecha_fundacion']) . '-01-01'
-                            : $validated['extension_fecha_fundacion'])
-                        : null,
-                    'anios_activa' => !empty($validated['extension_fecha_fundacion']) && preg_match('/^\d{4}/', trim((string)$validated['extension_fecha_fundacion']), $mY)
-                        ? max(0, (int)date('Y') - (int)$mY[0])
-                        : (!empty($validated['extension_anios_activa']) ? (int)$validated['extension_anios_activa'] : null),
-                    'tiempo_trabajo' => $validated['extension_tiempo_trabajo'] ?? null,
-                    'descripcion' => $validated['extension_descripcion'] ?? null,
-                    'miembros_activos' => !empty($validated['extension_miembros_activos']) ? (int)$validated['extension_miembros_activos'] : 0,
-                    'cantidad_campos_blancos' => !empty($validated['extension_cantidad_campos_blancos']) ? (int)$validated['extension_cantidad_campos_blancos'] : 0,
-                    'miembro_probante' => !empty($validated['extension_miembro_probante']) ? (int)$validated['extension_miembro_probante'] : 0,
-                    'logros_obtenidos' => $validated['extension_logros_obtenidos'] ?? null,
-                    'iglesias_fundadas' => !empty($validated['extension_iglesias_fundadas']) ? (int)$validated['extension_iglesias_fundadas'] : 0,
-                    'pastores_ministerio' => !empty($validated['extension_pastores_ministerio']) ? (int)$validated['extension_pastores_ministerio'] : 0,
-                    'posee_medio_comunicacion' => filter_var($validated['extension_posee_medio_comunicacion'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                    'medio_comunicacion' => is_array($validated['extension_medios_lista'] ?? null) ? json_encode($validated['extension_medios_lista']) : ($validated['extension_medios_lista'] ?? null),
-                    'activa' => true,
-                ];
-
-                $extensionId = !empty($validated['extension_id']) ? (int)$validated['extension_id'] : null;
-                if ($extensionId) {
-                    $iglesiaExistente = Iglesia::find($extensionId);
-                    if ($iglesiaExistente) {
-                        $iglesiaExistente->update($extensionData);
-                        $iglesiaRegistrada = $iglesiaExistente;
-                    }
+            if ($rolPastorExtension === 'conyuge_principal') {
+                // El cónyuge es el Pastor Principal: Vincular a la iglesia del cónyuge sin duplicar datos
+                $iglesiaConyuge = null;
+                if (!empty($validated['extension_id'])) {
+                    $iglesiaConyuge = Iglesia::find($validated['extension_id']);
+                }
+                if (!$iglesiaConyuge && $pastor->conyuge_id) {
+                    $iglesiaConyuge = Iglesia::where('pastor_id', $pastor->conyuge_id)->first();
+                }
+                if (!$iglesiaConyuge && $pastorConyuge) {
+                    $iglesiaConyuge = Iglesia::where('pastor_id', $pastorConyuge->id)->first();
                 }
 
-                if (!$iglesiaRegistrada) {
-                    $iglesiaRegistrada = Iglesia::where('pastor_id', $pastor->id)->first();
-                    if ($iglesiaRegistrada) {
-                        $iglesiaRegistrada->update($extensionData);
-                    } else {
-                        $iglesiaRegistrada = Iglesia::create($extensionData);
+                if ($iglesiaConyuge) {
+                    $iglesiaConyuge->pastores()->syncWithoutDetaching([$pastor->id]);
+                    $iglesiaRegistrada = $iglesiaConyuge;
+                }
+            } elseif ($rolPastorExtension === 'asistente') {
+                // Pastor Asistente / No posee extensión a cargo
+                $iglesiaRegistrada = null;
+            } else {
+                // Pastor Principal de la extensión
+                if ($registraExtension && !empty($extensionNombre)) {
+                    $extensionData = [
+                        'nombre' => $extensionNombre,
+                        'pastor_id' => $pastor->id,
+                        'empresa_id' => 1,
+                        'sucursal_id' => 1,
+                        'estado_id' => !empty($validated['extension_estado_id']) ? (int)$validated['extension_estado_id'] : ($pastor->estado_id ?? null),
+                        'municipio_id' => !empty($validated['extension_municipio_id']) ? (int)$validated['extension_municipio_id'] : ($pastor->municipio_id ?? null),
+                        'parroquia_id' => !empty($validated['extension_parroquia_id']) ? (int)$validated['extension_parroquia_id'] : ($pastor->parroquia_id ?? null),
+                        'tipo_local_id' => !empty($validated['extension_tipo_local_id']) ? (int)$validated['extension_tipo_local_id'] : null,
+                        'direccion' => $validated['extension_direccion'] ?? null,
+                        'sector' => $validated['extension_sector'] ?? null,
+                        'calle' => $validated['extension_calle'] ?? null,
+                        'avenida' => $validated['extension_avenida'] ?? null,
+                        'latitud' => !empty($validated['extension_latitud']) ? (float)$validated['extension_latitud'] : null,
+                        'longitud' => !empty($validated['extension_longitud']) ? (float)$validated['extension_longitud'] : null,
+                        'zona' => !empty($validated['extension_zona']) ? preg_replace('/\D/', '', $validated['extension_zona']) : ($pastor->zona ?? null),
+                        'distrito' => !empty($validated['extension_distrito']) ? preg_replace('/\D/', '', $validated['extension_distrito']) : ($pastor->distrito ?? null),
+                        'fecha_fundacion' => !empty($validated['extension_fecha_fundacion'])
+                            ? (preg_match('/^\d{4}$/', trim((string)$validated['extension_fecha_fundacion']))
+                                ? trim((string)$validated['extension_fecha_fundacion']) . '-01-01'
+                                : $validated['extension_fecha_fundacion'])
+                            : null,
+                        'anios_activa' => !empty($validated['extension_fecha_fundacion']) && preg_match('/^\d{4}/', trim((string)$validated['extension_fecha_fundacion']), $mY)
+                            ? max(0, (int)date('Y') - (int)$mY[0])
+                            : (!empty($validated['extension_anios_activa']) ? (int)$validated['extension_anios_activa'] : null),
+                        'tiempo_trabajo' => $validated['extension_tiempo_trabajo'] ?? null,
+                        'descripcion' => $validated['extension_descripcion'] ?? null,
+                        'miembros_activos' => !empty($validated['extension_miembros_activos']) ? (int)$validated['extension_miembros_activos'] : 0,
+                        'cantidad_campos_blancos' => !empty($validated['extension_cantidad_campos_blancos']) ? (int)$validated['extension_cantidad_campos_blancos'] : 0,
+                        'miembro_probante' => !empty($validated['extension_miembro_probante']) ? (int)$validated['extension_miembro_probante'] : 0,
+                        'logros_obtenidos' => $validated['extension_logros_obtenidos'] ?? null,
+                        'iglesias_fundadas' => !empty($validated['extension_iglesias_fundadas']) ? (int)$validated['extension_iglesias_fundadas'] : 0,
+                        'pastores_ministerio' => !empty($validated['extension_pastores_ministerio']) ? (int)$validated['extension_pastores_ministerio'] : 0,
+                        'posee_medio_comunicacion' => filter_var($validated['extension_posee_medio_comunicacion'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                        'medio_comunicacion' => is_array($validated['extension_medios_lista'] ?? null) ? json_encode($validated['extension_medios_lista']) : ($validated['extension_medios_lista'] ?? null),
+                        'activa' => true,
+                    ];
+
+                    $extensionId = !empty($validated['extension_id']) ? (int)$validated['extension_id'] : null;
+                    if ($extensionId) {
+                        $iglesiaExistente = Iglesia::find($extensionId);
+                        if ($iglesiaExistente) {
+                            $iglesiaExistente->update($extensionData);
+                            $iglesiaRegistrada = $iglesiaExistente;
+                        }
+                    }
+
+                    if (!$iglesiaRegistrada) {
+                        $iglesiaRegistrada = Iglesia::where('pastor_id', $pastor->id)->first();
+                        if ($iglesiaRegistrada) {
+                            $iglesiaRegistrada->update($extensionData);
+                        } else {
+                            $iglesiaRegistrada = Iglesia::create($extensionData);
+                        }
                     }
                 }
+            }
+
+            // Sincronizar pastor y cónyuge en la tabla pivot iglesia_pastor
+            if ($iglesiaRegistrada) {
+                $this->syncPastorConyuge($iglesiaRegistrada, $pastor->id);
             }
 
             // Notificar al Presbítero de la misma zona / distrito por WhatsApp

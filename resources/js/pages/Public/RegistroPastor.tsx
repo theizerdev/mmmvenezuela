@@ -38,6 +38,8 @@ import {
     Building2,
     Users,
     Radio,
+    Crown,
+    Heart,
     X
 } from 'lucide-react';
 import LocationMapPicker, { GeocodedAddressDetails } from '@/components/location-map-picker';
@@ -274,6 +276,7 @@ export default function RegistroPastor({
         extension_pastores_ministerio: '',
         extension_posee_medio_comunicacion: false,
         extension_medios_lista: [] as MediaItem[],
+        extension_rol_pastor: 'principal' as 'principal' | 'conyuge_principal' | 'asistente',
     });
 
     const esCasado = data.estado_civil.toLowerCase().includes('casad');
