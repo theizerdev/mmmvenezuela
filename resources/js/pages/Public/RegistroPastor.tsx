@@ -3413,27 +3413,27 @@ export default function RegistroPastor({
                                         )}
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                                         <button
                                             type="button"
                                             onClick={() => setData('extension_rol_pastor', 'principal')}
-                                            className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${data.extension_rol_pastor === 'principal'
-                                                ? 'border-blue-600 bg-blue-50/70 shadow-sm'
-                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                            className={`w-full p-5 sm:p-6 rounded-2xl border-2 text-left transition-all flex flex-col justify-between cursor-pointer ${data.extension_rol_pastor === 'principal'
+                                                ? 'border-blue-600 bg-blue-50/80 shadow-md ring-2 ring-blue-600/20'
+                                                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
                                                 }`}
                                         >
-                                            <div>
-                                                <div className="flex items-center justify-between mb-1.5">
-                                                    <span className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
-                                                        <Building2 className="w-4 h-4 text-blue-700" />
+                                            <div className="w-full">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-black text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                                                        <Building2 className="w-5 h-5 text-blue-700 shrink-0" />
                                                         Pastor Principal
                                                     </span>
                                                     {data.extension_rol_pastor === 'principal' && (
-                                                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                                                        <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
                                                     )}
                                                 </div>
-                                                <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-                                                    Estoy a cargo de la dirección general y registro de esta obra.
+                                                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                                                    Estoy a cargo de la dirección general y registro de esta obra o extensión.
                                                 </p>
                                             </div>
                                         </button>
@@ -3441,25 +3441,25 @@ export default function RegistroPastor({
                                         <button
                                             type="button"
                                             onClick={() => setData('extension_rol_pastor', 'conyuge_principal')}
-                                            className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${data.extension_rol_pastor === 'conyuge_principal'
-                                                ? 'border-emerald-600 bg-emerald-50/70 shadow-sm'
-                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                            className={`w-full p-5 sm:p-6 rounded-2xl border-2 text-left transition-all flex flex-col justify-between cursor-pointer ${data.extension_rol_pastor === 'conyuge_principal'
+                                                ? 'border-emerald-600 bg-emerald-50/80 shadow-md ring-2 ring-emerald-600/20'
+                                                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
                                                 }`}
                                         >
-                                            <div>
-                                                <div className="flex items-center justify-between mb-1.5">
-                                                    <span className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
-                                                        <Heart className="w-4 h-4 text-emerald-700" />
+                                            <div className="w-full">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-black text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                                                        <Heart className="w-5 h-5 text-emerald-700 shrink-0" />
                                                         Mi Cónyuge es el Pastor Principal
                                                     </span>
                                                     {data.extension_rol_pastor === 'conyuge_principal' && (
-                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                                                     )}
                                                 </div>
-                                                <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                                                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
                                                     {data.nombre_conyuge
                                                         ? `Vincularme a la iglesia de ${data.nombre_conyuge} sin duplicar datos.`
-                                                        : 'Mi cónyuge ya registró o registrará la obra.'}
+                                                        : 'Mi cónyuge ya registró o registrará los datos de la extensión.'}
                                                 </p>
                                             </div>
                                         </button>
