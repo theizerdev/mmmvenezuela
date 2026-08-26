@@ -2050,7 +2050,12 @@
   "8. Swagger UI & OpenAPI Specification": "8. Interfaz Swagger UI y Especificación OpenAPI",
   "The WhatsApp Node.js engine provides an interactive OpenAPI 3.0 specification available directly at the API server:": "El motor Node.js de WhatsApp ofrece una especificación interactiva OpenAPI 3.0 disponible en el servidor de API:",
   "Open Interactive Swagger UI": "Abrir Swagger UI Interactivo",
-  "OpenAPI 3.0 JSON Spec": "Especificación JSON OpenAPI 3.0"
+  "OpenAPI 3.0 JSON Spec": "Especificación JSON OpenAPI 3.0",
+  "used": "usado",
+  "max": "máx",
+  "Remaining:": "Restantes:",
+  "in queue": "en cola",
+  "Anti-Ban Jitter: 20-40s": "Jitter Anti-Baneo: 20-40s"
 }
 
 

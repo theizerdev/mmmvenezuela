@@ -9,6 +9,8 @@ import {
 import React, { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -538,73 +540,59 @@ export default function WhatsAppIntegration({
             <div className="space-y-6 w-full pb-10">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                {/* Hero Header Section */}
-                <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 md:p-8 text-white shadow-xl">
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 backdrop-blur-md shadow-inner">
-                                    <MessageSquare className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2.5">
-                                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                                            {__('WhatsApp API Module')}
-                                        </h1>
-                                        <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-mono text-xs">
-                                            {configForm.data.whatsapp_instance}
-                                        </Badge>
-                                    </div>
-                                    <p className="text-sm text-slate-300">
-                                        {__('Multi-Instance Baileys Engine for')} <span className="font-semibold text-white">{empresa_nombre}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                {/* Module Header */}
+                <ModuleHeader
+                    icon={<MessageSquare className="h-6 w-6 text-white" />}
+                    title={__('WhatsApp API Module')}
+                    description={`${__('Multi-Instance Baileys Engine for')} ${empresa_nombre}`}
+                    colorClassName="bg-emerald-600"
+                >
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="bg-black/20 text-white border-white/20 font-mono text-xs">
+                            {configForm.data.whatsapp_instance}
+                        </Badge>
+                        
+                        <Badge className={`gap-1.5 text-xs ${
+                            isConnected
+                                ? 'bg-emerald-500 hover:bg-emerald-500 text-white'
+                                : isConnecting || isQrReady
+                                ? 'bg-amber-500 hover:bg-amber-500 text-white'
+                                : 'bg-rose-500 hover:bg-rose-500 text-white'
+                        }`}>
+                            <span className={`h-2 w-2 rounded-full ${
+                                isConnected
+                                    ? 'bg-white animate-pulse'
+                                    : isConnecting || isQrReady
+                                    ? 'bg-white animate-ping'
+                                    : 'bg-white'
+                            }`} />
+                            {isConnected ? __('Connected') : isQrReady ? __('Waiting Scan') : isConnecting ? __('Connecting...') : __('Disconnected')}
+                        </Badge>
 
-                        {/* Quick Connection Badge & Status */}
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2">
-                                <span className={`h-3 w-3 rounded-full ${
-                                    isConnected
-                                        ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-pulse'
-                                        : isConnecting || isQrReady
-                                        ? 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)] animate-ping'
-                                        : 'bg-rose-400'
-                                }`} />
-                                <span className="text-xs font-semibold tracking-wide uppercase text-slate-200">
-                                    {isConnected ? __('Connected') : isQrReady ? __('Waiting Scan') : isConnecting ? __('Connecting...') : __('Disconnected')}
-                                </span>
+                        {isConnected && (
+                            <div className="flex gap-2 ml-1">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleReconnect}
+                                    className="h-8 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5"
+                                >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                    {__('Reset Session')}
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={handleDisconnect}
+                                    className="h-8 bg-rose-600 hover:bg-rose-700 text-white text-xs gap-1.5"
+                                >
+                                    <Power className="h-3.5 w-3.5" />
+                                    {__('Disconnect')}
+                                </Button>
                             </div>
-
-                            {isConnected && (
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={handleReconnect}
-                                        className="h-9 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5 backdrop-blur-md"
-                                    >
-                                        <RefreshCw className="h-3.5 w-3.5" />
-                                        {__('Reset Session')}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="destructive"
-                                        onClick={handleDisconnect}
-                                        className="h-9 bg-rose-600/80 hover:bg-rose-600 text-white text-xs gap-1.5 border border-rose-500/30 backdrop-blur-md"
-                                    >
-                                        <Power className="h-3.5 w-3.5" />
-                                        {__('Disconnect')}
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
-
-                    {/* Background Decorative Element */}
-                    <div className="absolute -right-10 -bottom-10 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-                </div>
+                </ModuleHeader>
 
                 {/* Server Offline Alert Banner */}
                 {isServiceUnavailable && (
@@ -621,82 +609,134 @@ export default function WhatsAppIntegration({
                     </Card>
                 )}
 
-                {/* Metrics Summary Strip (KPIs) */}
+                {/* Enhanced Shadcn Stat Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* KPI 1: Socket State */}
-                    <Card className="shadow-sm border-l-4 border-l-emerald-500">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div className="space-y-1">
-                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Socket State')}</span>
-                                <div className="text-lg font-bold flex items-center gap-1.5">
-                                    {isConnected ? (
-                                        <span className="text-emerald-600 flex items-center gap-1">
-                                            <CheckCircle2 className="h-4 w-4" /> {__('Active Session')}
-                                        </span>
-                                    ) : (
-                                        <span className="text-slate-500 flex items-center gap-1">
-                                            <Radio className="h-4 w-4 text-rose-500" /> {__('No Link')}
-                                        </span>
-                                    )}
-                                </div>
+                    {/* Card 1: Socket State */}
+                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Socket State')}
+                            </span>
+                            <div className={`p-2 rounded-xl ${
+                                isConnected
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : isConnecting || isQrReady
+                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                            }`}>
+                                <Activity className="h-4 w-4" />
                             </div>
-                            <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
-                                <Activity className="h-5 w-5" />
+                        </div>
+
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <span className={`h-2.5 w-2.5 rounded-full ${
+                                    isConnected
+                                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+                                        : isConnecting || isQrReady
+                                        ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-ping'
+                                        : 'bg-slate-400'
+                                }`} />
+                                <span className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                                    {isConnected ? __('Active Session') : isQrReady ? __('Waiting Scan') : isConnecting ? __('Connecting...') : __('No Link')}
+                                </span>
                             </div>
-                        </CardContent>
+                            <p className="text-xs text-muted-foreground truncate">
+                                {isConnected && liveStatusState?.userJid
+                                    ? `+${liveStatusState.userJid.split('@')[0]}`
+                                    : `${__('Instance')}: ${configForm.data.whatsapp_instance || 'empresa_1'}`}
+                            </p>
+                        </div>
                     </Card>
 
-                    {/* KPI 2: Daily Quota Gauge */}
-                    <Card className="shadow-sm border-l-4 border-l-blue-500">
-                        <CardContent className="p-4 space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Daily Limit (24h)')}</span>
-                                <span className="text-xs font-bold text-blue-600">{quotaPercentage}%</span>
-                            </div>
-                            <div className="text-xl font-bold">
-                                {sentTodayCount} <span className="text-xs font-normal text-muted-foreground">/ {dailyLimitCount} {__('msg')}</span>
+                    {/* Card 2: Daily Limit */}
+                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Daily Limit (24h)')}
+                            </span>
+                            <Badge variant="outline" className={`text-[10px] font-semibold font-mono ${
+                                quotaPercentage >= 90
+                                    ? 'border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-950/30'
+                                    : 'border-blue-300 text-blue-600 bg-blue-50 dark:bg-blue-950/30'
+                            }`}>
+                                {quotaPercentage}% {__('used')}
+                            </Badge>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
+                                    {sentTodayCount}
+                                </span>
+                                <span className="text-xs text-muted-foreground font-medium">
+                                    / {dailyLimitCount} {__('messages')}
+                                </span>
                             </div>
                             <Progress value={quotaPercentage} className="h-1.5 bg-slate-100 dark:bg-slate-800" />
-                        </CardContent>
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>{__('Remaining:')} {Math.max(0, dailyLimitCount - sentTodayCount)}</span>
+                                <span>{dailyLimitCount} {__('max')}</span>
+                            </div>
+                        </div>
                     </Card>
 
-                    {/* KPI 3: Outbound Queue */}
-                    <Card className="shadow-sm border-l-4 border-l-indigo-500">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div className="space-y-1">
-                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Pending in Queue')}</span>
-                                <div className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                    {/* Card 3: Outbound Queue */}
+                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Pending in Queue')}
+                            </span>
+                            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                <ListOrdered className="h-4 w-4" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
                                     {queueStatsState?.queued ?? queueStatsState?.totalQueued ?? 0}
-                                    <span className="text-xs font-normal text-muted-foreground ml-1.5">{__('messages')}</span>
-                                </div>
+                                </span>
+                                <span className="text-xs text-muted-foreground font-medium">
+                                    {__('in queue')}
+                                </span>
                             </div>
-                            <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-indigo-600">
-                                <ListOrdered className="h-5 w-5" />
-                            </div>
-                        </CardContent>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Shield className="h-3 w-3 text-indigo-500" />
+                                {__('Anti-Ban Jitter: 20-40s')}
+                            </p>
+                        </div>
                     </Card>
 
-                    {/* KPI 4: Anti-Ban Health & Schedule */}
-                    <Card className="shadow-sm border-l-4 border-l-amber-500">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div className="space-y-1">
-                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Anti-Ban Schedule')}</span>
-                                <div className="text-sm font-bold flex items-center gap-1.5">
-                                    {isWithinWorkingHours ? (
-                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] gap-1">
-                                            <Check className="h-3 w-3" /> {__('Active Hours')}
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[11px] gap-1">
-                                            <Clock className="h-3 w-3" /> {__('Night Pause')}
-                                        </Badge>
-                                    )}
-                                </div>
+                    {/* Card 4: Anti-Ban Schedule */}
+                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Anti-Ban Schedule')}
+                            </span>
+                            <div className={`p-2 rounded-xl ${
+                                isWithinWorkingHours
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            }`}>
+                                <Clock className="h-4 w-4" />
                             </div>
-                            <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600">
-                                <ShieldCheck className="h-5 w-5" />
+                        </div>
+
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className={`text-xs font-semibold ${
+                                    isWithinWorkingHours
+                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 border-emerald-300'
+                                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 border-amber-300'
+                                }`}>
+                                    {isWithinWorkingHours ? __('Active Hours') : __('Night Pause')}
+                                </Badge>
                             </div>
-                        </CardContent>
+                            <p className="text-xs text-muted-foreground font-mono">
+                                {antiBanForm.data.workingHoursStart || '08:00'} - {antiBanForm.data.workingHoursEnd || '20:00'}
+                            </p>
+                        </div>
                     </Card>
                 </div>
 
@@ -726,7 +766,7 @@ export default function WhatsAppIntegration({
                         <div className="grid md:grid-cols-12 gap-6">
                             {/* Visual QR / Connected Device Card */}
                             <div className="md:col-span-7">
-                                <Card className="shadow-sm border-t-4 border-t-emerald-600 h-full flex flex-col justify-between">
+                                <Card className="shadow-sm h-full flex flex-col justify-between">
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
                                             <Radio className="h-5 w-5 text-emerald-600" />

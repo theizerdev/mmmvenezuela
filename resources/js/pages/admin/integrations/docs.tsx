@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ModuleHeader } from '@/components/module-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -91,40 +92,25 @@ export default function WhatsAppDocs({
             <div className="space-y-6 w-full pb-16">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                {/* Hero Header */}
-                <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-6 md:p-8 text-white shadow-xl">
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 backdrop-blur-md">
-                                    <BookOpen className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                                            {__('WhatsApp API Integration Manual')}
-                                        </h1>
-                                        <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-mono text-xs">
-                                            v2.0 Baileys
-                                        </Badge>
-                                    </div>
-                                    <p className="text-sm text-slate-300">
-                                        {__('Complete technical guide for safe Anti-Ban messaging, Spintax, Queues, and Webhooks in Laravel.')}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <Link href="/admin/integrations/whatsapp">
-                                <Button size="sm" variant="outline" className="bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5 backdrop-blur-md">
-                                    <ArrowLeft className="h-3.5 w-3.5" />
-                                    {__('Back to WhatsApp Settings')}
-                                </Button>
-                            </Link>
-                        </div>
+                {/* Module Header */}
+                <ModuleHeader
+                    icon={<BookOpen className="h-6 w-6 text-white" />}
+                    title={__('WhatsApp API Integration Manual')}
+                    description={__('Complete technical guide for safe Anti-Ban messaging, Spintax, Queues, and Webhooks in Laravel.')}
+                    colorClassName="bg-emerald-600"
+                >
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-black/20 text-white border-white/20 font-mono text-xs">
+                            v2.0 Baileys
+                        </Badge>
+                        <Link href="/admin/integrations/whatsapp">
+                            <Button size="sm" variant="outline" className="bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5">
+                                <ArrowLeft className="h-3.5 w-3.5" />
+                                {__('Back to WhatsApp Settings')}
+                            </Button>
+                        </Link>
                     </div>
-                </div>
+                </ModuleHeader>
 
                 {/* Main Content Layout (Sidebar + Sections) */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
