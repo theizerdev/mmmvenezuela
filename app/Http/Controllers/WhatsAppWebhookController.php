@@ -56,6 +56,20 @@ class WhatsAppWebhookController extends Controller
 
             Log::info("💬 Mensaje WhatsApp recibido de {$from}: {$body}");
 
+            // Registrar mensaje entrante si existe modelo WhatsAppMessage
+            try {
+                \App\Models\WhatsAppMessage::create([
+                    'message_id' => $data['id'] ?? $data['key']['id'] ?? null,
+                    'recipient_phone' => preg_replace('/\D/', '', $from),
+                    'message_content' => $body,
+                    'status' => 'delivered',
+                    'direction' => 'inbound',
+                    'sent_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                // Silencioso si falla
+            }
+
             // Respuestas automáticas / Menú básico
             if (strtolower($body) === 'menu') {
                 $empresa = Empresa::where('whatsapp_instance', $instanceName)->first();
@@ -67,6 +81,39 @@ class WhatsAppWebhookController extends Controller
                     false,
                     $instanceName
                 );
+            }
+        }
+
+        // 📊 3. Actualización de Estados de Entrega y Lectura (ACKs)
+        if (in_array($event, ['message.ack', 'message.status', 'message.update'])) {
+            $messageId = $data['id'] ?? $data['key']['id'] ?? $data['messageId'] ?? null;
+            $status = $data['status'] ?? $data['ack'] ?? null;
+
+            if ($messageId && $status) {
+                $statusMap = [
+                    1 => 'pending',
+                    2 => 'sent',
+                    3 => 'delivered',
+                    4 => 'read',
+                    'pending' => 'pending',
+                    'sent' => 'sent',
+                    'delivered' => 'delivered',
+                    'read' => 'read',
+                    'failed' => 'failed',
+                ];
+
+                $normalizedStatus = $statusMap[$status] ?? null;
+
+                if ($normalizedStatus) {
+                    $updateData = ['status' => $normalizedStatus];
+                    if ($normalizedStatus === 'delivered') {
+                        $updateData['delivered_at'] = now();
+                    } elseif ($normalizedStatus === 'read') {
+                        $updateData['read_at'] = now();
+                    }
+
+                    \App\Models\WhatsAppMessage::where('message_id', $messageId)->update($updateData);
+                }
             }
         }
 
