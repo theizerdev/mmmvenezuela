@@ -519,54 +519,54 @@ export default function BiometricCameraModal({
                                     const tilt = Math.abs(leftEyeY - rightEyeY);
 
                                     // En carnet 30x40mm (3:4), centrado horizontal y vertical en el tercio superior
-                                    const isCenteredX = Math.abs(faceCenterX - 0.50) < 0.16;
-                                    const isCenteredY = Math.abs(faceCenterY - 0.44) < 0.16;
+                                    const isCenteredX = Math.abs(faceCenterX - 0.50) < 0.15;
+                                    const isCenteredY = Math.abs(faceCenterY - 0.44) < 0.15;
 
-                                    // Altura de cabeza: norma 30x40mm
-                                    const isTooClose = headHeight > 0.52;
-                                    const isTooFar = headHeight < 0.20;
+                                    // Altura de cabeza: norma 30x40mm (debe ocupar entre 26% y 48% de la altura)
+                                    const isTooClose = headHeight > 0.48;
+                                    const isTooFar = headHeight < 0.25;
                                     const isSizeOk = !isTooClose && !isTooFar;
-                                    const isStraight = tilt < 0.07;
+                                    const isStraight = tilt < 0.06;
 
-                                    if (isTooClose) {
+                                    if (isTooFar) {
                                         setFeedback({
-                                            color: 'yellow',
-                                            message: '🟡 Aléjese un poco (su rostro está muy cerca de la cámara).',
-                                            score: 60,
+                                            color: 'red',
+                                            message: '🔴 Rostro muy lejos. Acérquese a la cámara hasta llenar la guía.',
+                                            score: 40,
                                             details: { faceDetected: true, brightnessOk: quality.isBrightOk, centered: isCenteredX, sizeOk: false, blurOk: true },
                                         });
                                         greenStreakRef.current = 0;
-                                    } else if (isTooFar) {
+                                    } else if (isTooClose) {
                                         setFeedback({
-                                            color: 'yellow',
-                                            message: '🟡 Acérquese un poco más a la cámara.',
-                                            score: 60,
+                                            color: 'red',
+                                            message: '🔴 Rostro muy cerca. Aléjese para que se vean sus hombros.',
+                                            score: 40,
                                             details: { faceDetected: true, brightnessOk: quality.isBrightOk, centered: isCenteredX, sizeOk: false, blurOk: true },
                                         });
                                         greenStreakRef.current = 0;
                                     } else if (!isCenteredX) {
                                         setFeedback({
-                                            color: 'yellow',
-                                            message: '🟡 Centre su rostro horizontalmente.',
-                                            score: 65,
+                                            color: 'red',
+                                            message: '🔴 Rostro fuera de centro. Centre su cabeza en el recuadro.',
+                                            score: 50,
                                             details: { faceDetected: true, brightnessOk: quality.isBrightOk, centered: false, sizeOk: isSizeOk, blurOk: true },
                                         });
                                         greenStreakRef.current = 0;
                                     } else if (!isCenteredY) {
                                         setFeedback({
-                                            color: 'yellow',
+                                            color: 'red',
                                             message: faceCenterY > 0.44
-                                                ? '🟡 Suba un poco la cámara o alinee su cabeza arriba.'
-                                                : '🟡 Baje un poco la cámara para centrar el rostro.',
-                                            score: 65,
+                                                ? '🔴 Rostro muy abajo. Suba la cámara o alinee su cabeza arriba.'
+                                                : '🔴 Rostro muy arriba. Baje un poco la cámara.',
+                                            score: 50,
                                             details: { faceDetected: true, brightnessOk: quality.isBrightOk, centered: false, sizeOk: isSizeOk, blurOk: true },
                                         });
                                         greenStreakRef.current = 0;
                                     } else if (!isStraight) {
                                         setFeedback({
-                                            color: 'yellow',
-                                            message: '🟡 Mantenga su cabeza derecha (sin inclinar).',
-                                            score: 70,
+                                            color: 'red',
+                                            message: '🔴 Cabeza inclinada. Manténgase derecho mirando al frente.',
+                                            score: 55,
                                             details: { faceDetected: true, brightnessOk: quality.isBrightOk, centered: true, sizeOk: true, blurOk: true },
                                         });
                                         greenStreakRef.current = 0;
@@ -587,7 +587,7 @@ export default function BiometricCameraModal({
                                         // ¡ESTADO VERDE PERFECTO!
                                         setFeedback({
                                             color: 'green',
-                                            message: '🟢 ¡Encuadre perfecto (30 × 40 mm)! Manténgase quieto...',
+                                            message: '🟢 ¡Posición perfecta (30 × 40 mm)! Manténgase quieto...',
                                             score: 100,
                                             details: { faceDetected: true, brightnessOk: true, centered: true, sizeOk: true, blurOk: true },
                                         });
