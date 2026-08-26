@@ -1,16 +1,22 @@
 import { Head, useForm, router } from '@inertiajs/react';
 import {
     Settings2, MessageSquare, QrCode, RefreshCw, Power, Send, Key,
-    Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone
+    Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone,
+    Shield, Clock, Sparkles, UserCheck, Flame, ListOrdered, CheckCircle,
+    XCircle, HelpCircle, Server, Radio, ShieldCheck, ArrowRight, ExternalLink,
+    Zap, Globe, Terminal, Layers
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslate } from '@/hooks/use-translate';
 import type { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
 import PhoneInputGroup from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
@@ -19,14 +25,29 @@ interface LiveStatus {
     isConnected: boolean;
     connectionState: string;
     qrCode: string | null;
+    qrDataUrl?: string | null;
     token?: string | null;
     user: {
         id: string;
         name?: string;
     } | null;
+    userJid?: string | null;
     lastSeen: string | null;
     reconnectAttempts: number;
     _error?: string;
+}
+
+interface QueueStats {
+    totalQueued?: number;
+    queued?: number;
+    sentToday?: number;
+    dailyLimit?: number;
+    warmupMode?: boolean;
+    rateLimitPerMin?: number;
+    workingHoursEnabled?: boolean;
+    workingHoursStart?: string;
+    workingHoursEnd?: string;
+    [key: string]: any;
 }
 
 interface PageProps {
@@ -40,6 +61,7 @@ interface PageProps {
     whatsapp_phone: string | null;
     whatsapp_status: string | null;
     live_status: LiveStatus | null;
+    queue_stats?: QueueStats | null;
     paises: PaisPhoneOption[];
 }
 
@@ -54,15 +76,27 @@ export default function WhatsAppIntegration({
     whatsapp_phone,
     whatsapp_status,
     live_status,
+    queue_stats,
     paises
 }: PageProps) {
     const { __ } = useTranslate();
-    const [copied, setCopied] = useState(false);
+    const [copiedToken, setCopiedToken] = useState(false);
+    const [copiedWebhook, setCopiedWebhook] = useState(false);
     const [liveStatusState, setLiveStatusState] = useState<LiveStatus | null>(live_status);
+    const [queueStatsState, setQueueStatsState] = useState<QueueStats | null>(queue_stats || null);
     const [isPolling, setIsPolling] = useState(false);
     const [sendingMsg, setSendingMsg] = useState(false);
+    const [checkingNumber, setCheckingNumber] = useState(false);
+    const [numberCheckResult, setNumberCheckResult] = useState<{ checked: boolean; exists?: boolean; jid?: string; error?: string } | null>(null);
+    const [previewingSpintax, setPreviewingSpintax] = useState(false);
+    const [spintaxPreviews, setSpintaxPreviews] = useState<string[]>([]);
+    const [activeTab, setActiveTab] = useState('connection');
 
-    // Formulario de configuración
+    const webhookUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/webhooks/whatsapp`
+        : '/webhooks/whatsapp';
+
+    // Formulario de configuración principal
     const configForm = useForm({
         whatsapp_api_url: whatsapp_api_url,
         whatsapp_instance: whatsapp_instance || `empresa_${empresa_id}`,
@@ -71,33 +105,52 @@ export default function WhatsAppIntegration({
         whatsapp_rate_limit: whatsapp_rate_limit,
     });
 
-    // Formulario de mensaje de prueba
+    // Formulario de parámetros Anti-Baneo
+    const antiBanForm = useForm({
+        dailyLimit: queueStatsState?.dailyLimit || 100,
+        warmupMode: queueStatsState?.warmupMode ?? true,
+        workingHoursEnabled: queueStatsState?.workingHoursEnabled ?? true,
+        workingHoursStart: queueStatsState?.workingHoursStart || '08:00',
+        workingHoursEnd: queueStatsState?.workingHoursEnd || '20:00',
+        proxyUrl: '',
+    });
+
+    // Formulario de mensaje de prueba con Spintax
     const [testMessage, setTestMessage] = useState({
         paisId: '',
         phoneNumber: '',
-        message: __('Hello! This is a test message from the WhatsApp integration panel.'),
+        message: '{Hola|Buen día|Qué tal} {{nombre}}, {te confirmamos que|te notificamos que} tu solicitud en {{empresa}} está lista. Código: {{random}}.',
+        useSync: false,
     });
 
-    // Polling del estado de WhatsApp
+    // Determinar si la hora actual está dentro del horario laboral configurado
+    const isWithinWorkingHours = useMemo(() => {
+        if (!antiBanForm.data.workingHoursEnabled) return true;
+        const now = new Date();
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+        const [startH, startM] = (antiBanForm.data.workingHoursStart || '08:00').split(':').map(Number);
+        const [endH, endM] = (antiBanForm.data.workingHoursEnd || '20:00').split(':').map(Number);
+        const startMins = startH * 60 + startM;
+        const endMins = endH * 60 + endM;
+        return currentMins >= startMins && currentMins <= endMins;
+    }, [antiBanForm.data.workingHoursEnabled, antiBanForm.data.workingHoursStart, antiBanForm.data.workingHoursEnd]);
+
+    // Polling del estado de WhatsApp y Estadísticas de cola
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
 
-        // Solo hacemos polling si la integración está activa y no está completamente conectada con éxito
-        const shouldPoll = whatsapp_active && (!liveStatusState?.isConnected || liveStatusState?.connectionState === 'connecting' || liveStatusState?.connectionState === 'qr_ready');
+        const shouldPoll = whatsapp_active;
 
         if (shouldPoll) {
             setIsPolling(true);
             intervalId = setInterval(async () => {
                 try {
                     const response = await fetch('/admin/integrations/whatsapp/status');
-
                     if (response.ok) {
                         const data = await response.json();
-
                         if (data.success) {
                             setLiveStatusState(data.status);
 
-                            // Si se conectó exitosamente durante el polling, recargar la página para actualizar props
                             if (data.status?.isConnected && !liveStatusState?.isConnected) {
                                 Swal.fire({
                                     title: __('Connected!'),
@@ -110,18 +163,26 @@ export default function WhatsAppIntegration({
                             }
                         }
                     }
+
+                    if (liveStatusState?.isConnected) {
+                        const queueRes = await fetch('/admin/integrations/whatsapp/queue-stats');
+                        if (queueRes.ok) {
+                            const queueData = await queueRes.json();
+                            if (queueData.success && queueData.stats) {
+                                setQueueStatsState(queueData.stats);
+                            }
+                        }
+                    }
                 } catch (error) {
                     console.error('Error polling status:', error);
                 }
-            }, 3000);
+            }, 3500);
         } else {
             setIsPolling(false);
         }
 
         return () => {
-            if (intervalId) {
-clearInterval(intervalId);
-}
+            if (intervalId) clearInterval(intervalId);
         };
     }, [whatsapp_active, liveStatusState?.isConnected, liveStatusState?.connectionState]);
 
@@ -137,8 +198,23 @@ clearInterval(intervalId);
                     timer: 2000,
                     showConfirmButton: false,
                 });
-                // Actualizar estado en vivo al guardar
                 router.reload();
+            },
+        });
+    };
+
+    const handleSaveAntiBan = (e: React.FormEvent) => {
+        e.preventDefault();
+        antiBanForm.post('/admin/integrations/whatsapp/antiban', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Anti-Ban Updated'),
+                    text: __('Anti-ban limits and schedule settings saved successfully.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
             },
         });
     };
@@ -146,7 +222,7 @@ clearInterval(intervalId);
     const handleGenerateToken = () => {
         Swal.fire({
             title: __('Are you sure?'),
-            text: __('Generating a new token will invalidate the current one. You must update and sync any external client configured with it.'),
+            text: __('Generating a new token will invalidate the current one.'),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: __('Yes, generate new token'),
@@ -224,7 +300,6 @@ clearInterval(intervalId);
                     timer: 3000,
                     showConfirmButton: false,
                 });
-                // Iniciar polling
                 setLiveStatusState(prev => prev ? { ...prev, connectionState: 'connecting' } : null);
             }
         });
@@ -274,19 +349,112 @@ clearInterval(intervalId);
     };
 
     const getFullPhoneNumber = () => {
-        if (!testMessage.paisId || !testMessage.phoneNumber) {
-return '';
-}
-
+        if (!testMessage.paisId || !testMessage.phoneNumber) return '';
         const selectedPais = paises.find(p => p.id === Number(testMessage.paisId));
-
-        if (!selectedPais?.codigo_telefonico) {
-return '';
-}
-
+        if (!selectedPais?.codigo_telefonico) return '';
         const cleanCode = selectedPais.codigo_telefonico.replace(/^\+/, '');
-
         return `${cleanCode}${testMessage.phoneNumber.replace(/\D/g, '')}`;
+    };
+
+    const handleCheckNumber = async () => {
+        const fullNumber = getFullPhoneNumber();
+        if (!fullNumber) {
+            Swal.fire({
+                title: __('Missing Phone'),
+                text: __('Please select a country and enter a phone number first.'),
+                icon: 'warning',
+            });
+            return;
+        }
+
+        setCheckingNumber(true);
+        setNumberCheckResult(null);
+
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/check-number', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({ phone: fullNumber }),
+            });
+
+            const json = await res.json();
+            setCheckingNumber(false);
+
+            if (json.success && json.data) {
+                const exists = Boolean(json.data.exists);
+                setNumberCheckResult({
+                    checked: true,
+                    exists: exists,
+                    jid: json.data.jid || json.data.id || fullNumber,
+                });
+
+                if (exists) {
+                    Swal.fire({
+                        title: __('Registered on WhatsApp!'),
+                        text: `${fullNumber} ${__('is a valid active WhatsApp account.')}`,
+                        icon: 'success',
+                        timer: 2500,
+                        showConfirmButton: false,
+                    });
+                } else {
+                    Swal.fire({
+                        title: __('Number Not Found'),
+                        text: `${fullNumber} ${__('is NOT registered on WhatsApp. Meta will penalize sending to this number.')}`,
+                        icon: 'warning',
+                    });
+                }
+            } else {
+                setNumberCheckResult({
+                    checked: true,
+                    exists: false,
+                    error: json.error || __('Verification error'),
+                });
+            }
+        } catch (err: any) {
+            setCheckingNumber(false);
+            Swal.fire({
+                title: __('Error'),
+                text: err.message || __('Failed to check number.'),
+                icon: 'error',
+            });
+        }
+    };
+
+    const handlePreviewSpintax = async () => {
+        if (!testMessage.message.trim()) return;
+
+        setPreviewingSpintax(true);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/preview-spintax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({
+                    template: testMessage.message,
+                    count: 4,
+                    variables: {
+                        nombre: 'Juan Pérez',
+                        empresa: empresa_nombre,
+                    }
+                }),
+            });
+
+            const json = await res.json();
+            setPreviewingSpintax(false);
+
+            if (json.success && json.data?.variations) {
+                setSpintaxPreviews(json.data.variations);
+            } else if (json.data && Array.isArray(json.data)) {
+                setSpintaxPreviews(json.data);
+            }
+        } catch (err) {
+            setPreviewingSpintax(false);
+        }
     };
 
     const handleSendMessage = (e: React.FormEvent) => {
@@ -299,26 +467,29 @@ return '';
                 text: __('Please select a country and enter a valid phone number.'),
                 icon: 'error',
             });
-
             return;
         }
 
         setSendingMsg(true);
         router.post('/admin/integrations/whatsapp/send-message', {
             to: fullNumber,
-            message: testMessage.message
+            message: testMessage.message,
+            sync: testMessage.useSync,
+            variables: {
+                nombre: 'Cliente de Prueba',
+                empresa: empresa_nombre,
+            }
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 setSendingMsg(false);
                 Swal.fire({
-                    title: __('Message Sent'),
-                    text: __('The test message has been queued/sent successfully.'),
+                    title: __('Message Dispatched'),
+                    text: __('Message processed with Anti-Ban protection and Spintax variation.'),
                     icon: 'success',
-                    timer: 2000,
+                    timer: 2500,
                     showConfirmButton: false,
                 });
-                setTestMessage(prev => ({ ...prev, paisId: '', phoneNumber: '', message: '' }));
             },
             onError: (errors) => {
                 setSendingMsg(false);
@@ -331,12 +502,18 @@ return '';
         });
     };
 
-    const copyToClipboard = () => {
+    const copyTokenToClipboard = () => {
         if (configForm.data.whatsapp_api_key) {
             navigator.clipboard.writeText(configForm.data.whatsapp_api_key);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            setCopiedToken(true);
+            setTimeout(() => setCopiedToken(false), 2000);
         }
+    };
+
+    const copyWebhookToClipboard = () => {
+        navigator.clipboard.writeText(webhookUrl);
+        setCopiedWebhook(true);
+        setTimeout(() => setCopiedWebhook(false), 2000);
     };
 
     const breadcrumbs = [
@@ -346,391 +523,823 @@ return '';
         { title: __('WhatsApp'), href: '/admin/integrations/whatsapp' }
     ];
 
-    // Detallar el estado del socket en español
-    const getConnectionStateText = (state: string | undefined) => {
-        switch (state) {
-            case 'connected':
-            case 'open':
-                return { text: __('Connected'), color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200' };
-            case 'connecting':
-                return { text: __('Connecting...'), color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20 border-blue-200 animate-pulse' };
-            case 'qr_ready':
-                return { text: __('QR Ready (Waiting Scan)'), color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20 border-amber-200' };
-            case 'close':
-            case 'disconnected':
-                return { text: __('Disconnected'), color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20 border-rose-200' };
-            default:
-                return { text: __('Unknown'), color: 'text-slate-500 bg-slate-50 border-slate-200' };
-        }
-    };
-
-    const liveState = liveStatusState?.isConnected ? 'connected' : (liveStatusState?.connectionState || 'disconnected');
-    const stateInfo = getConnectionStateText(liveState);
-
-    // Si la API no está disponible
+    const isConnected = Boolean(liveStatusState?.isConnected);
+    const isConnecting = liveStatusState?.connectionState === 'connecting';
+    const isQrReady = liveStatusState?.connectionState === 'qr_ready' || liveStatusState?.status === 'qr' || Boolean(liveStatusState?.qrCode || liveStatusState?.qrDataUrl);
     const isServiceUnavailable = liveStatusState?._error === 'service_unavailable';
+
+    const sentTodayCount = queueStatsState?.sentToday ?? 0;
+    const dailyLimitCount = queueStatsState?.dailyLimit ?? antiBanForm.data.dailyLimit ?? 100;
+    const quotaPercentage = Math.min(100, Math.round((sentTodayCount / (dailyLimitCount || 1)) * 100));
 
     return (
         <>
             <Head title={__('WhatsApp Integration')} />
-            <div className="space-y-6">
+            <div className="space-y-6 w-full pb-10">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                {/* Header */}
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                            <MessageSquare className="h-8 w-8 text-emerald-600" />
-                            {__('WhatsApp API Module')}
-                        </h1>
-                        <p className="text-muted-foreground mt-1">
-                            {__('Manage your company WhatsApp session, API tokens, connection servers, and automated alerts.')}
-                        </p>
+                {/* Hero Header Section */}
+                <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 md:p-8 text-white shadow-xl">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 backdrop-blur-md shadow-inner">
+                                    <MessageSquare className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2.5">
+                                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                                            {__('WhatsApp API Module')}
+                                        </h1>
+                                        <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-mono text-xs">
+                                            {configForm.data.whatsapp_instance}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-sm text-slate-300">
+                                        {__('Multi-Instance Baileys Engine for')} <span className="font-semibold text-white">{empresa_nombre}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Connection Badge & Status */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2">
+                                <span className={`h-3 w-3 rounded-full ${
+                                    isConnected
+                                        ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-pulse'
+                                        : isConnecting || isQrReady
+                                        ? 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)] animate-ping'
+                                        : 'bg-rose-400'
+                                }`} />
+                                <span className="text-xs font-semibold tracking-wide uppercase text-slate-200">
+                                    {isConnected ? __('Connected') : isQrReady ? __('Waiting Scan') : isConnecting ? __('Connecting...') : __('Disconnected')}
+                                </span>
+                            </div>
+
+                            {isConnected && (
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleReconnect}
+                                        className="h-9 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5 backdrop-blur-md"
+                                    >
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                        {__('Reset Session')}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={handleDisconnect}
+                                        className="h-9 bg-rose-600/80 hover:bg-rose-600 text-white text-xs gap-1.5 border border-rose-500/30 backdrop-blur-md"
+                                    >
+                                        <Power className="h-3.5 w-3.5" />
+                                        {__('Disconnect')}
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                     </div>
+
+                    {/* Background Decorative Element */}
+                    <div className="absolute -right-10 -bottom-10 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
                 </div>
 
+                {/* Server Offline Alert Banner */}
                 {isServiceUnavailable && (
-                    <Card className="border-rose-300 bg-rose-50/50 dark:bg-rose-950/10">
-                        <CardContent className="flex items-start gap-3 p-4">
+                    <Card className="border-rose-400/60 bg-rose-500/10 dark:bg-rose-950/20 backdrop-blur-sm shadow-sm">
+                        <CardContent className="flex items-start gap-3.5 p-4">
                             <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
                             <div>
-                                <h3 className="font-semibold text-rose-800 dark:text-rose-400">{__('WhatsApp Server Offline')}</h3>
-                                <p className="text-sm text-rose-700 dark:text-rose-500/90 mt-1">
-                                    {__('The WhatsApp API service at')} <code className="font-mono text-xs">{whatsapp_api_url}</code> {__('is currently unreachable. Please make sure the node service is running.')}
+                                <h3 className="font-semibold text-rose-800 dark:text-rose-300">{__('WhatsApp Server Offline')}</h3>
+                                <p className="text-sm text-rose-700 dark:text-rose-400/90 mt-1">
+                                    {__('The WhatsApp API service at')} <code className="font-mono text-xs font-semibold px-1 py-0.5 bg-rose-100 dark:bg-rose-900/50 rounded">{whatsapp_api_url}</code> {__('is currently unreachable. Please make sure the Node.js service is running.')}
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
                 )}
 
-                <div className="grid gap-6 md:grid-cols-12">
-                    {/* Left Column: Config Panel (recursos/whatsapp) */}
-                    <div className="md:col-span-5 space-y-6">
+                {/* Metrics Summary Strip (KPIs) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* KPI 1: Socket State */}
+                    <Card className="shadow-sm border-l-4 border-l-emerald-500">
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div className="space-y-1">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Socket State')}</span>
+                                <div className="text-lg font-bold flex items-center gap-1.5">
+                                    {isConnected ? (
+                                        <span className="text-emerald-600 flex items-center gap-1">
+                                            <CheckCircle2 className="h-4 w-4" /> {__('Active Session')}
+                                        </span>
+                                    ) : (
+                                        <span className="text-slate-500 flex items-center gap-1">
+                                            <Radio className="h-4 w-4 text-rose-500" /> {__('No Link')}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
+                                <Activity className="h-5 w-5" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* KPI 2: Daily Quota Gauge */}
+                    <Card className="shadow-sm border-l-4 border-l-blue-500">
+                        <CardContent className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Daily Limit (24h)')}</span>
+                                <span className="text-xs font-bold text-blue-600">{quotaPercentage}%</span>
+                            </div>
+                            <div className="text-xl font-bold">
+                                {sentTodayCount} <span className="text-xs font-normal text-muted-foreground">/ {dailyLimitCount} {__('msg')}</span>
+                            </div>
+                            <Progress value={quotaPercentage} className="h-1.5 bg-slate-100 dark:bg-slate-800" />
+                        </CardContent>
+                    </Card>
+
+                    {/* KPI 3: Outbound Queue */}
+                    <Card className="shadow-sm border-l-4 border-l-indigo-500">
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div className="space-y-1">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Pending in Queue')}</span>
+                                <div className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                                    {queueStatsState?.queued ?? queueStatsState?.totalQueued ?? 0}
+                                    <span className="text-xs font-normal text-muted-foreground ml-1.5">{__('messages')}</span>
+                                </div>
+                            </div>
+                            <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-indigo-600">
+                                <ListOrdered className="h-5 w-5" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* KPI 4: Anti-Ban Health & Schedule */}
+                    <Card className="shadow-sm border-l-4 border-l-amber-500">
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div className="space-y-1">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">{__('Anti-Ban Schedule')}</span>
+                                <div className="text-sm font-bold flex items-center gap-1.5">
+                                    {isWithinWorkingHours ? (
+                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] gap-1">
+                                            <Check className="h-3 w-3" /> {__('Active Hours')}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[11px] gap-1">
+                                            <Clock className="h-3 w-3" /> {__('Night Pause')}
+                                        </Badge>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600">
+                                <ShieldCheck className="h-5 w-5" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Main Tabbed Interface */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto p-1.5 bg-slate-100/80 dark:bg-slate-900/80 rounded-xl gap-1">
+                        <TabsTrigger value="connection" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                            <QrCode className="h-4 w-4" />
+                            {__('Connection & QR')}
+                        </TabsTrigger>
+                        <TabsTrigger value="antiban" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                            <Shield className="h-4 w-4" />
+                            {__('Anti-Ban Policies')}
+                        </TabsTrigger>
+                        <TabsTrigger value="dispatcher" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                            <Send className="h-4 w-4" />
+                            {__('Test & Spintax')}
+                        </TabsTrigger>
+                        <TabsTrigger value="settings" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                            <Settings2 className="h-4 w-4" />
+                            {__('Server & Webhook')}
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* TAB 1: CONNECTION & QR CODE */}
+                    <TabsContent value="connection" className="space-y-6">
+                        <div className="grid md:grid-cols-12 gap-6">
+                            {/* Visual QR / Connected Device Card */}
+                            <div className="md:col-span-7">
+                                <Card className="shadow-sm border-t-4 border-t-emerald-600 h-full flex flex-col justify-between">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Radio className="h-5 w-5 text-emerald-600" />
+                                            {__('WhatsApp Device Linking')}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {__('Scan QR Code with your mobile phone or inspect active session details.')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col items-center justify-center min-h-[320px] text-center p-6">
+                                        {!whatsapp_active ? (
+                                            <div className="space-y-3 max-w-sm">
+                                                <div className="mx-auto w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                                                    <AlertTriangle className="h-7 w-7" />
+                                                </div>
+                                                <h3 className="font-semibold text-slate-700 dark:text-slate-200">{__('Integration Inactive')}</h3>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {__('You must check the "Enable WhatsApp Integration" switch and save configurations to start.')}
+                                                </p>
+                                                <Button size="sm" onClick={() => setActiveTab('settings')} variant="outline" className="gap-1.5 text-xs">
+                                                    {__('Go to Server Settings')} <ArrowRight className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        ) : isConnected ? (
+                                            /* CONNECTED VIEW */
+                                            <div className="space-y-6 w-full max-w-md py-4">
+                                                <div className="mx-auto w-20 h-20 rounded-2xl bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 shadow-inner">
+                                                    <CheckCircle2 className="h-10 w-10" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{__('WhatsApp Connected')}</h3>
+                                                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                                        {__('Active Multi-Session on Baileys Engine')}
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3 p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 text-left text-xs">
+                                                    <div className="space-y-1">
+                                                        <span className="text-muted-foreground block">{__('Account Name')}</span>
+                                                        <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                                            {liveStatusState.user?.name || __('WhatsApp Account')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <span className="text-muted-foreground block">{__('Phone JID')}</span>
+                                                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                                                            {(liveStatusState.userJid || liveStatusState.user?.id || '')?.split('@')[0]}
+                                                        </span>
+                                                    </div>
+                                                    <div className="col-span-2 border-t pt-2 mt-1 flex justify-between">
+                                                        <span className="text-muted-foreground">{__('Last Sync / Connection')}</span>
+                                                        <span className="font-mono text-slate-700 dark:text-slate-300">
+                                                            {liveStatusState.lastSeen ? new Date(liveStatusState.lastSeen).toLocaleTimeString() : __('Active')}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : isQrReady && (liveStatusState?.qrCode || liveStatusState?.qrDataUrl) ? (
+                                            /* QR CODE SCAN VIEW */
+                                            <div className="space-y-4 py-2">
+                                                <div className="space-y-1">
+                                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">
+                                                        {__('Scan QR Code to Link Account')}
+                                                    </h3>
+                                                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                                                        {__('Open WhatsApp on your phone, go to Linked Devices > Link a Device, and point your camera.')}
+                                                    </p>
+                                                </div>
+
+                                                <div className="relative mx-auto w-64 h-64 border-4 border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 bg-white shadow-md flex items-center justify-center">
+                                                    <img
+                                                        src={liveStatusState.qrDataUrl || liveStatusState.qrCode || ''}
+                                                        alt="WhatsApp QR Code"
+                                                        className="w-full h-full object-contain select-none"
+                                                    />
+                                                    {isPolling && (
+                                                        <div className="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full p-1.5 shadow-lg animate-pulse" title={__('Checking scan status...')}>
+                                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center justify-center gap-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                                                    <span>{__('Waiting for phone scan... (Auto-refreshes)')}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* DISCONNECTED STATE */
+                                            <div className="space-y-4 max-w-sm">
+                                                <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                                                    <QrCode className="h-8 w-8" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Engine Disconnected')}</h3>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {__('Click Initiate Connection to launch the multi-session instance and generate a new linking QR code.')}
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    onClick={handleConnect}
+                                                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                                                >
+                                                    <Power className="h-4 w-4" />
+                                                    {__('Initiate Connection')}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                    <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-3 flex justify-between items-center text-xs text-muted-foreground">
+                                        <span>{__('Multi-Device Baileys Socket Protocol')}</span>
+                                        <span>{isPolling ? '● ' + __('Live Polling Active') : '○ ' + __('Idle')}</span>
+                                    </CardFooter>
+                                </Card>
+                            </div>
+
+                            {/* Quick Instructions & Best Practices Card */}
+                            <div className="md:col-span-5 space-y-6">
+                                <Card className="shadow-sm border-t-4 border-t-blue-500 h-full flex flex-col justify-between">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <HelpCircle className="h-5 w-5 text-blue-600" />
+                                            {__('Connection Checklist')}
+                                        </CardTitle>
+                                        <CardDescription>{__('Follow these rules for seamless linking.')}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 text-xs">
+                                        <div className="space-y-3">
+                                            <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
+                                                <div className="h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">1</div>
+                                                <div>
+                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Prepare Official WhatsApp')}</h4>
+                                                    <p className="text-muted-foreground mt-0.5">{__('Ensure you are using the official WhatsApp or WhatsApp Business application with stable internet.')}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
+                                                <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">2</div>
+                                                <div>
+                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Point Camera at QR')}</h4>
+                                                    <p className="text-muted-foreground mt-0.5">{__('Go to Linked Devices > Link a Device and scan the QR code before the 30-second expiry timeout.')}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
+                                                <div className="h-6 w-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">3</div>
+                                                <div>
+                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Session Persists Automatically')}</h4>
+                                                    <p className="text-muted-foreground mt-0.5">{__('Once linked, auth credentials persist in local storage. Disconnecting from your phone clears the link.')}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-3 flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">{__('Need technical assistance?')}</span>
+                                        <a href="/docs" target="_blank" className="text-emerald-600 hover:underline flex items-center gap-1 font-medium">
+                                            {__('API Docs')} <ExternalLink className="h-3 w-3" />
+                                        </a>
+                                    </CardFooter>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* TAB 2: ANTI-BAN POLICIES & WORKING HOURS */}
+                    <TabsContent value="antiban" className="space-y-6">
+                        <div className="grid md:grid-cols-12 gap-6">
+                            <div className="md:col-span-8">
+                                <Card className="shadow-sm border-t-4 border-t-amber-500">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Shield className="h-5 w-5 text-amber-600" />
+                                            {__('Anti-Ban Protection & Messaging Policies')}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {__('Adjust safety throttle limits, warm-up pacing, and nocturnal silence to prevent Meta phone bans.')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <form onSubmit={handleSaveAntiBan}>
+                                        <CardContent className="space-y-5">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Warmup Mode Toggle */}
+                                                <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="font-semibold text-sm flex items-center gap-1.5">
+                                                            <Flame className="h-4 w-4 text-amber-500" />
+                                                            {__('Warm-Up Mode')}
+                                                        </Label>
+                                                        <Switch
+                                                            checked={antiBanForm.data.warmupMode}
+                                                            onCheckedChange={(c) => antiBanForm.setData('warmupMode', c)}
+                                                        />
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {__('Automatically throttles messages with dynamic intervals (20-40s) for newly connected phone lines.')}
+                                                    </p>
+                                                </div>
+
+                                                {/* Daily Message Limit Input */}
+                                                <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
+                                                    <Label htmlFor="dailyLimit" className="font-semibold text-sm block">
+                                                        {__('Daily Message Limit')}
+                                                    </Label>
+                                                    <Input
+                                                        id="dailyLimit"
+                                                        type="number"
+                                                        min="10"
+                                                        max="20000"
+                                                        value={antiBanForm.data.dailyLimit}
+                                                        onChange={(e) => antiBanForm.setData('dailyLimit', parseInt(e.target.value) || 100)}
+                                                        className="bg-white dark:bg-slate-950 font-mono"
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {__('Recommended: 30 for week 1, 80 for week 2, 200+ for mature lines.')}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Working Hours Timeframe */}
+                                            <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-0.5">
+                                                        <Label className="font-semibold text-sm flex items-center gap-1.5">
+                                                            <Clock className="h-4 w-4 text-blue-500" />
+                                                            {__('Working Hours / Nocturnal Silence')}
+                                                        </Label>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {__('Retains outbound messages queued outside safe daytime hours and dispatches next morning.')}
+                                                        </p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={antiBanForm.data.workingHoursEnabled}
+                                                        onCheckedChange={(c) => antiBanForm.setData('workingHoursEnabled', c)}
+                                                    />
+                                                </div>
+
+                                                {antiBanForm.data.workingHoursEnabled && (
+                                                    <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                                                        <div>
+                                                            <Label className="text-xs text-muted-foreground">{__('Allowed Start Time')}</Label>
+                                                            <Input
+                                                                type="time"
+                                                                value={antiBanForm.data.workingHoursStart}
+                                                                onChange={(e) => antiBanForm.setData('workingHoursStart', e.target.value)}
+                                                                className="bg-white dark:bg-slate-950 mt-1"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <Label className="text-xs text-muted-foreground">{__('Allowed End Time')}</Label>
+                                                            <Input
+                                                                type="time"
+                                                                value={antiBanForm.data.workingHoursEnd}
+                                                                onChange={(e) => antiBanForm.setData('workingHoursEnd', e.target.value)}
+                                                                className="bg-white dark:bg-slate-950 mt-1"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Dedicated Proxy URL */}
+                                            <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
+                                                <Label htmlFor="proxyUrl" className="font-semibold text-sm flex items-center gap-1.5">
+                                                    <Globe className="h-4 w-4 text-slate-500" />
+                                                    {__('Dedicated HTTP/SOCKS5 Proxy (Optional)')}
+                                                </Label>
+                                                <Input
+                                                    id="proxyUrl"
+                                                    placeholder="http://user:password@proxy-ip:port"
+                                                    value={antiBanForm.data.proxyUrl}
+                                                    onChange={(e) => antiBanForm.setData('proxyUrl', e.target.value)}
+                                                    className="bg-white dark:bg-slate-950 font-mono text-xs"
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    {__('Route this specific WhatsApp instance through a static residential proxy IP.')}
+                                                </p>
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
+                                            <Button type="submit" disabled={antiBanForm.processing} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow">
+                                                <Shield className="h-4 w-4" />
+                                                {__('Save Anti-Ban Policies')}
+                                            </Button>
+                                        </CardFooter>
+                                    </form>
+                                </Card>
+                            </div>
+
+                            {/* Anti-Ban Guidelines & Recommendations */}
+                            <div className="md:col-span-4 space-y-6">
+                                <Card className="shadow-sm border-t-4 border-t-amber-500">
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <Flame className="h-4 w-4 text-amber-500" />
+                                            {__('Recommended Warm-Up Schedule')}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3 text-xs">
+                                        <div className="p-2.5 rounded-lg border bg-amber-50/40 dark:bg-amber-950/20">
+                                            <span className="font-bold text-amber-800 dark:text-amber-300 block">{__('Week 1 (New Line)')}</span>
+                                            <span className="text-muted-foreground">{__('20 to 30 messages/day. Keep 20-40s jitter delays.')}</span>
+                                        </div>
+                                        <div className="p-2.5 rounded-lg border bg-blue-50/40 dark:bg-blue-950/20">
+                                            <span className="font-bold text-blue-800 dark:text-blue-300 block">{__('Week 2 (Progressive)')}</span>
+                                            <span className="text-muted-foreground">{__('50 to 80 messages/day. Always use Spintax variations.')}</span>
+                                        </div>
+                                        <div className="p-2.5 rounded-lg border bg-emerald-50/40 dark:bg-emerald-950/20">
+                                            <span className="font-bold text-emerald-800 dark:text-emerald-300 block">{__('Week 3+ (Mature)')}</span>
+                                            <span className="text-muted-foreground">{__('100 to 300+ messages/day. Maintain opt-out compliance.')}</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* TAB 3: TEST DISPATCHER & SPINTAX SANDBOX */}
+                    <TabsContent value="dispatcher" className="space-y-6">
                         <Card className="shadow-sm border-t-4 border-t-emerald-600">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Settings2 className="h-5 w-5 text-slate-500" />
-                                    {__('API Configuration')}
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Send className="h-5 w-5 text-emerald-600" />
+                                    {__('Message Sandbox & Spintax Permutations')}
                                 </CardTitle>
                                 <CardDescription>
-                                    {__('Set connection details for')} <span className="font-semibold text-slate-700 dark:text-slate-200">{empresa_nombre}</span>.
+                                    {__('Validate numbers in Meta servers, preview dynamic Spintax variations, and execute test transmissions.')}
                                 </CardDescription>
                             </CardHeader>
-                            <form onSubmit={handleSaveConfig}>
+                            <form onSubmit={handleSendMessage}>
                                 <CardContent className="space-y-5">
-                                    {/* Enable Switch */}
-                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                                        <div className="space-y-0.5">
-                                            <Label className="text-sm font-medium">{__('Enable WhatsApp Integration')}</Label>
-                                            <p className="text-xs text-muted-foreground">{__('Enable automated template sending.')}</p>
-                                        </div>
-                                        <Switch
-                                            checked={configForm.data.whatsapp_active}
-                                            onCheckedChange={(checked) => configForm.setData('whatsapp_active', checked)}
-                                        />
-                                    </div>
-
-                                    {/* Connection IP / API URL */}
+                                    {/* Recipient Phone with Number Verifier */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_api_url">{__('Connection IP / API URL')}</Label>
-                                        <Input
-                                            id="whatsapp_api_url"
-                                            placeholder="http://localhost:8092"
-                                            value={configForm.data.whatsapp_api_url}
-                                            onChange={(e) => configForm.setData('whatsapp_api_url', e.target.value)}
-                                            className="font-mono text-sm"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('Node service base URL.')}
-                                        </p>
-                                    </div>
-
-                                    {/* WhatsApp Instance Name */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_instance">{__('WhatsApp Instance Name')}</Label>
-                                        <Input
-                                            id="whatsapp_instance"
-                                            placeholder="empresa_1"
-                                            value={configForm.data.whatsapp_instance}
-                                            onChange={(e) => configForm.setData('whatsapp_instance', e.target.value)}
-                                            className="font-mono text-sm"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('Name of the session/instance in the WhatsApp API engine (e.g. ventas, empresa_1).')}
-                                        </p>
-                                    </div>
-
-                                    {/* Rate Limit */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_rate_limit">{__('Rate Limit (msg/min)')}</Label>
-                                        <Input
-                                            id="whatsapp_rate_limit"
-                                            type="number"
-                                            min="1"
-                                            max="1000"
-                                            value={configForm.data.whatsapp_rate_limit}
-                                            onChange={(e) => configForm.setData('whatsapp_rate_limit', parseInt(e.target.value) || 60)}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('Maximum messages sent per minute for this company.')}
-                                        </p>
-                                    </div>
-
-                                    {/* Company Token */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_api_key">{__('Company API Token')}</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="whatsapp_api_key"
-                                                type="text"
-                                                placeholder={__('Paste or enter API token...')}
-                                                value={configForm.data.whatsapp_api_key}
-                                                onChange={(e) => configForm.setData('whatsapp_api_key', e.target.value)}
-                                                className="font-mono text-sm"
-                                            />
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-sm font-semibold">{__('Recipient Phone Number')}</Label>
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                onClick={copyToClipboard}
-                                                disabled={!configForm.data.whatsapp_api_key}
-                                                className="shrink-0"
-                                                title={__('Copy to clipboard')}
+                                                size="sm"
+                                                onClick={handleCheckNumber}
+                                                disabled={checkingNumber || !testMessage.phoneNumber}
+                                                className="h-8 text-xs gap-1.5 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50"
                                             >
-                                                {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                                                <UserCheck className="h-3.5 w-3.5" />
+                                                {checkingNumber ? __('Verifying on WhatsApp...') : __('Check Number in WhatsApp')}
                                             </Button>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('This credentials token authorizes this company to communicate with the node server. You can copy or paste it directly.')}
-                                        </p>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col gap-3">
-                                    {/* Save Button */}
-                                    <Button type="submit" disabled={configForm.processing} className="w-full gap-2">
-                                        <RefreshCw className={`h-4 w-4 ${configForm.processing ? 'animate-spin' : ''}`} />
-                                        {__('Save Settings')}
-                                    </Button>
 
-                                    {/* Button Group */}
-                                    <div className="grid grid-cols-2 gap-2 w-full mt-1">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleGenerateToken}
-                                            className="gap-1 text-slate-700 hover:text-slate-900 border-slate-200 text-xs"
-                                        >
-                                            <Key className="h-3.5 w-3.5" />
-                                            {__('Generate Token')}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleSyncCompany}
-                                            disabled={!whatsapp_api_key}
-                                            className="gap-1 text-slate-700 hover:text-emerald-700 border-slate-200 text-xs"
-                                        >
-                                            <Database className="h-3.5 w-3.5" />
-                                            {__('Sync Company')}
-                                        </Button>
-                                    </div>
-                                </CardFooter>
-                            </form>
-                        </Card>
-                    </div>
-
-                    {/* Right Column: Connection / QR Scanner Card */}
-                    <div className="md:col-span-7 space-y-6">
-                        {/* Status / QR Card */}
-                        <Card className="shadow-sm border-t-4 border-t-emerald-600">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <Activity className="h-5 w-5 text-slate-500" />
-                                            {__('Connection Status')}
-                                        </CardTitle>
-                                        <CardDescription>{__('Link and monitor WhatsApp server state.')}</CardDescription>
-                                    </div>
-                                    <span className={`px-2.5 py-1 rounded-full border text-xs font-semibold ${stateInfo.color}`}>
-                                        {stateInfo.text}
-                                    </span>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
-                                {!whatsapp_active ? (
-                                    <div className="space-y-3">
-                                        <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                                            <AlertTriangle className="h-6 w-6" />
-                                        </div>
-                                        <h3 className="font-semibold text-slate-700 dark:text-slate-300">{__('Integration Inactive')}</h3>
-                                        <p className="text-sm text-muted-foreground max-w-sm">
-                                            {__('You must check the "Enable WhatsApp Integration" switch and save configurations to start.')}
-                                        </p>
-                                    </div>
-                                ) : isServiceUnavailable ? (
-                                    <div className="space-y-3">
-                                        <div className="mx-auto w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-500">
-                                            <AlertTriangle className="h-6 w-6" />
-                                        </div>
-                                        <h3 className="font-semibold text-rose-700 dark:text-rose-400">{__('Server Offline')}</h3>
-                                        <p className="text-sm text-muted-foreground max-w-sm">
-                                            {__('Unable to reach the WhatsApp engine. Please check system processes.')}
-                                        </p>
-                                    </div>
-                                ) : liveStatusState?.isConnected ? (
-                                    /* CONNECTED VIEW */
-                                    <div className="space-y-6 w-full py-4">
-                                        <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 dark:bg-emerald-950/40">
-                                            <CheckCircle2 className="h-8 w-8" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{__('Successfully Linked')}</h3>
-                                            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                                                {__('Active Session on Baileys Engine')}
-                                            </p>
-                                        </div>
-
-                                        <div className="max-w-md mx-auto grid grid-cols-2 gap-4 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50 text-left text-sm">
-                                            <div className="space-y-1">
-                                                <span className="text-xs text-muted-foreground block">{__('Linked Account')}</span>
-                                                <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                                                    <Phone className="h-3.5 w-3.5 text-slate-500" />
-                                                    {liveStatusState.user?.name || __('WhatsApp Account')}
-                                                </span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-xs text-muted-foreground block">{__('Phone JID')}</span>
-                                                <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                                    {liveStatusState.user?.id.split('@')[0]}
-                                                </span>
-                                            </div>
-                                            <div className="space-y-1 col-span-2 border-t pt-2 mt-1">
-                                                <span className="text-xs text-muted-foreground block">{__('Last Sync / Connection')}</span>
-                                                <span className="text-xs text-slate-600 dark:text-slate-400">
-                                                    {liveStatusState.lastSeen ? new Date(liveStatusState.lastSeen).toLocaleString() : __('N/A')}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-center gap-3 pt-2">
-                                            <Button variant="outline" className="gap-2" onClick={handleReconnect}>
-                                                <RefreshCw className="h-4 w-4" />
-                                                {__('Reset Session')}
-                                            </Button>
-                                            <Button variant="destructive" className="gap-2" onClick={handleDisconnect}>
-                                                <Power className="h-4 w-4" />
-                                                {__('Disconnect')}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (liveStatusState?.connectionState === 'qr_ready' || liveStatusState?.status === 'qr' || Boolean(liveStatusState?.qrCode)) && liveStatusState?.qrCode ? (
-                                    /* QR CODE VIEW */
-                                    <div className="space-y-5 py-2">
-                                        <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-lg">
-                                            {__('Scan QR Code to Link Account')}
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                                            {__('Open WhatsApp on your phone, go to Menu or Settings > Linked Devices > Link a Device, and point your camera to this screen.')}
-                                        </p>
-
-                                        {/* QR container */}
-                                        <div className="relative mx-auto w-64 h-64 border-4 border-slate-100 rounded-lg p-4 bg-white shadow-sm flex items-center justify-center">
-                                            <img
-                                                src={liveStatusState.qrCode}
-                                                alt="WhatsApp QR Code"
-                                                className="w-full h-full object-contain select-none"
-                                            />
-                                            {isPolling && (
-                                                <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white rounded-full p-1 shadow-md animate-pulse" title={__('Checking scan status...')}>
-                                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-                                            <span>{__('Waiting for phone scan...')}</span>
-                                        </div>
-
-                                        <Button variant="ghost" onClick={handleDisconnect} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs">
-                                            {__('Cancel and Clean Session')}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    /* DISCONNECTED VIEW */
-                                    <div className="space-y-4">
-                                        <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 dark:bg-slate-800">
-                                            <QrCode className="h-6 w-6" />
-                                        </div>
-                                        <h3 className="font-semibold text-slate-700 dark:text-slate-300">{__('Engine Disconnected')}</h3>
-                                        <p className="text-sm text-muted-foreground max-w-sm">
-                                            {__('There is no active session. Click Connect to initiate a new session and generate a linking QR code.')}
-                                        </p>
-                                        <Button
-                                            onClick={handleConnect}
-                                            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
-                                        >
-                                            <Power className="h-4 w-4" />
-                                            {__('Initiate Connection')}
-                                        </Button>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                    </div>
-                </div>
-
-                {/* Test Messaging Panel - Full Width */}
-                {liveStatusState?.isConnected && (
-                    <Card className="shadow-sm border-t-4 border-t-emerald-600 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <Send className="h-4 w-4 text-slate-500" />
-                                {__('Send Test Message')}
-                            </CardTitle>
-                            <CardDescription>
-                                {__('Verify integration output by sending a real-time message to any phone.')}
-                            </CardDescription>
-                        </CardHeader>
-                        <form onSubmit={handleSendMessage}>
-                            <CardContent className="space-y-4">
-                                <div className="grid md:grid-cols-12 gap-4">
-                                    <div className="md:col-span-12 space-y-2">
-                                        <Label>{__('Recipient Phone Number')}</Label>
                                         <PhoneInputGroup
                                             paises={paises}
                                             selectedPaisId={testMessage.paisId}
                                             phoneValue={testMessage.phoneNumber}
                                             onPaisChange={(paisId) => setTestMessage(prev => ({ ...prev, paisId: String(paisId) }))}
-                                            onPhoneChange={(phone) => setTestMessage(prev => ({ ...prev, phoneNumber: phone }))}
+                                            onPhoneChange={(phone) => {
+                                                setTestMessage(prev => ({ ...prev, phoneNumber: phone }));
+                                                setNumberCheckResult(null);
+                                            }}
                                             placeholder={__('4121234567')}
                                         />
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {__('Select country and enter only the phone number.')}
-                                        </p>
+
+                                        {numberCheckResult && (
+                                            <div className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 transition-all ${
+                                                numberCheckResult.exists
+                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
+                                                    : 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:text-rose-300'
+                                            }`}>
+                                                {numberCheckResult.exists ? <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" /> : <XCircle className="h-4 w-4 text-rose-600 shrink-0" />}
+                                                <span>
+                                                    {numberCheckResult.exists
+                                                        ? __('Registered WhatsApp user detected. Safe to dispatch.')
+                                                        : __('Warning: Number NOT found on WhatsApp. Meta will penalize sending unsolicited messages here.')}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="md:col-span-12 space-y-2">
-                                        <Label htmlFor="test_msg">{__('Message Text')}</Label>
+
+                                    {/* Spintax Message Template Textarea */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="test_msg" className="text-sm font-semibold flex items-center gap-1.5">
+                                                <Sparkles className="h-4 w-4 text-amber-500" />
+                                                {__('Message Template (Spintax & Variables Supported)')}
+                                            </Label>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handlePreviewSpintax}
+                                                disabled={previewingSpintax || !testMessage.message}
+                                                className="h-8 text-xs gap-1.5 text-amber-600 hover:text-amber-700 dark:text-amber-400"
+                                            >
+                                                <Sparkles className="h-3.5 w-3.5" />
+                                                {previewingSpintax ? __('Generating...') : __('Preview Spintax Variations')}
+                                            </Button>
+                                        </div>
+
                                         <textarea
                                             id="test_msg"
-                                            rows={4}
+                                            rows={3}
                                             value={testMessage.message}
                                             onChange={(e) => setTestMessage(prev => ({ ...prev, message: e.target.value }))}
-                                            className="w-full flex min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="w-full flex min-h-[90px] rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                         />
+                                        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                            <span>{__('Spintax Syntax:')} <code className="text-emerald-600 font-bold">{'{Hola|Buen día|Saludos}'}</code></span>
+                                            <span>• {__('Variables:')} <code className="text-blue-600 font-bold">{'{{nombre}}'}</code>, <code className="text-blue-600 font-bold">{'{{empresa}}'}</code>, <code className="text-blue-600 font-bold">{'{{random}}'}</code></span>
+                                        </div>
+
+                                        {/* Spintax Interactive Variations Output */}
+                                        {spintaxPreviews.length > 0 && (
+                                            <div className="p-4 border rounded-xl bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5 mt-3">
+                                                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block flex items-center gap-1.5">
+                                                    <Sparkles className="h-3.5 w-3.5" />
+                                                    {__('Spintax Permutation Samples:')}
+                                                </span>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                    {spintaxPreviews.map((variation, idx) => (
+                                                        <div key={idx} className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border text-xs text-slate-800 dark:text-slate-200 shadow-sm">
+                                                            <span className="text-amber-600 font-bold mr-1.5">#{idx + 1}:</span>
+                                                            {variation}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
-                                <Button type="submit" disabled={sendingMsg} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                    <Send className={`h-4 w-4 ${sendingMsg ? 'animate-pulse' : ''}`} />
-                                    {__('Send Message')}
-                                </Button>
-                            </CardFooter>
-                        </form>
-                    </Card>
-                )}
+                                </CardContent>
+                                <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                                    <div className="flex items-center gap-2.5">
+                                        <Switch
+                                            id="use_sync"
+                                            checked={testMessage.useSync}
+                                            onCheckedChange={(checked) => setTestMessage(prev => ({ ...prev, useSync: checked }))}
+                                        />
+                                        <Label htmlFor="use_sync" className="text-xs text-muted-foreground cursor-pointer">
+                                            {__('Immediate Sync Dispatch (Bypass Queue)')}
+                                        </Label>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={sendingMsg || !isConnected}
+                                        className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow"
+                                    >
+                                        <Send className={`h-4 w-4 ${sendingMsg ? 'animate-pulse' : ''}`} />
+                                        {__('Send Protected Message')}
+                                    </Button>
+                                </CardFooter>
+                            </form>
+                        </Card>
+                    </TabsContent>
+
+                    {/* TAB 4: SERVER SETTINGS & WEBHOOKS */}
+                    <TabsContent value="settings" className="space-y-6">
+                        <div className="grid md:grid-cols-12 gap-6">
+                            {/* Server credentials & tokens */}
+                            <div className="md:col-span-7">
+                                <Card className="shadow-sm border-t-4 border-t-emerald-600">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Server className="h-5 w-5 text-emerald-600" />
+                                            {__('Server & Multi-Instance Configuration')}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {__('Endpoint routing and company authentication credentials.')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <form onSubmit={handleSaveConfig}>
+                                        <CardContent className="space-y-4">
+                                            {/* Enable Switch */}
+                                            <div className="flex items-center justify-between p-3.5 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40">
+                                                <div className="space-y-0.5">
+                                                    <Label className="text-sm font-semibold">{__('Enable WhatsApp Integration')}</Label>
+                                                    <p className="text-xs text-muted-foreground">{__('Enable automated template sending.')}</p>
+                                                </div>
+                                                <Switch
+                                                    checked={configForm.data.whatsapp_active}
+                                                    onCheckedChange={(checked) => configForm.setData('whatsapp_active', checked)}
+                                                />
+                                            </div>
+
+                                            {/* Connection IP / API URL */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="whatsapp_api_url">{__('Connection IP / API URL')}</Label>
+                                                <Input
+                                                    id="whatsapp_api_url"
+                                                    placeholder="http://localhost:3000"
+                                                    value={configForm.data.whatsapp_api_url}
+                                                    onChange={(e) => configForm.setData('whatsapp_api_url', e.target.value)}
+                                                    className="font-mono text-sm"
+                                                />
+                                            </div>
+
+                                            {/* Instance Name */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="whatsapp_instance">{__('WhatsApp Instance Name')}</Label>
+                                                <Input
+                                                    id="whatsapp_instance"
+                                                    placeholder="empresa_1"
+                                                    value={configForm.data.whatsapp_instance}
+                                                    onChange={(e) => configForm.setData('whatsapp_instance', e.target.value)}
+                                                    className="font-mono text-sm"
+                                                />
+                                            </div>
+
+                                            {/* Company Token */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="whatsapp_api_key">{__('Company API Token (x-api-key)')}</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        id="whatsapp_api_key"
+                                                        type="text"
+                                                        value={configForm.data.whatsapp_api_key}
+                                                        onChange={(e) => configForm.setData('whatsapp_api_key', e.target.value)}
+                                                        className="font-mono text-sm"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={copyTokenToClipboard}
+                                                        disabled={!configForm.data.whatsapp_api_key}
+                                                        className="shrink-0"
+                                                    >
+                                                        {copiedToken ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-slate-500" />}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col sm:flex-row justify-between gap-3">
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleGenerateToken}
+                                                    className="gap-1.5 text-xs text-slate-700 dark:text-slate-200"
+                                                >
+                                                    <Key className="h-3.5 w-3.5" />
+                                                    {__('Generate Token')}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleSyncCompany}
+                                                    disabled={!whatsapp_api_key}
+                                                    className="gap-1.5 text-xs text-slate-700 hover:text-emerald-700 dark:text-slate-200"
+                                                >
+                                                    <Database className="h-3.5 w-3.5" />
+                                                    {__('Sync Company')}
+                                                </Button>
+                                            </div>
+
+                                            <Button type="submit" disabled={configForm.processing} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                                <RefreshCw className={`h-4 w-4 ${configForm.processing ? 'animate-spin' : ''}`} />
+                                                {__('Save Settings')}
+                                            </Button>
+                                        </CardFooter>
+                                    </form>
+                                </Card>
+                            </div>
+
+                            {/* Webhook Endpoint Info Card */}
+                            <div className="md:col-span-5 space-y-6">
+                                <Card className="shadow-sm border-t-4 border-t-indigo-500">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Terminal className="h-5 w-5 text-indigo-600" />
+                                            {__('Inbound Webhook Endpoint')}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {__('Receives opt-out unsubscriptions and incoming user replies.')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 text-xs">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs text-muted-foreground">{__('Webhook URL (Auto-Registered)')}</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    readOnly
+                                                    value={webhookUrl}
+                                                    className="font-mono text-xs bg-slate-50 dark:bg-slate-900 select-all"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={copyWebhookToClipboard}
+                                                    className="shrink-0"
+                                                >
+                                                    {copiedWebhook ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3.5 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200 block">{__('Listening Events:')}</span>
+                                            <div className="space-y-1.5 text-muted-foreground">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Badge variant="outline" className="font-mono text-[10px] bg-white dark:bg-slate-950">contact.opt_out</Badge>
+                                                    <span>{__('Handles STOP / BAJA unsubscriptions.')}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Badge variant="outline" className="font-mono text-[10px] bg-white dark:bg-slate-950">message.received</Badge>
+                                                    <span>{__('Handles incoming user messages & interactive bot replies.')}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+                </Tabs>
             </div>
         </>
     );

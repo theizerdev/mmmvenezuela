@@ -60,6 +60,16 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->can('dashboard.view');
 });
 
+// WhatsApp Webhooks
+Route::post('/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'handleIncoming'])->name('webhooks.whatsapp');
+Route::post('/api/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'handleIncoming']);
+
+// WhatsApp Documentation
+Route::get('/docs', [\App\Http\Controllers\Admin\IntegrationController::class, 'whatsappDocs'])->name('docs.whatsapp');
+Route::get('/docs/whatsapp', [\App\Http\Controllers\Admin\IntegrationController::class, 'whatsappDocs']);
+
+
+
 
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';

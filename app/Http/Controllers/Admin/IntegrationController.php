@@ -217,6 +217,29 @@ class IntegrationController extends Controller
     }
 
     /**
+     * Muestra la documentación técnica interactiva de la API de WhatsApp.
+     */
+    public function whatsappDocs(Request $request)
+    {
+        $empresa = $request->user()?->empresa ?? Empresa::find(1);
+
+        $currentLocale = app()->getLocale();
+        $translations = file_exists($path = base_path('lang/'.$currentLocale.'.json'))
+            ? json_decode(file_get_contents($path) ?: '{}', true)
+            : [];
+
+        return inertia('admin/integrations/docs', [
+            'empresa_id' => $empresa?->id ?? 1,
+            'empresa_nombre' => $empresa?->razon_social ?? $empresa?->name ?? 'MMM Venezuela',
+            'whatsapp_api_url' => $empresa?->whatsapp_api_url ?? config('whatsapp.api_url', 'http://localhost:3000'),
+            'whatsapp_instance' => $empresa?->whatsapp_instance ?? 'empresa_1',
+            'whatsapp_api_key' => $empresa?->whatsapp_api_key ?? 'my_secret_key_123',
+            'locale' => $currentLocale,
+            'translations' => $translations,
+        ]);
+    }
+
+    /**
      * Muestra la interfaz de configuración y estado de WhatsApp.
      */
     public function whatsappIndex(Request $request)
@@ -236,6 +259,11 @@ class IntegrationController extends Controller
         // Sincronizar estado local en DB con estado en vivo
         $this->syncLocalWhatsAppStatus($empresa, $status);
 
+        $queueStats = null;
+        if ($status && ! empty($status['isConnected'])) {
+            $queueStats = $whatsappService->getQueueStats();
+        }
+
         $currentLocale = app()->getLocale();
         $translations = file_exists($path = base_path('lang/'.$currentLocale.'.json'))
             ? json_decode(file_get_contents($path) ?: '{}', true)
@@ -251,13 +279,14 @@ class IntegrationController extends Controller
             'empresa_id' => $empresa->id,
             'empresa_nombre' => $empresa->razon_social ?? $empresa->name ?? 'Empresa',
             'whatsapp_api_key' => $empresa->whatsapp_api_key,
-            'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://82.165.213.124:8092'),
+            'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://localhost:3000'),
             'whatsapp_instance' => $empresa->whatsapp_instance ?? ('empresa_'.$empresa->id),
             'whatsapp_rate_limit' => $empresa->whatsapp_rate_limit ?? 60,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_phone' => $empresa->whatsapp_phone,
             'whatsapp_status' => $empresa->whatsapp_status,
             'live_status' => $status,
+            'queue_stats' => $queueStats,
             'locale' => $currentLocale,
             'translations' => $translations,
         ]);
@@ -491,7 +520,171 @@ class IntegrationController extends Controller
     }
 
     /**
-     * Envía un mensaje de prueba.
+     * Devuelve las estadísticas de la cola de WhatsApp en tiempo real (JSON).
+     */
+    public function whatsappQueueStats(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
+        }
+
+        $whatsappService = new WhatsAppService($empresa);
+        $stats = $whatsappService->getQueueStats();
+
+        return response()->json([
+            'success' => true,
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * Verifica si un número telefónico existe en WhatsApp.
+     */
+    public function whatsappCheckNumber(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'phone' => 'required|string|min:6|max:25',
+        ]);
+
+        $whatsappService = new WhatsAppService($empresa);
+        $result = $whatsappService->checkNumber($validated['phone']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Previsualiza variaciones de una plantilla con Spintax y variables dinámicas.
+     */
+    public function whatsappPreviewSpintax(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'template' => 'required|string|max:2000',
+            'count' => 'nullable|integer|min:1|max:20',
+            'variables' => 'nullable|array',
+        ]);
+
+        $whatsappService = new WhatsAppService($empresa);
+        $variations = $whatsappService->previewSpintax(
+            $validated['template'],
+            $validated['count'] ?? 5,
+            $validated['variables'] ?? []
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $variations,
+        ]);
+    }
+
+    /**
+     * Actualiza configuración Anti-Baneo en el motor de WhatsApp.
+     */
+    public function whatsappUpdateAntiBan(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'dailyLimit' => 'nullable|integer|min:1|max:50000',
+            'warmupMode' => 'nullable|boolean',
+            'workingHoursEnabled' => 'nullable|boolean',
+            'workingHoursStart' => 'nullable|string|max:10',
+            'workingHoursEnd' => 'nullable|string|max:10',
+            'proxyUrl' => 'nullable|string|max:255',
+        ]);
+
+        $whatsappService = new WhatsAppService($empresa);
+        $result = $whatsappService->updateAntiBan($validated);
+
+        if ($result && (isset($result['success']) && $result['success'] || isset($result['antiban']))) {
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Anti-Ban & Messaging limits updated successfully.'),
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'error',
+            'message' => __('Failed to update Anti-Ban settings on WhatsApp server.'),
+        ]);
+    }
+
+    /**
+     * Añade un número a la lista negra.
+     */
+    public function whatsappAddToBlacklist(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'phone' => 'required|string|min:6|max:25',
+            'reason' => 'nullable|string|max:100',
+        ]);
+
+        $whatsappService = new WhatsAppService($empresa);
+        $result = $whatsappService->addToBlacklist($validated['phone'], $validated['reason'] ?? 'MANUAL_BLOCK');
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Phone number added to blacklist successfully.'),
+        ]);
+    }
+
+    /**
+     * Elimina un número de la lista negra.
+     */
+    public function whatsappRemoveFromBlacklist(Request $request, string $phone)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $whatsappService = new WhatsAppService($empresa);
+        $whatsappService->removeFromBlacklist($phone);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Phone number removed from blacklist.'),
+        ]);
+    }
+
+    /**
+     * Envía un mensaje de prueba con soporte Spintax y variables.
      */
     public function whatsappSendMessage(Request $request)
     {
@@ -505,19 +698,26 @@ class IntegrationController extends Controller
         }
 
         $validated = $request->validate([
-            'to' => 'required|string|min:8|max:20',
-            'message' => 'required|string|max:1000',
+            'to' => 'required|string|min:8|max:25',
+            'message' => 'required|string|max:2000',
+            'variables' => 'nullable|array',
+            'sync' => 'nullable|boolean',
         ]);
 
         $whatsappService = new WhatsAppService($empresa);
 
-        // Ejecutar envío saltándose opt-in por ser prueba (isWelcome = true)
-        $result = $whatsappService->sendMessage($validated['to'], $validated['message'], true);
+        // Envío seguro con Spintax y variables
+        $result = $whatsappService->sendText(
+            $validated['to'],
+            $validated['message'],
+            $validated['variables'] ?? ['nombre' => $request->user()->name ?? 'Usuario'],
+            (bool) ($validated['sync'] ?? false)
+        );
 
-        if ($result && (isset($result['success']) && $result['success'] || isset($result['messageId']))) {
+        if ($result && (isset($result['success']) && $result['success'] || isset($result['messageId']) || isset($result['jobId']) || isset($result['status']))) {
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => __('Test message sent successfully!'),
+                'message' => __('Test message processed successfully! Spintax and variables resolved.'),
             ]);
         }
 

@@ -58,6 +58,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'preregistro/*',
             'preregistro-productor/*',
+            'webhooks/whatsapp',
+            'api/webhooks/whatsapp',
         ]);
 
         $middleware->alias([

@@ -14,14 +14,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // WhatsApp Integration Routes
     Route::get('/integrations/whatsapp', [IntegrationController::class, 'whatsappIndex'])->name('integrations.whatsapp.index')->can('whatsapp.view');
+    Route::get('/integrations/whatsapp/docs', [IntegrationController::class, 'whatsappDocs'])->name('integrations.whatsapp.docs')->can('whatsapp.view');
     Route::get('/integrations/whatsapp/status', [IntegrationController::class, 'whatsappStatus'])->name('integrations.whatsapp.status')->can('whatsapp.view');
+    Route::get('/integrations/whatsapp/queue-stats', [IntegrationController::class, 'whatsappQueueStats'])->name('integrations.whatsapp.queue-stats')->can('whatsapp.view');
     Route::put('/integrations/whatsapp/update', [IntegrationController::class, 'whatsappUpdate'])->name('integrations.whatsapp.update')->can('whatsapp.manage');
+    Route::post('/integrations/whatsapp/antiban', [IntegrationController::class, 'whatsappUpdateAntiBan'])->name('integrations.whatsapp.antiban')->can('whatsapp.manage');
     Route::post('/integrations/whatsapp/generate-token', [IntegrationController::class, 'whatsappGenerateToken'])->name('integrations.whatsapp.generate-token')->can('integrations.edit');
     Route::post('/integrations/whatsapp/sync', [IntegrationController::class, 'whatsappSync'])->name('integrations.whatsapp.sync')->can('integrations.edit');
     Route::post('/integrations/whatsapp/connect', [IntegrationController::class, 'whatsappConnect'])->name('integrations.whatsapp.connect')->can('integrations.edit');
     Route::post('/integrations/whatsapp/disconnect', [IntegrationController::class, 'whatsappDisconnect'])->name('integrations.whatsapp.disconnect')->can('integrations.edit');
     Route::post('/integrations/whatsapp/reconnect', [IntegrationController::class, 'whatsappReconnect'])->name('integrations.whatsapp.reconnect')->can('integrations.edit');
     Route::post('/integrations/whatsapp/send-message', [IntegrationController::class, 'whatsappSendMessage'])->name('integrations.whatsapp.send-message')->can('integrations.edit');
+    Route::post('/integrations/whatsapp/check-number', [IntegrationController::class, 'whatsappCheckNumber'])->name('integrations.whatsapp.check-number')->can('integrations.edit');
+    Route::post('/integrations/whatsapp/preview-spintax', [IntegrationController::class, 'whatsappPreviewSpintax'])->name('integrations.whatsapp.preview-spintax')->can('integrations.edit');
+    Route::post('/integrations/whatsapp/blacklist', [IntegrationController::class, 'whatsappAddToBlacklist'])->name('integrations.whatsapp.blacklist.add')->can('integrations.edit');
+    Route::delete('/integrations/whatsapp/blacklist/{phone}', [IntegrationController::class, 'whatsappRemoveFromBlacklist'])->name('integrations.whatsapp.blacklist.remove')->can('integrations.edit');
+
 
     // JAAK (Validaciones) Integration Routes
     Route::get('/integrations/validaciones', [IntegrationController::class, 'validacionesIndex'])->name('integrations.validaciones.index')->can('jaak.view');
