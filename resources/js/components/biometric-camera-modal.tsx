@@ -922,99 +922,97 @@ export default function BiometricCameraModal({
                 )}
 
                 {/* VISOR ENFOCADO (CONTENEDOR DE CÁMARA RESTRINGIDO A LA FORMA EXACTA DEL CARNET / CÉDULA) */}
-                {!previewResult && (
-                    <div
-                        ref={guideFrameRef}
-                        className={`relative flex flex-col items-center justify-between transition-all duration-300 overflow-hidden bg-slate-900 ${
-                            mode === 'foto'
-                                ? 'w-[min(82vw,360px)] aspect-[3/4] max-h-[62vh] rounded-3xl'
-                                : 'w-[min(92vw,520px)] aspect-[1.58/1] max-h-[58vh] rounded-3xl'
-                        } border-4 ${
-                            feedback.color === 'green'
-                                ? 'border-emerald-400 shadow-[0_0_40px_rgba(52,211,153,0.6)]'
-                                : feedback.color === 'yellow'
-                                ? 'border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)]'
-                                : 'border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.4)]'
-                        }`}
-                    >
-                        {/* VIDEO STREAM DIRECTAMENTE DENTRO DEL CONTENEDOR ENFOCADO */}
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            className={`absolute inset-0 w-full h-full object-cover transition-transform duration-300 ${
-                                facingMode === 'user' && mode === 'foto' ? '-scale-x-100' : ''
-                            } ${!isCameraActive ? 'opacity-0' : 'opacity-100'}`}
-                        />
+                <div
+                    ref={guideFrameRef}
+                    className={`${previewResult ? 'hidden' : 'relative flex'} flex-col items-center justify-between transition-all duration-300 overflow-hidden bg-slate-900 ${
+                        mode === 'foto'
+                            ? 'w-[min(82vw,360px)] aspect-[3/4] max-h-[62vh] rounded-3xl'
+                            : 'w-[min(92vw,520px)] aspect-[1.58/1] max-h-[58vh] rounded-3xl'
+                    } border-4 ${
+                        feedback.color === 'green'
+                            ? 'border-emerald-400 shadow-[0_0_40px_rgba(52,211,153,0.6)]'
+                            : feedback.color === 'yellow'
+                            ? 'border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)]'
+                            : 'border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.4)]'
+                    }`}
+                >
+                    {/* VIDEO STREAM DIRECTAMENTE DENTRO DEL CONTENEDOR ENFOCADO */}
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className={`absolute inset-0 w-full h-full object-cover transition-transform duration-300 ${
+                            facingMode === 'user' && mode === 'foto' ? '-scale-x-100' : ''
+                        } ${!isCameraActive ? 'opacity-0' : 'opacity-100'}`}
+                    />
 
-                        {/* SPINNER DE INICIALIZACIÓN DE CÁMARA */}
-                        {!isCameraActive && !cameraError && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-slate-300 gap-3 z-20">
-                                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                                <span className="text-xs font-semibold">Iniciando cámara y sensor biométrico...</span>
-                            </div>
-                        )}
-
-                        {/* BADGE SUPERIOR DE IDENTIFICACIÓN */}
-                        <div className="z-10 mt-3 bg-slate-950/85 px-3 py-1 rounded-full border border-slate-700/80 text-[11px] font-bold text-slate-200 shadow flex items-center gap-1.5 backdrop-blur-md">
-                            {mode === 'foto' ? (
-                                <>
-                                    <User className="w-3.5 h-3.5 text-emerald-400" />
-                                    <span>Foto Carnet Oficial (30 × 40 mm)</span>
-                                </>
-                            ) : (
-                                <>
-                                    <IdCard className="w-3.5 h-3.5 text-blue-400" />
-                                    <span>Cédula de Identidad</span>
-                                </>
-                            )}
+                    {/* SPINNER DE INICIALIZACIÓN DE CÁMARA */}
+                    {!isCameraActive && !cameraError && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-slate-300 gap-3 z-20">
+                            <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                            <span className="text-xs font-semibold">Iniciando cámara y sensor biométrico...</span>
                         </div>
+                    )}
 
-                        {/* SILUETA / GUÍAS DE ENCUADRE 30 x 40 mm */}
+                    {/* BADGE SUPERIOR DE IDENTIFICACIÓN */}
+                    <div className="z-10 mt-3 bg-slate-950/85 px-3 py-1 rounded-full border border-slate-700/80 text-[11px] font-bold text-slate-200 shadow flex items-center gap-1.5 backdrop-blur-md">
                         {mode === 'foto' ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-between p-3 pointer-events-none overflow-hidden">
-                                {/* Línea guía de coronilla (Cabello) - 30 mm superior */}
-                                <div className="w-full flex items-center justify-between px-2 pt-8 opacity-70">
-                                    <div className="h-[1px] flex-1 border-t border-dashed border-white" />
-                                    <span className="text-[9px] font-mono font-bold text-white px-2 bg-slate-950/80 rounded">Coronilla</span>
-                                    <div className="h-[1px] flex-1 border-t border-dashed border-white" />
-                                </div>
-
-                                {/* Silueta de Cabeza */}
-                                <div className="w-32 h-44 rounded-[50%] border-2 border-dashed border-white/60 -mt-2 flex items-center justify-center">
-                                    <div className="w-16 border-t border-dashed border-white/30" />
-                                </div>
-
-                                {/* Línea guía de barbilla - 30 mm inferior */}
-                                <div className="w-full flex items-center justify-between px-2 opacity-70 -mt-4">
-                                    <div className="h-[1px] flex-1 border-t border-dashed border-white" />
-                                    <span className="text-[9px] font-mono font-bold text-white px-2 bg-slate-950/80 rounded">Barbilla</span>
-                                    <div className="h-[1px] flex-1 border-t border-dashed border-white" />
-                                </div>
-
-                                {/* Cuello y Hombros en la base */}
-                                <div className="w-[96%] h-14 rounded-t-[40px] border-2 border-dashed border-white/50 flex items-center justify-center bg-white/5">
-                                    <span className="text-[9px] uppercase font-bold text-white/50 tracking-wider">Cuello y Hombros</span>
-                                </div>
-                            </div>
+                            <>
+                                <User className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>Foto Carnet Oficial (30 × 40 mm)</span>
+                            </>
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="w-[90%] h-[82%] border-2 border-dashed border-white/70 rounded-2xl flex items-center justify-center">
-                                    <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Alinee la Cédula Aquí</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ANIMACIÓN DE CUENTA REGRESIVA 3.. 2.. 1.. CON ANILLO LUMINOSO */}
-                        {countdown !== null && (
-                            <div className="absolute inset-0 m-auto z-30 flex flex-col items-center justify-center w-28 h-28 rounded-full bg-emerald-600/95 text-white shadow-[0_0_50px_rgba(16,185,129,0.9)] border-4 border-white animate-pulse">
-                                <span className="font-black text-6xl leading-none">{countdown}</span>
-                                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100 mt-1">Capturando</span>
-                            </div>
+                            <>
+                                <IdCard className="w-3.5 h-3.5 text-blue-400" />
+                                <span>Cédula de Identidad</span>
+                            </>
                         )}
                     </div>
-                )}
+
+                    {/* SILUETA / GUÍAS DE ENCUADRE 30 x 40 mm */}
+                    {mode === 'foto' ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-between p-3 pointer-events-none overflow-hidden">
+                            {/* Línea guía de coronilla (Cabello) - 30 mm superior */}
+                            <div className="w-full flex items-center justify-between px-2 pt-8 opacity-70">
+                                <div className="h-[1px] flex-1 border-t border-dashed border-white" />
+                                <span className="text-[9px] font-mono font-bold text-white px-2 bg-slate-950/80 rounded">Coronilla</span>
+                                <div className="h-[1px] flex-1 border-t border-dashed border-white" />
+                            </div>
+
+                            {/* Silueta de Cabeza */}
+                            <div className="w-32 h-44 rounded-[50%] border-2 border-dashed border-white/60 -mt-2 flex items-center justify-center">
+                                <div className="w-16 border-t border-dashed border-white/30" />
+                            </div>
+
+                            {/* Línea guía de barbilla - 30 mm inferior */}
+                            <div className="w-full flex items-center justify-between px-2 opacity-70 -mt-4">
+                                <div className="h-[1px] flex-1 border-t border-dashed border-white" />
+                                <span className="text-[9px] font-mono font-bold text-white px-2 bg-slate-950/80 rounded">Barbilla</span>
+                                <div className="h-[1px] flex-1 border-t border-dashed border-white" />
+                            </div>
+
+                            {/* Cuello y Hombros en la base */}
+                            <div className="w-[96%] h-14 rounded-t-[40px] border-2 border-dashed border-white/50 flex items-center justify-center bg-white/5">
+                                <span className="text-[9px] uppercase font-bold text-white/50 tracking-wider">Cuello y Hombros</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-[90%] h-[82%] border-2 border-dashed border-white/70 rounded-2xl flex items-center justify-center">
+                                <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Alinee la Cédula Aquí</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ANIMACIÓN DE CUENTA REGRESIVA 3.. 2.. 1.. CON ANILLO LUMINOSO */}
+                    {countdown !== null && (
+                        <div className="absolute inset-0 m-auto z-30 flex flex-col items-center justify-center w-28 h-28 rounded-full bg-emerald-600/95 text-white shadow-[0_0_50px_rgba(16,185,129,0.9)] border-4 border-white animate-pulse">
+                            <span className="font-black text-6xl leading-none">{countdown}</span>
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100 mt-1">Capturando</span>
+                        </div>
+                    )}
+                </div>
 
                 {/* VISTA PREVIA DE FOTO CAPTURADA Y CONFIRMACIÓN */}
                 {previewResult && (
