@@ -3215,37 +3215,40 @@ export default function RegistroPastor({
                             <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50/80 to-indigo-50/50 p-6 sm:p-8 rounded-t-3xl">
                                 <div className="flex items-center justify-between flex-wrap gap-2">
                                     <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
-                                        <div className="w-10 h-10 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 shadow-xs">
+                                        <div className="w-10 h-10 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 shadow-xs shrink-0">
                                             <Camera className="h-5 w-5" />
                                         </div>
                                         <div>
                                             <span>Paso 5: Fotografía Tipo Carnet y Cédula</span>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                                <Badge className="bg-blue-600 hover:bg-blue-600 text-white font-bold text-[10px] px-2 py-0">
-                                                    <Sparkles className="w-2.5 h-2.5 mr-1 inline" /> Verificación Biométrica IA
-                                                </Badge>
-                                                <Badge variant="outline" className="text-slate-500 border-slate-300 text-[10px] px-1.5 py-0 font-medium">
-                                                    Compresión Automática &lt; 350 KB
+                                                <Badge className="bg-blue-600 hover:bg-blue-600 text-white font-bold text-[10px] px-2.5 py-0.5 rounded-full shadow-xs">
+                                                    <Sparkles className="w-3 h-3 mr-1 inline" /> Captura en Vivo con IA
                                                 </Badge>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <CardDescription className="text-slate-600 text-xs sm:text-sm font-medium mt-2">
-                                    Capture sus fotografías utilizando el sistema guiado en tiempo real o cargue archivos legibles. Las fotos se ajustarán y optimizarán automáticamente al formato oficial.
-                                </CardDescription>
+                                <div className="mt-3 bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3.5 sm:p-4 text-slate-700 text-xs sm:text-sm space-y-1.5 shadow-xs">
+                                    <p className="font-bold text-blue-950 flex items-center gap-1.5">
+                                        <Sparkles className="w-4 h-4 text-blue-600" />
+                                        Instrucciones para la toma de fotografías:
+                                    </p>
+                                    <ul className="list-disc list-inside space-y-1 text-slate-600 text-xs pl-1">
+                                        <li><strong>Foto Tipo Carnet:</strong> Ubíquese de frente en un lugar bien iluminado. Alinee su cabeza en la guía superior y la barbilla en la marca inferior (deben visualizarse cabeza, cuello y hombros).</li>
+                                        <li><strong>Cédula de Identidad:</strong> Coloque la cédula sobre una superficie plana y sin reflejos. Encuadre los 4 bordes dentro del recuadro para que el texto sea nítido y legible.</li>
+                                    </ul>
+                                </div>
                             </CardHeader>
                             <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {/* Fotografía de Perfil / Carnet */}
                                     <div
-                                        className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${
-                                            isFieldVisibleError('foto', 5)
-                                                ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
-                                                : data.foto
+                                        className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${isFieldVisibleError('foto', 5)
+                                            ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
+                                            : data.foto
                                                 ? 'border-emerald-500/50 bg-emerald-50/10 shadow-sm'
                                                 : 'border-slate-200 hover:border-slate-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between w-full">
                                             <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
@@ -3261,13 +3264,12 @@ export default function RegistroPastor({
 
                                         {/* Marco de Previsualización */}
                                         <div
-                                            className={`w-40 h-52 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${
-                                                data.foto
-                                                    ? 'border-emerald-500 bg-black'
-                                                    : isFieldVisibleError('foto', 5)
+                                            className={`w-40 h-52 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto
+                                                ? 'border-emerald-500 bg-black'
+                                                : isFieldVisibleError('foto', 5)
                                                     ? 'border-rose-400 bg-rose-50/30'
                                                     : 'border-slate-300 bg-white'
-                                            }`}
+                                                }`}
                                         >
                                             {data.foto ? (
                                                 <img src={data.foto} alt="Foto Perfil" className="w-full h-full object-cover" />
@@ -3283,31 +3285,15 @@ export default function RegistroPastor({
                                         </div>
 
                                         {/* Botones de Acción */}
-                                        <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+                                        <div className="flex items-center gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
-                                                size="sm"
                                                 onClick={() => handleOpenBiometricCamera('foto', 'user')}
-                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md h-10 px-4 gap-1.5 flex-1"
+                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm sm:text-xs rounded-2xl shadow-md h-12 sm:h-11 px-5 gap-2 flex-1 transition-transform active:scale-98"
                                             >
-                                                <Camera className="w-4 h-4 text-blue-200" />
+                                                <Camera className="w-5 h-5 sm:w-4 sm:h-4 text-blue-200" />
                                                 Cámara Biométrica
                                             </Button>
-
-                                            <Label
-                                                htmlFor="upload-foto"
-                                                className="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold py-2 px-3.5 rounded-xl shadow-xs h-10 transition-colors"
-                                            >
-                                                <Upload className="w-3.5 h-3.5 text-slate-600" />
-                                                Subir Archivo
-                                            </Label>
-                                            <input
-                                                id="upload-foto"
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={(e) => handleFileUpload(e, 'foto')}
-                                            />
 
                                             {data.foto && (
                                                 <Button
@@ -3318,7 +3304,7 @@ export default function RegistroPastor({
                                                         setData('foto', '');
                                                         setFotoSizeKb(null);
                                                     }}
-                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-xl h-10 px-3"
+                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-2xl h-12 sm:h-11 px-3.5"
                                                     title="Eliminar Fotografía"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -3336,13 +3322,12 @@ export default function RegistroPastor({
 
                                     {/* Fotografía de la Cédula */}
                                     <div
-                                        className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${
-                                            isFieldVisibleError('foto_cedula', 5)
-                                                ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
-                                                : data.foto_cedula
+                                        className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${isFieldVisibleError('foto_cedula', 5)
+                                            ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
+                                            : data.foto_cedula
                                                 ? 'border-emerald-500/50 bg-emerald-50/10 shadow-sm'
                                                 : 'border-slate-200 hover:border-slate-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between w-full">
                                             <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
@@ -3358,13 +3343,12 @@ export default function RegistroPastor({
 
                                         {/* Marco de Previsualización Cédula */}
                                         <div
-                                            className={`w-56 h-36 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${
-                                                data.foto_cedula
-                                                    ? 'border-emerald-500 bg-black'
-                                                    : isFieldVisibleError('foto_cedula', 5)
+                                            className={`w-56 h-36 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto_cedula
+                                                ? 'border-emerald-500 bg-black'
+                                                : isFieldVisibleError('foto_cedula', 5)
                                                     ? 'border-rose-400 bg-rose-50/30'
                                                     : 'border-slate-300 bg-white'
-                                            }`}
+                                                }`}
                                         >
                                             {data.foto_cedula ? (
                                                 <img src={data.foto_cedula} alt="Cédula" className="w-full h-full object-cover" />
@@ -3380,31 +3364,15 @@ export default function RegistroPastor({
                                         </div>
 
                                         {/* Botones de Acción */}
-                                        <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+                                        <div className="flex items-center gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
-                                                size="sm"
                                                 onClick={() => handleOpenBiometricCamera('foto_cedula', 'environment')}
-                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md h-10 px-4 gap-1.5 flex-1"
+                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm sm:text-xs rounded-2xl shadow-md h-12 sm:h-11 px-5 gap-2 flex-1 transition-transform active:scale-98"
                                             >
-                                                <Camera className="w-4 h-4 text-blue-200" />
+                                                <Camera className="w-5 h-5 sm:w-4 sm:h-4 text-blue-200" />
                                                 Escanear Cédula
                                             </Button>
-
-                                            <Label
-                                                htmlFor="upload-cedula"
-                                                className="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold py-2 px-3.5 rounded-xl shadow-xs h-10 transition-colors"
-                                            >
-                                                <Upload className="w-3.5 h-3.5 text-slate-600" />
-                                                Subir Archivo
-                                            </Label>
-                                            <input
-                                                id="upload-cedula"
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={(e) => handleFileUpload(e, 'foto_cedula')}
-                                            />
 
                                             {data.foto_cedula && (
                                                 <Button
@@ -3415,8 +3383,8 @@ export default function RegistroPastor({
                                                         setData('foto_cedula', '');
                                                         setFotoCedulaSizeKb(null);
                                                     }}
-                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-xl h-10 px-3"
-                                                    title="Eliminar Cédula"
+                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-2xl h-12 sm:h-11 px-3.5"
+                                                    title="Eliminar Fotografía"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
