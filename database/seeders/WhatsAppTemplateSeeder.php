@@ -38,6 +38,13 @@ class WhatsAppTemplateSeeder extends Seeder
                 'activo' => true,
             ],
             [
+                'nombre' => 'Confirmación de Cambio de Clave',
+                'categoria' => 'seguridad',
+                'contenido' => "{¡Hola {{nombre}}! 👋|Paz de Dios {{nombre}},}\n\n{Tu contraseña ha sido actualizada con éxito en la plataforma de {{empresa}}.|Le confirmamos que su clave de acceso ha sido restablecida satisfactoriamente.} 🔒\n\n_{¿No fuiste tú? Por favor contáctanos de inmediato para proteger tu cuenta.|Si no realizaste esta acción, notifícalo a la administración.}_",
+                'variables' => ['nombre', 'empresa'],
+                'activo' => true,
+            ],
+            [
                 'nombre' => 'Notificación Ministerial a Presbítero',
                 'categoria' => 'pastoral',
                 'contenido' => "{🔔 *MMM Venezuela - Notificación Ministerial*|📋 *Ficha de Registro Ministerial*|📢 *Notificación de Obrero a su Cargo*}\n\nEstimado Presbítero,\n{Se ha completado la ficha de registro ministerial de un obrero a su cargo:|Le notificamos el registro exitoso del pastor:}\n\n👤 *Pastor:* {{nombre}}\n🆔 *Cédula:* {{documento}}\n🏷️ *Código Asignado:* {{codigo}}\n📜 *Grado Ministerial:* {{grado}}\n📍 *Zona:* {{zona}}\n🏛️ *Distrito:* {{distrito}}\n📱 *Teléfono:* {{telefono}}\n📋 *Estado Civil:* {{estado_civil}}\n\nLos datos se encuentran listos en el panel administrativo para su revisión y confirmación oficial.",

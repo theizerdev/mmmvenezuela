@@ -196,7 +196,7 @@ class ForgotPasswordOtpController extends Controller
         
         $whatsappService->sendTemplate($cleanNumber, 'Confirmación de Cambio de Clave', [
             'nombre' => $user->name,
-            'empresa' => $empresa->razon_social ?? $empresa->nombre ?? 'MMM Venezuela',
+            'empresa' => $empresa->razon_social ?? $empresa->razon_social ?? 'MMM Venezuela',
         ], true);
 
         // Limpiar las variables de verificación de la sesión
