@@ -900,7 +900,7 @@ export default function WhatsAppIntegration({
                             className="h-8 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5"
                         >
                             <Heart className="h-3.5 w-3.5 text-rose-300 fill-rose-300" />
-                            {__('Diagnóstico')}
+                            {__('Health Diagnostic')}
                         </Button>
 
                         {isConnected && (
@@ -992,7 +992,7 @@ export default function WhatsAppIntegration({
                         <div className="space-y-1">
                             <div className="flex items-baseline gap-2">
                                 <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 capitalize">
-                                    {liveStatusState?.connectionState || (isConnected ? 'connected' : 'offline')}
+                                    {liveStatusState?.connectionState || (isConnected ? __('connected') : __('offline'))}
                                 </span>
                             </div>
                             <p className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
@@ -1095,11 +1095,11 @@ export default function WhatsAppIntegration({
                         </TabsTrigger>
                         <TabsTrigger value="templates" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <FileText className="h-4 w-4" />
-                            {__('Plantillas')}
+                            {__('Templates')}
                         </TabsTrigger>
                         <TabsTrigger value="history" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <Inbox className="h-4 w-4" />
-                            {__('Historial & Logs')}
+                            {__('History & Logs')}
                         </TabsTrigger>
                         <TabsTrigger value="antiban" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <Shield className="h-4 w-4" />
@@ -1188,7 +1188,7 @@ export default function WhatsAppIntegration({
                                     </CardContent>
                                     <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-3 flex justify-between items-center text-xs text-muted-foreground">
                                         <span>{__('Engine:')} Baileys Multi-Instance</span>
-                                        <span>{__('Status:')} <strong className="text-slate-700 dark:text-slate-300 capitalize">{liveStatusState?.connectionState || 'idle'}</strong></span>
+                                        <span>{__('Status:')} <strong className="text-slate-700 dark:text-slate-300 capitalize">{liveStatusState?.connectionState || __('idle')}</strong></span>
                                     </CardFooter>
                                 </Card>
                             </div>
@@ -1250,10 +1250,10 @@ export default function WhatsAppIntegration({
                                 <div>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <FileText className="h-5 w-5 text-emerald-600" />
-                                        {__('Plantillas de Mensajes con Spintax')}
+                                        {__('Message Templates with Spintax')}
                                     </CardTitle>
                                     <CardDescription>
-                                        {__('Crea y gestiona plantillas reutilizables para notificaciones pastorales, convocatorias y comunicados.')}
+                                        {__('Create and manage reusable templates for pastoral notifications, calls, and announcements.')}
                                     </CardDescription>
                                 </div>
                                 <Button
@@ -1262,17 +1262,17 @@ export default function WhatsAppIntegration({
                                     className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    {__('Nueva Plantilla')}
+                                    {__('New Template')}
                                 </Button>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {/* Filtros por Categoría */}
                                 <div className="flex flex-wrap items-center gap-2">
                                     {[
-                                        { id: 'all', label: __('Todas') },
+                                        { id: 'all', label: __('All') },
                                         { id: 'pastoral', label: __('Pastoral') },
-                                        { id: 'convocatorias', label: __('Convocatorias') },
-                                        { id: 'avisos', label: __('Avisos') },
+                                        { id: 'convocatorias', label: __('Calls') },
+                                        { id: 'avisos', label: __('Announcements') },
                                         { id: 'general', label: __('General') },
                                     ].map(cat => (
                                         <Button
@@ -1292,7 +1292,7 @@ export default function WhatsAppIntegration({
                                     {filteredTemplates.length === 0 ? (
                                         <div className="col-span-2 text-center py-10 border rounded-xl bg-slate-50/50 dark:bg-slate-900/20 text-muted-foreground text-sm space-y-2">
                                             <FileText className="h-8 w-8 mx-auto text-slate-400" />
-                                            <p>{__('No hay plantillas registradas en esta categoría.')}</p>
+                                            <p>{__('No templates registered in this category.')}</p>
                                         </div>
                                     ) : (
                                         filteredTemplates.map(t => (
@@ -1302,7 +1302,7 @@ export default function WhatsAppIntegration({
                                                         <div>
                                                             <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t.nombre}</h4>
                                                             <Badge variant="outline" className="text-[10px] uppercase font-mono mt-1">
-                                                                {t.categoria}
+                                                                {__(t.categoria)}
                                                             </Badge>
                                                         </div>
                                                         <div className="flex items-center gap-1">
@@ -1349,7 +1349,7 @@ export default function WhatsAppIntegration({
                                                         className="text-xs h-8 gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                                                     >
                                                         <Send className="h-3.5 w-3.5" />
-                                                        {__('Usar en Sandbox')}
+                                                        {__('Use in Sandbox')}
                                                     </Button>
                                                 </div>
                                             </Card>
@@ -1365,19 +1365,19 @@ export default function WhatsAppIntegration({
                         {/* Mini-Cards de Métricas de Entrega */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Total Salientes')}</span>
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Total Outbound')}</span>
                                 <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{messagesStats.totalSent}</div>
                             </Card>
                             <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Tasa de Entrega')}</span>
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Delivery Rate')}</span>
                                 <div className="text-2xl font-bold text-emerald-600">{messagesStats.deliveryRate}%</div>
                             </Card>
                             <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Tasa de Lectura')}</span>
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Read Rate')}</span>
                                 <div className="text-2xl font-bold text-blue-600">{messagesStats.readRate}%</div>
                             </Card>
                             <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Fallidos')}</span>
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Failed')}</span>
                                 <div className="text-2xl font-bold text-rose-600">{messagesStats.totalFailed}</div>
                             </Card>
                         </div>
@@ -1388,10 +1388,10 @@ export default function WhatsAppIntegration({
                                 <div>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Inbox className="h-5 w-5 text-indigo-600" />
-                                        {__('Registro de Mensajes y Entregas')}
+                                        {__('Message & Delivery Registry')}
                                     </CardTitle>
                                     <CardDescription>
-                                        {__('Historial en vivo de mensajes enviados y recibidos con confirmación de lectura.')}
+                                        {__('Live log of sent and received messages with read confirmation.')}
                                     </CardDescription>
                                 </div>
                                 <Button
@@ -1402,7 +1402,7 @@ export default function WhatsAppIntegration({
                                     className="gap-1.5 text-xs h-8"
                                 >
                                     <RefreshCw className={`h-3.5 w-3.5 ${historyLoading ? 'animate-spin' : ''}`} />
-                                    {__('Refrescar')}
+                                    {__('Refresh')}
                                 </Button>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -1411,7 +1411,7 @@ export default function WhatsAppIntegration({
                                     <div className="relative flex-1 w-full">
                                         <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
                                         <Input
-                                            placeholder={__('Buscar por teléfono o mensaje...')}
+                                            placeholder={__('Search by phone or message...')}
                                             value={historySearch}
                                             onChange={(e) => setHistorySearch(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && fetchMessages(1, historySearch, historyStatus)}
@@ -1420,15 +1420,15 @@ export default function WhatsAppIntegration({
                                     </div>
                                     <Select value={historyStatus} onValueChange={(v) => { setHistoryStatus(v); setHistoryPage(1); }}>
                                         <SelectTrigger className="w-full sm:w-40 text-xs h-9">
-                                            <SelectValue placeholder={__('Estado')} />
+                                            <SelectValue placeholder={__('Status')} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">{__('Todos los Estados')}</SelectItem>
-                                            <SelectItem value="delivered">{__('Entregado')}</SelectItem>
-                                            <SelectItem value="read">{__('Leído')}</SelectItem>
-                                            <SelectItem value="sent">{__('Enviado')}</SelectItem>
-                                            <SelectItem value="failed">{__('Fallido')}</SelectItem>
-                                            <SelectItem value="pending">{__('Pendiente')}</SelectItem>
+                                            <SelectItem value="all">{__('All Statuses')}</SelectItem>
+                                            <SelectItem value="delivered">{__('Delivered')}</SelectItem>
+                                            <SelectItem value="read">{__('Read')}</SelectItem>
+                                            <SelectItem value="sent">{__('Sent')}</SelectItem>
+                                            <SelectItem value="failed">{__('Failed')}</SelectItem>
+                                            <SelectItem value="pending">{__('Pending')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -1438,19 +1438,19 @@ export default function WhatsAppIntegration({
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="bg-slate-50 dark:bg-slate-900/50 text-xs">
-                                                <TableHead>{__('Destinatario')}</TableHead>
-                                                <TableHead>{__('Mensaje')}</TableHead>
-                                                <TableHead>{__('Dirección')}</TableHead>
-                                                <TableHead>{__('Estado')}</TableHead>
-                                                <TableHead>{__('Fecha')}</TableHead>
-                                                <TableHead className="text-right">{__('Acciones')}</TableHead>
+                                                <TableHead>{__('Recipient')}</TableHead>
+                                                <TableHead>{__('Message')}</TableHead>
+                                                <TableHead>{__('Direction')}</TableHead>
+                                                <TableHead>{__('Status')}</TableHead>
+                                                <TableHead>{__('Date')}</TableHead>
+                                                <TableHead className="text-right">{__('Actions')}</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {!messagesData || messagesData.data.length === 0 ? (
                                                 <TableRow>
                                                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs">
-                                                        {historyLoading ? __('Cargando mensajes...') : __('No hay mensajes registrados con los filtros seleccionados.')}
+                                                        {historyLoading ? __('Loading messages...') : __('No messages found with selected filters.')}
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
@@ -1464,33 +1464,33 @@ export default function WhatsAppIntegration({
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge variant="outline" className={`text-[10px] ${m.direction === 'inbound' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-700'}`}>
-                                                                {m.direction === 'inbound' ? __('Entrante') : __('Saliente')}
+                                                                {m.direction === 'inbound' ? __('Inbound') : __('Outbound')}
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell>
                                                             {m.status === 'read' && (
                                                                 <Badge className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1 text-[10px]">
-                                                                    <CheckCheck className="h-3 w-3" /> {__('Leído')}
+                                                                    <CheckCheck className="h-3 w-3" /> {__('Read')}
                                                                 </Badge>
                                                             )}
                                                             {m.status === 'delivered' && (
                                                                 <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1 text-[10px]">
-                                                                    <CheckCheck className="h-3 w-3" /> {__('Entregado')}
+                                                                    <CheckCheck className="h-3 w-3" /> {__('Delivered')}
                                                                 </Badge>
                                                             )}
                                                             {m.status === 'sent' && (
                                                                 <Badge className="bg-slate-500/10 text-slate-600 border-slate-200 gap-1 text-[10px]">
-                                                                    <Check className="h-3 w-3" /> {__('Enviado')}
+                                                                    <Check className="h-3 w-3" /> {__('Sent')}
                                                                 </Badge>
                                                             )}
                                                             {m.status === 'failed' && (
                                                                 <Badge className="bg-rose-500/10 text-rose-600 border-rose-200 gap-1 text-[10px]">
-                                                                    <AlertCircle className="h-3 w-3" /> {__('Fallido')}
+                                                                    <AlertCircle className="h-3 w-3" /> {__('Failed')}
                                                                 </Badge>
                                                             )}
                                                             {m.status === 'pending' && (
                                                                 <Badge className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1 text-[10px]">
-                                                                    <Clock className="h-3 w-3" /> {__('Pendiente')}
+                                                                    <Clock className="h-3 w-3" /> {__('Pending')}
                                                                 </Badge>
                                                             )}
                                                         </TableCell>
@@ -1516,7 +1516,7 @@ export default function WhatsAppIntegration({
                                                                         className="h-7 text-[11px] gap-1 text-rose-600 hover:text-rose-700 px-2"
                                                                     >
                                                                         <RotateCw className={`h-3 w-3 ${retryingId === m.id ? 'animate-spin' : ''}`} />
-                                                                        {__('Reintentar')}
+                                                                        {__('Retry')}
                                                                     </Button>
                                                                 )}
                                                             </div>
@@ -1532,7 +1532,7 @@ export default function WhatsAppIntegration({
                                 {messagesData && messagesData.last_page > 1 && (
                                     <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
                                         <span>
-                                            {__('Página')} {messagesData.current_page} {__('de')} {messagesData.last_page} ({messagesData.total} {__('mensajes')})
+                                            {__('Page')} {messagesData.current_page} {__('of')} {messagesData.last_page} ({messagesData.total} {__('messages')})
                                         </span>
                                         <div className="flex gap-1">
                                             <Button
@@ -1542,7 +1542,7 @@ export default function WhatsAppIntegration({
                                                 onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
                                                 className="h-7 text-xs"
                                             >
-                                                {__('Anterior')}
+                                                {__('Previous')}
                                             </Button>
                                             <Button
                                                 size="sm"
@@ -1551,7 +1551,7 @@ export default function WhatsAppIntegration({
                                                 onClick={() => setHistoryPage(prev => prev + 1)}
                                                 className="h-7 text-xs"
                                             >
-                                                {__('Siguiente')}
+                                                {__('Next')}
                                             </Button>
                                         </div>
                                     </div>
@@ -1726,14 +1726,14 @@ export default function WhatsAppIntegration({
                                         <div className="p-3 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                             <div className="flex items-center gap-2">
                                                 <FileText className="h-4 w-4 text-emerald-600" />
-                                                <span className="text-xs font-semibold">{__('Cargar desde Plantilla:')}</span>
+                                                <span className="text-xs font-semibold">{__('Load from Template:')}</span>
                                             </div>
                                             <Select onValueChange={(val) => {
                                                 const t = templates.find(item => String(item.id) === val);
                                                 if (t) setTestMessage(prev => ({ ...prev, message: t.contenido }));
                                             }}>
                                                 <SelectTrigger className="w-full sm:w-72 text-xs h-8 bg-white dark:bg-slate-950">
-                                                    <SelectValue placeholder={__('Selecciona una plantilla...')} />
+                                                    <SelectValue placeholder={__('Select a template...')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {templates.map(t => (
@@ -2036,54 +2036,54 @@ export default function WhatsAppIntegration({
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base">
                             <Heart className="h-5 w-5 text-rose-500 fill-rose-500" />
-                            {__('Diagnóstico de Salud WhatsApp')}
+                            {__('WhatsApp Health Diagnostic')}
                         </DialogTitle>
                         <DialogDescription>
-                            {__('Prueba de latencia y estado del motor Baileys en tiempo real.')}
+                            {__('Real-time latency check and Baileys engine status test.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     {diagnosticLoading ? (
                         <div className="py-8 text-center space-y-3">
                             <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
-                            <p className="text-xs text-muted-foreground">{__('Ejecutando ping al servidor...')}</p>
+                            <p className="text-xs text-muted-foreground">{__('Executing server ping...')}</p>
                         </div>
                     ) : diagnosticData ? (
                         <div className="space-y-3 text-xs">
                             <div className="grid grid-cols-2 gap-2">
                                 <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Latencia de Red')}</span>
+                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Network Latency')}</span>
                                     <span className="text-lg font-bold text-emerald-600 font-mono">{diagnosticData.latencyMs} ms</span>
                                 </div>
                                 <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Estado Socket')}</span>
+                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Socket State')}</span>
                                     <span className="text-lg font-bold text-slate-900 dark:text-slate-100 capitalize">
-                                        {diagnosticData.status?.connectionState || (diagnosticData.status?.isConnected ? 'connected' : 'disconnected')}
+                                        {diagnosticData.status?.connectionState || (diagnosticData.status?.isConnected ? __('connected') : __('disconnected'))}
                                     </span>
                                 </div>
                             </div>
 
                             {diagnosticData.health && (
                                 <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-1.5 font-mono text-[11px]">
-                                    <div><strong>Node.js:</strong> {diagnosticData.health.system?.nodeVersion} ({diagnosticData.health.system?.platform})</div>
-                                    <div><strong>Memoria RSS:</strong> {diagnosticData.health.system?.memoryUsageMb?.rss} MB</div>
-                                    <div><strong>Base de Datos:</strong> {diagnosticData.health.database?.status} ({diagnosticData.health.database?.latencyMs} ms)</div>
+                                    <div><strong>{__('Node.js:')}</strong> {diagnosticData.health.system?.nodeVersion} ({diagnosticData.health.system?.platform})</div>
+                                    <div><strong>{__('RSS Memory:')}</strong> {diagnosticData.health.system?.memoryUsageMb?.rss} MB</div>
+                                    <div><strong>{__('Database:')}</strong> {diagnosticData.health.database?.status} ({diagnosticData.health.database?.latencyMs} ms)</div>
                                 </div>
                             )}
 
                             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                <span>{__('El servidor está respondiendo de forma óptima a las solicitudes.')}</span>
+                                <span>{__('The WhatsApp engine is healthy and responding optimally.')}</span>
                             </div>
                         </div>
                     ) : null}
 
                     <DialogFooter>
                         <Button size="sm" variant="outline" onClick={() => setDiagnosticOpen(false)}>
-                            {__('Cerrar')}
+                            {__('Close')}
                         </Button>
                         <Button size="sm" onClick={handleRunDiagnostic} disabled={diagnosticLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                            {__('Volver a Probar')}
+                            {__('Re-test')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -2095,47 +2095,49 @@ export default function WhatsAppIntegration({
                     <DialogHeader>
                         <DialogTitle className="text-base flex items-center gap-2">
                             <FileText className="h-5 w-5 text-emerald-600" />
-                            {editingTemplate ? __('Editar Plantilla') : __('Nueva Plantilla de WhatsApp')}
+                            {editingTemplate ? __('Edit Template') : __('New WhatsApp Template')}
                         </DialogTitle>
                         <DialogDescription>
-                            {__('Define una plantilla con opciones Spintax y variables dinámicas.')}
+                            {__('Define a reusable template with Spintax options and dynamic variables.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSaveTemplate} className="space-y-4 text-xs">
                         <div className="space-y-1.5">
-                            <Label htmlFor="tpl_name">{__('Nombre de la Plantilla')}</Label>
+                            <Label htmlFor="tpl_name">{__('Template Name')}</Label>
                             <Input
                                 id="tpl_name"
                                 required
-                                placeholder="ej. Convocatoria a Asamblea Pastoral"
+                                placeholder={__('e.g. Pastoral Assembly Call')}
                                 value={templateFormData.nombre}
                                 onChange={(e) => setTemplateFormData(prev => ({ ...prev, nombre: e.target.value }))}
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="tpl_cat">{__('Categoría')}</Label>
+                            <Label htmlFor="tpl_cat">{__('Category')}</Label>
                             <Select
                                 value={templateFormData.categoria}
                                 onValueChange={(val) => setTemplateFormData(prev => ({ ...prev, categoria: val }))}
                             >
                                 <SelectTrigger id="tpl_cat">
-                                    <SelectValue placeholder={__('Selecciona categoría')} />
+                                    <SelectValue placeholder={__('Select category')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="pastoral">{__('Pastoral')}</SelectItem>
-                                    <SelectItem value="convocatorias">{__('Convocatorias')}</SelectItem>
-                                    <SelectItem value="avisos">{__('Avisos & Circulares')}</SelectItem>
+                                    <SelectItem value="convocatorias">{__('Calls')}</SelectItem>
+                                    <SelectItem value="avisos">{__('Announcements')}</SelectItem>
                                     <SelectItem value="general">{__('General')}</SelectItem>
+                                    <SelectItem value="seguridad">{__('Security')}</SelectItem>
+                                    <SelectItem value="asistencia">{__('Attendance')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="tpl_content">{__('Contenido (con Spintax)')}</Label>
-                                <span className="text-[10px] text-muted-foreground">{__('Usa {opcion1|opcion2}')}</span>
+                                <Label htmlFor="tpl_content">{__('Template Content (Spintax Supported)')}</Label>
+                                <span className="text-[10px] text-muted-foreground">{__('Use {option1|option2}')}</span>
                             </div>
                             <Textarea
                                 id="tpl_content"
@@ -2150,7 +2152,7 @@ export default function WhatsAppIntegration({
 
                         {/* Insertador de Variables */}
                         <div className="space-y-1.5">
-                            <Label className="text-[11px] text-muted-foreground">{__('Insertar Variables Rápidas:')}</Label>
+                            <Label className="text-[11px] text-muted-foreground">{__('Insert Quick Variables:')}</Label>
                             <div className="flex flex-wrap gap-1.5">
                                 {['nombre', 'iglesia', 'zona', 'fecha', 'hora', 'lugar', 'empresa', 'random'].map(varName => (
                                     <Button
@@ -2169,10 +2171,10 @@ export default function WhatsAppIntegration({
 
                         <DialogFooter className="pt-3">
                             <Button type="button" size="sm" variant="outline" onClick={() => setTemplateModalOpen(false)}>
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                             <Button type="submit" size="sm" disabled={savingTemplate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                                {savingTemplate ? __('Guardando...') : __('Guardar Plantilla')}
+                                {savingTemplate ? __('Saving...') : __('Save Template')}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -2185,23 +2187,23 @@ export default function WhatsAppIntegration({
                     <DialogHeader>
                         <DialogTitle className="text-base flex items-center gap-2">
                             <Inbox className="h-5 w-5 text-indigo-600" />
-                            {__('Detalle del Mensaje')}
+                            {__('Message Details')}
                         </DialogTitle>
                     </DialogHeader>
 
                     {selectedMessage && (
                         <div className="space-y-3 text-xs">
                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-1.5 font-mono">
-                                <div><strong>{__('Destinatario:')}</strong> +{selectedMessage.recipient_phone}</div>
+                                <div><strong>{__('Recipient:')}</strong> +{selectedMessage.recipient_phone}</div>
                                 <div><strong>{__('Message ID:')}</strong> {selectedMessage.message_id || 'N/A'}</div>
-                                <div><strong>{__('Estado:')}</strong> <span className="capitalize">{selectedMessage.status}</span></div>
-                                <div><strong>{__('Fecha de Envío:')}</strong> {new Date(selectedMessage.created_at).toLocaleString()}</div>
-                                {selectedMessage.read_at && <div><strong>{__('Fecha de Lectura:')}</strong> {new Date(selectedMessage.read_at).toLocaleString()}</div>}
-                                <div><strong>{__('Reintentos:')}</strong> {selectedMessage.retry_count}</div>
+                                <div><strong>{__('Status:')}</strong> <span className="capitalize">{__(selectedMessage.status)}</span></div>
+                                <div><strong>{__('Sent Date:')}</strong> {new Date(selectedMessage.created_at).toLocaleString()}</div>
+                                {selectedMessage.read_at && <div><strong>{__('Read Date:')}</strong> {new Date(selectedMessage.read_at).toLocaleString()}</div>}
+                                <div><strong>{__('Retry Count:')}</strong> {selectedMessage.retry_count}</div>
                             </div>
 
                             <div className="space-y-1">
-                                <Label className="font-semibold">{__('Contenido Enviado:')}</Label>
+                                <Label className="font-semibold">{__('Dispatched Content:')}</Label>
                                 <div className="p-3 bg-slate-100 dark:bg-slate-950 rounded-xl border text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
                                     {selectedMessage.message_content}
                                 </div>
@@ -2217,7 +2219,7 @@ export default function WhatsAppIntegration({
 
                     <DialogFooter>
                         <Button size="sm" variant="outline" onClick={() => setSelectedMessage(null)}>
-                            {__('Cerrar')}
+                            {__('Close')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
