@@ -825,7 +825,9 @@ class IntegrationController extends Controller
 
         if ($status && isset($status['isConnected']) && $status['isConnected']) {
             $livePhone = null;
-            if (isset($status['user']['id'])) {
+            if (! empty($status['userJid'])) {
+                $livePhone = explode('@', $status['userJid'])[0];
+            } elseif (isset($status['user']['id'])) {
                 $livePhone = explode('@', $status['user']['id'])[0];
             }
 

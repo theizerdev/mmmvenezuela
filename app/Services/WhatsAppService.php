@@ -137,9 +137,9 @@ class WhatsAppService
      */
     protected function client()
     {
+        $key = (string) ($this->apiKey ?? '');
         $headers = [
-            'x-api-key' => $this->apiKey ?? '',
-            'X-API-Key' => $this->apiKey ?? '',
+            'x-api-key' => $key,
             'X-Company-Id' => (string) $this->companyId,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
