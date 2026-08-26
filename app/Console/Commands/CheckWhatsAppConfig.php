@@ -23,9 +23,9 @@ class CheckWhatsAppConfig extends Command
             return 1;
         }
 
-        $this->info("Configuración de WhatsApp para empresa: {$empresa->nombre}");
+        $this->info("Configuración de WhatsApp para empresa: {$empresa->razon_social}");
         $this->line("ID: {$empresa->id}");
-        $this->line("Nombre: {$empresa->nombre}");
+        $this->line("Nombre: {$empresa->razon_social}");
 
         if ($empresa->whatsapp_api_key) {
             $this->line('Longitud del whatsapp_api_key: '.strlen($empresa->whatsapp_api_key));

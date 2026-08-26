@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\Estado;
 use App\Models\Municipio;
 use App\Models\Parroquia;
 use App\Models\Pastor;
+use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -226,6 +229,27 @@ class PastorController extends Controller
         if (! empty($validated['conyuge_id'])) {
             Pastor::where('id', $validated['conyuge_id'])
                 ->update(['conyuge_id' => $pastor->id]);
+        }
+
+        // Notificar al Pastor por WhatsApp con plantilla Spintax
+        $phone = $pastor->telefono_tlf ?: $pastor->telefono_hab;
+        if (!empty($phone)) {
+            try {
+                $empresa = Empresa::first();
+                if ($empresa && $empresa->whatsapp_active) {
+                    $whatsappService = new WhatsAppService($empresa);
+                    $whatsappService->sendTemplate($phone, 'Bienvenida / Registro de Pastor', [
+                        'nombre' => $pastor->nombre_completo,
+                        'codigo' => $pastor->codigo,
+                        'zona' => $pastor->zona ?: 'Sin asignar',
+                        'distrito' => $pastor->distrito ?: 'Sin asignar',
+                        'grado' => $pastor->nivel_ministerial,
+                        'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error al notificar registro de pastor por WhatsApp: ' . $e->getMessage());
+            }
         }
 
         return redirect()->route('admin.pastores.index')->with('notification', [

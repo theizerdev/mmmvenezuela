@@ -60,7 +60,7 @@ class MigrateMessagingFromCompanies extends Command
                 ->first();
 
             if ($existingConnection && ! $force) {
-                $this->line("  [SKIP] Empresa {$empresa->id} ({$empresa->nombre}): Ya existe conexión");
+                $this->line("  [SKIP] Empresa {$empresa->id} ({$empresa->razon_social}): Ya existe conexión");
                 $skipped++;
                 $progressBar->advance();
 
@@ -82,7 +82,7 @@ class MigrateMessagingFromCompanies extends Command
             };
 
             if ($dryRun) {
-                $this->line("  [DRY-RUN] Empresa {$empresa->id} ({$empresa->nombre}):");
+                $this->line("  [DRY-RUN] Empresa {$empresa->id} ({$empresa->razon_social}):");
                 $this->line('    - Credenciales: '.($empresa->whatsapp_api_key ? '✓ Configurado' : '✗ Vacío'));
                 $this->line("    - Estado: {$status}");
             } else {
@@ -119,7 +119,7 @@ class MigrateMessagingFromCompanies extends Command
                     ]
                 );
 
-                $this->line("  [MIGRATED] Empresa {$empresa->id} ({$empresa->nombre})");
+                $this->line("  [MIGRATED] Empresa {$empresa->id} ({$empresa->razon_social})");
             }
 
             $migrated++;

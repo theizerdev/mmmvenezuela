@@ -71,7 +71,7 @@ class SyncWhatsAppCompany extends Command
     {
         // Verificar si la empresa tiene API key configurada
         if (empty($empresa->whatsapp_api_key)) {
-            $nombreEmpresa = $empresa->nombre ?? $empresa->name ?? "Empresa ID {$empresa->id}";
+            $nombreEmpresa = $empresa->razon_social ?? $empresa->name ?? "Empresa ID {$empresa->id}";
             $this->warn("⚠️ La empresa {$nombreEmpresa} no tiene API Key de WhatsApp configurada");
 
             return;
@@ -97,7 +97,7 @@ class SyncWhatsAppCompany extends Command
                 ]
             );
 
-            $nombreEmpresa = $empresa->nombre ?? $empresa->name ?? "Empresa ID {$empresa->id}";
+            $nombreEmpresa = $empresa->razon_social ?? $empresa->name ?? "Empresa ID {$empresa->id}";
             $this->info("✅ Empresa {$nombreEmpresa} sincronizada con API de WhatsApp (larawhatsapp)");
             $this->info('🔑 API Key: '.substr($empresa->whatsapp_api_key, 0, 20).'...');
 

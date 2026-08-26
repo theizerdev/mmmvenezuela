@@ -291,38 +291,31 @@ class UserController extends Controller
                     $distritosTexto .= ", Distrito {$user->distrito_2}";
                 }
 
-                $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
-                         . "Estimado Presbítero *{$user->name}*,\n\n"
-                         . "Se ha configurado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
-                         . "📍 *Asignación:*\n"
-                         . "• *Zona(s):* {$zonasTexto}\n"
-                         . "• *Distrito(s):* {$distritosTexto}\n\n"
-                         . "🔐 *Sus credenciales de acceso:*\n"
-                         . "• *Usuario / Correo:* {$user->email}\n"
-                         . ($rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "") . "\n"
-                         . "🌐 *Enlace para ingresar al sistema:*\n"
-                         . "{$loginUrl}\n\n"
-                         . "Desde su panel administrativo podrá dar seguimiento a las fichas ministeriales de los obreros a su cargo, consultar iglesias y recibir notificaciones automáticas cada vez que un pastor complete su registro.\n\n"
-                         . "_Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión._";
-            } else {
-                $mensaje = "👋 *¡Bienvenido a la Plataforma MMM Venezuela!*\n\n"
-                         . "Estimado(a) *{$user->name}*,\n\n"
-                         . "Se ha configurado su cuenta de acceso institucional a la plataforma administrativa.\n\n"
-                         . "📋 *Detalles de su cuenta:*\n"
-                         . "• *Rol asignado:* " . ($rolesList ?: 'Usuario del Sistema') . "\n"
-                         . ($user->empresa ? "• *Institución:* {$user->empresa->razon_social}\n" : "")
-                         . ($user->sucursal ? "• *Sede:* {$user->sucursal->nombre}\n" : "") . "\n"
-                         . "🔐 *Sus credenciales de acceso:*\n"
-                         . "• *Usuario / Correo:* {$user->email}\n"
-                         . ($rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "") . "\n"
-                         . "🌐 *Enlace para ingresar al sistema:*\n"
-                         . "{$loginUrl}\n\n"
-                         . "Ya puede ingresar para acceder a los módulos y herramientas correspondientes a sus funciones.\n\n"
-                         . "_Por seguridad, le recomendamos mantener sus credenciales en resguardo y cambiar su contraseña periódicamente._";
-            }
+                $variables = [
+                    'nombre' => $user->name,
+                    'zonas' => $zonasTexto,
+                    'distritos' => $distritosTexto,
+                    'email' => $user->email,
+                    'password_line' => $rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "",
+                    'login_url' => $loginUrl,
+                    'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
+                ];
 
-            $whatsappService = new WhatsAppService($empresa);
-            $whatsappService->sendMessage($user->telefono, $mensaje);
+                $whatsappService = new WhatsAppService($empresa);
+                $whatsappService->sendTemplate($user->telefono, 'Bienvenida de Presbítero al Sistema', $variables);
+            } else {
+                $variables = [
+                    'nombre' => $user->name,
+                    'rol' => $rolesList ?: 'Usuario del Sistema',
+                    'email' => $user->email,
+                    'password_line' => $rawPassword ? "• *Contraseña:* {$rawPassword}\n" : "",
+                    'login_url' => $loginUrl,
+                    'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
+                ];
+
+                $whatsappService = new WhatsAppService($empresa);
+                $whatsappService->sendTemplate($user->telefono, 'Bienvenida de Usuario al Sistema', $variables);
+            }
         } catch (\Throwable $e) {
             Log::error('Error al enviar WhatsApp de bienvenida a usuario: ' . $e->getMessage(), [
                 'user_id' => $user->id,

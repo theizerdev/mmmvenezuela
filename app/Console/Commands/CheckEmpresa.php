@@ -18,7 +18,7 @@ class CheckEmpresa extends Command
         if ($empresa) {
             $this->info('Información de la empresa:');
             $this->line('ID: '.$empresa->id);
-            $this->line('Nombre: '.$empresa->nombre);
+            $this->line('Nombre: '.$empresa->razon_social);
             $this->line('Status: '.$empresa->status);
             $this->line('Activa: '.($empresa->activa ? 'Sí' : 'No'));
             $this->line('API Key: '.substr($empresa->api_key, 0, 50).'...');

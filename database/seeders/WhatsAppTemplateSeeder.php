@@ -24,10 +24,17 @@ class WhatsAppTemplateSeeder extends Seeder
                 'activo' => true,
             ],
             [
-                'nombre' => 'Felicitación y Bendición Ministerial',
-                'categoria' => 'pastoral',
-                'contenido' => "{🎉 ¡FELIZ CUMPLEAÑOS! 🎂|¡Muchas bendiciones en su cumpleaños! 🎂|¡Paz y gozo en su día especial! 🎉}\n\n{Estimado(a) Pastor(a)|Apreciado(a) Siervo(a) de Dios} *{{nombre}}*,\n\nDe parte de la directiva nacional y de toda la familia de {{empresa}}, {le enviamos un caluroso saludo y nuestras más sinceras felicitaciones|le felicitamos con gran gozo fraternal} en este día tan especial.\n\n{Que el Señor continúe bendiciendo grandemente su vida, su hogar y su valioso ministerio en la Zona {{zona}}.|Que la gracia y favor de Dios sigan respaldando su labor ministerial.}\n\n📖 *«El Señor te bendiga y te guarde; el Señor haga resplandecer su rostro sobre ti...» (Números 6:24-25)*",
-                'variables' => ['nombre', 'zona', 'empresa'],
+                'nombre' => 'Bienvenida de Presbítero al Sistema',
+                'categoria' => 'seguridad',
+                'contenido' => "👋 *{¡Bienvenido al Sistema Ministerial MMM Venezuela!|Paz de Dios, Estimado Presbítero}*\n\nEstimado Presbítero *{{nombre}}*,\n\nSe ha configurado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n📍 *Asignación:*\n• *Zona(s):* {{zonas}}\n• *Distrito(s):* {{distritos}}\n\n🔐 *Sus credenciales de acceso:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\nDesde su panel podrá dar seguimiento a las fichas de los obreros a su cargo y recibir notificaciones automáticas.\n\n_{Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión.|Mantenga sus credenciales en resguardo.}_",
+                'variables' => ['nombre', 'zonas', 'distritos', 'email', 'password_line', 'login_url', 'empresa'],
+                'activo' => true,
+            ],
+            [
+                'nombre' => 'Bienvenida de Usuario al Sistema',
+                'categoria' => 'seguridad',
+                'contenido' => "👋 *{¡Bienvenido a la Plataforma MMM Venezuela!|Paz de Dios, Saludos Cordiales}*\n\nEstimado(a) *{{nombre}}*,\n\nSe ha configurado su cuenta de acceso institucional a la plataforma administrativa de {{empresa}}.\n\n📋 *Detalles de su cuenta:*\n• *Rol asignado:* {{rol}}\n• *Institución:* {{empresa}}\n\n🔐 *Sus credenciales:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\n_{Por seguridad, mantenga sus credenciales en resguardo y cambie su clave periódicamente.|Agradecemos su compromiso en el servicio.}_",
+                'variables' => ['nombre', 'rol', 'email', 'password_line', 'login_url', 'empresa'],
                 'activo' => true,
             ],
             [
@@ -40,8 +47,15 @@ class WhatsAppTemplateSeeder extends Seeder
             [
                 'nombre' => 'Bienvenida / Registro de Pastor',
                 'categoria' => 'pastoral',
-                'contenido' => "{¡Bendiciones|Paz de Dios|Un cordial saludo} Pastor {{nombre}}, {le damos la más cordial bienvenida a|le confirmamos su registro en} la plataforma oficial de {{empresa}}. {Que el Señor continúe respaldando su labor ministerial.|Agradecemos su valioso servicio en la obra de Dios.}",
-                'variables' => ['nombre', 'empresa'],
+                'contenido' => "{¡Paz de Dios y bendiciones!|¡Un saludo fraternal en Cristo!|¡Bienvenido al registro ministerial!} Pastor(a) *{{nombre}}*,\n\n{Le confirmamos que su registro ministerial ha sido completado satisfactoriamente en|Le damos la más cordial bienvenida a} la plataforma oficial de {{empresa}}.\n\n🏷️ *Código Ministerial:* {{codigo}}\n📍 *Zona:* {{zona}}\n🏛️ *Distrito:* {{distrito}}\n📜 *Grado:* {{grado}}\n\n{Que el Señor continúe bendiciendo y respaldando su ministerio y familia.|Agradecemos su fidelidad en la obra del Señor.}",
+                'variables' => ['nombre', 'codigo', 'zona', 'distrito', 'grado', 'empresa'],
+                'activo' => true,
+            ],
+            [
+                'nombre' => 'Felicitación y Bendición Ministerial',
+                'categoria' => 'pastoral',
+                'contenido' => "{🎉 ¡FELIZ CUMPLEAÑOS! 🎂|¡Muchas bendiciones en su cumpleaños! 🎂|¡Paz y gozo en su día especial! 🎉}\n\n{Estimado(a) Pastor(a)|Apreciado(a) Siervo(a) de Dios} *{{nombre}}*,\n\nDe parte de la directiva nacional y de toda la familia de {{empresa}}, {le enviamos un caluroso saludo y nuestras más sinceras felicitaciones|le felicitamos con gran gozo fraternal} en este día tan especial.\n\n{Que el Señor continúe bendiciendo grandemente su vida, su hogar y su valioso ministerio en la Zona {{zona}}.|Que la gracia y favor de Dios sigan respaldando su labor ministerial.}\n\n📖 *«El Señor te bendiga y te guarde; el Señor haga resplandecer su rostro sobre ti...» (Números 6:24-25)*",
+                'variables' => ['nombre', 'zona', 'empresa'],
                 'activo' => true,
             ],
             [

@@ -78,7 +78,7 @@ class ForgotPasswordOtpController extends Controller
         $sent = $whatsappService->sendTemplate($cleanNumber, 'Código de Verificación OTP', [
             'otp' => $otp,
             'proposito' => 'restablecer tu contraseña',
-            'empresa' => $empresa->nombre ?? 'MMM Venezuela',
+            'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
             'minutos' => '10',
         ], true);
 
@@ -190,13 +190,14 @@ class ForgotPasswordOtpController extends Controller
         $fullNumber = $codigoTelefonico . $request->telefono;
         $cleanNumber = preg_replace('/[^0-9]/', '', $fullNumber);
 
-        // Enviar mensaje de confirmación de cambio de contraseña
+        // Enviar mensaje de confirmación de cambio de contraseña con plantilla Spintax
         $empresa = $user->empresa ?? Empresa::first();
         $whatsappService = new WhatsAppService($empresa);
         
-        $confirmationMessage = "¡Hola! 👋\n\nTu contraseña ha sido actualizada con éxito en nuestro sistema. ¡Para nosotros, tu seguridad es lo primero! 🔒\n\n¿No fuiste tú? Por favor contáctanos de inmediato respondiendo a este mensaje para proteger tu cuenta.\n\nEstamos aquí para ayudarte. 💛";
-        
-        $whatsappService->sendMessage($cleanNumber, $confirmationMessage, true);
+        $whatsappService->sendTemplate($cleanNumber, 'Confirmación de Cambio de Clave', [
+            'nombre' => $user->name,
+            'empresa' => $empresa->razon_social ?? $empresa->nombre ?? 'MMM Venezuela',
+        ], true);
 
         // Limpiar las variables de verificación de la sesión
         session()->forget(['otp_verified_phone', 'otp_verified_pais_id', 'otp_verified_at']);

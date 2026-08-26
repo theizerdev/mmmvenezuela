@@ -29,15 +29,15 @@ class SyncAllCompaniesCommand extends Command
         $errors = 0;
 
         foreach ($empresas as $empresa) {
-            $this->line("Procesando: {$empresa->nombre}");
+            $this->line("Procesando: {$empresa->razon_social}");
 
             $apiKey = $service->createCompany($empresa);
 
             if ($apiKey) {
-                $this->info("✅ {$empresa->nombre} - API Key: {$apiKey}");
+                $this->info("✅ {$empresa->razon_social} - API Key: {$apiKey}");
                 $success++;
             } else {
-                $this->error("❌ {$empresa->nombre} - Error");
+                $this->error("❌ {$empresa->razon_social} - Error");
                 $errors++;
             }
         }

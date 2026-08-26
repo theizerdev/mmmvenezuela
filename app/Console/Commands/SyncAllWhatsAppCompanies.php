@@ -109,7 +109,7 @@ class SyncAllWhatsAppCompanies extends Command
             DB::connection('whatsapp_api')->table('companies')->updateOrInsert(
                 ['id' => $empresa->id],
                 [
-                    'name' => $empresa->razon_social ?? $empresa->nombre ?? 'Empresa',
+                    'name' => $empresa->razon_social ?? $empresa->razon_social ?? 'Empresa',
                     'apiKey' => $apiKey,
                     'webhookUrl' => $webhookUrl,
                     'rateLimitPerMinute' => $empresa->whatsapp_rate_limit ?? 60,

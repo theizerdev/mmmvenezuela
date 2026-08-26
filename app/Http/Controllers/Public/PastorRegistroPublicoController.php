@@ -672,6 +672,9 @@ class PastorRegistroPublicoController extends Controller
             // Notificar al Presbítero de la misma zona / distrito por WhatsApp
             $this->notificarPresbiteroWhatsApp($pastor);
 
+            // Notificar confirmación de registro al propio Pastor
+            $this->notificarPastorBienvenidaWhatsApp($pastor);
+
             return redirect()->route('registro-pastor.index')->with('success', [
                 'pastor_id' => $pastor->id,
                 'codigo' => $pastor->codigo,
@@ -1012,7 +1015,7 @@ class PastorRegistroPublicoController extends Controller
                 'distrito' => $pastor->distrito ?: 'Sin asignar',
                 'telefono' => $pastor->telefono_tlf ?: 'N/A',
                 'estado_civil' => $pastor->estado_civil ?: 'N/A',
-                'empresa' => $empresa->nombre ?? 'MMM Venezuela',
+                'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
             ];
 
             foreach ($presbiteros as $presbitero) {
@@ -1022,6 +1025,41 @@ class PastorRegistroPublicoController extends Controller
             }
         } catch (\Throwable $e) {
             Log::error('Error al enviar WhatsApp a presbítero: ' . $e->getMessage(), [
+                'pastor_id' => $pastor->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Envía mensaje de confirmación y bienvenida al WhatsApp del propio pastor recién registrado.
+     */
+    private function notificarPastorBienvenidaWhatsApp(Pastor $pastor): void
+    {
+        try {
+            $phone = $pastor->telefono_tlf ?: $pastor->telefono_hab;
+            if (empty($phone)) {
+                return;
+            }
+
+            $empresa = Empresa::first();
+            if (!$empresa || !$empresa->whatsapp_active) {
+                return;
+            }
+
+            $variables = [
+                'nombre' => $pastor->nombre_completo,
+                'codigo' => $pastor->codigo,
+                'zona' => $pastor->zona ?: 'Sin asignar',
+                'distrito' => $pastor->distrito ?: 'Sin asignar',
+                'grado' => $pastor->nivel_ministerial,
+                'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
+            ];
+
+            $whatsappService = new WhatsAppService($empresa);
+            $whatsappService->sendTemplate($phone, 'Bienvenida / Registro de Pastor', $variables);
+        } catch (\Throwable $e) {
+            Log::error('Error al enviar WhatsApp de bienvenida al pastor: ' . $e->getMessage(), [
                 'pastor_id' => $pastor->id,
                 'error' => $e->getMessage(),
             ]);
