@@ -284,7 +284,6 @@ export default function WhatsAppIntegration({
                                     timer: 3000,
                                     showConfirmButton: false,
                                 });
-                                router.reload({ only: ['whatsapp_phone', 'whatsapp_status'] });
                             }
                         }
                     }
@@ -443,6 +442,7 @@ export default function WhatsAppIntegration({
 
         router[method](url, templateFormData, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setTemplateModalOpen(false);
                 Swal.fire({
@@ -452,7 +452,6 @@ export default function WhatsAppIntegration({
                     timer: 2000,
                     showConfirmButton: false,
                 });
-                router.reload({ only: ['templates'] });
             },
             onFinish: () => setSavingTemplate(false),
         });
@@ -471,6 +470,7 @@ export default function WhatsAppIntegration({
             if (result.isConfirmed) {
                 router.delete(`/admin/integrations/whatsapp/templates/${id}`, {
                     preserveScroll: true,
+                    preserveState: true,
                     onSuccess: () => {
                         Swal.fire({
                             title: __('Deleted'),
@@ -479,7 +479,6 @@ export default function WhatsAppIntegration({
                             timer: 2000,
                             showConfirmButton: false,
                         });
-                        router.reload({ only: ['templates'] });
                     },
                 });
             }
@@ -510,6 +509,7 @@ export default function WhatsAppIntegration({
         e.preventDefault();
         configForm.put('/admin/integrations/whatsapp/update', {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 Swal.fire({
                     title: __('Settings Saved'),
@@ -518,7 +518,6 @@ export default function WhatsAppIntegration({
                     timer: 2000,
                     showConfirmButton: false,
                 });
-                router.reload();
             },
         });
     };
@@ -527,6 +526,7 @@ export default function WhatsAppIntegration({
         e.preventDefault();
         antiBanForm.post('/admin/integrations/whatsapp/antiban', {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 Swal.fire({
                     title: __('Anti-Ban Updated'),
@@ -552,7 +552,12 @@ export default function WhatsAppIntegration({
             if (result.isConfirmed) {
                 router.post('/admin/integrations/whatsapp/generate-token', {}, {
                     preserveScroll: true,
-                    onSuccess: () => {
+                    preserveState: true,
+                    onSuccess: (page) => {
+                        const newKey = (page.props as any).whatsapp_api_key;
+                        if (newKey) {
+                            configForm.setData('whatsapp_api_key', newKey);
+                        }
                         Swal.fire({
                             title: __('Token Generated'),
                             text: __('A new API key has been created for your company.'),
@@ -578,6 +583,7 @@ export default function WhatsAppIntegration({
             if (result.isConfirmed) {
                 router.post('/admin/integrations/whatsapp/sync', {}, {
                     preserveScroll: true,
+                    preserveState: true,
                     onSuccess: () => {
                         Swal.fire({
                             title: __('Synchronized'),
@@ -605,6 +611,7 @@ export default function WhatsAppIntegration({
             if (result.isConfirmed) {
                 router.post('/admin/integrations/whatsapp/disconnect', {}, {
                     preserveScroll: true,
+                    preserveState: true,
                     onSuccess: () => {
                         setLiveStatusState(prev => prev ? { ...prev, isConnected: false, connectionState: 'disconnected', user: null, userJid: null } : null);
                         Swal.fire({
@@ -614,7 +621,6 @@ export default function WhatsAppIntegration({
                             timer: 2000,
                             showConfirmButton: false,
                         });
-                        router.reload();
                     }
                 });
             }
@@ -624,6 +630,7 @@ export default function WhatsAppIntegration({
     const handleReconnect = () => {
         router.post('/admin/integrations/whatsapp/reconnect', {}, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 Swal.fire({
                     title: __('Reconnecting...'),
@@ -632,7 +639,6 @@ export default function WhatsAppIntegration({
                     timer: 2000,
                     showConfirmButton: false,
                 });
-                router.reload();
             }
         });
     };
