@@ -1003,22 +1003,21 @@ class PastorRegistroPublicoController extends Controller
 
             $whatsappService = new WhatsAppService($empresa);
 
-            $mensaje = "🔔 *MMM Venezuela - Notificación Ministerial*\n\n"
-                     . "Estimado Presbítero,\n"
-                     . "Se ha completado la ficha de registro ministerial de un obrero a su cargo:\n\n"
-                     . "👤 *Pastor:* {$pastor->nombre_completo}\n"
-                     . "🆔 *Cédula:* {$pastor->documento}\n"
-                     . "🏷️ *Código Asignado:* {$pastor->codigo}\n"
-                     . "📜 *Grado Ministerial:* {$pastor->nivel_ministerial}\n"
-                     . "📍 *Zona:* " . ($pastor->zona ?: 'Sin asignar') . "\n"
-                     . "🏛️ *Distrito:* " . ($pastor->distrito ?: 'Sin asignar') . "\n"
-                     . "📱 *Teléfono:* " . ($pastor->telefono_tlf ?: 'N/A') . "\n"
-                     . "📋 *Estado Civil:* " . ($pastor->estado_civil ?: 'N/A') . "\n\n"
-                     . "Los datos se encuentran listos en el panel administrativo para su revisión y confirmación oficial.";
+            $variables = [
+                'nombre' => $pastor->nombre_completo,
+                'documento' => $pastor->documento,
+                'codigo' => $pastor->codigo,
+                'grado' => $pastor->nivel_ministerial,
+                'zona' => $pastor->zona ?: 'Sin asignar',
+                'distrito' => $pastor->distrito ?: 'Sin asignar',
+                'telefono' => $pastor->telefono_tlf ?: 'N/A',
+                'estado_civil' => $pastor->estado_civil ?: 'N/A',
+                'empresa' => $empresa->nombre ?? 'MMM Venezuela',
+            ];
 
             foreach ($presbiteros as $presbitero) {
                 if (!empty($presbitero->telefono)) {
-                    $whatsappService->sendMessage($presbitero->telefono, $mensaje);
+                    $whatsappService->sendTemplate($presbitero->telefono, 'Notificación Ministerial a Presbítero', $variables);
                 }
             }
         } catch (\Throwable $e) {

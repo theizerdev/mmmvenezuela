@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Empresa;
 use App\Models\WhatsAppMessage;
+use App\Models\WhatsAppTemplate;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -383,6 +384,29 @@ class WhatsAppService
     }
 
     /**
+     * 📋 Enviar un mensaje utilizando una Plantilla registrada con Spintax y variables dinámicas
+     */
+    public function sendTemplate(string $to, string $templateNameOrCategory, array $variables = [], bool $sync = false, ?string $instance = null): ?array
+    {
+        $template = WhatsAppTemplate::where('empresa_id', $this->companyId)
+            ->where('activo', true)
+            ->where(function ($q) use ($templateNameOrCategory) {
+                $q->where('nombre', $templateNameOrCategory)
+                    ->orWhere('categoria', $templateNameOrCategory);
+            })
+            ->first();
+
+        $content = $template ? $template->contenido : $templateNameOrCategory;
+
+        // Auto-inyectar nombre de la empresa si no se pasa explícitamente
+        if (!isset($variables['empresa'])) {
+            $variables['empresa'] = $this->empresa?->nombre ?? 'MMM Venezuela';
+        }
+
+        return $this->sendText($to, $content, $variables, $sync, $instance);
+    }
+
+    /**
      * Wrapper retrocompatible de sendMessage
      */
     public function sendMessage(string $to, string $message, array|bool $variablesOrIsWelcome = [], bool $sync = false, ?string $instance = null): ?array
@@ -488,6 +512,12 @@ class WhatsAppService
         $effectiveDailyLimit = (int) ($remoteStats['dailyLimit'] ?? $dailyLimit);
         $remaining = max(0, $effectiveDailyLimit - $effectiveSent);
 
+        $dbWarmupMode = $empresa?->whatsapp_warmup_mode ?? true;
+        $dbWorkingHoursEnabled = $empresa?->whatsapp_working_hours_enabled ?? true;
+        $dbWorkingHoursStart = $empresa?->whatsapp_working_hours_start ?? '08:00';
+        $dbWorkingHoursEnd = $empresa?->whatsapp_working_hours_end ?? '20:00';
+        $dbProxyUrl = $empresa?->whatsapp_proxy_url ?? '';
+
         return [
             'sentToday' => $effectiveSent,
             'dailyLimit' => $effectiveDailyLimit,
@@ -495,10 +525,11 @@ class WhatsAppService
             'queued' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
             'inQueue' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
             'failedToday' => (int) ($remoteStats['failedToday'] ?? $failedToday),
-            'warmupMode' => (bool) ($remoteStats['warmupMode'] ?? ($effectiveDailyLimit <= 100)),
-            'workingHoursEnabled' => (bool) ($remoteStats['workingHoursEnabled'] ?? true),
-            'workingHoursStart' => $remoteStats['workingHoursStart'] ?? '08:00',
-            'workingHoursEnd' => $remoteStats['workingHoursEnd'] ?? '20:00',
+            'warmupMode' => (bool) ($remoteStats['warmupMode'] ?? $dbWarmupMode),
+            'workingHoursEnabled' => (bool) ($remoteStats['workingHoursEnabled'] ?? $dbWorkingHoursEnabled),
+            'workingHoursStart' => $remoteStats['workingHoursStart'] ?? $dbWorkingHoursStart,
+            'workingHoursEnd' => $remoteStats['workingHoursEnd'] ?? $dbWorkingHoursEnd,
+            'proxyUrl' => $remoteStats['proxyUrl'] ?? $dbProxyUrl,
         ];
     }
 

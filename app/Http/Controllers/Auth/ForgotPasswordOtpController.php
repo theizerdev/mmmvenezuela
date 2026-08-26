@@ -72,12 +72,15 @@ class ForgotPasswordOtpController extends Controller
         $empresa = $user->empresa ?? Empresa::first();
         $whatsappService = new WhatsAppService($empresa);
 
-        $message = "Tu código de verificación (OTP) para restablecer tu contraseña es: *{$otp}*. Válido por 10 minutos.";
-        
         // Registrar en logs locales para facilitar el testing
         Log::info("OTP generado para {$user->email}: {$otp} (Teléfono: {$cleanNumber})");
 
-        $sent = $whatsappService->sendMessage($cleanNumber, $message,true);
+        $sent = $whatsappService->sendTemplate($cleanNumber, 'Código de Verificación OTP', [
+            'otp' => $otp,
+            'proposito' => 'restablecer tu contraseña',
+            'empresa' => $empresa->nombre ?? 'MMM Venezuela',
+            'minutos' => '10',
+        ], true);
 
         // Limpiar cualquier estado previo de verificación de la sesión
         session()->forget(['otp_verified_phone', 'otp_verified_pais_id', 'otp_verified_at']);

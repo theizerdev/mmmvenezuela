@@ -46,6 +46,11 @@ class Empresa extends Model
         'whatsapp_api_url',
         'whatsapp_instance',
         'whatsapp_rate_limit',
+        'whatsapp_warmup_mode',
+        'whatsapp_working_hours_enabled',
+        'whatsapp_working_hours_start',
+        'whatsapp_working_hours_end',
+        'whatsapp_proxy_url',
         'whatsapp_active',
         'whatsapp_phone',
         'whatsapp_status',
@@ -61,6 +66,12 @@ class Empresa extends Model
         'jaak_api_key',
         'jaak_environment',
         'jaak_active',
+    ];
+
+    protected $casts = [
+        'whatsapp_warmup_mode' => 'boolean',
+        'whatsapp_working_hours_enabled' => 'boolean',
+        'whatsapp_active' => 'boolean',
     ];
 
     protected function casts(): array

@@ -77,7 +77,15 @@ class FelicitarCumpleanerosCommand extends Command
                 if ($telefono) {
                     try {
                         $whatsappService = new WhatsAppService();
-                        $result = $whatsappService->sendMessage($telefono, $mensaje);
+                        $result = $whatsappService->sendTemplate(
+                            $telefono,
+                            'Felicitación y Bendición Ministerial',
+                            [
+                                'nombre' => $nombreCompleto,
+                                'zona' => $zona ?: 'Nacional',
+                                'empresa' => 'Movimiento Misionero Mundial en Venezuela',
+                            ]
+                        );
                         if ($result) {
                             $this->info("   ✅ Notificación WhatsApp enviada exitosamente a {$nombreCompleto} ({$telefono}).");
                         } else {

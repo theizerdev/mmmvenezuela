@@ -29,6 +29,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/integrations/whatsapp/preview-spintax', [IntegrationController::class, 'whatsappPreviewSpintax'])->name('integrations.whatsapp.preview-spintax')->can('integrations.edit');
     Route::post('/integrations/whatsapp/blacklist', [IntegrationController::class, 'whatsappAddToBlacklist'])->name('integrations.whatsapp.blacklist.add')->can('integrations.edit');
     Route::delete('/integrations/whatsapp/blacklist/{phone}', [IntegrationController::class, 'whatsappRemoveFromBlacklist'])->name('integrations.whatsapp.blacklist.remove')->can('integrations.edit');
+    Route::get('/integrations/whatsapp/diagnostic', [IntegrationController::class, 'whatsappDiagnostic'])->name('integrations.whatsapp.diagnostic')->can('whatsapp.view');
+    Route::get('/integrations/whatsapp/messages', [IntegrationController::class, 'whatsappMessages'])->name('integrations.whatsapp.messages')->can('whatsapp.view');
+    Route::post('/integrations/whatsapp/messages/{id}/retry', [IntegrationController::class, 'whatsappRetryMessage'])->name('integrations.whatsapp.messages.retry')->can('integrations.edit');
+
+    // WhatsApp Templates CRUD
+    Route::post('/integrations/whatsapp/templates', [IntegrationController::class, 'whatsappTemplatesStore'])->name('integrations.whatsapp.templates.store')->can('integrations.edit');
+    Route::put('/integrations/whatsapp/templates/{id}', [IntegrationController::class, 'whatsappTemplatesUpdate'])->name('integrations.whatsapp.templates.update')->can('integrations.edit');
+    Route::delete('/integrations/whatsapp/templates/{id}', [IntegrationController::class, 'whatsappTemplatesDestroy'])->name('integrations.whatsapp.templates.destroy')->can('integrations.edit');
 
 
     // JAAK (Validaciones) Integration Routes

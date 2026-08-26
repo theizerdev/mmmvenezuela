@@ -65,7 +65,7 @@ class SendWhatsAppNotificationJob implements ShouldQueue
                 false
             );
         } else {
-            $result = $whatsapp->sendText(
+            $result = $whatsapp->sendTemplate(
                 $this->phone,
                 $this->template,
                 $this->variables,

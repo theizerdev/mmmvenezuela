@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
+use App\Models\WhatsAppMessage;
+use App\Models\WhatsAppTemplate;
 use App\Services\ControlAccesoService;
 use App\Services\JaakService;
 use App\Services\WhatsAppService;
@@ -271,14 +273,26 @@ class IntegrationController extends Controller
             ->orderBy('nombre', 'asc')
             ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']);
 
+        $templates = WhatsAppTemplate::where('empresa_id', $empresa->id)
+            ->where('activo', true)
+            ->orderBy('categoria')
+            ->orderBy('nombre')
+            ->get();
+
         return inertia('admin/integrations/whatsapp', [
             'paises' => $paises,
+            'templates' => $templates,
             'empresa_id' => $empresa->id,
             'empresa_nombre' => $empresa->razon_social ?? $empresa->name ?? 'Empresa',
             'whatsapp_api_key' => $empresa->whatsapp_api_key,
             'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://localhost:3000'),
             'whatsapp_instance' => $empresa->whatsapp_instance ?? ('empresa_'.$empresa->id),
             'whatsapp_rate_limit' => (int) ($empresa->whatsapp_rate_limit ?? 300),
+            'whatsapp_warmup_mode' => (bool) ($empresa->whatsapp_warmup_mode ?? true),
+            'whatsapp_working_hours_enabled' => (bool) ($empresa->whatsapp_working_hours_enabled ?? true),
+            'whatsapp_working_hours_start' => $empresa->whatsapp_working_hours_start ?? '08:00',
+            'whatsapp_working_hours_end' => $empresa->whatsapp_working_hours_end ?? '20:00',
+            'whatsapp_proxy_url' => $empresa->whatsapp_proxy_url ?? '',
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_phone' => $empresa->whatsapp_phone,
             'whatsapp_status' => $empresa->whatsapp_status,
@@ -615,18 +629,43 @@ class IntegrationController extends Controller
             'proxyUrl' => 'nullable|string|max:255',
         ]);
 
+        $updateData = [];
         if (isset($validated['dailyLimit'])) {
-            $empresa->update([
-                'whatsapp_rate_limit' => (int) $validated['dailyLimit'],
-            ]);
+            $updateData['whatsapp_rate_limit'] = (int) $validated['dailyLimit'];
+        }
+        if (isset($validated['warmupMode'])) {
+            $updateData['whatsapp_warmup_mode'] = (bool) $validated['warmupMode'];
+        }
+        if (isset($validated['workingHoursEnabled'])) {
+            $updateData['whatsapp_working_hours_enabled'] = (bool) $validated['workingHoursEnabled'];
+        }
+        if (isset($validated['workingHoursStart'])) {
+            $updateData['whatsapp_working_hours_start'] = $validated['workingHoursStart'];
+        }
+        if (isset($validated['workingHoursEnd'])) {
+            $updateData['whatsapp_working_hours_end'] = $validated['workingHoursEnd'];
+        }
+        if (array_key_exists('proxyUrl', $validated)) {
+            $updateData['whatsapp_proxy_url'] = $validated['proxyUrl'];
+        }
+
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
         }
 
         $whatsappService = new WhatsAppService($empresa);
-        $whatsappService->updateAntiBan($validated);
+        $whatsappService->updateAntiBan([
+            'dailyLimit' => $validated['dailyLimit'] ?? $empresa->whatsapp_rate_limit,
+            'warmupMode' => $validated['warmupMode'] ?? $empresa->whatsapp_warmup_mode,
+            'workingHoursEnabled' => $validated['workingHoursEnabled'] ?? $empresa->whatsapp_working_hours_enabled,
+            'workingHoursStart' => $validated['workingHoursStart'] ?? $empresa->whatsapp_working_hours_start,
+            'workingHoursEnd' => $validated['workingHoursEnd'] ?? $empresa->whatsapp_working_hours_end,
+            'proxyUrl' => $validated['proxyUrl'] ?? $empresa->whatsapp_proxy_url,
+        ]);
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __('Anti-Ban & Messaging limits updated successfully to :limit messages/day.', ['limit' => $empresa->whatsapp_rate_limit ?? 300]),
+            'message' => __('Anti-Ban & Messaging limits updated successfully.'),
         ]);
     }
 
@@ -843,5 +882,198 @@ class IntegrationController extends Controller
         if (! empty($updateData)) {
             $empresa->update($updateData);
         }
+    }
+
+    /**
+     * 🩺 Diagnóstico y prueba de latencia en vivo del motor de WhatsApp
+     */
+    public function whatsappDiagnostic(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
+        }
+
+        $whatsappService = new WhatsAppService($empresa);
+        $startTime = microtime(true);
+        $status = $whatsappService->getStatus();
+        $latencyMs = round((microtime(true) - $startTime) * 1000, 2);
+
+        $healthData = null;
+        try {
+            $apiUrl = rtrim($empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://localhost:3000'), '/');
+            $res = \Illuminate\Support\Facades\Http::timeout(3)->get("{$apiUrl}/health");
+            if ($res->successful()) {
+                $healthData = $res->json();
+            }
+        } catch (\Throwable $e) {
+            // Silencioso si falla
+        }
+
+        return response()->json([
+            'success' => true,
+            'latencyMs' => $latencyMs,
+            'status' => $status,
+            'health' => $healthData,
+            'empresa_status' => $empresa->whatsapp_status,
+            'last_connected' => $empresa->whatsapp_last_connected?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * 📬 Historial y logs de mensajes de WhatsApp
+     */
+    public function whatsappMessages(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return response()->json(['success' => false, 'messages' => []], 404);
+        }
+
+        $query = WhatsAppMessage::query();
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('recipient_phone', 'like', "%{$search}%")
+                    ->orWhere('message_content', 'like', "%{$search}%")
+                    ->orWhere('message_id', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status = $request->input('status')) {
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        }
+
+        if ($direction = $request->input('direction')) {
+            if ($direction !== 'all') {
+                $query->where('direction', $direction);
+            }
+        }
+
+        $messages = $query->orderBy('created_at', 'desc')->paginate((int) $request->input('per_page', 15));
+
+        $totalSent = WhatsAppMessage::where('direction', 'outbound')->count();
+        $totalDelivered = WhatsAppMessage::where('direction', 'outbound')->whereIn('status', ['delivered', 'read'])->count();
+        $totalRead = WhatsAppMessage::where('direction', 'outbound')->where('status', 'read')->count();
+        $totalFailed = WhatsAppMessage::where('direction', 'outbound')->where('status', 'failed')->count();
+
+        $deliveryRate = $totalSent > 0 ? round(($totalDelivered / $totalSent) * 100, 1) : 100;
+        $readRate = $totalDelivered > 0 ? round(($totalRead / $totalDelivered) * 100, 1) : 0;
+
+        return response()->json([
+            'success' => true,
+            'messages' => $messages,
+            'stats' => [
+                'totalSent' => $totalSent,
+                'totalDelivered' => $totalDelivered,
+                'totalRead' => $totalRead,
+                'totalFailed' => $totalFailed,
+                'deliveryRate' => $deliveryRate,
+                'readRate' => $readRate,
+            ],
+        ]);
+    }
+
+    /**
+     * 🔄 Reintentar envío de mensaje fallido
+     */
+    public function whatsappRetryMessage(Request $request, $id)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return response()->json(['success' => false, 'error' => 'No active company.'], 404);
+        }
+
+        $message = WhatsAppMessage::findOrFail($id);
+        $whatsappService = new WhatsAppService($empresa);
+
+        $result = $whatsappService->sendText($message->recipient_phone, $message->message_content, $message->variables ?? []);
+
+        if ($result && (isset($result['success']) && $result['success'] || isset($result['data']))) {
+            $message->update([
+                'status' => 'sent',
+                'sent_at' => now(),
+                'retry_count' => $message->retry_count + 1,
+            ]);
+
+            return response()->json(['success' => true, 'message' => __('Message re-queued successfully.')]);
+        }
+
+        $message->increment('retry_count');
+
+        return response()->json(['success' => false, 'error' => __('Failed to retry message.')], 500);
+    }
+
+    /**
+     * 📋 Crear plantilla de WhatsApp
+     */
+    public function whatsappTemplatesStore(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return back()->with('notification', ['type' => 'error', 'message' => __('No active company.')]);
+        }
+
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:150',
+            'categoria' => 'required|string|max:50',
+            'contenido' => 'required|string',
+            'variables' => 'nullable|array',
+            'activo' => 'nullable|boolean',
+        ]);
+
+        WhatsAppTemplate::create([
+            'empresa_id' => $empresa->id,
+            'nombre' => $validated['nombre'],
+            'categoria' => $validated['categoria'],
+            'contenido' => $validated['contenido'],
+            'variables' => $validated['variables'] ?? [],
+            'activo' => $validated['activo'] ?? true,
+        ]);
+
+        return back()->with('notification', ['type' => 'success', 'message' => __('Template created successfully.')]);
+    }
+
+    /**
+     * 📋 Actualizar plantilla de WhatsApp
+     */
+    public function whatsappTemplatesUpdate(Request $request, $id)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return back()->with('notification', ['type' => 'error', 'message' => __('No active company.')]);
+        }
+
+        $template = WhatsAppTemplate::where('empresa_id', $empresa->id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:150',
+            'categoria' => 'required|string|max:50',
+            'contenido' => 'required|string',
+            'variables' => 'nullable|array',
+            'activo' => 'nullable|boolean',
+        ]);
+
+        $template->update($validated);
+
+        return back()->with('notification', ['type' => 'success', 'message' => __('Template updated successfully.')]);
+    }
+
+    /**
+     * 📋 Eliminar plantilla de WhatsApp
+     */
+    public function whatsappTemplatesDestroy(Request $request, $id)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return back()->with('notification', ['type' => 'error', 'message' => __('No active company.')]);
+        }
+
+        $template = WhatsAppTemplate::where('empresa_id', $empresa->id)->findOrFail($id);
+        $template->delete();
+
+        return back()->with('notification', ['type' => 'success', 'message' => __('Template deleted successfully.')]);
     }
 }

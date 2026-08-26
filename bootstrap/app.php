@@ -35,6 +35,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/asistencia-descansos.log'));
+
+        // Monitor de Salud y Estado de Conexión de WhatsApp
+        $schedule->command('whatsapp:heartbeat')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->appendOutputTo(storage_path('logs/whatsapp-heartbeat.log'));
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // La app corre detrás del Apache del host, que termina TLS y reenvía por HTTP

@@ -4,21 +4,46 @@ import {
     Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone,
     Shield, Clock, Sparkles, UserCheck, Flame, ListOrdered, CheckCircle,
     XCircle, HelpCircle, Server, Radio, ShieldCheck, ArrowRight, ExternalLink,
-    Zap, Globe, Terminal, Layers
+    Zap, Globe, Terminal, Layers, FileText, Plus, Trash2, Edit3, Search,
+    Eye, CheckCheck, AlertCircle, HeartHandshake, Wifi, WifiOff, Heart,
+    BarChart3, Inbox, RotateCw, Play, Filter, ArrowUpRight
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
-import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import type { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
 import PhoneInputGroup from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
@@ -49,7 +74,37 @@ interface QueueStats {
     workingHoursEnabled?: boolean;
     workingHoursStart?: string;
     workingHoursEnd?: string;
+    proxyUrl?: string;
     [key: string]: any;
+}
+
+interface WhatsAppTemplateItem {
+    id: number;
+    empresa_id: number;
+    nombre: string;
+    categoria: string;
+    contenido: string;
+    variables: string[] | null;
+    activo: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+interface WhatsAppMessageItem {
+    id: number;
+    message_id?: string | null;
+    recipient_phone: string;
+    recipient_name?: string | null;
+    message_content: string;
+    variables?: Record<string, any> | null;
+    status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+    direction: 'inbound' | 'outbound';
+    sent_at?: string | null;
+    delivered_at?: string | null;
+    read_at?: string | null;
+    error_message?: string | null;
+    retry_count: number;
+    created_at: string;
 }
 
 interface PageProps {
@@ -59,11 +114,17 @@ interface PageProps {
     whatsapp_api_url: string;
     whatsapp_instance?: string;
     whatsapp_rate_limit: number;
+    whatsapp_warmup_mode?: boolean;
+    whatsapp_working_hours_enabled?: boolean;
+    whatsapp_working_hours_start?: string;
+    whatsapp_working_hours_end?: string;
+    whatsapp_proxy_url?: string;
     whatsapp_active: boolean;
     whatsapp_phone: string | null;
     whatsapp_status: string | null;
     live_status: LiveStatus | null;
     queue_stats?: QueueStats | null;
+    templates?: WhatsAppTemplateItem[];
     paises: PaisPhoneOption[];
 }
 
@@ -74,11 +135,17 @@ export default function WhatsAppIntegration({
     whatsapp_api_url,
     whatsapp_instance = '',
     whatsapp_rate_limit,
+    whatsapp_warmup_mode = true,
+    whatsapp_working_hours_enabled = true,
+    whatsapp_working_hours_start = '08:00',
+    whatsapp_working_hours_end = '20:00',
+    whatsapp_proxy_url = '',
     whatsapp_active,
     whatsapp_phone,
     whatsapp_status,
     live_status,
     queue_stats,
+    templates = [],
     paises
 }: PageProps) {
     const { __ } = useTranslate();
@@ -94,6 +161,48 @@ export default function WhatsAppIntegration({
     const [spintaxPreviews, setSpintaxPreviews] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState('connection');
 
+    // Estado del Módulo de Diagnóstico / Heartbeat
+    const [diagnosticOpen, setDiagnosticOpen] = useState(false);
+    const [diagnosticLoading, setDiagnosticLoading] = useState(false);
+    const [diagnosticData, setDiagnosticData] = useState<any>(null);
+
+    // Estado del Módulo de Plantillas
+    const [templatesList, setTemplatesList] = useState<WhatsAppTemplateItem[]>(templates);
+    const [templateModalOpen, setTemplateModalOpen] = useState(false);
+    const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplateItem | null>(null);
+    const [templateCategoryFilter, setTemplateCategoryFilter] = useState('all');
+    const [templateFormData, setTemplateFormData] = useState({
+        nombre: '',
+        categoria: 'pastoral',
+        contenido: '',
+        variables: [] as string[],
+        activo: true,
+    });
+    const [savingTemplate, setSavingTemplate] = useState(false);
+
+    // Estado del Módulo de Historial y Logs
+    const [messagesData, setMessagesData] = useState<{
+        data: WhatsAppMessageItem[];
+        current_page: number;
+        last_page: number;
+        total: number;
+        per_page: number;
+    } | null>(null);
+    const [messagesStats, setMessagesStats] = useState({
+        totalSent: 0,
+        totalDelivered: 0,
+        totalRead: 0,
+        totalFailed: 0,
+        deliveryRate: 100,
+        readRate: 0,
+    });
+    const [historySearch, setHistorySearch] = useState('');
+    const [historyStatus, setHistoryStatus] = useState('all');
+    const [historyPage, setHistoryPage] = useState(1);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [selectedMessage, setSelectedMessage] = useState<WhatsAppMessageItem | null>(null);
+    const [retryingId, setRetryingId] = useState<number | null>(null);
+
     const webhookUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/webhooks/whatsapp`
         : '/webhooks/whatsapp';
@@ -106,14 +215,15 @@ export default function WhatsAppIntegration({
         whatsapp_active: whatsapp_active,
         whatsapp_rate_limit: whatsapp_rate_limit,
     });
+
     // Formulario de parámetros Anti-Baneo
     const antiBanForm = useForm({
-        dailyLimit: queueStatsState?.dailyLimit || whatsapp_rate_limit || 300,
-        warmupMode: queueStatsState?.warmupMode ?? ((whatsapp_rate_limit || 300) <= 100),
-        workingHoursEnabled: queueStatsState?.workingHoursEnabled ?? true,
-        workingHoursStart: queueStatsState?.workingHoursStart || '08:00',
-        workingHoursEnd: queueStatsState?.workingHoursEnd || '20:00',
-        proxyUrl: '',
+        dailyLimit: queueStatsState?.dailyLimit ?? whatsapp_rate_limit ?? 300,
+        warmupMode: queueStatsState?.warmupMode ?? whatsapp_warmup_mode ?? true,
+        workingHoursEnabled: queueStatsState?.workingHoursEnabled ?? whatsapp_working_hours_enabled ?? true,
+        workingHoursStart: queueStatsState?.workingHoursStart ?? whatsapp_working_hours_start ?? '08:00',
+        workingHoursEnd: queueStatsState?.workingHoursEnd ?? whatsapp_working_hours_end ?? '20:00',
+        proxyUrl: queueStatsState?.proxyUrl ?? whatsapp_proxy_url ?? '',
     });
 
     // País por defecto para el sandbox (Venezuela +58 o primer país de la lista)
@@ -151,7 +261,6 @@ export default function WhatsAppIntegration({
     // Polling del estado de WhatsApp y Estadísticas de cola
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
-
         const shouldPoll = whatsapp_active;
 
         if (shouldPoll) {
@@ -199,6 +308,203 @@ export default function WhatsAppIntegration({
             if (intervalId) clearInterval(intervalId);
         };
     }, [whatsapp_active, liveStatusState?.isConnected]);
+
+    // Cargar historial de mensajes al entrar a la pestaña o al filtrar
+    const fetchMessages = async (page = 1, search = historySearch, status = historyStatus) => {
+        setHistoryLoading(true);
+        try {
+            const params = new URLSearchParams({
+                page: String(page),
+                search: search || '',
+                status: status || 'all',
+            });
+            const res = await fetch(`/admin/integrations/whatsapp/messages?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    setMessagesData(data.messages);
+                    if (data.stats) {
+                        setMessagesStats(data.stats);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching WhatsApp messages:', e);
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'history') {
+            fetchMessages(historyPage, historySearch, historyStatus);
+        }
+    }, [activeTab, historyPage, historyStatus]);
+
+    // Ejecutar diagnóstico en vivo
+    const handleRunDiagnostic = async () => {
+        setDiagnosticOpen(true);
+        setDiagnosticLoading(true);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/diagnostic');
+            if (res.ok) {
+                const data = await res.json();
+                setDiagnosticData(data);
+            }
+        } catch (e) {
+            console.error('Error running diagnostic:', e);
+        } finally {
+            setDiagnosticLoading(false);
+        }
+    };
+
+    // Reintentar mensaje fallido
+    const handleRetryMessage = async (id: number) => {
+        setRetryingId(id);
+        try {
+            const res = await fetch(`/admin/integrations/whatsapp/messages/${id}/retry`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+            });
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire({
+                    title: __('Message Re-sent'),
+                    text: __('The message has been re-queued for transmission.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+                fetchMessages(historyPage, historySearch, historyStatus);
+            } else {
+                Swal.fire({
+                    title: __('Retry Failed'),
+                    text: data.error || __('Could not send message.'),
+                    icon: 'error',
+                });
+            }
+        } catch (e) {
+            Swal.fire({
+                title: __('Error'),
+                text: __('Failed to communicate with server.'),
+                icon: 'error',
+            });
+        } finally {
+            setRetryingId(null);
+        }
+    };
+
+    // Gestor de Plantillas
+    const handleOpenCreateTemplate = () => {
+        setEditingTemplate(null);
+        setTemplateFormData({
+            nombre: '',
+            categoria: 'pastoral',
+            contenido: '',
+            variables: [],
+            activo: true,
+        });
+        setTemplateModalOpen(true);
+    };
+
+    const handleOpenEditTemplate = (t: WhatsAppTemplateItem) => {
+        setEditingTemplate(t);
+        setTemplateFormData({
+            nombre: t.nombre,
+            categoria: t.categoria,
+            contenido: t.contenido,
+            variables: t.variables || [],
+            activo: t.activo,
+        });
+        setTemplateModalOpen(true);
+    };
+
+    const handleInsertVariableInTemplate = (varName: string) => {
+        const tag = `{{${varName}}}`;
+        setTemplateFormData(prev => ({
+            ...prev,
+            contenido: prev.contenido + tag,
+            variables: prev.variables.includes(varName) ? prev.variables : [...prev.variables, varName],
+        }));
+    };
+
+    const handleSaveTemplate = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSavingTemplate(true);
+
+        const url = editingTemplate
+            ? `/admin/integrations/whatsapp/templates/${editingTemplate.id}`
+            : '/admin/integrations/whatsapp/templates';
+        
+        const method = editingTemplate ? 'put' : 'post';
+
+        router[method](url, templateFormData, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setTemplateModalOpen(false);
+                Swal.fire({
+                    title: __('Template Saved'),
+                    text: __('WhatsApp template successfully stored.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+                router.reload({ only: ['templates'] });
+            },
+            onFinish: () => setSavingTemplate(false),
+        });
+    };
+
+    const handleDeleteTemplate = (id: number) => {
+        Swal.fire({
+            title: __('Delete Template?'),
+            text: __('This action cannot be undone.'),
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: __('Yes, delete'),
+            cancelButtonText: __('Cancel'),
+            confirmButtonColor: '#e11d48',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(`/admin/integrations/whatsapp/templates/${id}`, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: __('Deleted'),
+                            text: __('Template removed successfully.'),
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false,
+                        });
+                        router.reload({ only: ['templates'] });
+                    },
+                });
+            }
+        });
+    };
+
+    const handleUseTemplateInSandbox = (t: WhatsAppTemplateItem) => {
+        setTestMessage(prev => ({
+            ...prev,
+            message: t.contenido,
+        }));
+        setActiveTab('dispatcher');
+        Swal.fire({
+            title: __('Template Loaded'),
+            text: __('Template loaded into the testing sandbox.'),
+            icon: 'info',
+            timer: 1500,
+            showConfirmButton: false,
+        });
+    };
+
+    const filteredTemplates = useMemo(() => {
+        if (templateCategoryFilter === 'all') return templates;
+        return templates.filter(t => t.categoria === templateCategoryFilter);
+    }, [templates, templateCategoryFilter]);
 
     const handleSaveConfig = (e: React.FormEvent) => {
         e.preventDefault();
@@ -268,64 +574,31 @@ export default function WhatsAppIntegration({
             showCancelButton: true,
             confirmButtonText: __('Yes, synchronize'),
             cancelButtonText: __('Cancel'),
-            confirmButtonColor: '#059669',
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire({
-                    title: __('Syncing...'),
-                    text: __('Updating server credentials...'),
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
                 router.post('/admin/integrations/whatsapp/sync', {}, {
                     preserveScroll: true,
                     onSuccess: () => {
                         Swal.fire({
-                            title: __('Synchronized!'),
-                            text: __('The company credentials have been sent to the WhatsApp API server.'),
+                            title: __('Synchronized'),
+                            text: __('Company synchronized with WhatsApp server.'),
                             icon: 'success',
-                            timer: 2500,
+                            timer: 2000,
                             showConfirmButton: false,
-                        });
-                    },
-                    onError: () => {
-                        Swal.fire({
-                            title: __('Error'),
-                            text: __('Failed to sync company credentials with WhatsApp API server.'),
-                            icon: 'error',
                         });
                     }
                 });
-            }
-        });
-    };
-
-    const handleConnect = () => {
-        router.post('/admin/integrations/whatsapp/connect', {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                Swal.fire({
-                    title: __('Connecting...'),
-                    text: __('Initializing WhatsApp session. Please wait...'),
-                    icon: 'info',
-                    timer: 3000,
-                    showConfirmButton: false,
-                });
-                setLiveStatusState(prev => prev ? { ...prev, connectionState: 'connecting' } : null);
             }
         });
     };
 
     const handleDisconnect = () => {
         Swal.fire({
-            title: __('Disconnect WhatsApp?'),
-            text: __('You will stop sending and receiving messages. The session on this device will be closed.'),
+            title: __('Disconnect WhatsApp Session?'),
+            text: __('You will need to scan the QR code again to link this instance.'),
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: __('Yes, disconnect'),
+            confirmButtonText: __('Yes, Disconnect'),
             cancelButtonText: __('Cancel'),
             confirmButtonColor: '#e11d48',
         }).then((result) => {
@@ -333,14 +606,15 @@ export default function WhatsAppIntegration({
                 router.post('/admin/integrations/whatsapp/disconnect', {}, {
                     preserveScroll: true,
                     onSuccess: () => {
+                        setLiveStatusState(prev => prev ? { ...prev, isConnected: false, connectionState: 'disconnected', user: null, userJid: null } : null);
                         Swal.fire({
                             title: __('Disconnected'),
-                            text: __('Session closed successfully.'),
-                            icon: 'success',
+                            text: __('WhatsApp session has been closed.'),
+                            icon: 'info',
                             timer: 2000,
                             showConfirmButton: false,
                         });
-                        setLiveStatusState(null);
+                        router.reload();
                     }
                 });
             }
@@ -352,47 +626,48 @@ export default function WhatsAppIntegration({
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire({
-                    title: __('Reconnecting'),
-                    text: __('Requesting session reset from Baileys server...'),
+                    title: __('Reconnecting...'),
+                    text: __('Requesting session renewal from WhatsApp server.'),
                     icon: 'info',
                     timer: 2000,
                     showConfirmButton: false,
                 });
+                router.reload();
             }
         });
     };
 
     const getFullPhoneNumber = () => {
-        if (!testMessage.phoneNumber) return '';
+        const pais = paises?.find(p => String(p.id) === String(testMessage.paisId));
         const rawDigits = testMessage.phoneNumber.replace(/\D/g, '');
         if (!rawDigits) return '';
 
-        // Si ya incluye prefijo 58 y tiene al menos 12 dígitos (ej: 584241703465)
-        if (rawDigits.startsWith('58') && rawDigits.length >= 12) {
-            return rawDigits;
+        let nationalDigits = rawDigits;
+        if (nationalDigits.startsWith('0')) {
+            nationalDigits = nationalDigits.substring(1);
         }
 
-        // Si ya incluye prefijo 52 / 521 de México
-        if (rawDigits.startsWith('52') && rawDigits.length >= 12) {
-            return rawDigits;
+        if (pais?.codigo_telefonico === '+58' || pais?.codigo_iso2 === 'VE') {
+            if (nationalDigits.startsWith('58') && nationalDigits.length === 12) {
+                return nationalDigits;
+            }
+            return `58${nationalDigits}`;
         }
 
-        const activePaisId = testMessage.paisId || defaultCountryId;
-        const selectedPais = paises.find(p => String(p.id) === String(activePaisId));
-        const cleanCode = selectedPais?.codigo_telefonico ? selectedPais.codigo_telefonico.replace(/^\+/, '') : '58';
+        const dialCode = pais?.codigo_telefonico?.replace('+', '') || '';
+        if (dialCode && nationalDigits.startsWith(dialCode)) {
+            return nationalDigits;
+        }
 
-        // Si el usuario escribió un 0 al inicio (ej. 04241703465 -> 4241703465)
-        const cleanNumber = rawDigits.startsWith('0') ? rawDigits.substring(1) : rawDigits;
-
-        return `${cleanCode}${cleanNumber}`;
+        return dialCode ? `${dialCode}${nationalDigits}` : nationalDigits;
     };
 
     const handleCheckNumber = async () => {
-        const fullNumber = getFullPhoneNumber();
-        if (!fullNumber) {
+        const fullPhone = getFullPhoneNumber();
+        if (!fullPhone) {
             Swal.fire({
-                title: __('Missing Phone'),
-                text: __('Please select a country and enter a phone number first.'),
+                title: __('Validation'),
+                text: __('Please enter a valid phone number with area code.'),
                 icon: 'warning',
             });
             return;
@@ -402,55 +677,56 @@ export default function WhatsAppIntegration({
         setNumberCheckResult(null);
 
         try {
-            const res = await fetch('/admin/integrations/whatsapp/check-number', {
+            const response = await fetch('/admin/integrations/whatsapp/check-number', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                 },
-                body: JSON.stringify({ phone: fullNumber }),
+                body: JSON.stringify({ phone: fullPhone }),
             });
 
-            const json = await res.json();
-            setCheckingNumber(false);
+            const data = await response.json();
 
-            if (json.success && json.data) {
-                const exists = Boolean(json.data.exists);
+            if (data.success && data.result) {
+                const isRegistered = Boolean(data.result.exists);
                 setNumberCheckResult({
                     checked: true,
-                    exists: exists,
-                    jid: json.data.jid || `${fullNumber}@s.whatsapp.net`,
+                    exists: isRegistered,
+                    jid: data.result.jid,
                 });
 
-                if (exists) {
+                if (isRegistered) {
                     Swal.fire({
-                        title: __('Registered on WhatsApp!'),
-                        text: `+${fullNumber} ${__('is a valid active WhatsApp account.')}`,
+                        title: __('Valid WhatsApp Number!'),
+                        text: `${__('Number')} +${fullPhone} ${__('is registered and ready to receive messages.')}`,
                         icon: 'success',
-                        timer: 2500,
+                        timer: 3000,
                         showConfirmButton: false,
                     });
                 } else {
                     Swal.fire({
                         title: __('Number Not Found'),
-                        text: `+${fullNumber} ${__('is NOT registered on WhatsApp. Meta will penalize sending to this number.')}`,
+                        text: `${__('The phone number')} +${fullPhone} ${__('does NOT have an active WhatsApp account. Sending messages may penalize your reputation.')}`,
                         icon: 'warning',
+                        confirmButtonText: __('Understand'),
                     });
                 }
             } else {
                 setNumberCheckResult({
                     checked: true,
                     exists: false,
-                    error: json.error || __('Verification error'),
+                    error: data.error || __('Verification failed'),
                 });
             }
-        } catch (err: any) {
-            setCheckingNumber(false);
-            Swal.fire({
-                title: __('Error'),
-                text: err.message || __('Failed to check number.'),
-                icon: 'error',
+        } catch (error) {
+            setNumberCheckResult({
+                checked: true,
+                exists: false,
+                error: __('Communication error with WhatsApp API'),
             });
+        } finally {
+            setCheckingNumber(false);
         }
     };
 
@@ -459,78 +735,96 @@ export default function WhatsAppIntegration({
 
         setPreviewingSpintax(true);
         try {
-            const res = await fetch('/admin/integrations/whatsapp/preview-spintax', {
+            const response = await fetch('/admin/integrations/whatsapp/preview-spintax', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                 },
                 body: JSON.stringify({
-                    template: testMessage.message,
+                    text: testMessage.message,
                     count: 4,
                     variables: {
-                        nombre: 'Juan Pérez',
+                        nombre: 'Pastor David Morales',
                         empresa: empresa_nombre,
-                    }
+                        random: String(Math.floor(1000 + Math.random() * 9000)),
+                    },
                 }),
             });
 
-            const json = await res.json();
-            setPreviewingSpintax(false);
-
-            if (json.success && json.data?.variations) {
-                setSpintaxPreviews(json.data.variations);
-            } else if (json.data && Array.isArray(json.data)) {
-                setSpintaxPreviews(json.data);
+            const data = await response.json();
+            if (data.success && Array.isArray(data.variations)) {
+                setSpintaxPreviews(data.variations);
             }
-        } catch (err) {
+        } catch (error) {
+            console.error('Error previewing spintax:', error);
+        } finally {
             setPreviewingSpintax(false);
         }
     };
 
-    const handleSendMessage = (e: React.FormEvent) => {
+    const handleSendTestMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        const fullNumber = getFullPhoneNumber();
+        const fullPhone = getFullPhoneNumber();
 
-        if (!fullNumber) {
+        if (!fullPhone) {
             Swal.fire({
-                title: __('Missing Phone'),
-                text: __('Please select a country and enter a valid phone number.'),
-                icon: 'error',
+                title: __('Validation'),
+                text: __('Please select a country code and enter a recipient phone number.'),
+                icon: 'warning',
             });
             return;
         }
 
         setSendingMsg(true);
-        router.post('/admin/integrations/whatsapp/send-message', {
-            to: fullNumber,
-            message: testMessage.message,
-            sync: testMessage.useSync,
-            variables: {
-                nombre: 'Cliente de Prueba',
-                empresa: empresa_nombre,
-            }
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setSendingMsg(false);
+        try {
+            const response = await fetch('/admin/integrations/whatsapp/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({
+                    phone: fullPhone,
+                    message: testMessage.message,
+                    sync: testMessage.useSync,
+                    variables: {
+                        nombre: 'Pastor David Morales',
+                        empresa: empresa_nombre,
+                        random: String(Math.floor(1000 + Math.random() * 9000)),
+                    },
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
                 Swal.fire({
-                    title: __('Message Dispatched'),
-                    text: __('Message processed with Anti-Ban protection and Spintax variation.'),
+                    title: __('Message Sent!'),
+                    text: __('The WhatsApp message has been successfully dispatched or queued.'),
                     icon: 'success',
                     timer: 2500,
                     showConfirmButton: false,
                 });
-            },
-            onError: (errors) => {
-                setSendingMsg(false);
+                if (activeTab === 'history') {
+                    fetchMessages(historyPage, historySearch, historyStatus);
+                }
+            } else {
                 Swal.fire({
-                    title: __('Failed to Send'),
-                    text: Object.values(errors).join(', ') || __('Error occurred during sending.'),
+                    title: __('Send Error'),
+                    text: data.error || __('Could not deliver the message. Check WhatsApp connection.'),
                     icon: 'error',
                 });
             }
-        });
+        } catch (error) {
+            Swal.fire({
+                title: __('Error'),
+                text: __('Network error attempting to contact WhatsApp server.'),
+                icon: 'error',
+            });
+        } finally {
+            setSendingMsg(false);
+        }
     };
 
     const copyTokenToClipboard = () => {
@@ -560,7 +854,7 @@ export default function WhatsAppIntegration({
     const isServiceUnavailable = liveStatusState?._error === 'service_unavailable';
 
     const sentTodayCount = queueStatsState?.sentToday ?? 0;
-    const dailyLimitCount = queueStatsState?.dailyLimit ?? antiBanForm.data.dailyLimit ?? 100;
+    const dailyLimitCount = queueStatsState?.dailyLimit ?? antiBanForm.data.dailyLimit ?? 300;
     const quotaPercentage = Math.min(100, Math.round((sentTodayCount / (dailyLimitCount || 1)) * 100));
 
     return (
@@ -598,6 +892,17 @@ export default function WhatsAppIntegration({
                             {isConnected ? __('Connected') : isQrReady ? __('Waiting Scan') : isConnecting ? __('Connecting...') : __('Disconnected')}
                         </Badge>
 
+                        {/* Botón de Diagnóstico / Heartbeat */}
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleRunDiagnostic}
+                            className="h-8 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5"
+                        >
+                            <Heart className="h-3.5 w-3.5 text-rose-300 fill-rose-300" />
+                            {__('Diagnóstico')}
+                        </Button>
+
                         {isConnected && (
                             <div className="flex gap-2 ml-1">
                                 <Button
@@ -622,6 +927,33 @@ export default function WhatsAppIntegration({
                         )}
                     </div>
                 </ModuleHeader>
+
+                {/* Alerta de Desconexión (Heartbeat Alert) */}
+                {whatsapp_active && !isConnected && (
+                    <Card className="border-amber-400/80 bg-amber-500/10 dark:bg-amber-950/20 backdrop-blur-sm shadow-sm">
+                        <CardContent className="flex items-center justify-between p-4 flex-wrap gap-3">
+                            <div className="flex items-start gap-3">
+                                <WifiOff className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-sm">
+                                        {__('WhatsApp Session Disconnected')}
+                                    </h4>
+                                    <p className="text-xs text-amber-800 dark:text-amber-400/90 mt-0.5">
+                                        {__('Your WhatsApp line is not active. Outbound messages will not dispatch until reconnected.')}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                size="sm"
+                                onClick={() => setActiveTab('connection')}
+                                className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 h-8"
+                            >
+                                <QrCode className="h-3.5 w-3.5" />
+                                {__('Link / Scan QR Now')}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Server Offline Alert Banner */}
                 {isServiceUnavailable && (
@@ -658,42 +990,30 @@ export default function WhatsAppIntegration({
                         </div>
 
                         <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <span className={`h-2.5 w-2.5 rounded-full ${
-                                    isConnected
-                                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
-                                        : isConnecting || isQrReady
-                                        ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-ping'
-                                        : 'bg-slate-400'
-                                }`} />
-                                <span className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-                                    {isConnected ? __('Active Session') : isQrReady ? __('Waiting Scan') : isConnecting ? __('Connecting...') : __('No Link')}
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 capitalize">
+                                    {liveStatusState?.connectionState || (isConnected ? 'connected' : 'offline')}
                                 </span>
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                                {isConnected && liveStatusState?.userJid
-                                    ? `+${liveStatusState.userJid.split('@')[0]}`
-                                    : `${__('Instance')}: ${configForm.data.whatsapp_instance || 'empresa_1'}`}
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
+                                <Phone className="h-3 w-3 text-emerald-500" />
+                                {liveStatusState?.userJid ? `+${liveStatusState.userJid.split('@')[0]}` : (whatsapp_phone ? `+${whatsapp_phone}` : __('No linked phone'))}
                             </p>
                         </div>
                     </Card>
 
-                    {/* Card 2: Daily Limit */}
+                    {/* Card 2: 24H Daily Quota */}
                     <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('Daily Limit (24h)')}
+                                {__('24H Daily Limit')}
                             </span>
-                            <Badge variant="outline" className={`text-[10px] font-semibold font-mono ${
-                                quotaPercentage >= 90
-                                    ? 'border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-950/30'
-                                    : 'border-blue-300 text-blue-600 bg-blue-50 dark:bg-blue-950/30'
-                            }`}>
-                                {quotaPercentage}% {__('used')}
-                            </Badge>
+                            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                <Flame className="h-4 w-4" />
+                            </div>
                         </div>
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
                                     {sentTodayCount}
@@ -754,16 +1074,13 @@ export default function WhatsAppIntegration({
 
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                                <Badge variant="outline" className={`text-xs font-semibold ${
-                                    isWithinWorkingHours
-                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 border-emerald-300'
-                                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 border-amber-300'
-                                }`}>
-                                    {isWithinWorkingHours ? __('Active Hours') : __('Night Pause')}
-                                </Badge>
+                                <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                                    {antiBanForm.data.workingHoursStart || '08:00'} - {antiBanForm.data.workingHoursEnd || '20:00'}
+                                </span>
                             </div>
-                            <p className="text-xs text-muted-foreground font-mono">
-                                {antiBanForm.data.workingHoursStart || '08:00'} - {antiBanForm.data.workingHoursEnd || '20:00'}
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                <span className={`h-2 w-2 rounded-full ${isWithinWorkingHours ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                {isWithinWorkingHours ? __('Safe Window Open') : __('Paused (Night Silence)')}
                             </p>
                         </div>
                     </Card>
@@ -771,20 +1088,28 @@ export default function WhatsAppIntegration({
 
                 {/* Main Tabbed Interface */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto p-1.5 bg-slate-100/80 dark:bg-slate-900/80 rounded-xl gap-1">
-                        <TabsTrigger value="connection" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                    <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto p-1.5 bg-slate-100/80 dark:bg-slate-900/80 rounded-xl gap-1">
+                        <TabsTrigger value="connection" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <QrCode className="h-4 w-4" />
                             {__('Connection & QR')}
                         </TabsTrigger>
-                        <TabsTrigger value="antiban" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                        <TabsTrigger value="templates" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
+                            <FileText className="h-4 w-4" />
+                            {__('Plantillas')}
+                        </TabsTrigger>
+                        <TabsTrigger value="history" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
+                            <Inbox className="h-4 w-4" />
+                            {__('Historial & Logs')}
+                        </TabsTrigger>
+                        <TabsTrigger value="antiban" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <Shield className="h-4 w-4" />
                             {__('Anti-Ban Policies')}
                         </TabsTrigger>
-                        <TabsTrigger value="dispatcher" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                        <TabsTrigger value="dispatcher" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <Send className="h-4 w-4" />
                             {__('Test & Spintax')}
                         </TabsTrigger>
-                        <TabsTrigger value="settings" className="py-2.5 gap-2 text-xs md:text-sm font-medium rounded-lg">
+                        <TabsTrigger value="settings" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <Settings2 className="h-4 w-4" />
                             {__('Server & Webhook')}
                         </TabsTrigger>
@@ -808,135 +1133,92 @@ export default function WhatsAppIntegration({
                                     <CardContent className="flex flex-col items-center justify-center min-h-[320px] text-center p-6">
                                         {!whatsapp_active ? (
                                             <div className="space-y-3 max-w-sm">
-                                                <div className="mx-auto w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                                                    <AlertTriangle className="h-7 w-7" />
+                                                <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+                                                    <Power className="h-8 w-8" />
                                                 </div>
-                                                <h3 className="font-semibold text-slate-700 dark:text-slate-200">{__('Integration Inactive')}</h3>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {__('You must check the "Enable WhatsApp Integration" switch and save configurations to start.')}
-                                                </p>
-                                                <Button size="sm" onClick={() => setActiveTab('settings')} variant="outline" className="gap-1.5 text-xs">
-                                                    {__('Go to Server Settings')} <ArrowRight className="h-3.5 w-3.5" />
+                                                <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Integration Disabled')}</h3>
+                                                <p className="text-xs text-muted-foreground">{__('Enable WhatsApp in the Server Settings tab to start the engine.')}</p>
+                                                <Button size="sm" onClick={() => setActiveTab('settings')} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                                    <Settings2 className="h-4 w-4" />
+                                                    {__('Go to Settings')}
                                                 </Button>
                                             </div>
                                         ) : isConnected ? (
-                                            /* CONNECTED VIEW */
-                                            <div className="space-y-6 w-full max-w-md py-4">
-                                                <div className="mx-auto w-20 h-20 rounded-2xl bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 shadow-inner">
-                                                    <CheckCircle2 className="h-10 w-10" />
+                                            <div className="space-y-4 max-w-sm">
+                                                <div className="relative">
+                                                    <div className="h-24 w-24 bg-emerald-500/10 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-500/5">
+                                                        <CheckCircle2 className="h-12 w-12" />
+                                                    </div>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{__('WhatsApp Connected')}</h3>
-                                                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                                                        {__('Active Multi-Session on Baileys Engine')}
-                                                    </p>
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{__('WhatsApp Connected & Synced')}</h3>
+                                                    <p className="text-xs text-muted-foreground mt-1">{__('Your phone is currently paired and processing messages through the engine.')}</p>
                                                 </div>
-
-                                                <div className="grid grid-cols-2 gap-3 p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 text-left text-xs">
-                                                    <div className="space-y-1">
-                                                        <span className="text-muted-foreground block">{__('Account Name')}</span>
-                                                        <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                                                            <Phone className="h-3.5 w-3.5 text-slate-400" />
-                                                            {liveStatusState.user?.name || __('WhatsApp Account')}
-                                                        </span>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <span className="text-muted-foreground block">{__('Phone JID')}</span>
-                                                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                                                            {(liveStatusState.userJid || liveStatusState.user?.id || '')?.split('@')[0]}
-                                                        </span>
-                                                    </div>
-                                                    <div className="col-span-2 border-t pt-2 mt-1 flex justify-between">
-                                                        <span className="text-muted-foreground">{__('Last Sync / Connection')}</span>
-                                                        <span className="font-mono text-slate-700 dark:text-slate-300">
-                                                            {liveStatusState.lastSeen ? new Date(liveStatusState.lastSeen).toLocaleTimeString() : __('Active')}
-                                                        </span>
-                                                    </div>
+                                                <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border text-xs font-mono text-slate-700 dark:text-slate-300 space-y-1">
+                                                    <div><strong>{__('JID:')}</strong> {liveStatusState?.userJid || `${whatsapp_phone}@s.whatsapp.net`}</div>
+                                                    <div><strong>{__('Instance:')}</strong> {configForm.data.whatsapp_instance}</div>
                                                 </div>
                                             </div>
-                                        ) : isQrReady && (liveStatusState?.qrCode || liveStatusState?.qrDataUrl) ? (
-                                            /* QR CODE SCAN VIEW */
-                                            <div className="space-y-4 py-2">
-                                                <div className="space-y-1">
-                                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">
-                                                        {__('Scan QR Code to Link Account')}
-                                                    </h3>
-                                                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                                                        {__('Open WhatsApp on your phone, go to Linked Devices > Link a Device, and point your camera.')}
-                                                    </p>
-                                                </div>
-
-                                                <div className="relative mx-auto w-64 h-64 border-4 border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 bg-white shadow-md flex items-center justify-center">
+                                        ) : isQrReady && (liveStatusState?.qrDataUrl || liveStatusState?.qrCode) ? (
+                                            <div className="space-y-4 flex flex-col items-center">
+                                                <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-slate-200 inline-block">
                                                     <img
-                                                        src={liveStatusState.qrDataUrl || liveStatusState.qrCode || ''}
+                                                        src={liveStatusState.qrDataUrl || `data:image/png;base64,${liveStatusState.qrCode}`}
                                                         alt="WhatsApp QR Code"
-                                                        className="w-full h-full object-contain select-none"
+                                                        className="w-56 h-56 object-contain rounded-lg"
                                                     />
-                                                    {isPolling && (
-                                                        <div className="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full p-1.5 shadow-lg animate-pulse" title={__('Checking scan status...')}>
-                                                            <RefreshCw className="h-4 w-4 animate-spin" />
-                                                        </div>
-                                                    )}
                                                 </div>
-
-                                                <div className="flex items-center justify-center gap-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                                                    <span>{__('Waiting for phone scan... (Auto-refreshes)')}</span>
+                                                <div className="space-y-1">
+                                                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 gap-1.5 animate-pulse">
+                                                        <Clock className="h-3 w-3" />
+                                                        {__('QR Code Active - Scan from WhatsApp App')}
+                                                    </Badge>
+                                                    <p className="text-xs text-muted-foreground">{__('Auto-refreshes every 20 seconds. Keep this screen open.')}</p>
                                                 </div>
                                             </div>
                                         ) : (
-                                            /* DISCONNECTED STATE */
-                                            <div className="space-y-4 max-w-sm">
-                                                <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                                            <div className="space-y-3">
+                                                <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto animate-pulse">
                                                     <QrCode className="h-8 w-8" />
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Engine Disconnected')}</h3>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {__('Click Initiate Connection to launch the multi-session instance and generate a new linking QR code.')}
-                                                    </p>
-                                                </div>
-                                                <Button
-                                                    onClick={handleConnect}
-                                                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
-                                                >
-                                                    <Power className="h-4 w-4" />
-                                                    {__('Initiate Connection')}
-                                                </Button>
+                                                <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Initializing Session...')}</h3>
+                                                <p className="text-xs text-muted-foreground">{__('Requesting QR code from Baileys engine...')}</p>
                                             </div>
                                         )}
                                     </CardContent>
                                     <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-3 flex justify-between items-center text-xs text-muted-foreground">
-                                        <span>{__('Multi-Device Baileys Socket Protocol')}</span>
-                                        <span>{isPolling ? '● ' + __('Live Polling Active') : '○ ' + __('Idle')}</span>
+                                        <span>{__('Engine:')} Baileys Multi-Instance</span>
+                                        <span>{__('Status:')} <strong className="text-slate-700 dark:text-slate-300 capitalize">{liveStatusState?.connectionState || 'idle'}</strong></span>
                                     </CardFooter>
                                 </Card>
                             </div>
 
-                            {/* Quick Instructions & Best Practices Card */}
-                            <div className="md:col-span-5 space-y-6">
-                                <Card className="shadow-sm border-t-4 border-t-blue-500 h-full flex flex-col justify-between">
+                            {/* Quick Instructions Card */}
+                            <div className="md:col-span-5">
+                                <Card className="shadow-sm h-full flex flex-col justify-between">
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
-                                            <HelpCircle className="h-5 w-5 text-blue-600" />
-                                            {__('Connection Checklist')}
+                                            <HelpCircle className="h-5 w-5 text-indigo-600" />
+                                            {__('How to Pair WhatsApp')}
                                         </CardTitle>
-                                        <CardDescription>{__('Follow these rules for seamless linking.')}</CardDescription>
+                                        <CardDescription>
+                                            {__('Follow these simple steps on your mobile phone.')}
+                                        </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-4 text-xs">
                                         <div className="space-y-3">
                                             <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
-                                                <div className="h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">1</div>
+                                                <div className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">1</div>
                                                 <div>
-                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Prepare Official WhatsApp')}</h4>
-                                                    <p className="text-muted-foreground mt-0.5">{__('Ensure you are using the official WhatsApp or WhatsApp Business application with stable internet.')}</p>
+                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Open WhatsApp on your Phone')}</h4>
+                                                    <p className="text-muted-foreground mt-0.5">{__('Tap Menu (Android) or Settings (iOS).')}</p>
                                                 </div>
                                             </div>
 
                                             <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
-                                                <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">2</div>
+                                                <div className="h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">2</div>
                                                 <div>
-                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Point Camera at QR')}</h4>
+                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Select Linked Devices')}</h4>
                                                     <p className="text-muted-foreground mt-0.5">{__('Go to Linked Devices > Link a Device and scan the QR code before the 30-second expiry timeout.')}</p>
                                                 </div>
                                             </div>
@@ -961,11 +1243,328 @@ export default function WhatsAppIntegration({
                         </div>
                     </TabsContent>
 
-                    {/* TAB 2: ANTI-BAN POLICIES & WORKING HOURS */}
+                    {/* TAB 2: PLANTILLAS RÁPIDAS CON SPINTAX */}
+                    <TabsContent value="templates" className="space-y-6">
+                        <Card className="shadow-sm">
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div>
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <FileText className="h-5 w-5 text-emerald-600" />
+                                        {__('Plantillas de Mensajes con Spintax')}
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {__('Crea y gestiona plantillas reutilizables para notificaciones pastorales, convocatorias y comunicados.')}
+                                    </CardDescription>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={handleOpenCreateTemplate}
+                                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    {__('Nueva Plantilla')}
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Filtros por Categoría */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {[
+                                        { id: 'all', label: __('Todas') },
+                                        { id: 'pastoral', label: __('Pastoral') },
+                                        { id: 'convocatorias', label: __('Convocatorias') },
+                                        { id: 'avisos', label: __('Avisos') },
+                                        { id: 'general', label: __('General') },
+                                    ].map(cat => (
+                                        <Button
+                                            key={cat.id}
+                                            size="sm"
+                                            variant={templateCategoryFilter === cat.id ? 'default' : 'outline'}
+                                            onClick={() => setTemplateCategoryFilter(cat.id)}
+                                            className="h-8 text-xs rounded-lg"
+                                        >
+                                            {cat.label}
+                                        </Button>
+                                    ))}
+                                </div>
+
+                                {/* Lista de Plantillas */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                    {filteredTemplates.length === 0 ? (
+                                        <div className="col-span-2 text-center py-10 border rounded-xl bg-slate-50/50 dark:bg-slate-900/20 text-muted-foreground text-sm space-y-2">
+                                            <FileText className="h-8 w-8 mx-auto text-slate-400" />
+                                            <p>{__('No hay plantillas registradas en esta categoría.')}</p>
+                                        </div>
+                                    ) : (
+                                        filteredTemplates.map(t => (
+                                            <Card key={t.id} className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 border">
+                                                <div className="space-y-2">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t.nombre}</h4>
+                                                            <Badge variant="outline" className="text-[10px] uppercase font-mono mt-1">
+                                                                {t.categoria}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => handleOpenEditTemplate(t)}
+                                                                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-800"
+                                                            >
+                                                                <Edit3 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => handleDeleteTemplate(t.id)}
+                                                                className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    <p className="text-xs text-slate-700 dark:text-slate-300 font-mono bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg line-clamp-3">
+                                                        {t.contenido}
+                                                    </p>
+
+                                                    {Array.isArray(t.variables) && t.variables.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 items-center text-[10px] text-muted-foreground pt-1">
+                                                            <span>{__('Variables:')}</span>
+                                                            {t.variables.map((v, i) => (
+                                                                <Badge key={i} variant="secondary" className="font-mono text-[9px] py-0 px-1">
+                                                                    {`{{${v}}}`}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="pt-2 border-t flex justify-end">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleUseTemplateInSandbox(t)}
+                                                        className="text-xs h-8 gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                                                    >
+                                                        <Send className="h-3.5 w-3.5" />
+                                                        {__('Usar en Sandbox')}
+                                                    </Button>
+                                                </div>
+                                            </Card>
+                                        ))
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* TAB 3: HISTORIAL Y LOGS DE MENSAJES */}
+                    <TabsContent value="history" className="space-y-6">
+                        {/* Mini-Cards de Métricas de Entrega */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Card className="p-3.5 shadow-sm space-y-1">
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Total Salientes')}</span>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{messagesStats.totalSent}</div>
+                            </Card>
+                            <Card className="p-3.5 shadow-sm space-y-1">
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Tasa de Entrega')}</span>
+                                <div className="text-2xl font-bold text-emerald-600">{messagesStats.deliveryRate}%</div>
+                            </Card>
+                            <Card className="p-3.5 shadow-sm space-y-1">
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Tasa de Lectura')}</span>
+                                <div className="text-2xl font-bold text-blue-600">{messagesStats.readRate}%</div>
+                            </Card>
+                            <Card className="p-3.5 shadow-sm space-y-1">
+                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Fallidos')}</span>
+                                <div className="text-2xl font-bold text-rose-600">{messagesStats.totalFailed}</div>
+                            </Card>
+                        </div>
+
+                        {/* Tabla de Mensajes */}
+                        <Card className="shadow-sm">
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div>
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <Inbox className="h-5 w-5 text-indigo-600" />
+                                        {__('Registro de Mensajes y Entregas')}
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {__('Historial en vivo de mensajes enviados y recibidos con confirmación de lectura.')}
+                                    </CardDescription>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => fetchMessages(historyPage, historySearch, historyStatus)}
+                                    disabled={historyLoading}
+                                    className="gap-1.5 text-xs h-8"
+                                >
+                                    <RefreshCw className={`h-3.5 w-3.5 ${historyLoading ? 'animate-spin' : ''}`} />
+                                    {__('Refrescar')}
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Barra de Búsqueda y Filtros */}
+                                <div className="flex flex-col sm:flex-row items-center gap-3">
+                                    <div className="relative flex-1 w-full">
+                                        <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
+                                        <Input
+                                            placeholder={__('Buscar por teléfono o mensaje...')}
+                                            value={historySearch}
+                                            onChange={(e) => setHistorySearch(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && fetchMessages(1, historySearch, historyStatus)}
+                                            className="pl-9 text-xs"
+                                        />
+                                    </div>
+                                    <Select value={historyStatus} onValueChange={(v) => { setHistoryStatus(v); setHistoryPage(1); }}>
+                                        <SelectTrigger className="w-full sm:w-40 text-xs h-9">
+                                            <SelectValue placeholder={__('Estado')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">{__('Todos los Estados')}</SelectItem>
+                                            <SelectItem value="delivered">{__('Entregado')}</SelectItem>
+                                            <SelectItem value="read">{__('Leído')}</SelectItem>
+                                            <SelectItem value="sent">{__('Enviado')}</SelectItem>
+                                            <SelectItem value="failed">{__('Fallido')}</SelectItem>
+                                            <SelectItem value="pending">{__('Pendiente')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Tabla */}
+                                <div className="border rounded-xl overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-slate-50 dark:bg-slate-900/50 text-xs">
+                                                <TableHead>{__('Destinatario')}</TableHead>
+                                                <TableHead>{__('Mensaje')}</TableHead>
+                                                <TableHead>{__('Dirección')}</TableHead>
+                                                <TableHead>{__('Estado')}</TableHead>
+                                                <TableHead>{__('Fecha')}</TableHead>
+                                                <TableHead className="text-right">{__('Acciones')}</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {!messagesData || messagesData.data.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs">
+                                                        {historyLoading ? __('Cargando mensajes...') : __('No hay mensajes registrados con los filtros seleccionados.')}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                messagesData.data.map(m => (
+                                                    <TableRow key={m.id} className="text-xs">
+                                                        <TableCell className="font-mono font-semibold">
+                                                            +{m.recipient_phone}
+                                                        </TableCell>
+                                                        <TableCell className="max-w-[240px] truncate text-slate-600 dark:text-slate-300">
+                                                            {m.message_content}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline" className={`text-[10px] ${m.direction === 'inbound' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-700'}`}>
+                                                                {m.direction === 'inbound' ? __('Entrante') : __('Saliente')}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {m.status === 'read' && (
+                                                                <Badge className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1 text-[10px]">
+                                                                    <CheckCheck className="h-3 w-3" /> {__('Leído')}
+                                                                </Badge>
+                                                            )}
+                                                            {m.status === 'delivered' && (
+                                                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1 text-[10px]">
+                                                                    <CheckCheck className="h-3 w-3" /> {__('Entregado')}
+                                                                </Badge>
+                                                            )}
+                                                            {m.status === 'sent' && (
+                                                                <Badge className="bg-slate-500/10 text-slate-600 border-slate-200 gap-1 text-[10px]">
+                                                                    <Check className="h-3 w-3" /> {__('Enviado')}
+                                                                </Badge>
+                                                            )}
+                                                            {m.status === 'failed' && (
+                                                                <Badge className="bg-rose-500/10 text-rose-600 border-rose-200 gap-1 text-[10px]">
+                                                                    <AlertCircle className="h-3 w-3" /> {__('Fallido')}
+                                                                </Badge>
+                                                            )}
+                                                            {m.status === 'pending' && (
+                                                                <Badge className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1 text-[10px]">
+                                                                    <Clock className="h-3 w-3" /> {__('Pendiente')}
+                                                                </Badge>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                                                            {new Date(m.created_at).toLocaleString()}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => setSelectedMessage(m)}
+                                                                    className="h-7 w-7 p-0"
+                                                                >
+                                                                    <Eye className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                                {m.status === 'failed' && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => handleRetryMessage(m.id)}
+                                                                        disabled={retryingId === m.id}
+                                                                        className="h-7 text-[11px] gap-1 text-rose-600 hover:text-rose-700 px-2"
+                                                                    >
+                                                                        <RotateCw className={`h-3 w-3 ${retryingId === m.id ? 'animate-spin' : ''}`} />
+                                                                        {__('Reintentar')}
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {/* Paginación */}
+                                {messagesData && messagesData.last_page > 1 && (
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+                                        <span>
+                                            {__('Página')} {messagesData.current_page} {__('de')} {messagesData.last_page} ({messagesData.total} {__('mensajes')})
+                                        </span>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={messagesData.current_page <= 1}
+                                                onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
+                                                className="h-7 text-xs"
+                                            >
+                                                {__('Anterior')}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={messagesData.current_page >= messagesData.last_page}
+                                                onClick={() => setHistoryPage(prev => prev + 1)}
+                                                className="h-7 text-xs"
+                                            >
+                                                {__('Siguiente')}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* TAB 4: ANTI-BAN POLICIES & WORKING HOURS */}
                     <TabsContent value="antiban" className="space-y-6">
                         <div className="grid md:grid-cols-12 gap-6">
                             <div className="md:col-span-8">
-                                <Card className="shadow-sm border-t-4 border-t-amber-500">
+                                <Card className="shadow-sm">
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
                                             <Shield className="h-5 w-5 text-amber-600" />
@@ -1018,65 +1617,60 @@ export default function WhatsAppIntegration({
                                             {/* Working Hours Timeframe */}
                                             <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
                                                 <div className="flex items-center justify-between">
-                                                    <div className="space-y-0.5">
-                                                        <Label className="font-semibold text-sm flex items-center gap-1.5">
-                                                            <Clock className="h-4 w-4 text-blue-500" />
-                                                            {__('Working Hours / Nocturnal Silence')}
-                                                        </Label>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {__('Retains outbound messages queued outside safe daytime hours and dispatches next morning.')}
-                                                        </p>
-                                                    </div>
+                                                    <Label className="font-semibold text-sm flex items-center gap-1.5">
+                                                        <Clock className="h-4 w-4 text-indigo-500" />
+                                                        {__('Working Hours & Night Silence (Auto-Pause)')}
+                                                    </Label>
                                                     <Switch
                                                         checked={antiBanForm.data.workingHoursEnabled}
                                                         onCheckedChange={(c) => antiBanForm.setData('workingHoursEnabled', c)}
                                                     />
                                                 </div>
-
-                                                {antiBanForm.data.workingHoursEnabled && (
-                                                    <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                                                        <div>
-                                                            <Label className="text-xs text-muted-foreground">{__('Allowed Start Time')}</Label>
-                                                            <Input
-                                                                type="time"
-                                                                value={antiBanForm.data.workingHoursStart}
-                                                                onChange={(e) => antiBanForm.setData('workingHoursStart', e.target.value)}
-                                                                className="bg-white dark:bg-slate-950 mt-1"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-xs text-muted-foreground">{__('Allowed End Time')}</Label>
-                                                            <Input
-                                                                type="time"
-                                                                value={antiBanForm.data.workingHoursEnd}
-                                                                onChange={(e) => antiBanForm.setData('workingHoursEnd', e.target.value)}
-                                                                className="bg-white dark:bg-slate-950 mt-1"
-                                                            />
-                                                        </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {__('Queued messages during off-hours will safely pause and automatically resume the following morning.')}
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-4 pt-1">
+                                                    <div>
+                                                        <Label className="text-xs text-muted-foreground block mb-1">{__('Start Time')}</Label>
+                                                        <Input
+                                                            type="time"
+                                                            value={antiBanForm.data.workingHoursStart}
+                                                            onChange={(e) => antiBanForm.setData('workingHoursStart', e.target.value)}
+                                                            className="bg-white dark:bg-slate-950"
+                                                        />
                                                     </div>
-                                                )}
+                                                    <div>
+                                                        <Label className="text-xs text-muted-foreground block mb-1">{__('End Time')}</Label>
+                                                        <Input
+                                                            type="time"
+                                                            value={antiBanForm.data.workingHoursEnd}
+                                                            onChange={(e) => antiBanForm.setData('workingHoursEnd', e.target.value)}
+                                                            className="bg-white dark:bg-slate-950"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            {/* Dedicated Proxy URL */}
+                                            {/* Dedicated Proxy (Optional) */}
                                             <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
                                                 <Label htmlFor="proxyUrl" className="font-semibold text-sm flex items-center gap-1.5">
-                                                    <Globe className="h-4 w-4 text-slate-500" />
-                                                    {__('Dedicated HTTP/SOCKS5 Proxy (Optional)')}
+                                                    <Globe className="h-4 w-4 text-emerald-500" />
+                                                    {__('Dedicated Proxy HTTP / SOCKS5 (Optional)')}
                                                 </Label>
                                                 <Input
                                                     id="proxyUrl"
                                                     placeholder="http://user:password@proxy-ip:port"
                                                     value={antiBanForm.data.proxyUrl}
                                                     onChange={(e) => antiBanForm.setData('proxyUrl', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 font-mono text-xs"
+                                                    className="font-mono text-xs bg-white dark:bg-slate-950"
                                                 />
                                                 <p className="text-xs text-muted-foreground">
-                                                    {__('Route this specific WhatsApp instance through a static residential proxy IP.')}
+                                                    {__('Route this specific WhatsApp instance through a fixed residential proxy IP.')}
                                                 </p>
                                             </div>
                                         </CardContent>
                                         <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
-                                            <Button type="submit" disabled={antiBanForm.processing} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow">
+                                            <Button type="submit" disabled={antiBanForm.processing} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
                                                 <Shield className="h-4 w-4" />
                                                 {__('Save Anti-Ban Policies')}
                                             </Button>
@@ -1085,27 +1679,27 @@ export default function WhatsAppIntegration({
                                 </Card>
                             </div>
 
-                            {/* Anti-Ban Guidelines & Recommendations */}
+                            {/* Anti-Ban Rules Sidebar */}
                             <div className="md:col-span-4 space-y-6">
                                 <Card className="shadow-sm">
                                     <CardHeader>
-                                        <CardTitle className="text-base flex items-center gap-2">
-                                            <Flame className="h-4 w-4 text-amber-500" />
-                                            {__('Recommended Warm-Up Schedule')}
+                                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                                            {__('Anti-Ban Safety Checklist')}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-3 text-xs">
-                                        <div className="p-2.5 rounded-lg border bg-amber-50/40 dark:bg-amber-950/20">
-                                            <span className="font-bold text-amber-800 dark:text-amber-300 block">{__('Week 1 (New Line)')}</span>
-                                            <span className="text-muted-foreground">{__('20 to 30 messages/day. Keep 20-40s jitter delays.')}</span>
+                                        <div className="flex gap-2 items-start">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                                            <span><strong>{__('Use Spintax Always:')}</strong> {__('Rotate greetings and words so each message has a unique fingerprint.')}</span>
                                         </div>
-                                        <div className="p-2.5 rounded-lg border bg-blue-50/40 dark:bg-blue-950/20">
-                                            <span className="font-bold text-blue-800 dark:text-blue-300 block">{__('Week 2 (Progressive)')}</span>
-                                            <span className="text-muted-foreground">{__('50 to 80 messages/day. Always use Spintax variations.')}</span>
+                                        <div className="flex gap-2 items-start">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                                            <span><strong>{__('Verify Numbers First:')}</strong> {__('Check if the recipient exists on WhatsApp before sending cold broadcasts.')}</span>
                                         </div>
-                                        <div className="p-2.5 rounded-lg border bg-emerald-50/40 dark:bg-emerald-950/20">
-                                            <span className="font-bold text-emerald-800 dark:text-emerald-300 block">{__('Week 3+ (Mature)')}</span>
-                                            <span className="text-muted-foreground">{__('100 to 300+ messages/day. Maintain opt-out compliance.')}</span>
+                                        <div className="flex gap-2 items-start">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                                            <span><strong>{__('Honor Opt-Outs:')}</strong> {__('Our webhook automatically registers unsubscriptions when users reply "STOP".')}</span>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -1113,91 +1707,112 @@ export default function WhatsAppIntegration({
                         </div>
                     </TabsContent>
 
-                    {/* TAB 3: TEST DISPATCHER & SPINTAX SANDBOX */}
+                    {/* TAB 5: TESTING SANDBOX & SPINTAX */}
                     <TabsContent value="dispatcher" className="space-y-6">
                         <Card className="shadow-sm">
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <Send className="h-5 w-5 text-emerald-600" />
-                                    {__('Message Sandbox & Spintax Permutations')}
+                                    {__('Testing Sandbox & Spintax Simulator')}
                                 </CardTitle>
                                 <CardDescription>
-                                    {__('Validate numbers in Meta servers, preview dynamic Spintax variations, and execute test transmissions.')}
+                                    {__('Test message delivery with automatic number verification (+58) and live Spintax variations.')}
                                 </CardDescription>
                             </CardHeader>
-                            <form onSubmit={handleSendMessage}>
-                                <CardContent className="space-y-5">
-                                    {/* Recipient Phone with Number Verifier */}
+                            <form onSubmit={handleSendTestMessage}>
+                                <CardContent className="space-y-6">
+                                    {/* Selector rápido de plantillas */}
+                                    {templates.length > 0 && (
+                                        <div className="p-3 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2">
+                                                <FileText className="h-4 w-4 text-emerald-600" />
+                                                <span className="text-xs font-semibold">{__('Cargar desde Plantilla:')}</span>
+                                            </div>
+                                            <Select onValueChange={(val) => {
+                                                const t = templates.find(item => String(item.id) === val);
+                                                if (t) setTestMessage(prev => ({ ...prev, message: t.contenido }));
+                                            }}>
+                                                <SelectTrigger className="w-full sm:w-72 text-xs h-8 bg-white dark:bg-slate-950">
+                                                    <SelectValue placeholder={__('Selecciona una plantilla...')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {templates.map(t => (
+                                                        <SelectItem key={t.id} value={String(t.id)}>
+                                                            {t.nombre}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+
+                                    {/* Phone selector with Country Code */}
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <Label className="text-sm font-semibold">{__('Recipient Phone Number')}</Label>
+                                            <Label className="text-sm font-semibold">{__('Recipient WhatsApp Number')}</Label>
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={handleCheckNumber}
                                                 disabled={checkingNumber || !testMessage.phoneNumber}
-                                                className="h-8 text-xs gap-1.5 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50"
+                                                className="h-7 text-xs gap-1.5"
                                             >
-                                                <UserCheck className="h-3.5 w-3.5" />
-                                                {checkingNumber ? __('Verifying on WhatsApp...') : __('Check Number in WhatsApp')}
+                                                <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                                                {checkingNumber ? __('Verifying...') : __('Verify WhatsApp Number')}
                                             </Button>
                                         </div>
 
                                         <PhoneInputGroup
                                             paises={paises}
                                             selectedPaisId={testMessage.paisId}
-                                            phoneValue={testMessage.phoneNumber}
-                                            onPaisChange={(paisId) => setTestMessage(prev => ({ ...prev, paisId: String(paisId) }))}
-                                            onPhoneChange={(phone) => {
-                                                setTestMessage(prev => ({ ...prev, phoneNumber: phone }));
-                                                setNumberCheckResult(null);
-                                            }}
-                                            placeholder={__('4121234567')}
+                                            phoneNumber={testMessage.phoneNumber}
+                                            onPaisChange={(val) => setTestMessage(prev => ({ ...prev, paisId: val }))}
+                                            onPhoneNumberChange={(val) => setTestMessage(prev => ({ ...prev, phoneNumber: val }))}
                                         />
 
                                         {numberCheckResult && (
-                                            <div className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 transition-all ${
-                                                numberCheckResult.exists
-                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
-                                                    : 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:text-rose-300'
-                                            }`}>
-                                                {numberCheckResult.exists ? <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" /> : <XCircle className="h-4 w-4 text-rose-600 shrink-0" />}
-                                                <span>
-                                                    {numberCheckResult.exists
-                                                        ? __('Registered WhatsApp user detected. Safe to dispatch.')
-                                                        : __('Warning: Number NOT found on WhatsApp. Meta will penalize sending unsolicited messages here.')}
-                                                </span>
+                                            <div className="pt-1">
+                                                {numberCheckResult.exists ? (
+                                                    <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-300 dark:text-emerald-400 gap-1 text-xs">
+                                                        <CheckCircle className="h-3.5 w-3.5" />
+                                                        {__('Number verified on WhatsApp!')} ({numberCheckResult.jid})
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge className="bg-amber-500/10 text-amber-700 border-amber-300 dark:text-amber-400 gap-1 text-xs">
+                                                        <AlertTriangle className="h-3.5 w-3.5" />
+                                                        {numberCheckResult.error || __('Warning: Number NOT found on WhatsApp. Meta will penalize sending to invalid numbers.')}
+                                                    </Badge>
+                                                )}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Spintax Message Template Textarea */}
+                                    {/* Message Textarea with Spintax Simulator */}
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <Label htmlFor="test_msg" className="text-sm font-semibold flex items-center gap-1.5">
-                                                <Sparkles className="h-4 w-4 text-amber-500" />
-                                                {__('Message Template (Spintax & Variables Supported)')}
+                                            <Label htmlFor="test_msg" className="text-sm font-semibold">
+                                                {__('Message Template (Spintax Supported)')}
                                             </Label>
                                             <Button
                                                 type="button"
-                                                variant="ghost"
+                                                variant="outline"
                                                 size="sm"
                                                 onClick={handlePreviewSpintax}
                                                 disabled={previewingSpintax || !testMessage.message}
-                                                className="h-8 text-xs gap-1.5 text-amber-600 hover:text-amber-700 dark:text-amber-400"
+                                                className="h-7 text-xs gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                                             >
                                                 <Sparkles className="h-3.5 w-3.5" />
                                                 {previewingSpintax ? __('Generating...') : __('Preview Spintax Variations')}
                                             </Button>
                                         </div>
 
-                                        <textarea
+                                        <Textarea
                                             id="test_msg"
                                             rows={3}
                                             value={testMessage.message}
                                             onChange={(e) => setTestMessage(prev => ({ ...prev, message: e.target.value }))}
-                                            className="w-full flex min-h-[90px] rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                                            className="font-mono text-xs"
                                         />
                                         <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                             <span>{__('Spintax Syntax:')} <code className="text-emerald-600 font-bold">{'{Hola|Buen día|Saludos}'}</code></span>
@@ -1247,12 +1862,12 @@ export default function WhatsAppIntegration({
                         </Card>
                     </TabsContent>
 
-                    {/* TAB 4: SERVER SETTINGS & WEBHOOKS */}
+                    {/* TAB 6: SERVER SETTINGS & WEBHOOKS */}
                     <TabsContent value="settings" className="space-y-6">
                         <div className="grid md:grid-cols-12 gap-6">
                             {/* Server credentials & tokens */}
                             <div className="md:col-span-7">
-                                <Card className="shadow-sm border-t-4 border-t-emerald-600">
+                                <Card className="shadow-sm">
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
                                             <Server className="h-5 w-5 text-emerald-600" />
@@ -1359,7 +1974,7 @@ export default function WhatsAppIntegration({
 
                             {/* Webhook Endpoint Info Card */}
                             <div className="md:col-span-5 space-y-6">
-                                <Card className="shadow-sm border-t-4 border-t-indigo-500">
+                                <Card className="shadow-sm">
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
                                             <Terminal className="h-5 w-5 text-indigo-600" />
@@ -1401,6 +2016,10 @@ export default function WhatsAppIntegration({
                                                     <Badge variant="outline" className="font-mono text-[10px] bg-white dark:bg-slate-950">message.received</Badge>
                                                     <span>{__('Handles incoming user messages & interactive bot replies.')}</span>
                                                 </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Badge variant="outline" className="font-mono text-[10px] bg-white dark:bg-slate-950">message.ack / status</Badge>
+                                                    <span>{__('Updates delivery and blue ticks read receipts.')}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -1410,6 +2029,199 @@ export default function WhatsAppIntegration({
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {/* MODAL 1: Diagnóstico en Vivo (Heartbeat) */}
+            <Dialog open={diagnosticOpen} onOpenChange={setDiagnosticOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base">
+                            <Heart className="h-5 w-5 text-rose-500 fill-rose-500" />
+                            {__('Diagnóstico de Salud WhatsApp')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {__('Prueba de latencia y estado del motor Baileys en tiempo real.')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {diagnosticLoading ? (
+                        <div className="py-8 text-center space-y-3">
+                            <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
+                            <p className="text-xs text-muted-foreground">{__('Ejecutando ping al servidor...')}</p>
+                        </div>
+                    ) : diagnosticData ? (
+                        <div className="space-y-3 text-xs">
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
+                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Latencia de Red')}</span>
+                                    <span className="text-lg font-bold text-emerald-600 font-mono">{diagnosticData.latencyMs} ms</span>
+                                </div>
+                                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
+                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Estado Socket')}</span>
+                                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100 capitalize">
+                                        {diagnosticData.status?.connectionState || (diagnosticData.status?.isConnected ? 'connected' : 'disconnected')}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {diagnosticData.health && (
+                                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-1.5 font-mono text-[11px]">
+                                    <div><strong>Node.js:</strong> {diagnosticData.health.system?.nodeVersion} ({diagnosticData.health.system?.platform})</div>
+                                    <div><strong>Memoria RSS:</strong> {diagnosticData.health.system?.memoryUsageMb?.rss} MB</div>
+                                    <div><strong>Base de Datos:</strong> {diagnosticData.health.database?.status} ({diagnosticData.health.database?.latencyMs} ms)</div>
+                                </div>
+                            )}
+
+                            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                <span>{__('El servidor está respondiendo de forma óptima a las solicitudes.')}</span>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    <DialogFooter>
+                        <Button size="sm" variant="outline" onClick={() => setDiagnosticOpen(false)}>
+                            {__('Cerrar')}
+                        </Button>
+                        <Button size="sm" onClick={handleRunDiagnostic} disabled={diagnosticLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                            {__('Volver a Probar')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL 2: Crear / Editar Plantilla */}
+            <Dialog open={templateModalOpen} onOpenChange={setTemplateModalOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="text-base flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-emerald-600" />
+                            {editingTemplate ? __('Editar Plantilla') : __('Nueva Plantilla de WhatsApp')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {__('Define una plantilla con opciones Spintax y variables dinámicas.')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSaveTemplate} className="space-y-4 text-xs">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="tpl_name">{__('Nombre de la Plantilla')}</Label>
+                            <Input
+                                id="tpl_name"
+                                required
+                                placeholder="ej. Convocatoria a Asamblea Pastoral"
+                                value={templateFormData.nombre}
+                                onChange={(e) => setTemplateFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="tpl_cat">{__('Categoría')}</Label>
+                            <Select
+                                value={templateFormData.categoria}
+                                onValueChange={(val) => setTemplateFormData(prev => ({ ...prev, categoria: val }))}
+                            >
+                                <SelectTrigger id="tpl_cat">
+                                    <SelectValue placeholder={__('Selecciona categoría')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pastoral">{__('Pastoral')}</SelectItem>
+                                    <SelectItem value="convocatorias">{__('Convocatorias')}</SelectItem>
+                                    <SelectItem value="avisos">{__('Avisos & Circulares')}</SelectItem>
+                                    <SelectItem value="general">{__('General')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="tpl_content">{__('Contenido (con Spintax)')}</Label>
+                                <span className="text-[10px] text-muted-foreground">{__('Usa {opcion1|opcion2}')}</span>
+                            </div>
+                            <Textarea
+                                id="tpl_content"
+                                required
+                                rows={4}
+                                placeholder="{Estimado|Apreciado} {{nombre}}, le notificamos..."
+                                value={templateFormData.contenido}
+                                onChange={(e) => setTemplateFormData(prev => ({ ...prev, contenido: e.target.value }))}
+                                className="font-mono text-xs"
+                            />
+                        </div>
+
+                        {/* Insertador de Variables */}
+                        <div className="space-y-1.5">
+                            <Label className="text-[11px] text-muted-foreground">{__('Insertar Variables Rápidas:')}</Label>
+                            <div className="flex flex-wrap gap-1.5">
+                                {['nombre', 'iglesia', 'zona', 'fecha', 'hora', 'lugar', 'empresa', 'random'].map(varName => (
+                                    <Button
+                                        key={varName}
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleInsertVariableInTemplate(varName)}
+                                        className="h-6 text-[10px] font-mono px-2 bg-slate-50 dark:bg-slate-900 hover:bg-emerald-50 text-slate-700 dark:text-slate-300"
+                                    >
+                                        + {`{{${varName}}}`}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="pt-3">
+                            <Button type="button" size="sm" variant="outline" onClick={() => setTemplateModalOpen(false)}>
+                                {__('Cancelar')}
+                            </Button>
+                            <Button type="submit" size="sm" disabled={savingTemplate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                {savingTemplate ? __('Guardando...') : __('Guardar Plantilla')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL 3: Detalle de Mensaje del Historial */}
+            <Dialog open={Boolean(selectedMessage)} onOpenChange={(open) => !open && setSelectedMessage(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-base flex items-center gap-2">
+                            <Inbox className="h-5 w-5 text-indigo-600" />
+                            {__('Detalle del Mensaje')}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {selectedMessage && (
+                        <div className="space-y-3 text-xs">
+                            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-1.5 font-mono">
+                                <div><strong>{__('Destinatario:')}</strong> +{selectedMessage.recipient_phone}</div>
+                                <div><strong>{__('Message ID:')}</strong> {selectedMessage.message_id || 'N/A'}</div>
+                                <div><strong>{__('Estado:')}</strong> <span className="capitalize">{selectedMessage.status}</span></div>
+                                <div><strong>{__('Fecha de Envío:')}</strong> {new Date(selectedMessage.created_at).toLocaleString()}</div>
+                                {selectedMessage.read_at && <div><strong>{__('Fecha de Lectura:')}</strong> {new Date(selectedMessage.read_at).toLocaleString()}</div>}
+                                <div><strong>{__('Reintentos:')}</strong> {selectedMessage.retry_count}</div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="font-semibold">{__('Contenido Enviado:')}</Label>
+                                <div className="p-3 bg-slate-100 dark:bg-slate-950 rounded-xl border text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
+                                    {selectedMessage.message_content}
+                                </div>
+                            </div>
+
+                            {selectedMessage.error_message && (
+                                <div className="p-2.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 rounded-xl text-rose-700 dark:text-rose-400">
+                                    <strong>{__('Error:')}</strong> {selectedMessage.error_message}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedMessage(null)}>
+                            {__('Cerrar')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

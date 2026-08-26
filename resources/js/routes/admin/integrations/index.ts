@@ -7,7 +7,7 @@ import validaciones from './validaciones'
 import jaak from './jaak'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @see app/Http/Controllers/Admin/IntegrationController.php:21
  * @route '/admin/integrations'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -22,7 +22,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @see app/Http/Controllers/Admin/IntegrationController.php:21
  * @route '/admin/integrations'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -31,7 +31,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @see app/Http/Controllers/Admin/IntegrationController.php:21
  * @route '/admin/integrations'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -40,7 +40,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @see app/Http/Controllers/Admin/IntegrationController.php:21
  * @route '/admin/integrations'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -50,7 +50,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @see app/Http/Controllers/Admin/IntegrationController.php:21
  * @route '/admin/integrations'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -60,7 +60,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @see app/Http/Controllers/Admin/IntegrationController.php:21
  * @route '/admin/integrations'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -69,7 +69,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
- * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @see app/Http/Controllers/Admin/IntegrationController.php:21
  * @route '/admin/integrations'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
