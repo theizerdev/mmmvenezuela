@@ -106,16 +106,21 @@ export default function WhatsAppIntegration({
         whatsapp_active: whatsapp_active,
         whatsapp_rate_limit: whatsapp_rate_limit,
     });
-
     // Formulario de parámetros Anti-Baneo
     const antiBanForm = useForm({
-        dailyLimit: queueStatsState?.dailyLimit || 100,
-        warmupMode: queueStatsState?.warmupMode ?? true,
+        dailyLimit: queueStatsState?.dailyLimit || whatsapp_rate_limit || 300,
+        warmupMode: queueStatsState?.warmupMode ?? ((whatsapp_rate_limit || 300) <= 100),
         workingHoursEnabled: queueStatsState?.workingHoursEnabled ?? true,
         workingHoursStart: queueStatsState?.workingHoursStart || '08:00',
         workingHoursEnd: queueStatsState?.workingHoursEnd || '20:00',
         proxyUrl: '',
     });
+
+    // País por defecto para el sandbox (Venezuela +58 o primer país de la lista)
+    const defaultCountryId = useMemo(() => {
+        const ve = paises?.find(p => p.codigo_telefonico === '+58' || p.codigo_iso2 === 'VE');
+        return ve ? String(ve.id) : (paises?.[0] ? String(paises[0].id) : '');
+    }, [paises]);
 
     // Formulario de mensaje de prueba con Spintax
     const [testMessage, setTestMessage] = useState({
@@ -124,6 +129,12 @@ export default function WhatsAppIntegration({
         message: '{Hola|Buen día|Qué tal} {{nombre}}, {te confirmamos que|te notificamos que} tu solicitud en {{empresa}} está lista. Código: {{random}}.',
         useSync: false,
     });
+
+    useEffect(() => {
+        if (!testMessage.paisId && defaultCountryId) {
+            setTestMessage(prev => ({ ...prev, paisId: defaultCountryId }));
+        }
+    }, [defaultCountryId]);
 
     // Determinar si la hora actual está dentro del horario laboral configurado
     const isWithinWorkingHours = useMemo(() => {
@@ -152,6 +163,9 @@ export default function WhatsAppIntegration({
                         const data = await response.json();
                         if (data.success) {
                             setLiveStatusState(data.status);
+                            if (data.queue_stats) {
+                                setQueueStatsState(data.queue_stats);
+                            }
 
                             if (data.status?.isConnected && !liveStatusState?.isConnected) {
                                 Swal.fire({
@@ -166,13 +180,11 @@ export default function WhatsAppIntegration({
                         }
                     }
 
-                    if (liveStatusState?.isConnected) {
-                        const queueRes = await fetch('/admin/integrations/whatsapp/queue-stats');
-                        if (queueRes.ok) {
-                            const queueData = await queueRes.json();
-                            if (queueData.success && queueData.stats) {
-                                setQueueStatsState(queueData.stats);
-                            }
+                    const queueRes = await fetch('/admin/integrations/whatsapp/queue-stats');
+                    if (queueRes.ok) {
+                        const queueData = await queueRes.json();
+                        if (queueData.success && queueData.stats) {
+                            setQueueStatsState(queueData.stats);
                         }
                     }
                 } catch (error) {
@@ -186,7 +198,7 @@ export default function WhatsAppIntegration({
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [whatsapp_active, liveStatusState?.isConnected, liveStatusState?.connectionState]);
+    }, [whatsapp_active, liveStatusState?.isConnected]);
 
     const handleSaveConfig = (e: React.FormEvent) => {
         e.preventDefault();
@@ -351,11 +363,28 @@ export default function WhatsAppIntegration({
     };
 
     const getFullPhoneNumber = () => {
-        if (!testMessage.paisId || !testMessage.phoneNumber) return '';
-        const selectedPais = paises.find(p => p.id === Number(testMessage.paisId));
-        if (!selectedPais?.codigo_telefonico) return '';
-        const cleanCode = selectedPais.codigo_telefonico.replace(/^\+/, '');
-        return `${cleanCode}${testMessage.phoneNumber.replace(/\D/g, '')}`;
+        if (!testMessage.phoneNumber) return '';
+        const rawDigits = testMessage.phoneNumber.replace(/\D/g, '');
+        if (!rawDigits) return '';
+
+        // Si ya incluye prefijo 58 y tiene al menos 12 dígitos (ej: 584241703465)
+        if (rawDigits.startsWith('58') && rawDigits.length >= 12) {
+            return rawDigits;
+        }
+
+        // Si ya incluye prefijo 52 / 521 de México
+        if (rawDigits.startsWith('52') && rawDigits.length >= 12) {
+            return rawDigits;
+        }
+
+        const activePaisId = testMessage.paisId || defaultCountryId;
+        const selectedPais = paises.find(p => String(p.id) === String(activePaisId));
+        const cleanCode = selectedPais?.codigo_telefonico ? selectedPais.codigo_telefonico.replace(/^\+/, '') : '58';
+
+        // Si el usuario escribió un 0 al inicio (ej. 04241703465 -> 4241703465)
+        const cleanNumber = rawDigits.startsWith('0') ? rawDigits.substring(1) : rawDigits;
+
+        return `${cleanCode}${cleanNumber}`;
     };
 
     const handleCheckNumber = async () => {
@@ -390,13 +419,13 @@ export default function WhatsAppIntegration({
                 setNumberCheckResult({
                     checked: true,
                     exists: exists,
-                    jid: json.data.jid || json.data.id || fullNumber,
+                    jid: json.data.jid || `${fullNumber}@s.whatsapp.net`,
                 });
 
                 if (exists) {
                     Swal.fire({
                         title: __('Registered on WhatsApp!'),
-                        text: `${fullNumber} ${__('is a valid active WhatsApp account.')}`,
+                        text: `+${fullNumber} ${__('is a valid active WhatsApp account.')}`,
                         icon: 'success',
                         timer: 2500,
                         showConfirmButton: false,
@@ -404,7 +433,7 @@ export default function WhatsAppIntegration({
                 } else {
                     Swal.fire({
                         title: __('Number Not Found'),
-                        text: `${fullNumber} ${__('is NOT registered on WhatsApp. Meta will penalize sending to this number.')}`,
+                        text: `+${fullNumber} ${__('is NOT registered on WhatsApp. Meta will penalize sending to this number.')}`,
                         icon: 'warning',
                     });
                 }
@@ -1058,7 +1087,7 @@ export default function WhatsAppIntegration({
 
                             {/* Anti-Ban Guidelines & Recommendations */}
                             <div className="md:col-span-4 space-y-6">
-                                <Card className="shadow-sm border-t-4 border-t-amber-500">
+                                <Card className="shadow-sm">
                                     <CardHeader>
                                         <CardTitle className="text-base flex items-center gap-2">
                                             <Flame className="h-4 w-4 text-amber-500" />
@@ -1086,7 +1115,7 @@ export default function WhatsAppIntegration({
 
                     {/* TAB 3: TEST DISPATCHER & SPINTAX SANDBOX */}
                     <TabsContent value="dispatcher" className="space-y-6">
-                        <Card className="shadow-sm border-t-4 border-t-emerald-600">
+                        <Card className="shadow-sm">
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <Send className="h-5 w-5 text-emerald-600" />

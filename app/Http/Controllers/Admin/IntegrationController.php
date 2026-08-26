@@ -259,10 +259,7 @@ class IntegrationController extends Controller
         // Sincronizar estado local en DB con estado en vivo
         $this->syncLocalWhatsAppStatus($empresa, $status);
 
-        $queueStats = null;
-        if ($status && ! empty($status['isConnected'])) {
-            $queueStats = $whatsappService->getQueueStats();
-        }
+        $queueStats = $whatsappService->getQueueStats();
 
         $currentLocale = app()->getLocale();
         $translations = file_exists($path = base_path('lang/'.$currentLocale.'.json'))
@@ -281,7 +278,7 @@ class IntegrationController extends Controller
             'whatsapp_api_key' => $empresa->whatsapp_api_key,
             'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://localhost:3000'),
             'whatsapp_instance' => $empresa->whatsapp_instance ?? ('empresa_'.$empresa->id),
-            'whatsapp_rate_limit' => $empresa->whatsapp_rate_limit ?? 60,
+            'whatsapp_rate_limit' => (int) ($empresa->whatsapp_rate_limit ?? 300),
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_phone' => $empresa->whatsapp_phone,
             'whatsapp_status' => $empresa->whatsapp_status,
@@ -308,12 +305,14 @@ class IntegrationController extends Controller
 
         // Sincronizar estado local en DB con estado en vivo
         $this->syncLocalWhatsAppStatus($empresa, $status);
+        $queueStats = $whatsappService->getQueueStats();
 
         return response()->json([
             'success' => true,
             'status' => $status,
             'whatsapp_status' => $empresa->whatsapp_status,
             'whatsapp_phone' => $empresa->whatsapp_phone,
+            'queue_stats' => $queueStats,
         ]);
     }
 
@@ -616,19 +615,18 @@ class IntegrationController extends Controller
             'proxyUrl' => 'nullable|string|max:255',
         ]);
 
-        $whatsappService = new WhatsAppService($empresa);
-        $result = $whatsappService->updateAntiBan($validated);
-
-        if ($result && (isset($result['success']) && $result['success'] || isset($result['antiban']))) {
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Anti-Ban & Messaging limits updated successfully.'),
+        if (isset($validated['dailyLimit'])) {
+            $empresa->update([
+                'whatsapp_rate_limit' => (int) $validated['dailyLimit'],
             ]);
         }
 
+        $whatsappService = new WhatsAppService($empresa);
+        $whatsappService->updateAntiBan($validated);
+
         return back()->with('notification', [
-            'type' => 'error',
-            'message' => __('Failed to update Anti-Ban settings on WhatsApp server.'),
+            'type' => 'success',
+            'message' => __('Anti-Ban & Messaging limits updated successfully to :limit messages/day.', ['limit' => $empresa->whatsapp_rate_limit ?? 300]),
         ]);
     }
 

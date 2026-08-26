@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Empresa;
+use App\Models\WhatsAppMessage;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -282,7 +283,29 @@ class WhatsAppService
         try {
             $response = $this->client()->get("{$this->baseUrl}/api/instance/{$instanceName}/check-number/{$formattedPhone}");
 
-            return $response->json();
+            if ($response->successful()) {
+                $data = $response->json();
+
+                return [
+                    'exists' => (bool) ($data['exists'] ?? true),
+                    'jid' => $data['jid'] ?? ($formattedPhone.'@s.whatsapp.net'),
+                    'formattedPhone' => $formattedPhone,
+                ];
+            }
+
+            // Si el servidor de WhatsApp no tiene implementada la subruta check-number (404),
+            // validamos el formato internacional E.164 para no arrojar un falso negativo
+            if ($response->status() === 404) {
+                $isValidFormat = strlen($formattedPhone) >= 10 && strlen($formattedPhone) <= 15;
+
+                return [
+                    'exists' => $isValidFormat,
+                    'jid' => $formattedPhone.'@s.whatsapp.net',
+                    'formattedPhone' => $formattedPhone,
+                ];
+            }
+
+            return null;
         } catch (\Exception $e) {
             Log::error('WhatsApp Check Number Error: '.$e->getMessage(), [
                 'phone' => $phone,
@@ -312,13 +335,31 @@ class WhatsAppService
             ]);
 
             if ($response->successful()) {
+                $responseData = $response->json();
+                $msgId = $responseData['data']['key']['id'] ?? $responseData['messageId'] ?? null;
+
+                try {
+                    WhatsAppMessage::create([
+                        'message_id' => $msgId,
+                        'recipient_phone' => $toFormatted,
+                        'message_content' => $message,
+                        'variables' => $variables,
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                        'direction' => 'outbound',
+                        'created_by' => auth()->id() ?? null,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to log outbound WhatsAppMessage: '.$e->getMessage());
+                }
+
                 Log::info('WhatsApp mensaje enviado', [
                     'company_id' => $this->companyId,
                     'instance' => $instanceName,
                     'to' => $toFormatted,
                 ]);
 
-                return $response->json();
+                return $responseData;
             }
 
             Log::error('WhatsApp Send Message Failed', [
@@ -415,17 +456,50 @@ class WhatsAppService
     {
         $instanceName = $instance ?? $this->instanceName;
 
+        // Obtener límite configurado de la empresa en BD
+        $empresa = Empresa::find($this->companyId);
+        $dailyLimit = (int) ($empresa?->whatsapp_rate_limit ?? 300);
+
+        // Mensajes locales enviados hoy
+        $sentToday = WhatsAppMessage::where('direction', 'outbound')
+            ->whereDate('created_at', today())
+            ->count();
+
+        $inQueue = WhatsAppMessage::where('direction', 'outbound')
+            ->where('status', 'pending')
+            ->count();
+
+        $failedToday = WhatsAppMessage::where('direction', 'outbound')
+            ->whereDate('created_at', today())
+            ->where('status', 'failed')
+            ->count();
+
+        $remoteStats = null;
         try {
-            $response = $this->client()->get("{$this->baseUrl}/api/message/queue/{$instanceName}");
-
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('WhatsApp Queue Stats Error: '.$e->getMessage(), [
-                'instance' => $instanceName,
-            ]);
-
-            return null;
+            $response = $this->client()->timeout(4)->get("{$this->baseUrl}/api/message/queue/{$instanceName}");
+            if ($response->successful()) {
+                $remoteStats = $response->json();
+            }
+        } catch (\Throwable $e) {
+            // Continúa con métricas sincronizadas locales
         }
+
+        $effectiveSent = max($sentToday, (int) ($remoteStats['sentToday'] ?? 0));
+        $effectiveDailyLimit = (int) ($remoteStats['dailyLimit'] ?? $dailyLimit);
+        $remaining = max(0, $effectiveDailyLimit - $effectiveSent);
+
+        return [
+            'sentToday' => $effectiveSent,
+            'dailyLimit' => $effectiveDailyLimit,
+            'remaining' => $remaining,
+            'queued' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
+            'inQueue' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
+            'failedToday' => (int) ($remoteStats['failedToday'] ?? $failedToday),
+            'warmupMode' => (bool) ($remoteStats['warmupMode'] ?? ($effectiveDailyLimit <= 100)),
+            'workingHoursEnabled' => (bool) ($remoteStats['workingHoursEnabled'] ?? true),
+            'workingHoursStart' => $remoteStats['workingHoursStart'] ?? '08:00',
+            'workingHoursEnd' => $remoteStats['workingHoursEnd'] ?? '20:00',
+        ];
     }
 
     /**
