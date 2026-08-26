@@ -660,14 +660,24 @@ export default function RegistroPastor({
         }
     };
 
-    // Auto-Save Draft
+    // Auto-Save Draft y Captura de Registro Exitoso (Flash)
     useEffect(() => {
-        if (flash?.success || props?.flash?.success) {
+        const successData = flash?.success || props?.flash?.success;
+        if (successData) {
+            setSubmittedResult({
+                codigo: successData.codigo || 'GENERADO',
+                nombre: successData.nombre || 'Pastor',
+                pastor_id: successData.pastor_id || null,
+                iglesia: successData.iglesia || null,
+                mensaje: successData.mensaje || '¡Su ficha ministerial y los datos de su Iglesia/Extensión han sido registrados satisfactoriamente en el sistema nacional!',
+            });
+            setIsSubmittingModalOpen(false);
             try {
                 localStorage.removeItem(DRAFT_STORAGE_KEY);
             } catch (e) { }
             setHasPendingDraft(false);
             setLastSavedTime(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
@@ -1828,46 +1838,125 @@ export default function RegistroPastor({
 
             {/* Contenido Principal */}
             <main className="flex-1 w-full max-w-[1750px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8">
-                {/* Banner de Recuperación de Borrador */}
-                {hasPendingDraft && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                        <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                                <RotateCcw className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h3 className="text-sm sm:text-base font-bold text-blue-950">
-                                    ¡Tienes un borrador en progreso guardado en este equipo!
-                                </h3>
-                                <p className="text-xs text-blue-800 mt-0.5">
-                                    Puedes retomar en el <b>Paso {draftStep}: {steps[draftStep - 1]?.title}</b> con los datos que habías ingresado previamente.
+                {submittedResult ? (
+                    <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                        <Card className="bg-white border-slate-200 shadow-xl rounded-3xl overflow-hidden text-center">
+                            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-8 text-white relative">
+                                <div className="mx-auto w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mb-4 backdrop-blur-xs shadow-inner">
+                                    <CheckCircle2 className="w-12 h-12 text-white" />
+                                </div>
+                                <Badge className="bg-white/20 text-white hover:bg-white/30 text-xs font-bold px-3.5 py-1 rounded-full mb-2">
+                                    <ShieldCheck className="w-4 h-4 mr-1.5 inline" /> Registro Confirmado y Guardado
+                                </Badge>
+                                <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-2">
+                                    ¡Ficha Ministerial Registrada!
+                                </h2>
+                                <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-md mx-auto">
+                                    Movimiento Misionero Mundial en Venezuela
                                 </p>
                             </div>
-                        </div>
 
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <Button
-                                type="button"
-                                onClick={handleRestoreDraft}
-                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm flex-1 sm:flex-initial shadow-md"
-                            >
-                                <Cloud className="w-4 h-4 mr-1.5" />
-                                Continuar Borrador
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleDiscardDraft}
-                                className="border-slate-300 text-slate-700 hover:text-rose-600 hover:border-rose-300 text-xs sm:text-sm flex-1 sm:flex-initial"
-                            >
-                                Empezar de Cero
-                            </Button>
-                        </div>
+                            <CardContent className="p-6 sm:p-8 space-y-6 text-slate-800">
+                                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-1">
+                                            Código Ministerial Asignado
+                                        </p>
+                                        <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-xs">
+                                            <span className="font-mono text-2xl font-black text-blue-900 tracking-wider">
+                                                {submittedResult.codigo}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-200/70 text-left">
+                                        <div>
+                                            <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                                                Pastor(a)
+                                            </p>
+                                            <p className="text-sm font-bold text-slate-900">
+                                                {submittedResult.nombre}
+                                            </p>
+                                        </div>
+
+                                        {submittedResult.iglesia && (
+                                            <div>
+                                                <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                                                    Iglesia / Extensión
+                                                </p>
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    {submittedResult.iglesia}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-emerald-900 text-xs sm:text-sm flex items-start gap-3 text-left">
+                                    <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                                    <p className="leading-relaxed font-medium">
+                                        {submittedResult.mensaje || 'Sus datos y fotografías fueron almacenados exitosamente en la base de datos nacional y han sido notificados al presbiterio correspondiente.'}
+                                    </p>
+                                </div>
+
+                                <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+                                    <Button
+                                        type="button"
+                                        onClick={() => {
+                                            setSubmittedResult(null);
+                                            window.location.href = '/registro';
+                                        }}
+                                        className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-6 rounded-xl shadow-md text-sm"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Registrar Otro Pastor / Extensión
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
-                )}
+                ) : (
+                    <>
+                        {/* Banner de Recuperación de Borrador */}
+                        {hasPendingDraft && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                        <RotateCcw className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm sm:text-base font-bold text-blue-950">
+                                            ¡Tienes un borrador en progreso guardado en este equipo!
+                                        </h3>
+                                        <p className="text-xs text-blue-800 mt-0.5">
+                                            Puedes retomar en el <b>Paso {draftStep}: {steps[draftStep - 1]?.title}</b> con los datos que habías ingresado previamente.
+                                        </p>
+                                    </div>
+                                </div>
 
-                {/* Formulario Wizard */}
-                <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <Button
+                                        type="button"
+                                        onClick={handleRestoreDraft}
+                                        className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm flex-1 sm:flex-initial shadow-md"
+                                    >
+                                        <Cloud className="w-4 h-4 mr-1.5" />
+                                        Continuar Borrador
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleDiscardDraft}
+                                        className="border-slate-300 text-slate-700 hover:text-rose-600 hover:border-rose-300 text-xs sm:text-sm flex-1 sm:flex-initial"
+                                    >
+                                        Empezar de Cero
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Formulario Wizard */}
+                        <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Header de Título y Progreso */}
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div>
@@ -4272,6 +4361,8 @@ export default function RegistroPastor({
                         </Card>
                     )}
                 </form>
+                </>
+            )}
             </main>
 
             {/* Footer Institucional */}
