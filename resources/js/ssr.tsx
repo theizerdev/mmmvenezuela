@@ -1,3 +1,18 @@
+if (typeof window === 'undefined') {
+    (global as any).window = {
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        navigator: { userAgent: 'node' },
+        location: { href: '' },
+    };
+    (global as any).document = {
+        createElement: () => ({ getContext: () => null }),
+        documentElement: { style: {} },
+        head: { appendChild: () => {} },
+    };
+    (global as any).navigator = { userAgent: 'node' };
+}
+
 import { createInertiaApp } from '@inertiajs/react';
 import createServer from '@inertiajs/react/server';
 import React from 'react';

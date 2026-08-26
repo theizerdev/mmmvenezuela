@@ -43,6 +43,7 @@ import {
     X
 } from 'lucide-react';
 import LocationMapPicker, { GeocodedAddressDetails } from '@/components/location-map-picker';
+import BiometricCameraModal, { BiometricCaptureResult, BiometricMode, optimizeAndCompressImage } from '@/components/biometric-camera-modal';
 
 interface EstadoItem {
     id: number;
@@ -153,7 +154,12 @@ export default function RegistroPastor({
     const [hasPendingDraft, setHasPendingDraft] = useState<boolean>(false);
     const [draftStep, setDraftStep] = useState<number>(1);
 
-    // Estados para Cámara Web
+    // Estados para Cámara Biométrica Inteligente (face-api.js)
+    const [isBiometricModalOpen, setIsBiometricModalOpen] = useState<boolean>(false);
+    const [biometricTarget, setBiometricTarget] = useState<BiometricMode>('foto');
+    const [biometricInitialFacing, setBiometricInitialFacing] = useState<'user' | 'environment'>('user');
+    const [fotoSizeKb, setFotoSizeKb] = useState<number | null>(null);
+    const [fotoCedulaSizeKb, setFotoCedulaSizeKb] = useState<number | null>(null);
     const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
     const [activeCameraTarget, setActiveCameraTarget] = useState<'foto' | 'foto_cedula'>('foto');
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -1080,24 +1086,24 @@ export default function RegistroPastor({
         });
     };
 
-    const capturePhoto = async () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth || 640;
-            canvas.height = videoRef.current.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-                const raw = canvas.toDataURL('image/jpeg', 0.9);
-                const compressed = await resizeAndCompressImage(raw);
-                markFieldTouched(activeCameraTarget);
-                setData(activeCameraTarget, compressed);
-                stopCamera();
-            }
+    // Handlers para Cámara Biométrica Inteligente (face-api.js)
+    const handleOpenBiometricCamera = (target: BiometricMode, defaultFacing: 'user' | 'environment' = 'user') => {
+        setBiometricTarget(target);
+        setBiometricInitialFacing(defaultFacing);
+        setIsBiometricModalOpen(true);
+    };
+
+    const handleBiometricCapture = (result: BiometricCaptureResult) => {
+        markFieldTouched(result.mode);
+        setData(result.mode, result.dataUrl);
+        if (result.mode === 'foto') {
+            setFotoSizeKb(result.sizeKb);
+        } else {
+            setFotoCedulaSizeKb(result.sizeKb);
         }
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'foto' | 'foto_cedula') => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'foto' | 'foto_cedula') => {
         const file = e.target.files?.[0];
         if (file) {
             markFieldTouched(target);
@@ -1105,8 +1111,20 @@ export default function RegistroPastor({
             reader.onload = async (event) => {
                 const result = event.target?.result as string;
                 if (result) {
-                    const compressed = await resizeAndCompressImage(result);
-                    setData(target, compressed);
+                    const optimized = await optimizeAndCompressImage(
+                        result,
+                        target === 'foto' ? 900 : 1200,
+                        target === 'foto' ? 1200 : 800,
+                        350,
+                        true,
+                        target
+                    );
+                    setData(target, optimized.dataUrl);
+                    if (target === 'foto') {
+                        setFotoSizeKb(optimized.sizeKb);
+                    } else {
+                        setFotoCedulaSizeKb(optimized.sizeKb);
+                    }
                 }
             };
             reader.readAsDataURL(file);
@@ -1511,6 +1529,15 @@ export default function RegistroPastor({
     return (
         <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans relative">
             <Head title="Registro Ministerial y de Extensión - MMM Venezuela" />
+
+            {/* MODAL DE CÁMARA BIOMÉTRICA CON INTELIGENCIA ARTIFICIAL (face-api.js) */}
+            <BiometricCameraModal
+                isOpen={isBiometricModalOpen}
+                mode={biometricTarget}
+                initialFacingMode={biometricInitialFacing}
+                onClose={() => setIsBiometricModalOpen(false)}
+                onCapture={handleBiometricCapture}
+            />
 
             {/* MODAL AGREGAR MUNICIPIO RÁPIDO */}
             {isAddMunicipioModalOpen && (
@@ -3184,89 +3211,94 @@ export default function RegistroPastor({
 
                     {/* PASO 5: FOTOGRAFÍA DEL PASTOR Y CÉDULA (OBLIGATORIAS) */}
                     {activeTab === 5 && (
-                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl">
-                            <CardHeader className="border-b border-slate-100 bg-slate-50/70 p-6 sm:p-8 rounded-t-3xl">
-                                <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
-                                    <Camera className="h-6 w-6 text-blue-600" />
-                                    <span>Paso 5: Fotografía Tipo Carnet y Foto de la Cédula</span>
+                        <Card className="bg-white border-slate-200 shadow-md text-slate-800 rounded-3xl overflow-hidden">
+                            <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50/80 to-indigo-50/50 p-6 sm:p-8 rounded-t-3xl">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <div className="flex items-center gap-3 text-blue-900 font-black text-lg sm:text-xl">
+                                        <div className="w-10 h-10 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 shadow-xs">
+                                            <Camera className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <span>Paso 5: Fotografía Tipo Carnet y Cédula</span>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <Badge className="bg-blue-600 hover:bg-blue-600 text-white font-bold text-[10px] px-2 py-0">
+                                                    <Sparkles className="w-2.5 h-2.5 mr-1 inline" /> Verificación Biométrica IA
+                                                </Badge>
+                                                <Badge variant="outline" className="text-slate-500 border-slate-300 text-[10px] px-1.5 py-0 font-medium">
+                                                    Compresión Automática &lt; 350 KB
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <CardDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
-                                    Tome o suba una foto nítida de perfil (tipo carnet) y la foto de su documento de identidad.
+                                <CardDescription className="text-slate-600 text-xs sm:text-sm font-medium mt-2">
+                                    Capture sus fotografías utilizando el sistema guiado en tiempo real o cargue archivos legibles. Las fotos se ajustarán y optimizarán automáticamente al formato oficial.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
-                                {/* Modal de Cámara en Vivo si está activa */}
-                                {isCameraActive && (
-                                    <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3 flex flex-col items-center shadow-lg">
-                                        <div className="relative rounded-xl overflow-hidden bg-black max-w-md w-full aspect-video border border-slate-700">
-                                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Fotografía de Perfil / Carnet */}
+                                    <div
+                                        className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${
+                                            isFieldVisibleError('foto', 5)
+                                                ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
+                                                : data.foto
+                                                ? 'border-emerald-500/50 bg-emerald-50/10 shadow-sm'
+                                                : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between w-full">
+                                            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                                                <User className="w-4 h-4 text-blue-600" />
+                                                Foto de Perfil (Tipo Carnet) <span className="text-rose-500 ml-0.5">*</span>
+                                            </h4>
+                                            {data.foto && (
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                                                    <CheckCircle2 className="w-3 h-3" /> Verificada {fotoSizeKb ? `(${fotoSizeKb} KB)` : ''}
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                type="button"
-                                                onClick={capturePhoto}
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
-                                            >
-                                                <Camera className="w-4 h-4" />
-                                                Capturar Fotografía
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    const nextMode = facingMode === 'user' ? 'environment' : 'user';
-                                                    setFacingMode(nextMode);
-                                                    startCamera(activeCameraTarget, nextMode);
-                                                }}
-                                                className="bg-white border-slate-300 text-slate-700"
-                                            >
-                                                <SwitchCamera className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                onClick={stopCamera}
-                                            >
-                                                Cancelar
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Fotografía de Perfil */}
-                                    <div className={`bg-slate-50 p-5 rounded-2xl border flex flex-col items-center text-center space-y-4 ${isFieldVisibleError('foto', 5) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/10' : 'border-slate-200'}`}>
-                                        <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                                            <User className="w-4 h-4 text-blue-600" />
-                                            Foto de Perfil (Tipo Carnet) <span className="text-rose-500 ml-0.5">*</span>
-                                        </h4>
-
-                                        <div className={`w-36 h-44 rounded-xl border-2 border-dashed bg-white overflow-hidden flex items-center justify-center relative shadow-inner ${isFieldVisibleError('foto', 5) ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'}`}>
+                                        {/* Marco de Previsualización */}
+                                        <div
+                                            className={`w-40 h-52 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${
+                                                data.foto
+                                                    ? 'border-emerald-500 bg-black'
+                                                    : isFieldVisibleError('foto', 5)
+                                                    ? 'border-rose-400 bg-rose-50/30'
+                                                    : 'border-slate-300 bg-white'
+                                            }`}
+                                        >
                                             {data.foto ? (
                                                 <img src={data.foto} alt="Foto Perfil" className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="text-slate-400 text-xs flex flex-col items-center p-2">
-                                                    <Camera className="w-8 h-8 mb-1 opacity-50" />
-                                                    <span>Sin Foto</span>
+                                                <div className="text-slate-400 text-xs flex flex-col items-center p-3 text-center space-y-1">
+                                                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                                                        <User className="w-6 h-6 opacity-60" />
+                                                    </div>
+                                                    <span className="font-semibold text-slate-500">Sin Fotografía</span>
+                                                    <span className="text-[10px] text-slate-400">Encuadre 3:4 requerido</span>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="flex flex-wrap gap-2 justify-center w-full">
+                                        {/* Botones de Acción */}
+                                        <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
                                                 size="sm"
-                                                onClick={() => startCamera('foto')}
-                                                className="bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold gap-1"
+                                                onClick={() => handleOpenBiometricCamera('foto', 'user')}
+                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md h-10 px-4 gap-1.5 flex-1"
                                             >
-                                                <Video className="w-3.5 h-3.5" />
-                                                Usar Cámara
+                                                <Camera className="w-4 h-4 text-blue-200" />
+                                                Cámara Biométrica
                                             </Button>
+
                                             <Label
                                                 htmlFor="upload-foto"
-                                                className="cursor-pointer inline-flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold py-2 px-3 rounded-md shadow-xs"
+                                                className="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold py-2 px-3.5 rounded-xl shadow-xs h-10 transition-colors"
                                             >
-                                                <Upload className="w-3.5 h-3.5" />
+                                                <Upload className="w-3.5 h-3.5 text-slate-600" />
                                                 Subir Archivo
                                             </Label>
                                             <input
@@ -3276,15 +3308,20 @@ export default function RegistroPastor({
                                                 className="hidden"
                                                 onChange={(e) => handleFileUpload(e, 'foto')}
                                             />
+
                                             {data.foto && (
                                                 <Button
                                                     type="button"
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => setData('foto', '')}
-                                                    className="text-rose-600 hover:text-rose-800 text-xs"
+                                                    onClick={() => {
+                                                        setData('foto', '');
+                                                        setFotoSizeKb(null);
+                                                    }}
+                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-xl h-10 px-3"
+                                                    title="Eliminar Fotografía"
                                                 >
-                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    <Trash2 className="w-4 h-4" />
                                                 </Button>
                                             )}
                                         </div>
@@ -3298,38 +3335,67 @@ export default function RegistroPastor({
                                     </div>
 
                                     {/* Fotografía de la Cédula */}
-                                    <div className={`bg-slate-50 p-5 rounded-2xl border flex flex-col items-center text-center space-y-4 ${isFieldVisibleError('foto_cedula', 5) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/10' : 'border-slate-200'}`}>
-                                        <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                                            <IdCard className="w-4 h-4 text-blue-600" />
-                                            Foto de la Cédula de Identidad <span className="text-rose-500 ml-0.5">*</span>
-                                        </h4>
+                                    <div
+                                        className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${
+                                            isFieldVisibleError('foto_cedula', 5)
+                                                ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
+                                                : data.foto_cedula
+                                                ? 'border-emerald-500/50 bg-emerald-50/10 shadow-sm'
+                                                : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between w-full">
+                                            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                                                <IdCard className="w-4 h-4 text-blue-600" />
+                                                Foto de la Cédula de Identidad <span className="text-rose-500 ml-0.5">*</span>
+                                            </h4>
+                                            {data.foto_cedula && (
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                                                    <CheckCircle2 className="w-3 h-3" /> Verificada {fotoCedulaSizeKb ? `(${fotoCedulaSizeKb} KB)` : ''}
+                                                </span>
+                                            )}
+                                        </div>
 
-                                        <div className={`w-56 h-36 rounded-xl border-2 border-dashed bg-white overflow-hidden flex items-center justify-center relative shadow-inner ${isFieldVisibleError('foto_cedula', 5) ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'}`}>
+                                        {/* Marco de Previsualización Cédula */}
+                                        <div
+                                            className={`w-56 h-36 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${
+                                                data.foto_cedula
+                                                    ? 'border-emerald-500 bg-black'
+                                                    : isFieldVisibleError('foto_cedula', 5)
+                                                    ? 'border-rose-400 bg-rose-50/30'
+                                                    : 'border-slate-300 bg-white'
+                                            }`}
+                                        >
                                             {data.foto_cedula ? (
                                                 <img src={data.foto_cedula} alt="Cédula" className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="text-slate-400 text-xs flex flex-col items-center p-2">
-                                                    <IdCard className="w-8 h-8 mb-1 opacity-50" />
-                                                    <span>Sin Cédula</span>
+                                                <div className="text-slate-400 text-xs flex flex-col items-center p-3 text-center space-y-1">
+                                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                                                        <IdCard className="w-6 h-6 opacity-60" />
+                                                    </div>
+                                                    <span className="font-semibold text-slate-500">Sin Cédula</span>
+                                                    <span className="text-[10px] text-slate-400">Debe ser nítida y legible</span>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="flex flex-wrap gap-2 justify-center w-full">
+                                        {/* Botones de Acción */}
+                                        <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
                                                 size="sm"
-                                                onClick={() => startCamera('foto_cedula', 'environment')}
-                                                className="bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold gap-1"
+                                                onClick={() => handleOpenBiometricCamera('foto_cedula', 'environment')}
+                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md h-10 px-4 gap-1.5 flex-1"
                                             >
-                                                <Video className="w-3.5 h-3.5" />
-                                                Usar Cámara
+                                                <Camera className="w-4 h-4 text-blue-200" />
+                                                Escanear Cédula
                                             </Button>
+
                                             <Label
                                                 htmlFor="upload-cedula"
-                                                className="cursor-pointer inline-flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold py-2 px-3 rounded-md shadow-xs"
+                                                className="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold py-2 px-3.5 rounded-xl shadow-xs h-10 transition-colors"
                                             >
-                                                <Upload className="w-3.5 h-3.5" />
+                                                <Upload className="w-3.5 h-3.5 text-slate-600" />
                                                 Subir Archivo
                                             </Label>
                                             <input
@@ -3339,15 +3405,20 @@ export default function RegistroPastor({
                                                 className="hidden"
                                                 onChange={(e) => handleFileUpload(e, 'foto_cedula')}
                                             />
+
                                             {data.foto_cedula && (
                                                 <Button
                                                     type="button"
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => setData('foto_cedula', '')}
-                                                    className="text-rose-600 hover:text-rose-800 text-xs"
+                                                    onClick={() => {
+                                                        setData('foto_cedula', '');
+                                                        setFotoCedulaSizeKb(null);
+                                                    }}
+                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-xl h-10 px-3"
+                                                    title="Eliminar Cédula"
                                                 >
-                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    <Trash2 className="w-4 h-4" />
                                                 </Button>
                                             )}
                                         </div>
