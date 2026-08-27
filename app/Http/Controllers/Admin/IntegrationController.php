@@ -53,6 +53,12 @@ class IntegrationController extends Controller
             'google_smtp_from_address' => $empresa->google_smtp_from_address,
             'google_smtp_from_name' => $empresa->google_smtp_from_name,
             'google_smtp_active' => (bool) $empresa->google_smtp_active,
+            'mailgun_domain' => $empresa->mailgun_domain,
+            'mailgun_secret' => $empresa->mailgun_secret,
+            'mailgun_endpoint' => $empresa->mailgun_endpoint ?? 'api.mailgun.net',
+            'mailgun_from_address' => $empresa->mailgun_from_address,
+            'mailgun_from_name' => $empresa->mailgun_from_name,
+            'mailgun_active' => (bool) $empresa->mailgun_active,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
             'control_acceso_base_url' => $empresa->control_acceso_base_url,
@@ -283,6 +289,126 @@ class IntegrationController extends Controller
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('Google SMTP test failed: ').$e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Actualiza la configuración de Mailgun de la empresa del usuario.
+     */
+    public function updateMailgun(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'mailgun_domain' => 'nullable|string|max:255',
+            'mailgun_secret' => 'nullable|string|max:255',
+            'mailgun_endpoint' => 'nullable|string|max:100',
+            'mailgun_from_address' => 'nullable|email|max:255',
+            'mailgun_from_name' => 'nullable|string|max:255',
+            'mailgun_active' => 'required|boolean',
+        ]);
+
+        $updateData = [
+            'mailgun_domain' => $validated['mailgun_domain'] ? trim($validated['mailgun_domain']) : null,
+            'mailgun_endpoint' => $validated['mailgun_endpoint'] ?: 'api.mailgun.net',
+            'mailgun_from_address' => $validated['mailgun_from_address'],
+            'mailgun_from_name' => $validated['mailgun_from_name'],
+            'mailgun_active' => $validated['mailgun_active'],
+        ];
+
+        if (array_key_exists('mailgun_secret', $validated) && $validated['mailgun_secret'] !== null) {
+            $updateData['mailgun_secret'] = trim($validated['mailgun_secret']);
+        }
+
+        $empresa->update($updateData);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Mailgun settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba el envío de correo a través de la API oficial de Mailgun.
+     */
+    public function mailgunTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        if (empty($empresa->mailgun_domain) || empty($empresa->mailgun_secret)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please configure and save your Mailgun Domain and API Key before testing the connection.'),
+            ]);
+        }
+
+        $recipientEmail = $request->input('test_email', $request->user()->email);
+
+        if (! filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please provide a valid recipient email address.'),
+            ]);
+        }
+
+        try {
+            $domain = trim($empresa->mailgun_domain);
+            $secret = trim($empresa->mailgun_secret);
+            $endpoint = $empresa->mailgun_endpoint ?: 'api.mailgun.net';
+            $endpoint = rtrim(str_replace(['https://', 'http://'], '', $endpoint), '/');
+
+            $fromName = $empresa->mailgun_from_name ?: $empresa->razon_social ?: config('mail.from.name');
+            $fromEmail = $empresa->mailgun_from_address ?: ("postmaster@".$domain);
+            $from = "{$fromName} <{$fromEmail}>";
+
+            $companyName = $empresa->razon_social ?: 'MMM Venezuela';
+            $url = "https://{$endpoint}/v3/{$domain}/messages";
+
+            $response = \Illuminate\Support\Facades\Http::asForm()
+                ->withBasicAuth('api', $secret)
+                ->timeout(15)
+                ->post($url, [
+                    'from' => $from,
+                    'to' => $recipientEmail,
+                    'subject' => "Prueba de Integración Mailgun - {$companyName}",
+                    'text' => "¡Hola!\n\nEste es un mensaje de prueba enviado desde {$companyName} para verificar que la integración de Mailgun API está funcionando correctamente.\n\nFecha y hora: ".now()->translatedFormat('d/m/Y h:i A')."\n\nAtentamente,\nEquipo de {$companyName}",
+                ]);
+
+            if ($response->successful()) {
+                return back()->with('notification', [
+                    'type' => 'success',
+                    'message' => __('Test email sent successfully to :email via Mailgun.', ['email' => $recipientEmail]),
+                ]);
+            }
+
+            $errorBody = $response->json('message') ?? $response->body();
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Mailgun test failed (:status): :error', [
+                    'status' => $response->status(),
+                    'error' => $errorBody,
+                ]),
+            ]);
+        } catch (\Throwable $e) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Mailgun test failed: ').$e->getMessage(),
             ]);
         }
     }

@@ -74,6 +74,12 @@ class Empresa extends Model
         'google_smtp_from_address',
         'google_smtp_from_name',
         'google_smtp_active',
+        'mailgun_domain',
+        'mailgun_secret',
+        'mailgun_endpoint',
+        'mailgun_from_address',
+        'mailgun_from_name',
+        'mailgun_active',
     ];
 
     protected $casts = [
@@ -99,6 +105,8 @@ class Empresa extends Model
             'google_smtp_port' => 'integer',
             'google_smtp_password' => 'encrypted',
             'google_smtp_active' => 'boolean',
+            'mailgun_secret' => 'encrypted',
+            'mailgun_active' => 'boolean',
         ];
     }
 

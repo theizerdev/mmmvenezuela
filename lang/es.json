@@ -2127,5 +2127,20 @@
     "Please configure and save your Google Email and App Password before testing the connection.": "Por favor configura y guarda tu correo de Google y contraseña de aplicación antes de probar la conexión.",
     "Please provide a valid recipient email address.": "Por favor ingresa una dirección de correo destinatario válida.",
     "Test email sent successfully to :email": "Correo de prueba enviado exitosamente a :email",
-    "Google SMTP test failed: ": "La prueba de Google SMTP falló: "
+    "Google SMTP test failed: ": "La prueba de Google SMTP falló: ",
+    "Mailgun API": "API de Mailgun",
+    "High-deliverability transactional email delivery via Mailgun REST API.": "Envío de correos transaccionales de alta entregabilidad mediante la API REST de Mailgun.",
+    "Enable Mailgun": "Habilitar Mailgun",
+    "Enable email dispatch via Mailgun API for company notifications.": "Activar el despacho de correos vía Mailgun API para notificaciones de la empresa.",
+    "Mailgun Domain": "Dominio de Mailgun",
+    "Mailgun API Key": "API Key de Mailgun",
+    "Mailgun Server Region / Endpoint": "Región / Endpoint del Servidor Mailgun",
+    "Mailgun API Key Guide": "Guía de API Key de Mailgun",
+    "Find your Sending API Key or Primary Account API Key in your Mailgun Security settings at:": "Encuentra tu Sending API Key o Primary Account API Key en la configuración de seguridad de Mailgun en:",
+    "Mailgun integration settings updated successfully.": "Configuración de Mailgun actualizada correctamente.",
+    "Test Mailgun Connection": "Probar Conexión Mailgun",
+    "Please configure and save your Mailgun Domain and API Key before testing the connection.": "Por favor configura y guarda tu dominio y API Key de Mailgun antes de probar la conexión.",
+    "Test email sent successfully to :email via Mailgun.": "Correo de prueba enviado exitosamente a :email a través de Mailgun.",
+    "Mailgun test failed (:status): :error": "La prueba de Mailgun falló (:status): :error",
+    "Mailgun test failed: ": "La prueba de Mailgun falló: "
 }

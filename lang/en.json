@@ -1565,5 +1565,20 @@
     "Please configure and save your Google Email and App Password before testing the connection.": "Please configure and save your Google Email and App Password before testing the connection.",
     "Please provide a valid recipient email address.": "Please provide a valid recipient email address.",
     "Test email sent successfully to :email": "Test email sent successfully to :email",
-    "Google SMTP test failed: ": "Google SMTP test failed: "
+    "Google SMTP test failed: ": "Google SMTP test failed: ",
+    "Mailgun API": "Mailgun API",
+    "High-deliverability transactional email delivery via Mailgun REST API.": "High-deliverability transactional email delivery via Mailgun REST API.",
+    "Enable Mailgun": "Enable Mailgun",
+    "Enable email dispatch via Mailgun API for company notifications.": "Enable email dispatch via Mailgun API for company notifications.",
+    "Mailgun Domain": "Mailgun Domain",
+    "Mailgun API Key": "Mailgun API Key",
+    "Mailgun Server Region / Endpoint": "Mailgun Server Region / Endpoint",
+    "Mailgun API Key Guide": "Mailgun API Key Guide",
+    "Find your Sending API Key or Primary Account API Key in your Mailgun Security settings at:": "Find your Sending API Key or Primary Account API Key in your Mailgun Security settings at:",
+    "Mailgun integration settings updated successfully.": "Mailgun integration settings updated successfully.",
+    "Test Mailgun Connection": "Test Mailgun Connection",
+    "Please configure and save your Mailgun Domain and API Key before testing the connection.": "Please configure and save your Mailgun Domain and API Key before testing the connection.",
+    "Test email sent successfully to :email via Mailgun.": "Test email sent successfully to :email via Mailgun.",
+    "Mailgun test failed (:status): :error": "Mailgun test failed (:status): :error",
+    "Mailgun test failed: ": "Mailgun test failed: "
 }

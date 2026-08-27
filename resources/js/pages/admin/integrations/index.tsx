@@ -23,6 +23,12 @@ interface PageProps {
     google_smtp_from_address: string | null;
     google_smtp_from_name: string | null;
     google_smtp_active: boolean;
+    mailgun_domain: string | null;
+    mailgun_secret?: string | null;
+    mailgun_endpoint: string | null;
+    mailgun_from_address: string | null;
+    mailgun_from_name: string | null;
+    mailgun_active: boolean;
     whatsapp_active: boolean;
     whatsapp_connected: boolean;
     control_acceso_base_url: string | null;
@@ -44,6 +50,12 @@ export default function Integrations({
     google_smtp_from_address,
     google_smtp_from_name,
     google_smtp_active,
+    mailgun_domain,
+    mailgun_secret,
+    mailgun_endpoint,
+    mailgun_from_address,
+    mailgun_from_name,
+    mailgun_active,
     whatsapp_active,
     whatsapp_connected,
     control_acceso_base_url,
@@ -55,6 +67,8 @@ export default function Integrations({
     const [testingConnection, setTestingConnection] = useState(false);
     const [testingSmtp, setTestingSmtp] = useState(false);
     const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+    const [testingMailgun, setTestingMailgun] = useState(false);
+    const [showMailgunSecret, setShowMailgunSecret] = useState(false);
 
     const mapboxForm = useForm({
         mapbox_api_key: mapbox_api_key || '',
@@ -75,6 +89,15 @@ export default function Integrations({
         google_smtp_from_address: google_smtp_from_address || '',
         google_smtp_from_name: google_smtp_from_name || '',
         google_smtp_active: google_smtp_active,
+    });
+
+    const mailgunForm = useForm({
+        mailgun_domain: mailgun_domain || '',
+        mailgun_secret: mailgun_secret || '',
+        mailgun_endpoint: mailgun_endpoint || 'api.mailgun.net',
+        mailgun_from_address: mailgun_from_address || '',
+        mailgun_from_name: mailgun_from_name || '',
+        mailgun_active: mailgun_active,
     });
 
     const controlAccesoForm = useForm({
@@ -155,6 +178,49 @@ export default function Integrations({
             router.post('/admin/integrations/google-smtp/test', { test_email: email }, {
                 preserveScroll: true,
                 onFinish: () => setTestingSmtp(false),
+            });
+        }
+    };
+
+    const handleSaveMailgun = (e: React.FormEvent) => {
+        e.preventDefault();
+        mailgunForm.put('/admin/integrations/mailgun', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: __('Mailgun integration settings updated successfully.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+        });
+    };
+
+    const handleTestMailgun = async () => {
+        const { value: email } = await Swal.fire({
+            title: __('Test Mailgun Connection'),
+            text: __('Enter a recipient email address to send a verification test message:'),
+            input: 'email',
+            inputPlaceholder: 'tu-correo@ejemplo.com',
+            inputValue: mailgunForm.data.mailgun_from_address || '',
+            showCancelButton: true,
+            confirmButtonText: __('Send Test Email'),
+            cancelButtonText: __('Cancel'),
+            confirmButtonColor: '#f97316',
+            inputValidator: (value) => {
+                if (!value) {
+                    return __('Please enter a valid email address.');
+                }
+            }
+        });
+
+        if (email) {
+            setTestingMailgun(true);
+            router.post('/admin/integrations/mailgun/test', { test_email: email }, {
+                preserveScroll: true,
+                onFinish: () => setTestingMailgun(false),
             });
         }
     };
@@ -507,6 +573,154 @@ export default function Integrations({
                                     {__('Test Connection')}
                                 </Button>
                                 <Button type="submit" disabled={googleSmtpForm.processing || !googleSmtpForm.data.google_smtp_active} className="gap-2">
+                                    <Save className="h-4 w-4" />
+                                    {__('Save Changes')}
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </Card>
+
+                    {/* Mailgun Integration */}
+                    <Card className="shadow-sm border-t-4 border-t-orange-500 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded bg-orange-50 dark:bg-orange-950/20 text-orange-600">
+                                        <Mail className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('Mailgun API')}</CardTitle>
+                                        <CardDescription>{__('High-deliverability transactional email delivery via Mailgun REST API.')}</CardDescription>
+                                    </div>
+                                </div>
+                                <BadgeStatus active={mailgunForm.data.mailgun_active} />
+                            </div>
+                        </CardHeader>
+                        <form onSubmit={handleSaveMailgun}>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">{__('Enable Mailgun')}</Label>
+                                        <p className="text-xs text-muted-foreground">{__('Enable email dispatch via Mailgun API for company notifications.')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={mailgunForm.data.mailgun_active}
+                                        onCheckedChange={(checked) => mailgunForm.setData('mailgun_active', checked)}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailgun_domain">{__('Mailgun Domain')}</Label>
+                                        <Input
+                                            id="mailgun_domain"
+                                            type="text"
+                                            placeholder="mg.tu-dominio.com"
+                                            value={mailgunForm.data.mailgun_domain}
+                                            onChange={(e) => mailgunForm.setData('mailgun_domain', e.target.value)}
+                                            disabled={!mailgunForm.data.mailgun_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="mailgun_secret">{__('Mailgun API Key')}</Label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowMailgunSecret(!showMailgunSecret)}
+                                                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                                tabIndex={-1}
+                                            >
+                                                {showMailgunSecret ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                                {showMailgunSecret ? __('Hide') : __('Show')}
+                                            </button>
+                                        </div>
+                                        <Input
+                                            id="mailgun_secret"
+                                            type={showMailgunSecret ? 'text' : 'password'}
+                                            placeholder="key-••••••••••••••••"
+                                            value={mailgunForm.data.mailgun_secret}
+                                            onChange={(e) => mailgunForm.setData('mailgun_secret', e.target.value)}
+                                            disabled={!mailgunForm.data.mailgun_active}
+                                            className="font-mono text-sm tracking-wider"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailgun_from_name">{__('Sender Name (From Name)')}</Label>
+                                        <Input
+                                            id="mailgun_from_name"
+                                            type="text"
+                                            placeholder="MMM Venezuela"
+                                            value={mailgunForm.data.mailgun_from_name}
+                                            onChange={(e) => mailgunForm.setData('mailgun_from_name', e.target.value)}
+                                            disabled={!mailgunForm.data.mailgun_active}
+                                            className="text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailgun_from_address">{__('Sender Email (From Email)')}</Label>
+                                        <Input
+                                            id="mailgun_from_address"
+                                            type="email"
+                                            placeholder="no-reply@mg.tu-dominio.com"
+                                            value={mailgunForm.data.mailgun_from_address}
+                                            onChange={(e) => mailgunForm.setData('mailgun_from_address', e.target.value)}
+                                            disabled={!mailgunForm.data.mailgun_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="mailgun_endpoint">{__('Mailgun Server Region / Endpoint')}</Label>
+                                    <select
+                                        id="mailgun_endpoint"
+                                        value={mailgunForm.data.mailgun_endpoint}
+                                        onChange={(e) => mailgunForm.setData('mailgun_endpoint', e.target.value)}
+                                        disabled={!mailgunForm.data.mailgun_active}
+                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                                    >
+                                        <option value="api.mailgun.net">US Region (api.mailgun.net)</option>
+                                        <option value="api.eu.mailgun.net">EU Region (api.eu.mailgun.net)</option>
+                                    </select>
+                                </div>
+
+                                <div className="p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20 border border-orange-200/80 dark:border-orange-900/50 text-xs text-orange-900 dark:text-orange-300 space-y-1">
+                                    <div className="flex items-center gap-1.5 font-semibold">
+                                        <HelpCircle className="h-4 w-4 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                                        <span>{__('Mailgun API Key Guide')}</span>
+                                    </div>
+                                    <p className="text-[11px] leading-relaxed text-orange-800 dark:text-orange-300/90">
+                                        {__('Find your Sending API Key or Primary Account API Key in your Mailgun Security settings at:')}{' '}
+                                        <a
+                                            href="https://app.mailgun.com/app/account/security/api_keys"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-medium underline hover:text-orange-950 dark:hover:text-orange-100 inline-flex items-center gap-0.5"
+                                        >
+                                            app.mailgun.com/app/account/security/api_keys <ExternalLink className="h-3 w-3 inline" />
+                                        </a>
+                                    </p>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-between">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2 border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800 dark:border-orange-900/50 dark:text-orange-400 dark:hover:bg-orange-950/20"
+                                    disabled={!mailgunForm.data.mailgun_active || testingMailgun}
+                                    onClick={handleTestMailgun}
+                                >
+                                    {testingMailgun ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    {__('Test Connection')}
+                                </Button>
+                                <Button type="submit" disabled={mailgunForm.processing || !mailgunForm.data.mailgun_active} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
