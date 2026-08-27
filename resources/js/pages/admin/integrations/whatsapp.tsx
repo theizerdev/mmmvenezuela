@@ -6,7 +6,8 @@ import {
     XCircle, HelpCircle, Server, Radio, ShieldCheck, ArrowRight, ExternalLink,
     Zap, Globe, Terminal, Layers, FileText, Plus, Trash2, Edit3, Search,
     Eye, CheckCheck, AlertCircle, HeartHandshake, Wifi, WifiOff, Heart,
-    BarChart3, Inbox, RotateCw, Play, Filter, ArrowUpRight
+    BarChart3, Inbox, RotateCw, Play, Filter, ArrowUpRight, Users, Megaphone,
+    CheckSquare, Square, Volume2
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';
@@ -107,6 +108,20 @@ interface WhatsAppMessageItem {
     created_at: string;
 }
 
+interface BroadcastRecipient {
+    id: number;
+    type: 'user' | 'pastor';
+    name: string;
+    email?: string;
+    phone: string;
+    formatted_phone: string;
+    is_valid_phone: boolean;
+    zonas: string;
+    distritos: string;
+    role: string;
+    codigo?: string;
+}
+
 interface PageProps {
     empresa_id: number;
     empresa_nombre: string;
@@ -202,6 +217,17 @@ export default function WhatsAppIntegration({
     const [historyLoading, setHistoryLoading] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState<WhatsAppMessageItem | null>(null);
     const [retryingId, setRetryingId] = useState<number | null>(null);
+
+    // Estado del Módulo de Difusión Masiva (Broadcast)
+    const [broadcastTarget, setBroadcastTarget] = useState<'presbiteros' | 'pastores' | 'usuarios'>('presbiteros');
+    const [broadcastZona, setBroadcastZona] = useState<string>('all');
+    const [broadcastRecipients, setBroadcastRecipients] = useState<BroadcastRecipient[]>([]);
+    const [selectedRecipientIds, setSelectedRecipientIds] = useState<number[]>([]);
+    const [broadcastLoading, setBroadcastLoading] = useState(false);
+    const [broadcastMessage, setBroadcastMessage] = useState('');
+    const [broadcastDelaySeconds, setBroadcastDelaySeconds] = useState(15);
+    const [broadcastSending, setBroadcastSending] = useState(false);
+    const [broadcastFilterSearch, setBroadcastFilterSearch] = useState('');
 
     const webhookUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/webhooks/whatsapp`
@@ -339,6 +365,162 @@ export default function WhatsAppIntegration({
             fetchMessages(historyPage, historySearch, historyStatus);
         }
     }, [activeTab, historyPage, historyStatus]);
+
+    // Cargar destinatarios para Difusión Masiva
+    const fetchBroadcastRecipients = async (target = broadcastTarget, zona = broadcastZona) => {
+        setBroadcastLoading(true);
+        try {
+            const params = new URLSearchParams({
+                target,
+                zona: zona || 'all',
+            });
+            const res = await fetch(`/admin/integrations/whatsapp/broadcast/recipients?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    setBroadcastRecipients(data.recipients || []);
+                    const validIds = (data.recipients || [])
+                        .filter((r: BroadcastRecipient) => r.is_valid_phone)
+                        .map((r: BroadcastRecipient) => r.id);
+                    setSelectedRecipientIds(validIds);
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching broadcast recipients:', e);
+        } finally {
+            setBroadcastLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'broadcast') {
+            fetchBroadcastRecipients(broadcastTarget, broadcastZona);
+        }
+    }, [activeTab, broadcastTarget, broadcastZona]);
+
+    const toggleRecipient = (id: number) => {
+        setSelectedRecipientIds(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const toggleAllRecipients = () => {
+        const validRecipients = broadcastRecipients.filter(r => r.is_valid_phone);
+        if (selectedRecipientIds.length === validRecipients.length) {
+            setSelectedRecipientIds([]);
+        } else {
+            setSelectedRecipientIds(validRecipients.map(r => r.id));
+        }
+    };
+
+    const handleInsertBroadcastVariable = (varName: string) => {
+        const tag = `{{${varName}}}`;
+        setBroadcastMessage(prev => prev + tag);
+    };
+
+    const handleSelectBroadcastTemplate = (templateContent: string) => {
+        setBroadcastMessage(templateContent);
+        Swal.fire({
+            title: __('Template Loaded'),
+            text: __('Broadcast content updated from template.'),
+            icon: 'info',
+            timer: 1500,
+            showConfirmButton: false,
+        });
+    };
+
+    const handleDispatchBroadcast = async () => {
+        if (selectedRecipientIds.length === 0) {
+            Swal.fire({
+                title: __('No Recipients Selected'),
+                text: __('Please select at least one recipient with a valid phone number.'),
+                icon: 'warning',
+            });
+            return;
+        }
+
+        if (!broadcastMessage.trim()) {
+            Swal.fire({
+                title: __('Empty Message'),
+                text: __('Please compose a message or choose a template before sending.'),
+                icon: 'warning',
+            });
+            return;
+        }
+
+        const targetLabel = broadcastTarget === 'presbiteros'
+            ? __('Presbyters')
+            : broadcastTarget === 'pastores'
+            ? __('Pastors')
+            : __('Users');
+
+        const result = await Swal.fire({
+            title: __('Dispatch Broadcast Campaign?'),
+            html: `
+                <div class="text-left text-sm space-y-2">
+                    <p><b>${__('Target Audience:')}</b> ${targetLabel}</p>
+                    <p><b>${__('Recipients Count:')}</b> <span class="text-emerald-600 font-bold">${selectedRecipientIds.length} ${__('recipients')}</span></p>
+                    <p><b>${__('Safety Delay:')}</b> ${broadcastDelaySeconds} ${__('seconds between messages')}</p>
+                    <p class="text-xs text-muted-foreground mt-2">${__('Messages will be queued and sent safely with Spintax variation to protect the WhatsApp line.')}</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: __('Yes, Dispatch Broadcast'),
+            cancelButtonText: __('Cancel'),
+            confirmButtonColor: '#059669',
+        });
+
+        if (!result.isConfirmed) return;
+
+        setBroadcastSending(true);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/broadcast/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({
+                    target_type: broadcastTarget,
+                    recipient_ids: selectedRecipientIds,
+                    message_content: broadcastMessage,
+                    delay_seconds: broadcastDelaySeconds,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                Swal.fire({
+                    title: __('Broadcast Enqueued!'),
+                    text: data.message || __('The broadcast messages have been successfully added to the dispatch queue.'),
+                    icon: 'success',
+                    showConfirmButton: true,
+                    confirmButtonText: __('View History & Logs'),
+                }).then((r) => {
+                    if (r.isConfirmed) {
+                        setActiveTab('history');
+                        fetchMessages(1, '', 'all');
+                    }
+                });
+            } else {
+                Swal.fire({
+                    title: __('Broadcast Error'),
+                    text: data.error || __('Failed to dispatch broadcast.'),
+                    icon: 'error',
+                });
+            }
+        } catch (e) {
+            Swal.fire({
+                title: __('Error'),
+                text: __('Network error attempting to send broadcast.'),
+                icon: 'error',
+            });
+        } finally {
+            setBroadcastSending(false);
+        }
+    };
 
     // Ejecutar diagnóstico en vivo
     const handleRunDiagnostic = async () => {
@@ -1094,10 +1276,14 @@ export default function WhatsAppIntegration({
 
                 {/* Main Tabbed Interface */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto p-1.5 bg-slate-100/80 dark:bg-slate-900/80 rounded-xl gap-1">
+                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 h-auto p-1.5 bg-slate-100/80 dark:bg-slate-900/80 rounded-xl gap-1">
                         <TabsTrigger value="connection" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <QrCode className="h-4 w-4" />
                             {__('Connection & QR')}
+                        </TabsTrigger>
+                        <TabsTrigger value="broadcast" className="py-2.5 gap-1.5 text-xs md:text-sm font-semibold rounded-lg text-indigo-600 dark:text-indigo-400">
+                            <Megaphone className="h-4 w-4" />
+                            {__('Mass Broadcast')}
                         </TabsTrigger>
                         <TabsTrigger value="templates" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
                             <FileText className="h-4 w-4" />
@@ -1243,6 +1429,356 @@ export default function WhatsAppIntegration({
                                         <a href="/docs" target="_blank" className="text-emerald-600 hover:underline flex items-center gap-1 font-medium">
                                             {__('API Docs')} <ExternalLink className="h-3 w-3" />
                                         </a>
+                                    </CardFooter>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* TAB: DIFUSIÓN MASIVA / BROADCAST */}
+                    <TabsContent value="broadcast" className="space-y-6">
+                        <div className="grid lg:grid-cols-12 gap-6">
+                            {/* COLUMNA IZQUIERDA: 1. AUDIENCIA Y SELECCIÓN (7 COLS) */}
+                            <div className="lg:col-span-7 space-y-6">
+                                <Card className="shadow-sm border-indigo-200/60 dark:border-indigo-900/40">
+                                    <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div>
+                                            <CardTitle className="text-lg flex items-center gap-2">
+                                                <Megaphone className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                                {__('1. Target Audience & Recipients')}
+                                            </CardTitle>
+                                            <CardDescription>
+                                                {__('Select the group and filter recipients for this broadcast.')}
+                                            </CardDescription>
+                                        </div>
+                                        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 font-mono text-xs w-fit">
+                                            {selectedRecipientIds.length} / {broadcastRecipients.length} {__('Selected')}
+                                        </Badge>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {/* Selectores de Audiencia y Zona */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-semibold">{__('Target Group')}</Label>
+                                                <Select
+                                                    value={broadcastTarget}
+                                                    onValueChange={(val: any) => setBroadcastTarget(val)}
+                                                >
+                                                    <SelectTrigger className="text-xs h-9">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="presbiteros">
+                                                            <div className="flex items-center gap-2">
+                                                                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+                                                                <span>{__('Presbyters (Role: Presbítero)')}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                        <SelectItem value="pastores">
+                                                            <div className="flex items-center gap-2">
+                                                                <Users className="h-3.5 w-3.5 text-emerald-600" />
+                                                                <span>{__('All Active Pastors')}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                        <SelectItem value="usuarios">
+                                                            <div className="flex items-center gap-2">
+                                                                <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                                                                <span>{__('All System Users')}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-semibold">{__('Filter by Zone')}</Label>
+                                                <Select
+                                                    value={broadcastZona}
+                                                    onValueChange={setBroadcastZona}
+                                                >
+                                                    <SelectTrigger className="text-xs h-9">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">{__('All Zones (National)')}</SelectItem>
+                                                        {Array.from({ length: 15 }, (_, i) => String(i + 1)).map(z => (
+                                                            <SelectItem key={z} value={z}>{__('Zone')} {z}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+
+                                        {/* Barra de Búsqueda y Botón de Selección Masiva */}
+                                        <div className="flex items-center justify-between gap-3 pt-2">
+                                            <div className="relative flex-1">
+                                                <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
+                                                <Input
+                                                    placeholder={__('Search recipient by name, phone...')}
+                                                    value={broadcastFilterSearch}
+                                                    onChange={e => setBroadcastFilterSearch(e.target.value)}
+                                                    className="pl-9 text-xs h-9"
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={toggleAllRecipients}
+                                                className="text-xs h-9 gap-1.5 shrink-0"
+                                            >
+                                                {selectedRecipientIds.length === broadcastRecipients.filter(r => r.is_valid_phone).length && selectedRecipientIds.length > 0 ? (
+                                                    <>
+                                                        <CheckSquare className="h-4 w-4 text-indigo-600" />
+                                                        {__('Deselect All')}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Square className="h-4 w-4" />
+                                                        {__('Select All')}
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+
+                                        {/* Tabla de Destinatarios */}
+                                        <div className="border rounded-xl max-h-[380px] overflow-y-auto overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow className="bg-slate-50 dark:bg-slate-900/50 text-xs">
+                                                        <TableHead className="w-10 text-center">#</TableHead>
+                                                        <TableHead>{__('Recipient')}</TableHead>
+                                                        <TableHead>{__('Phone')}</TableHead>
+                                                        <TableHead>{__('Zone / District')}</TableHead>
+                                                        <TableHead>{__('Status')}</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {broadcastLoading ? (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">
+                                                                <RefreshCw className="h-4 w-4 animate-spin inline mr-2 text-indigo-600" />
+                                                                {__('Loading audience list...')}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ) : broadcastRecipients.length === 0 ? (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">
+                                                                {__('No recipients found matching current filters.')}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ) : (
+                                                        broadcastRecipients
+                                                            .filter(r => {
+                                                                if (!broadcastFilterSearch) return true;
+                                                                const q = broadcastFilterSearch.toLowerCase();
+                                                                return r.name.toLowerCase().includes(q) ||
+                                                                       r.phone.includes(q) ||
+                                                                       (r.zonas && r.zonas.toLowerCase().includes(q));
+                                                            })
+                                                            .map((recipient) => {
+                                                                const isSelected = selectedRecipientIds.includes(recipient.id);
+                                                                return (
+                                                                    <TableRow
+                                                                        key={`${recipient.type}-${recipient.id}`}
+                                                                        className={`text-xs cursor-pointer transition-colors ${
+                                                                            isSelected
+                                                                                ? 'bg-indigo-50/50 dark:bg-indigo-950/20'
+                                                                                : recipient.is_valid_phone
+                                                                                ? 'hover:bg-slate-50/80 dark:hover:bg-slate-900/40'
+                                                                                : 'opacity-50'
+                                                                        }`}
+                                                                        onClick={() => {
+                                                                            if (recipient.is_valid_phone) {
+                                                                                toggleRecipient(recipient.id);
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <TableCell className="text-center">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isSelected}
+                                                                                disabled={!recipient.is_valid_phone}
+                                                                                onChange={() => toggleRecipient(recipient.id)}
+                                                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                                                                            />
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <div className="font-semibold text-slate-900 dark:text-slate-100">
+                                                                                {recipient.name}
+                                                                            </div>
+                                                                            <div className="text-[11px] text-muted-foreground">
+                                                                                {recipient.role}
+                                                                            </div>
+                                                                        </TableCell>
+                                                                        <TableCell className="font-mono text-xs">
+                                                                            {recipient.phone ? (
+                                                                                <span>+{recipient.formatted_phone || recipient.phone}</span>
+                                                                            ) : (
+                                                                                <span className="text-rose-500 font-sans italic">{__('No phone registered')}</span>
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <div className="text-xs">
+                                                                                <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">
+                                                                                    {recipient.zonas}
+                                                                                </Badge>
+                                                                            </div>
+                                                                            {recipient.distritos && recipient.distritos !== __('Unassigned') && (
+                                                                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                                                                    {recipient.distritos}
+                                                                                </div>
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            {recipient.is_valid_phone ? (
+                                                                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px] gap-1">
+                                                                                    <Check className="h-3 w-3" /> {__('Valid')}
+                                                                                </Badge>
+                                                                            ) : (
+                                                                                <Badge className="bg-rose-500/10 text-rose-600 border-rose-200 text-[10px]">
+                                                                                    {__('Invalid Phone')}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                );
+                                                            })
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* COLUMNA DERECHA: 2. MENSAJE, SPINTAX Y DESPACHO (5 COLS) */}
+                            <div className="lg:col-span-5 space-y-6">
+                                <Card className="shadow-sm border-indigo-200/60 dark:border-indigo-900/40 flex flex-col justify-between">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Send className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                            {__('2. Message & Spintax Content')}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {__('Compose broadcast with Spintax options and dynamic tags.')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {/* Cargar Plantilla Oficial */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">{__('Load Official Template')}</Label>
+                                            <Select onValueChange={handleSelectBroadcastTemplate}>
+                                                <SelectTrigger className="text-xs h-9">
+                                                    <SelectValue placeholder={__('Select a template to load...')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {templatesList.map(t => (
+                                                        <SelectItem key={t.id} value={t.contenido}>
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge variant="outline" className="text-[10px] uppercase font-mono">{t.categoria}</Badge>
+                                                                <span>{t.nombre}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Insertar Variables Rápidas */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">{__('Insert Dynamic Variables')}</Label>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {['nombre', 'zonas', 'distritos', 'empresa', 'fecha', 'hora', 'random'].map(v => (
+                                                    <Button
+                                                        key={v}
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        onClick={() => handleInsertBroadcastVariable(v)}
+                                                        className="h-6 px-2 text-[11px] font-mono bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300"
+                                                    >
+                                                        + {`{{${v}}}`}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Editor de Texto del Comunicado */}
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-xs font-semibold">{__('Message Body (Spintax Supported)')}</Label>
+                                                <span className="text-[10px] text-muted-foreground font-mono">
+                                                    {__('Use {option1|option2}')}
+                                                </span>
+                                            </div>
+                                            <Textarea
+                                                rows={7}
+                                                placeholder={__('Write pastoral circular or load an official template...')}
+                                                value={broadcastMessage}
+                                                onChange={e => setBroadcastMessage(e.target.value)}
+                                                className="text-xs font-sans resize-y leading-relaxed"
+                                            />
+                                        </div>
+
+                                        {/* Parámetros de Seguridad Anti-Baneo */}
+                                        <div className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-900/50 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Shield className="h-4 w-4 text-emerald-600" />
+                                                    <span className="text-xs font-semibold">{__('Anti-Ban Safety Delay')}</span>
+                                                </div>
+                                                <span className="text-xs font-mono font-bold text-emerald-600">
+                                                    {broadcastDelaySeconds}s {__('delay')}
+                                                </span>
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground leading-snug">
+                                                {__('Estimated total broadcast time:')}{' '}
+                                                <b className="text-slate-800 dark:text-slate-200">
+                                                    {Math.ceil((selectedRecipientIds.length * broadcastDelaySeconds) / 60)} {__('minutes')}
+                                                </b>
+                                            </p>
+                                        </div>
+
+                                        {/* Vista Previa de Muestra */}
+                                        {broadcastRecipients.length > 0 && broadcastMessage && (
+                                            <div className="p-3 border rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 space-y-1.5">
+                                                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                                                    <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                                                    {__('Sample Preview for')} {broadcastRecipients[0]?.name}:
+                                                </div>
+                                                <div className="text-xs text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-black/30 p-2.5 rounded-lg whitespace-pre-line border border-emerald-200/50 font-sans">
+                                                    {broadcastMessage
+                                                        .replace(/\{\{nombre\}\}/g, broadcastRecipients[0]?.name || '')
+                                                        .replace(/\{\{zonas\}\}/g, broadcastRecipients[0]?.zonas || '')
+                                                        .replace(/\{\{distritos\}\}/g, broadcastRecipients[0]?.distritos || '')
+                                                        .replace(/\{\{empresa\}\}/g, empresa_nombre || 'MMM Venezuela')
+                                                        .replace(/\{\{fecha\}\}/g, new Date().toLocaleDateString())
+                                                        .replace(/\{\{random\}\}/g, 'A7B8C9')}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                    <CardFooter className="pt-2 border-t">
+                                        <Button
+                                            type="button"
+                                            size="lg"
+                                            onClick={handleDispatchBroadcast}
+                                            disabled={broadcastSending || selectedRecipientIds.length === 0 || !broadcastMessage.trim()}
+                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-2 text-sm shadow-md"
+                                        >
+                                            {broadcastSending ? (
+                                                <>
+                                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                                    {__('Enqueuing Campaign...')}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Radio className="h-4 w-4" />
+                                                    {__('Launch Safe Broadcast')} ({selectedRecipientIds.length})
+                                                </>
+                                            )}
+                                        </Button>
                                     </CardFooter>
                                 </Card>
                             </div>

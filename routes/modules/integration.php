@@ -38,6 +38,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/integrations/whatsapp/templates/{id}', [IntegrationController::class, 'whatsappTemplatesUpdate'])->name('integrations.whatsapp.templates.update')->can('integrations.edit');
     Route::delete('/integrations/whatsapp/templates/{id}', [IntegrationController::class, 'whatsappTemplatesDestroy'])->name('integrations.whatsapp.templates.destroy')->can('integrations.edit');
 
+    // WhatsApp Broadcasts (Difusión Masiva)
+    Route::get('/integrations/whatsapp/broadcast/recipients', [IntegrationController::class, 'whatsappBroadcastRecipients'])->name('integrations.whatsapp.broadcast.recipients')->can('whatsapp.view');
+    Route::post('/integrations/whatsapp/broadcast/send', [IntegrationController::class, 'whatsappBroadcastSend'])->name('integrations.whatsapp.broadcast.send')->can('integrations.edit');
+
 
     // JAAK (Validaciones) Integration Routes
     Route::get('/integrations/validaciones', [IntegrationController::class, 'validacionesIndex'])->name('integrations.validaciones.index')->can('jaak.view');

@@ -26,21 +26,21 @@ class WhatsAppTemplateSeeder extends Seeder
             [
                 'nombre' => 'Bienvenida de Presbítero al Sistema',
                 'categoria' => 'seguridad',
-                'contenido' => "👋 *{¡Bienvenido al Sistema Ministerial MMM Venezuela!|Paz de Dios, Estimado Presbítero}*\n\nEstimado Presbítero *{{nombre}}*,\n\nSe ha configurado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n📍 *Asignación:*\n• *Zona(s):* {{zonas}}\n• *Distrito(s):* {{distritos}}\n\n🔐 *Sus credenciales de acceso:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\nDesde su panel podrá dar seguimiento a las fichas de los obreros a su cargo y recibir notificaciones automáticas.\n\n_{Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión.|Mantenga sus credenciales en resguardo.}_",
+                'contenido' => "👋 *{¡Bienvenido al Sistema Ministerial MMM Venezuela!|Dios le bendiga, Estimado Presbítero}*\n\nEstimado Presbítero *{{nombre}}*,\n\nSe ha configurado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n📍 *Asignación:*\n• *Zona(s):* {{zonas}}\n• *Distrito(s):* {{distritos}}\n\n🔐 *Sus credenciales de acceso:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\nDesde su panel podrá dar seguimiento a las fichas de los obreros a su cargo y recibir notificaciones automáticas.\n\n_{Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión.|Mantenga sus credenciales en resguardo.}_",
                 'variables' => ['nombre', 'zonas', 'distritos', 'email', 'password_line', 'login_url', 'empresa'],
                 'activo' => true,
             ],
             [
                 'nombre' => 'Bienvenida de Usuario al Sistema',
                 'categoria' => 'seguridad',
-                'contenido' => "👋 *{¡Bienvenido a la Plataforma MMM Venezuela!|Paz de Dios, Saludos Cordiales}*\n\nEstimado(a) *{{nombre}}*,\n\nSe ha configurado su cuenta de acceso institucional a la plataforma administrativa de {{empresa}}.\n\n📋 *Detalles de su cuenta:*\n• *Rol asignado:* {{rol}}\n• *Institución:* {{empresa}}\n\n🔐 *Sus credenciales:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\n_{Por seguridad, mantenga sus credenciales en resguardo y cambie su clave periódicamente.|Agradecemos su compromiso en el servicio.}_",
+                'contenido' => "👋 *{¡Bienvenido a la Plataforma MMM Venezuela!|Dios le bendiga, Saludos Cordiales}*\n\nEstimado(a) *{{nombre}}*,\n\nSe ha configurado su cuenta de acceso institucional a la plataforma administrativa de {{empresa}}.\n\n📋 *Detalles de su cuenta:*\n• *Rol asignado:* {{rol}}\n• *Institución:* {{empresa}}\n\n🔐 *Sus credenciales:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\n_{Por seguridad, mantenga sus credenciales en resguardo y cambie su clave periódicamente.|Agradecemos su compromiso en el servicio.}_",
                 'variables' => ['nombre', 'rol', 'email', 'password_line', 'login_url', 'empresa'],
                 'activo' => true,
             ],
             [
                 'nombre' => 'Confirmación de Cambio de Clave',
                 'categoria' => 'seguridad',
-                'contenido' => "{¡Hola {{nombre}}! 👋|Paz de Dios {{nombre}},}\n\n{Tu contraseña ha sido actualizada con éxito en la plataforma de {{empresa}}.|Le confirmamos que su clave de acceso ha sido restablecida satisfactoriamente.} 🔒\n\n_{¿No fuiste tú? Por favor contáctanos de inmediato para proteger tu cuenta.|Si no realizaste esta acción, notifícalo a la administración.}_",
+                'contenido' => "{¡Hola {{nombre}}! 👋|Dios le bendiga {{nombre}},}\n\n{Tu contraseña ha sido actualizada con éxito en la plataforma de {{empresa}}.|Le confirmamos que su clave de acceso ha sido restablecida satisfactoriamente.} 🔒\n\n_{¿No fuiste tú? Por favor contáctanos de inmediato para proteger tu cuenta.|Si no realizaste esta acción, notifícalo a la administración.}_",
                 'variables' => ['nombre', 'empresa'],
                 'activo' => true,
             ],
@@ -54,7 +54,7 @@ class WhatsAppTemplateSeeder extends Seeder
             [
                 'nombre' => 'Bienvenida / Registro de Pastor',
                 'categoria' => 'pastoral',
-                'contenido' => "{¡Paz de Dios y bendiciones!|¡Un saludo fraternal en Cristo!|¡Bienvenido al registro ministerial!} Pastor(a) *{{nombre}}*,\n\n{Le confirmamos que su registro ministerial ha sido completado satisfactoriamente en|Le damos la más cordial bienvenida a} la plataforma oficial de {{empresa}}.\n\n🏷️ *Código Ministerial:* {{codigo}}\n📍 *Zona:* {{zona}}\n🏛️ *Distrito:* {{distrito}}\n📜 *Grado:* {{grado}}\n\n{Que el Señor continúe bendiciendo y respaldando su ministerio y familia.|Agradecemos su fidelidad en la obra del Señor.}",
+                'contenido' => "{¡Dios le bendiga y bendiciones!|¡Un saludo fraternal en Cristo!|¡Bienvenido al registro ministerial!} Pastor(a) *{{nombre}}*,\n\n{Le confirmamos que su registro ministerial ha sido completado satisfactoriamente en|Le damos la más cordial bienvenida a} la plataforma oficial de {{empresa}}.\n\n🏷️ *Código Ministerial:* {{codigo}}\n📍 *Zona:* {{zona}}\n🏛️ *Distrito:* {{distrito}}\n📜 *Grado:* {{grado}}\n\n{Que el Señor continúe bendiciendo y respaldando su ministerio y familia.|Agradecemos su fidelidad en la obra del Señor.}",
                 'variables' => ['nombre', 'codigo', 'zona', 'distrito', 'grado', 'empresa'],
                 'activo' => true,
             ],
@@ -75,7 +75,7 @@ class WhatsAppTemplateSeeder extends Seeder
             [
                 'nombre' => 'Recordatorio de Informe Mensual',
                 'categoria' => 'convocatorias',
-                'contenido' => "{Paz de Dios|Estimado Pastor} {{nombre}}, {le recordamos amablemente que|esperamos que se encuentre bien, le notificamos que} está habilitada la entrega del informe mensual de {{iglesia}}. Agradecemos enviarlo antes del {{fecha_limite}}. Código de seguimiento: {{random}}.",
+                'contenido' => "{Dios le bendiga|Estimado Pastor} {{nombre}}, {le recordamos amablemente que|esperamos que se encuentre bien, le notificamos que} está habilitada la entrega del informe mensual de {{iglesia}}. Agradecemos enviarlo antes del {{fecha_limite}}. Código de seguimiento: {{random}}.",
                 'variables' => ['nombre', 'iglesia', 'fecha_limite', 'random', 'empresa'],
                 'activo' => true,
             ],
@@ -89,8 +89,22 @@ class WhatsAppTemplateSeeder extends Seeder
             [
                 'nombre' => 'Notificación de Marcaje y Asistencia',
                 'categoria' => 'asistencia',
-                'contenido' => "{🟢 ¡HOLA {{nombre}}!|Paz de Dios {{nombre}},|Saludos cordiales {{nombre}},}\n\nSe ha registrado tu *{{tipo_marcaje}}* a las *{{hora}} hrs* el día {{fecha}} (Vía {{origen}}).\n\n{{detalles_turno}}",
+                'contenido' => "{🟢 ¡HOLA {{nombre}}!|Dios le bendiga {{nombre}},|Saludos cordiales {{nombre}},}\n\nSe ha registrado tu *{{tipo_marcaje}}* a las *{{hora}} hrs* el día {{fecha}} (Vía {{origen}}).\n\n{{detalles_turno}}",
                 'variables' => ['nombre', 'tipo_marcaje', 'hora', 'fecha', 'origen', 'detalles_turno', 'empresa'],
+                'activo' => true,
+            ],
+            [
+                'nombre' => 'Circular Ministerial a Presbíteros',
+                'categoria' => 'pastoral',
+                'contenido' => "{🏛️ *CIRCULAR OFICIAL A PRESBÍTEROS*|📢 *COMUNICADO MINISTERIAL*|📜 *CIRCULAR NACIONAL*}\n\n{Dios le bendiga, Estimado Presbítero|Saludos fraternales en Cristo, Estimado Siervo de Dios} *{{nombre}}*,\n\n{Por medio de la presente, la Directiva Nacional le comunica la siguiente disposición oficial para la Zona {{zonas}} y Distritos {{distritos}}:|Le hacemos llegar la siguiente circular ministerial correspondiente a su jurisdicción pastoral:}\n\n{{mensaje_circular}}\n\n_{Agradecemos la oportuna socialización con los obreros a su cargo. Dios continúe respaldando su labor ministerial.|Contamos con su fiel respaldo y apoyo en la obra del Señor.}_",
+                'variables' => ['nombre', 'zonas', 'distritos', 'mensaje_circular', 'empresa'],
+                'activo' => true,
+            ],
+            [
+                'nombre' => 'Convocatoria a Junta y Presbiterio',
+                'categoria' => 'convocatorias',
+                'contenido' => "{🤝 *CONVOCATORIA A REUNIÓN DE PRESBÍTEROS*|🗓️ *CITACIÓN OFICIAL DE PRESBITERIO*}\n\nEstimado Presbítero *{{nombre}}*,\n\n{Se le convoca formalmente a la reunión ministerial de presbíteros|Por instrucciones de la Directiva Nacional, se le cita a la asamblea de presbiterio} que se llevará a cabo:\n\n📅 *Fecha:* {{fecha}}\n⏰ *Hora:* {{hora}}\n📍 *Lugar:* {{lugar}}\n📝 *Agenda:* {{motivo}}\n\n_Contamos con su puntual y bendecida asistencia en el Señor._",
+                'variables' => ['nombre', 'fecha', 'hora', 'lugar', 'motivo', 'empresa'],
                 'activo' => true,
             ]
         ];

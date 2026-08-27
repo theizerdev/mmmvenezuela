@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
+use App\Models\Pastor;
+use App\Models\User;
 use App\Models\WhatsAppMessage;
 use App\Models\WhatsAppTemplate;
 use App\Services\ControlAccesoService;
@@ -1075,5 +1077,251 @@ class IntegrationController extends Controller
         $template->delete();
 
         return back()->with('notification', ['type' => 'success', 'message' => __('Template deleted successfully.')]);
+    }
+
+    /**
+     * 📢 Obtener destinatarios segmentados para Difusión Masiva (Broadcast)
+     */
+    public function whatsappBroadcastRecipients(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return response()->json(['success' => false, 'error' => __('No active company.')], 400);
+        }
+
+        $target = $request->query('target', 'presbiteros'); // 'presbiteros' | 'pastores' | 'usuarios'
+        $zona = $request->query('zona'); // optional zone filter
+
+        $countryCode = $empresa->pais?->codigo_telefonico ?? '+58';
+        $recipients = [];
+
+        if ($target === 'presbiteros') {
+            $query = User::where('empresa_id', $empresa->id)
+                ->whereHas('roles', function ($q) {
+                    $q->whereIn('name', ['Presbitero', 'Presbítero', 'presbitero']);
+                });
+
+            if (!empty($zona) && $zona !== 'all') {
+                $query->where(function ($q) use ($zona) {
+                    $q->where('zona', $zona)
+                      ->orWhere('zona_2', $zona);
+                });
+            }
+
+            $users = $query->orderBy('name')->get();
+
+            foreach ($users as $u) {
+                $rawPhone = $u->telefono ?? '';
+                $formattedPhone = $rawPhone ? WhatsAppService::formatPhoneNumber($rawPhone, $countryCode) : '';
+                $isValidPhone = !empty($formattedPhone) && strlen($formattedPhone) >= 10;
+                $zonasList = implode(', ', $u->getZonasList()) ?: __('Unassigned');
+                $distritosList = !empty($u->getDistritosList()) 
+                    ? implode(', ', array_map(fn($d) => "D. {$d}", $u->getDistritosList()))
+                    : __('Unassigned');
+
+                $recipients[] = [
+                    'id' => $u->id,
+                    'type' => 'user',
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'phone' => $rawPhone,
+                    'formatted_phone' => $formattedPhone,
+                    'is_valid_phone' => $isValidPhone,
+                    'zonas' => $zonasList,
+                    'distritos' => $distritosList,
+                    'role' => 'Presbítero',
+                ];
+            }
+        } elseif ($target === 'pastores') {
+            $query = Pastor::where('empresa_id', $empresa->id)
+                ->where('status', true);
+
+            if (!empty($zona) && $zona !== 'all') {
+                $query->where('zona', $zona);
+            }
+
+            $pastores = $query->orderBy('nombres')->get();
+
+            foreach ($pastores as $p) {
+                $rawPhone = $p->telefono ?? '';
+                $formattedPhone = $rawPhone ? WhatsAppService::formatPhoneNumber($rawPhone, $countryCode) : '';
+                $isValidPhone = !empty($formattedPhone) && strlen($formattedPhone) >= 10;
+
+                $recipients[] = [
+                    'id' => $p->id,
+                    'type' => 'pastor',
+                    'name' => trim("{$p->nombres} {$p->apellidos}"),
+                    'email' => $p->email,
+                    'phone' => $rawPhone,
+                    'formatted_phone' => $formattedPhone,
+                    'is_valid_phone' => $isValidPhone,
+                    'zonas' => $p->zona ? "Zona {$p->zona}" : __('Unassigned'),
+                    'distritos' => $p->distrito ? "Distrito {$p->distrito}" : __('Unassigned'),
+                    'role' => $p->nivel_ministerial ?? 'Pastor',
+                    'codigo' => $p->codigo,
+                ];
+            }
+        } else { // 'usuarios'
+            $query = User::where('empresa_id', $empresa->id);
+
+            if (!empty($zona) && $zona !== 'all') {
+                $query->where(function ($q) use ($zona) {
+                    $q->where('zona', $zona)
+                      ->orWhere('zona_2', $zona);
+                });
+            }
+
+            $users = $query->orderBy('name')->get();
+
+            foreach ($users as $u) {
+                $rawPhone = $u->telefono ?? '';
+                $formattedPhone = $rawPhone ? WhatsAppService::formatPhoneNumber($rawPhone, $countryCode) : '';
+                $isValidPhone = !empty($formattedPhone) && strlen($formattedPhone) >= 10;
+                $roleName = $u->roles->first()?->name ?? 'Usuario';
+
+                $recipients[] = [
+                    'id' => $u->id,
+                    'type' => 'user',
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'phone' => $rawPhone,
+                    'formatted_phone' => $formattedPhone,
+                    'is_valid_phone' => $isValidPhone,
+                    'zonas' => implode(', ', $u->getZonasList()) ?: __('Unassigned'),
+                    'distritos' => !empty($u->getDistritosList()) 
+                        ? implode(', ', array_map(fn($d) => "D. {$d}", $u->getDistritosList()))
+                        : __('Unassigned'),
+                    'role' => $roleName,
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'target' => $target,
+            'count' => count($recipients),
+            'valid_count' => count(array_filter($recipients, fn($r) => $r['is_valid_phone'])),
+            'recipients' => $recipients,
+        ]);
+    }
+
+    /**
+     * 🚀 Despachar Difusión Masiva de WhatsApp (Broadcast Send)
+     */
+    public function whatsappBroadcastSend(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+        if (! $empresa) {
+            return response()->json(['success' => false, 'error' => __('No active company.')], 400);
+        }
+
+        $validated = $request->validate([
+            'target_type' => 'required|string|in:presbiteros,pastores,usuarios',
+            'recipient_ids' => 'required|array|min:1',
+            'recipient_ids.*' => 'required|integer',
+            'message_content' => 'required|string|min:3',
+            'delay_seconds' => 'nullable|integer|min:5|max:120',
+        ]);
+
+        $targetType = $validated['target_type'];
+        $recipientIds = $validated['recipient_ids'];
+        $messageTemplate = $validated['message_content'];
+
+        $whatsappService = new WhatsAppService($empresa);
+        $countryCode = $empresa->pais?->codigo_telefonico ?? '+58';
+        $empresaName = $empresa->razon_social ?? $empresa->nombre ?? 'MMM Venezuela';
+
+        $enqueued = 0;
+        $errors = [];
+
+        if ($targetType === 'presbiteros' || $targetType === 'usuarios') {
+            $recipients = User::where('empresa_id', $empresa->id)
+                ->whereIn('id', $recipientIds)
+                ->get();
+
+            foreach ($recipients as $recipient) {
+                $rawPhone = $recipient->telefono;
+                if (empty($rawPhone)) {
+                    continue;
+                }
+
+                $formattedPhone = WhatsAppService::formatPhoneNumber($rawPhone, $countryCode);
+                if (empty($formattedPhone)) {
+                    continue;
+                }
+
+                $zonas = implode(', ', $recipient->getZonasList()) ?: 'Nacional';
+                $distritos = !empty($recipient->getDistritosList()) 
+                    ? implode(', ', array_map(fn($d) => "Distrito {$d}", $recipient->getDistritosList()))
+                    : 'Nacional';
+
+                $variables = [
+                    'nombre' => $recipient->name,
+                    'zonas' => $zonas,
+                    'zona' => $recipient->zona ?: $zonas,
+                    'distritos' => $distritos,
+                    'distrito' => $recipient->distrito ?: $distritos,
+                    'email' => $recipient->email,
+                    'empresa' => $empresaName,
+                    'fecha' => now()->translatedFormat('d/m/Y'),
+                    'hora' => now()->format('h:i A'),
+                    'random' => strtoupper(substr(md5(uniqid()), 0, 6)),
+                ];
+
+                $res = $whatsappService->sendText($formattedPhone, $messageTemplate, $variables, false);
+
+                if ($res && !isset($res['error'])) {
+                    $enqueued++;
+                } else {
+                    $errors[] = "Error al despachar a {$recipient->name} ({$formattedPhone})";
+                }
+            }
+        } elseif ($targetType === 'pastores') {
+            $recipients = Pastor::where('empresa_id', $empresa->id)
+                ->whereIn('id', $recipientIds)
+                ->get();
+
+            foreach ($recipients as $recipient) {
+                $rawPhone = $recipient->telefono;
+                if (empty($rawPhone)) {
+                    continue;
+                }
+
+                $formattedPhone = WhatsAppService::formatPhoneNumber($rawPhone, $countryCode);
+                if (empty($formattedPhone)) {
+                    continue;
+                }
+
+                $variables = [
+                    'nombre' => trim("{$recipient->nombres} {$recipient->apellidos}"),
+                    'codigo' => $recipient->codigo ?? 'N/A',
+                    'grado' => $recipient->nivel_ministerial ?? 'Pastor',
+                    'zona' => $recipient->zona ? "Zona {$recipient->zona}" : 'General',
+                    'zonas' => $recipient->zona ? "Zona {$recipient->zona}" : 'General',
+                    'distrito' => $recipient->distrito ? "Distrito {$recipient->distrito}" : 'General',
+                    'distritos' => $recipient->distrito ? "Distrito {$recipient->distrito}" : 'General',
+                    'email' => $recipient->email ?? '',
+                    'empresa' => $empresaName,
+                    'fecha' => now()->translatedFormat('d/m/Y'),
+                    'hora' => now()->format('h:i A'),
+                    'random' => strtoupper(substr(md5(uniqid()), 0, 6)),
+                ];
+
+                $res = $whatsappService->sendText($formattedPhone, $messageTemplate, $variables, false);
+
+                if ($res && !isset($res['error'])) {
+                    $enqueued++;
+                } else {
+                    $errors[] = "Error al despachar a {$recipient->nombres} ({$formattedPhone})";
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'enqueued_count' => $enqueued,
+            'errors' => $errors,
+            'message' => __(':count broadcast messages enqueued successfully.', ['count' => $enqueued]),
+        ]);
     }
 }
