@@ -670,10 +670,10 @@ class PastorRegistroPublicoController extends Controller
             }
 
             // Notificar al Presbítero de la misma zona / distrito por WhatsApp
-            $this->notificarPresbiteroWhatsApp($pastor);
+            //$this->notificarPresbiteroWhatsApp($pastor);
 
             // Notificar confirmación de registro al propio Pastor
-            $this->notificarPastorBienvenidaWhatsApp($pastor);
+           // $this->notificarPastorBienvenidaWhatsApp($pastor);
 
             return redirect()->route('registro-pastor.index')->with('success', [
                 'pastor_id' => $pastor->id,
