@@ -66,6 +66,14 @@ class Empresa extends Model
         'jaak_api_key',
         'jaak_environment',
         'jaak_active',
+        'google_smtp_host',
+        'google_smtp_port',
+        'google_smtp_encryption',
+        'google_smtp_email',
+        'google_smtp_password',
+        'google_smtp_from_address',
+        'google_smtp_from_name',
+        'google_smtp_active',
     ];
 
     protected $casts = [
@@ -88,6 +96,9 @@ class Empresa extends Model
             'control_acceso_active' => 'boolean',
             'jaak_api_key' => 'encrypted',
             'jaak_active' => 'boolean',
+            'google_smtp_port' => 'integer',
+            'google_smtp_password' => 'encrypted',
+            'google_smtp_active' => 'boolean',
         ];
     }
 

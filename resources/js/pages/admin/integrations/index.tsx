@@ -1,5 +1,5 @@
 import { Head, useForm, Link, router } from '@inertiajs/react';
-import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink, Wifi, Loader2 } from 'lucide-react';
+import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink, Wifi, Loader2, Mail, Eye, EyeOff, Send, HelpCircle } from 'lucide-react';
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -15,6 +15,14 @@ interface PageProps {
     mapbox_active: boolean;
     google_maps_api_key: string | null;
     google_maps_active: boolean;
+    google_smtp_host: string | null;
+    google_smtp_port: number | null;
+    google_smtp_encryption: string | null;
+    google_smtp_email: string | null;
+    google_smtp_password?: string | null;
+    google_smtp_from_address: string | null;
+    google_smtp_from_name: string | null;
+    google_smtp_active: boolean;
     whatsapp_active: boolean;
     whatsapp_connected: boolean;
     control_acceso_base_url: string | null;
@@ -28,6 +36,14 @@ export default function Integrations({
     mapbox_active,
     google_maps_api_key,
     google_maps_active,
+    google_smtp_host,
+    google_smtp_port,
+    google_smtp_encryption,
+    google_smtp_email,
+    google_smtp_password,
+    google_smtp_from_address,
+    google_smtp_from_name,
+    google_smtp_active,
     whatsapp_active,
     whatsapp_connected,
     control_acceso_base_url,
@@ -37,6 +53,8 @@ export default function Integrations({
 }: PageProps) {
     const { __ } = useTranslate();
     const [testingConnection, setTestingConnection] = useState(false);
+    const [testingSmtp, setTestingSmtp] = useState(false);
+    const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
     const mapboxForm = useForm({
         mapbox_api_key: mapbox_api_key || '',
@@ -46,6 +64,17 @@ export default function Integrations({
     const googleMapsForm = useForm({
         google_maps_api_key: google_maps_api_key || '',
         google_maps_active: google_maps_active,
+    });
+
+    const googleSmtpForm = useForm({
+        google_smtp_host: google_smtp_host || 'smtp.gmail.com',
+        google_smtp_port: google_smtp_port || 587,
+        google_smtp_encryption: google_smtp_encryption || 'tls',
+        google_smtp_email: google_smtp_email || '',
+        google_smtp_password: google_smtp_password || '',
+        google_smtp_from_address: google_smtp_from_address || '',
+        google_smtp_from_name: google_smtp_from_name || '',
+        google_smtp_active: google_smtp_active,
     });
 
     const controlAccesoForm = useForm({
@@ -85,6 +114,49 @@ export default function Integrations({
                 });
             },
         });
+    };
+
+    const handleSaveGoogleSmtp = (e: React.FormEvent) => {
+        e.preventDefault();
+        googleSmtpForm.put('/admin/integrations/google-smtp', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: __('Google SMTP settings updated successfully.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+        });
+    };
+
+    const handleTestGoogleSmtp = async () => {
+        const { value: email } = await Swal.fire({
+            title: __('Test Google SMTP Connection'),
+            text: __('Enter a recipient email address to send a verification test message:'),
+            input: 'email',
+            inputPlaceholder: 'tu-correo@ejemplo.com',
+            inputValue: googleSmtpForm.data.google_smtp_email || '',
+            showCancelButton: true,
+            confirmButtonText: __('Send Test Email'),
+            cancelButtonText: __('Cancel'),
+            confirmButtonColor: '#ea4335',
+            inputValidator: (value) => {
+                if (!value) {
+                    return __('Please enter a valid email address.');
+                }
+            }
+        });
+
+        if (email) {
+            setTestingSmtp(true);
+            router.post('/admin/integrations/google-smtp/test', { test_email: email }, {
+                preserveScroll: true,
+                onFinish: () => setTestingSmtp(false),
+            });
+        }
     };
 
     const handleSaveControlAcceso = (e: React.FormEvent) => {
@@ -260,6 +332,181 @@ export default function Integrations({
                             </CardContent>
                             <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
                                 <Button type="submit" disabled={googleMapsForm.processing || !googleMapsForm.data.google_maps_active} className="gap-2">
+                                    <Save className="h-4 w-4" />
+                                    {__('Save Changes')}
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </Card>
+
+                    {/* Google SMTP Integration */}
+                    <Card className="shadow-sm border-t-4 border-t-rose-500 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded bg-rose-50 dark:bg-rose-950/20 text-rose-600">
+                                        <Mail className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('Google SMTP (Gmail / Workspace)')}</CardTitle>
+                                        <CardDescription>{__('Send transactional emails and notifications reliably using Google SMTP service.')}</CardDescription>
+                                    </div>
+                                </div>
+                                <BadgeStatus active={googleSmtpForm.data.google_smtp_active} />
+                            </div>
+                        </CardHeader>
+                        <form onSubmit={handleSaveGoogleSmtp}>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">{__('Enable Google SMTP')}</Label>
+                                        <p className="text-xs text-muted-foreground">{__('Enable email dispatch via Google SMTP for company alerts.')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={googleSmtpForm.data.google_smtp_active}
+                                        onCheckedChange={(checked) => googleSmtpForm.setData('google_smtp_active', checked)}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="google_smtp_email">{__('Google Email / Username')}</Label>
+                                        <Input
+                                            id="google_smtp_email"
+                                            type="email"
+                                            placeholder="tu-correo@gmail.com"
+                                            value={googleSmtpForm.data.google_smtp_email}
+                                            onChange={(e) => googleSmtpForm.setData('google_smtp_email', e.target.value)}
+                                            disabled={!googleSmtpForm.data.google_smtp_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="google_smtp_password">{__('Google App Password')}</Label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                                                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                                tabIndex={-1}
+                                            >
+                                                {showSmtpPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                                {showSmtpPassword ? __('Hide') : __('Show')}
+                                            </button>
+                                        </div>
+                                        <Input
+                                            id="google_smtp_password"
+                                            type={showSmtpPassword ? 'text' : 'password'}
+                                            placeholder="••••••••••••••••"
+                                            value={googleSmtpForm.data.google_smtp_password}
+                                            onChange={(e) => googleSmtpForm.setData('google_smtp_password', e.target.value)}
+                                            disabled={!googleSmtpForm.data.google_smtp_active}
+                                            className="font-mono text-sm tracking-wider"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="google_smtp_from_name">{__('Sender Name (From Name)')}</Label>
+                                        <Input
+                                            id="google_smtp_from_name"
+                                            type="text"
+                                            placeholder="MMM Venezuela"
+                                            value={googleSmtpForm.data.google_smtp_from_name}
+                                            onChange={(e) => googleSmtpForm.setData('google_smtp_from_name', e.target.value)}
+                                            disabled={!googleSmtpForm.data.google_smtp_active}
+                                            className="text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="google_smtp_from_address">{__('Sender Email (From Email)')}</Label>
+                                        <Input
+                                            id="google_smtp_from_address"
+                                            type="email"
+                                            placeholder="no-reply@tu-dominio.com"
+                                            value={googleSmtpForm.data.google_smtp_from_address}
+                                            onChange={(e) => googleSmtpForm.setData('google_smtp_from_address', e.target.value)}
+                                            disabled={!googleSmtpForm.data.google_smtp_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-3 pt-1">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="google_smtp_host" className="text-xs text-muted-foreground">{__('SMTP Host')}</Label>
+                                        <Input
+                                            id="google_smtp_host"
+                                            type="text"
+                                            placeholder="smtp.gmail.com"
+                                            value={googleSmtpForm.data.google_smtp_host}
+                                            onChange={(e) => googleSmtpForm.setData('google_smtp_host', e.target.value)}
+                                            disabled={!googleSmtpForm.data.google_smtp_active}
+                                            className="font-mono text-xs h-9"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="google_smtp_port" className="text-xs text-muted-foreground">{__('Port')}</Label>
+                                        <Input
+                                            id="google_smtp_port"
+                                            type="number"
+                                            placeholder="587"
+                                            value={googleSmtpForm.data.google_smtp_port}
+                                            onChange={(e) => googleSmtpForm.setData('google_smtp_port', parseInt(e.target.value) || 587)}
+                                            disabled={!googleSmtpForm.data.google_smtp_active}
+                                            className="font-mono text-xs h-9"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="google_smtp_encryption" className="text-xs text-muted-foreground">{__('Encryption')}</Label>
+                                        <select
+                                            id="google_smtp_encryption"
+                                            value={googleSmtpForm.data.google_smtp_encryption}
+                                            onChange={(e) => googleSmtpForm.setData('google_smtp_encryption', e.target.value)}
+                                            disabled={!googleSmtpForm.data.google_smtp_active}
+                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                                        >
+                                            <option value="tls">TLS (587)</option>
+                                            <option value="ssl">SSL (465)</option>
+                                            <option value="starttls">STARTTLS</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-300 space-y-1">
+                                    <div className="flex items-center gap-1.5 font-semibold">
+                                        <HelpCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                                        <span>{__('Google App Passwords Guide')}</span>
+                                    </div>
+                                    <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300/90">
+                                        {__('For accounts with 2-Step Verification, generate a 16-character App Password at:')}{' '}
+                                        <a
+                                            href="https://myaccount.google.com/apppasswords"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-medium underline hover:text-amber-950 dark:hover:text-amber-100 inline-flex items-center gap-0.5"
+                                        >
+                                            myaccount.google.com/apppasswords <ExternalLink className="h-3 w-3 inline" />
+                                        </a>
+                                    </p>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-between">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/20"
+                                    disabled={!googleSmtpForm.data.google_smtp_active || testingSmtp}
+                                    onClick={handleTestGoogleSmtp}
+                                >
+                                    {testingSmtp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    {__('Test Connection')}
+                                </Button>
+                                <Button type="submit" disabled={googleSmtpForm.processing || !googleSmtpForm.data.google_smtp_active} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>

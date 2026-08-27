@@ -14,6 +14,7 @@ use App\Services\JaakService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
 
 class IntegrationController extends Controller
 {
@@ -44,6 +45,14 @@ class IntegrationController extends Controller
             'mapbox_active' => (bool) $empresa->mapbox_active,
             'google_maps_api_key' => $empresa->google_maps_api_key,
             'google_maps_active' => (bool) $empresa->google_maps_active,
+            'google_smtp_host' => $empresa->google_smtp_host ?? 'smtp.gmail.com',
+            'google_smtp_port' => (int) ($empresa->google_smtp_port ?? 587),
+            'google_smtp_encryption' => $empresa->google_smtp_encryption ?? 'tls',
+            'google_smtp_email' => $empresa->google_smtp_email,
+            'google_smtp_password' => $empresa->google_smtp_password,
+            'google_smtp_from_address' => $empresa->google_smtp_from_address,
+            'google_smtp_from_name' => $empresa->google_smtp_from_name,
+            'google_smtp_active' => (bool) $empresa->google_smtp_active,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
             'control_acceso_base_url' => $empresa->control_acceso_base_url,
@@ -155,6 +164,127 @@ class IntegrationController extends Controller
             'type' => 'success',
             'message' => __('Google Maps integration settings updated successfully.'),
         ]);
+    }
+
+    /**
+     * Actualiza la configuración de Google SMTP de la empresa del usuario.
+     */
+    public function updateGoogleSmtp(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'google_smtp_host' => 'nullable|string|max:255',
+            'google_smtp_port' => 'nullable|integer|min:1|max:65535',
+            'google_smtp_encryption' => 'nullable|string|in:tls,ssl,none,starttls',
+            'google_smtp_email' => 'nullable|email|max:255',
+            'google_smtp_password' => 'nullable|string|max:255',
+            'google_smtp_from_address' => 'nullable|email|max:255',
+            'google_smtp_from_name' => 'nullable|string|max:255',
+            'google_smtp_active' => 'required|boolean',
+        ]);
+
+        $updateData = [
+            'google_smtp_host' => $validated['google_smtp_host'] ?: 'smtp.gmail.com',
+            'google_smtp_port' => $validated['google_smtp_port'] ?: 587,
+            'google_smtp_encryption' => $validated['google_smtp_encryption'] ?: 'tls',
+            'google_smtp_email' => $validated['google_smtp_email'],
+            'google_smtp_from_address' => $validated['google_smtp_from_address'],
+            'google_smtp_from_name' => $validated['google_smtp_from_name'],
+            'google_smtp_active' => $validated['google_smtp_active'],
+        ];
+
+        if (array_key_exists('google_smtp_password', $validated) && $validated['google_smtp_password'] !== null) {
+            $updateData['google_smtp_password'] = $validated['google_smtp_password'];
+        }
+
+        $empresa->update($updateData);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Google SMTP settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba el envío de correo con la configuración de Google SMTP.
+     */
+    public function googleSmtpTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        if (empty($empresa->google_smtp_email) || empty($empresa->google_smtp_password)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please configure and save your Google Email and App Password before testing the connection.'),
+            ]);
+        }
+
+        $recipientEmail = $request->input('test_email', $request->user()->email);
+
+        if (! filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please provide a valid recipient email address.'),
+            ]);
+        }
+
+        try {
+            $host = $empresa->google_smtp_host ?: 'smtp.gmail.com';
+            $port = (int) ($empresa->google_smtp_port ?: 587);
+            $encryption = $empresa->google_smtp_encryption === 'none' ? null : ($empresa->google_smtp_encryption ?: 'tls');
+            $username = $empresa->google_smtp_email;
+            $password = $empresa->google_smtp_password;
+            $fromAddress = $empresa->google_smtp_from_address ?: $empresa->google_smtp_email ?: config('mail.from.address');
+            $fromName = $empresa->google_smtp_from_name ?: $empresa->razon_social ?: config('mail.from.name');
+
+            config([
+                'mail.mailers.google_smtp_test' => [
+                    'transport' => 'smtp',
+                    'host' => $host,
+                    'port' => $port,
+                    'encryption' => $encryption,
+                    'username' => $username,
+                    'password' => $password,
+                    'timeout' => 15,
+                ],
+            ]);
+
+            $companyName = $empresa->razon_social ?: 'MMM Venezuela';
+
+            Mail::mailer('google_smtp_test')->raw(
+                "¡Hola!\n\nEste es un mensaje de prueba enviado desde {$companyName} para verificar que la integración de Google SMTP está funcionando correctamente.\n\nFecha y hora: ".now()->translatedFormat('d/m/Y h:i A')."\n\nAtentamente,\nEquipo de {$companyName}",
+                function ($message) use ($recipientEmail, $fromAddress, $fromName, $companyName) {
+                    $message->from($fromAddress, $fromName)
+                        ->to($recipientEmail)
+                        ->subject("Prueba de Integración Google SMTP - {$companyName}");
+                }
+            );
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Test email sent successfully to :email', ['email' => $recipientEmail]),
+            ]);
+        } catch (\Throwable $e) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Google SMTP test failed: ').$e->getMessage(),
+            ]);
+        }
     }
 
     /**

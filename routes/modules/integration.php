@@ -9,6 +9,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/integrations/map/navigation', [IntegrationController::class, 'mapboxNavigation'])->name('integrations.mapbox.navigation')->can('integrations.view');
     Route::put('/integrations/mapbox', [IntegrationController::class, 'updateMapbox'])->name('integrations.mapbox.update')->can('integrations.edit');
     Route::put('/integrations/google-maps', [IntegrationController::class, 'updateGoogleMaps'])->name('integrations.google-maps.update')->can('integrations.edit');
+    Route::put('/integrations/google-smtp', [IntegrationController::class, 'updateGoogleSmtp'])->name('integrations.google-smtp.update')->can('integrations.edit');
+    Route::post('/integrations/google-smtp/test', [IntegrationController::class, 'googleSmtpTest'])->name('integrations.google-smtp.test')->can('integrations.edit');
     Route::put('/integrations/control-acceso', [IntegrationController::class, 'updateControlAcceso'])->name('integrations.control-acceso.update')->can('integrations.edit');
     Route::post('/integrations/control-acceso/test', [IntegrationController::class, 'controlAccesoTest'])->name('integrations.control-acceso.test')->can('integrations.edit');
 

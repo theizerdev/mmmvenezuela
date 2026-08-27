@@ -1,8 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:293
- * @route '/admin/integrations/control-acceso'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:172
+ * @route '/admin/integrations/google-smtp'
  */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
@@ -11,13 +11,13 @@ export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => (
 
 update.definition = {
     methods: ["put"],
-    url: '/admin/integrations/control-acceso',
+    url: '/admin/integrations/google-smtp',
 } satisfies RouteDefinition<["put"]>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:293
- * @route '/admin/integrations/control-acceso'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:172
+ * @route '/admin/integrations/google-smtp'
  */
 update.url = (options?: RouteQueryOptions) => {
     return update.definition.url + queryParams(options)
@@ -25,8 +25,8 @@ update.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:293
- * @route '/admin/integrations/control-acceso'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:172
+ * @route '/admin/integrations/google-smtp'
  */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
@@ -35,8 +35,8 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:293
- * @route '/admin/integrations/control-acceso'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:172
+ * @route '/admin/integrations/google-smtp'
  */
     const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url({
@@ -50,8 +50,8 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:293
- * @route '/admin/integrations/control-acceso'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:172
+ * @route '/admin/integrations/google-smtp'
  */
         updateForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url({
@@ -66,8 +66,8 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:327
- * @route '/admin/integrations/control-acceso/test'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:219
+ * @route '/admin/integrations/google-smtp/test'
  */
 export const test = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: test.url(options),
@@ -76,13 +76,13 @@ export const test = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 test.definition = {
     methods: ["post"],
-    url: '/admin/integrations/control-acceso/test',
+    url: '/admin/integrations/google-smtp/test',
 } satisfies RouteDefinition<["post"]>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:327
- * @route '/admin/integrations/control-acceso/test'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:219
+ * @route '/admin/integrations/google-smtp/test'
  */
 test.url = (options?: RouteQueryOptions) => {
     return test.definition.url + queryParams(options)
@@ -90,8 +90,8 @@ test.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:327
- * @route '/admin/integrations/control-acceso/test'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:219
+ * @route '/admin/integrations/google-smtp/test'
  */
 test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: test.url(options),
@@ -100,8 +100,8 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:327
- * @route '/admin/integrations/control-acceso/test'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:219
+ * @route '/admin/integrations/google-smtp/test'
  */
     const testForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: test.url(options),
@@ -110,8 +110,8 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:327
- * @route '/admin/integrations/control-acceso/test'
+ * @see app/Http/Controllers/Admin/IntegrationController.php:219
+ * @route '/admin/integrations/google-smtp/test'
  */
         testForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: test.url(options),
@@ -119,9 +119,9 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
         })
     
     test.form = testForm
-const controlAcceso = {
+const googleSmtp = {
     update: Object.assign(update, update),
 test: Object.assign(test, test),
 }
 
-export default controlAcceso
+export default googleSmtp
