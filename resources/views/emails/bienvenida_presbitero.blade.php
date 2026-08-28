@@ -25,8 +25,17 @@
         table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
         body { margin: 0; padding: 0; width: 100% !important; background-color: #f1ede5; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #0f172a; }
-        @media only screen and (max-width: 640px) {
-            .container-padding { padding-left: 20px !important; padding-right: 20px !important; }
+        @media only screen and (max-width: 480px) {
+            /* Contenedor general */
+            .container-padding { padding-left: 16px !important; padding-right: 16px !important; }
+            /* Banner: logo — se achica pero se mantiene al lado del texto */
+            .banner-logo-td { padding: 10px 8px 10px 10px !important; width: 54px !important; }
+            .banner-logo-img { width: 50px !important; }
+            /* Banner: texto — se reduce para caber en una línea sin wrap */
+            .banner-text-td { padding: 10px 10px 10px 4px !important; }
+            .banner-text-sub  { font-size: 7.5px !important; letter-spacing: 0.8px !important; white-space: nowrap !important; }
+            .banner-text-main { font-size: 14px !important; white-space: nowrap !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
+            /* Footer */
             .footer-col { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding-right: 0 !important; margin-bottom: 14px !important; }
             .footer-logo { margin: 0 auto 10px auto !important; }
         }
@@ -55,15 +64,15 @@
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <!-- Logo MMM -->
-                                    <td width="100" style="padding: 18px 12px 18px 20px; vertical-align: middle; text-align: left;">
-                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="82" style="display: block; width: 82px; height: auto; border: 0; outline: none;">
+                                    <td class="banner-logo-td" width="100" style="padding: 18px 12px 18px 20px; vertical-align: middle; text-align: left;">
+                                        <img class="banner-logo-img" src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="82" style="display: block; width: 82px; height: auto; border: 0; outline: none;">
                                     </td>
                                     <!-- Bloque de texto institucional en blanco -->
-                                    <td style="padding: 18px 20px 18px 4px; vertical-align: middle; text-align: left;">
+                                    <td class="banner-text-td" style="padding: 18px 20px 18px 4px; vertical-align: middle; text-align: left;">
                                         <!-- Línea superior — Denominación (Cocogoose Regular) -->
-                                        <div style="font-family: 'Cocogoose', 'Trebuchet MS', Arial, sans-serif; font-size: 10px; font-weight: 400; color: #ffffff; letter-spacing: 0; text-transform: uppercase; line-height: 1.4; margin: 0 0 1px 0; padding: 0; display: block;">IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA</div>
+                                        <div class="banner-text-sub" style="font-family: 'Cocogoose', 'Trebuchet MS', Arial, sans-serif; font-size: 10px; font-weight: 400; color: #ffffff; letter-spacing: 3.52px; text-transform: uppercase; line-height: 1.4; margin: 0 0 1px 0; padding: 0; display: block;">IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA</div>
                                         <!-- Línea inferior — Organización (Cocogoose Bold) -->
-                                        <div style="font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0; text-transform: uppercase; line-height: 1.05; white-space: nowrap; margin: 0; padding: 0; display: block;">MOVIMIENTO MISIONERO MUNDIAL</div>
+                                        <div class="banner-text-main" style="font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0; text-transform: uppercase; line-height: 1.05; white-space: nowrap; margin: 0; padding: 0; display: block;">MOVIMIENTO MISIONERO MUNDIAL</div>
                                     </td>
                                 </tr>
                             </table>
