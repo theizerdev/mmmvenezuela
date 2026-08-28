@@ -28,29 +28,45 @@
                 <!-- Contenedor Estándar 640px Normativa MMM -->
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(26, 55, 134, 0.08); border: 1px solid #e5dfd5;">
                     
-                    <!-- Barra de Acento Superior con Paleta Oficial MMM -->
+                    <!-- Banner Institucional — Fondo Azul Marino Profundo (igual a imagen de referencia) -->
                     <tr>
-                        <td style="height: 5px; background: linear-gradient(90deg, #1a3786 0%, #01a1ff 55%, #eca100 100%);"></td>
-                    </tr>
-
-                    <!-- Banner Institucional Superior MMM (Manual de Marca) -->
-                    <tr>
-                        <td class="container-padding" style="padding: 24px 32px; background: linear-gradient(135deg, #0a2160 0%, #1a3786 60%, #184bb8 100%); text-align: left; border-bottom: 3px solid #eca100;">
+                        <td style="padding: 0; background-color: #1a3786; border-top: 3px solid #1230a0; border-bottom: 2px solid #0f2460;">
+                            <!--[if mso]>
+                            <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:640px;">
+                            <v:fill type="solid" color="#1a3786"/>
+                            <v:textbox style="mso-fit-shape-to-text:true" inset="0,0,0,0">
+                            <![endif]-->
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
-                                    <td width="95" style="vertical-align: middle; text-align: left; padding-right: 18px;">
-                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="88" style="display: block; width: 88px; height: auto; border: 0; outline: none; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));">
+                                    <!-- Logo MMM -->
+                                    <td width="115" style="padding: 20px 14px 20px 24px; vertical-align: middle; text-align: left;">
+                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="90" style="display: block; width: 90px; height: auto; border: 0; outline: none;">
                                     </td>
-                                    <td style="vertical-align: middle; text-align: left;">
-                                        <div style="font-size: 12px; font-weight: 700; color: #ffffff; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.25; opacity: 0.95;">
-                                            Iglesia Cristiana Pentecostés de Venezuela
+                                    <!-- Bloque de texto institucional en blanco -->
+                                    <td style="padding: 20px 24px 20px 6px; vertical-align: middle; text-align: left;">
+                                        <!--
+                                            Línea superior — Denominación
+                                            Fuente objetivo: Cocogoose (bold condensed)
+                                            Email-safe: Trebuchet MS con letter-spacing amplio
+                                        -->
+                                        <div style="font-family: 'Trebuchet MS', 'Arial Narrow', Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; color: #ffffff; letter-spacing: 2.5px; text-transform: uppercase; line-height: 1.4; margin-bottom: 2px;">
+                                            IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA
                                         </div>
-                                        <div style="font-size: 18px; font-weight: 900; color: #ffffff; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 4px; line-height: 1.2;">
-                                            Movimiento Misionero Mundial
+                                        <!--
+                                            Línea inferior — Nombre de la organización
+                                            Fuente objetivo: Aribau Grotesk (extra-bold, condensed)
+                                            Email-safe: Impact es la mejor aproximación disponible en todos los clientes
+                                        -->
+                                        <div style="font-family: Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.0; text-shadow: 1px 1px 3px rgba(0,0,0,0.3);">
+                                            MOVIMIENTO MISIONERO MUNDIAL
                                         </div>
                                     </td>
                                 </tr>
                             </table>
+                            <!--[if mso]>
+                            </v:textbox>
+                            </v:rect>
+                            <![endif]-->
                         </td>
                     </tr>
 
@@ -64,7 +80,7 @@
                             </p>
 
                             <p style="font-size: 14px; line-height: 1.7; color: #334155; margin: 0 0 22px 0; text-align: justify;">
-                                El <strong>Movimiento Misionero Mundial Venezuela</strong> le informa que se ha creado exitosamente su cuenta de acceso institucional al <strong>Sistema Automatizado de Registro Pastoral</strong>.
+                                El <strong>Movimiento Misionero Mundial Venezuela</strong> le informa que se ha creado exitosamente su cuenta de acceso institucional a <strong>SAPRCOE</strong> (Sistema Automatizado de Registro y Control de Obreros y Extensiones).
                             </p>
 
                             <!-- Sección 1: Datos de Jurisdicción Asignada -->
