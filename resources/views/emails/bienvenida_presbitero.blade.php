@@ -35,8 +35,8 @@
             <td class="container-padding" style="padding: 36px 60px 24px 60px; background-color: #ffffff; border-bottom: 2px solid #0f172a;">
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
-                        <td width="100" style="vertical-align: middle; text-align: left; padding-right: 24px;">
-                            <img src="{{ $logoUrl ?? url('/icons/logo_mmm-a-color-sin-fondo.png') }}" alt="Logo MMM Venezuela" width="90" height="90" style="display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));">
+                        <td width="95" style="vertical-align: middle; text-align: left; padding-right: 20px;">
+                            <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="90" style="display: block; width: 90px; height: auto; border: 0; outline: none; text-decoration: none;">
                         </td>
                         <td style="vertical-align: middle; text-align: left;">
                             <div style="font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 0.6px; text-transform: uppercase; line-height: 1.3;">
@@ -87,12 +87,12 @@
         <tr>
             <td class="container-padding" style="padding: 20px 60px 30px 60px;">
                 
-                <p style="font-size: 16px; line-height: 1.7; color: #0f172a; margin: 0 0 16px 0;">
-                    <strong>Paz de Dios y saludos fraternales en Cristo, Estimado Presbítero {{ $nombre }}:</strong>
+                <p style="font-size: 16px; line-height: 1.6; color: #0f172a; margin: 0 0 16px 0;">
+                    <strong>Estimado Presbítero {{ $nombre }}:</strong>
                 </p>
 
                 <p style="font-size: 15px; line-height: 1.8; color: #334155; margin: 0 0 28px 0; text-align: justify;">
-                    Por medio de la presente comunicación oficial, la Directiva Nacional del <strong>Movimiento Misionero Mundial Venezuela</strong> le notifica la formalización y apertura de su cuenta institucional en el <strong>Sistema Automatizado de Registro Pastoral</strong>, otorgándosele las facultades de administración, supervisión eclesiástica y control ministerial correspondientes a su encargo de <strong>Presbítero</strong>.
+                    El <strong>Movimiento Misionero Mundial Venezuela</strong> le informa que se ha creado exitosamente su cuenta de acceso institucional al <strong>Sistema Automatizado de Registro Pastoral</strong>.
                 </p>
 
                 <!-- Bloque 1: Jurisdicción y Credenciales (2 Columnas Amplias) -->
@@ -202,18 +202,18 @@
 
         <!-- Pie de Página Institucional 100% Ancho -->
         <tr>
-            <td class="container-padding" style="background-color: #f8fafc; padding: 36px 60px; border-top: 2px solid #e2e8f0; text-align: center;">
-                <div style="font-size: 13px; font-style: italic; color: #475569; margin-bottom: 12px;">
-                    «Mirad cuán bueno y cuán delicioso es habitar los hermanos juntos en armonía...» (Salmos 133:1)
+            <td class="container-padding" style="background-color: #f8fafc; padding: 32px 60px; border-top: 2px solid #e2e8f0; text-align: center;">
+                <div style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px;">
+                    Fraternalmente en Cristo,
                 </div>
                 <div style="font-size: 14px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.8px;">
-                    MOVIMIENTO MISIONERO MUNDIAL VENEZUELA
+                    Oficina Nacional de Secretaría
                 </div>
-                <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 4px;">
-                    Junta Nacional de Presbiterio • Oficina de Secretaría
+                <div style="font-size: 12px; font-weight: 700; color: #1d4ed8; text-transform: uppercase; margin-top: 2px;">
+                    Movimiento Misionero Mundial Venezuela
                 </div>
                 <div style="font-size: 11px; color: #94a3b8; margin-top: 14px;">
-                    Este es un mensaje oficial emitido automáticamente por el Sistema Automatizado de Registro Pastoral MMM Venezuela.<br>
+                    Este es un mensaje oficial emitido automáticamente por el Sistema Automatizado de Registro Pastoral.<br>
                     © {{ date('Y') }} Todos los derechos reservados.
                 </div>
             </td>

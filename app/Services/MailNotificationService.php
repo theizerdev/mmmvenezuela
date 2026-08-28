@@ -48,6 +48,13 @@ class MailNotificationService
         $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
+        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
+        if (file_exists($logoPath)) {
+            $logoDataUri = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        } else {
+            $logoDataUri = url('/icons/logo_mmm-a-color-sin-fondo.png');
+        }
+
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
             'email' => $user->email,
@@ -58,7 +65,7 @@ class MailNotificationService
             'telefonoContacto' => $empresa?->telefono ?: '+58 (Oficina Nacional)',
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
-            'logoUrl' => url('/icons/logo_mmm-a-color-sin-fondo.png'),
+            'logoUrl' => $logoDataUri,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
         ];
 
