@@ -26,8 +26,8 @@ class WhatsAppTemplateSeeder extends Seeder
             [
                 'nombre' => 'Bienvenida de Presbítero al Sistema',
                 'categoria' => 'seguridad',
-                'contenido' => "👋 *{¡Bienvenido al Sistema Ministerial MMM Venezuela!|Dios le bendiga, Estimado Presbítero}*\n\nEstimado Presbítero *{{nombre}}*,\n\nSe ha configurado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n📍 *Asignación:*\n• *Zona(s):* {{zonas}}\n• *Distrito(s):* {{distritos}}\n\n🔐 *Sus credenciales de acceso:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\nDesde su panel podrá dar seguimiento a las fichas de los obreros a su cargo y recibir notificaciones automáticas.\n\n_{Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión.|Mantenga sus credenciales en resguardo.}_",
-                'variables' => ['nombre', 'zonas', 'distritos', 'email', 'password_line', 'login_url', 'empresa'],
+                'contenido' => "👋 *{¡Bienvenido al Sistema Ministerial MMM Venezuela!|Paz de Dios, Estimado Presbítero}*\n\nEstimado Presbítero *{{nombre}}*, se ha creado su cuenta de acceso institucional:\n\n🔐 *Credenciales de acceso:*\n• *Usuario:* {{email}}\n{{password_line}}• *Enlace de ingreso:* {{login_url}}\n\n⚠️ *Nota:* Esta cuenta es de uso personal e intransferible. Al ingresar, el sistema le solicitará cambiar su contraseña por motivos de seguridad.",
+                'variables' => ['nombre', 'email', 'password_line', 'login_url', 'empresa'],
                 'activo' => true,
             ],
             [

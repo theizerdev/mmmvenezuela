@@ -40,18 +40,12 @@ class TestBienvenidaPresbiteroWhatsApp extends Command
         $rawPassword = 'Password123*';
 
         $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
-                 . "Estimado Presbítero *{$presbitero->name}*,\n\n"
-                 . "Se ha creado exitosamente su cuenta de acceso institucional con el rol de *Presbítero*.\n\n"
-                 . "📍 *Jurisdicción Asignada:*\n"
-                 . "• *Zona(s):* {$zonasTexto}\n"
-                 . "• *Distrito(s):* {$distritosTexto}\n\n"
-                 . "🔐 *Sus credenciales de acceso:*\n"
-                 . "• *Usuario / Correo:* {$presbitero->email}\n"
-                 . "• *Contraseña:* {$rawPassword}\n\n"
-                 . "🌐 *Enlace para ingresar al sistema:*\n"
-                 . "{$loginUrl}\n\n"
-                 . "Desde su panel administrativo podrá dar seguimiento a las fichas ministeriales de los obreros a su cargo, consultar iglesias y recibir notificaciones automáticas cada vez que un pastor complete su registro.\n\n"
-                 . "_Por seguridad, le recomendamos cambiar su contraseña tras el primer inicio de sesión._";
+                 . "Estimado Presbítero *{$presbitero->name}*, se ha creado su cuenta de acceso institucional:\n\n"
+                 . "🔐 *Credenciales de acceso:*\n"
+                 . "• *Usuario:* {$presbitero->email}\n"
+                 . "• *Contraseña:* {$rawPassword}\n"
+                 . "• *Enlace de ingreso:* {$loginUrl}\n\n"
+                 . "⚠️ *Nota:* Esta cuenta es de uso personal e intransferible. Al ingresar, el sistema le solicitará cambiar su contraseña por motivos de seguridad.";
 
         $whatsappService = new WhatsAppService($empresa);
         $res = $whatsappService->sendMessage($presbitero->telefono, $mensaje);
