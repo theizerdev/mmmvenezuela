@@ -318,18 +318,43 @@ class WhatsAppService
     }
 
     /**
+     * Procesa y resuelve variables y Spintax en un mensaje de texto.
+     */
+    public static function processMessageContent(string $message, array $variables = []): string
+    {
+        // 1. Reemplazar variables {{variable}} y {variable}
+        foreach ($variables as $key => $value) {
+            if (is_scalar($value) || is_null($value)) {
+                $valStr = (string) ($value ?? '');
+                $message = str_replace('{{' . $key . '}}', $valStr, $message);
+                $message = str_replace('{' . $key . '}', $valStr, $message);
+            }
+        }
+
+        // 2. Resolver Spintax anidado o simple {opcion1|opcion2|opcion3}
+        while (preg_match('/\{([^{}]+)\}/', $message, $matches)) {
+            $options = explode('|', $matches[1]);
+            $selected = $options[array_rand($options)];
+            $message = str_replace($matches[0], $selected, $message);
+        }
+
+        return trim($message);
+    }
+
+    /**
      * 🛡️ Enviar mensaje de texto con protección Anti-Baneo, Spintax y variables
      */
     public function sendText(string $to, string $message, array $variables = [], bool $sync = false, ?string $instance = null): ?array
     {
         $instanceName = $instance ?? $this->instanceName;
         $toFormatted = self::formatPhoneNumber($to, $this->countryCode);
+        $processedMessage = self::processMessageContent($message, $variables);
 
         try {
             $url = "{$this->baseUrl}/api/message/send-text/{$instanceName}";
             $response = $this->client()->post($url, [
                 'to' => $toFormatted,
-                'message' => $message,
+                'message' => $processedMessage,
                 'variables' => (object) $variables,
                 'sync' => $sync,
                 'simulateTyping' => true,
@@ -343,7 +368,7 @@ class WhatsAppService
                     WhatsAppMessage::create([
                         'message_id' => $msgId,
                         'recipient_phone' => $toFormatted,
-                        'message_content' => $message,
+                        'message_content' => $processedMessage,
                         'variables' => $variables,
                         'status' => 'sent',
                         'sent_at' => now(),

@@ -26,14 +26,14 @@ class WhatsAppTemplateSeeder extends Seeder
             [
                 'nombre' => 'Bienvenida de Presbítero al Sistema',
                 'categoria' => 'seguridad',
-                'contenido' => "👋 *{¡Bienvenido al Sistema Ministerial MMM Venezuela!|Paz de Dios, Estimado Presbítero}*\n\nEstimado Presbítero *{{nombre}}*, se ha creado su cuenta de acceso institucional:\n\n🔐 *Credenciales de acceso:*\n• *Usuario:* {{email}}\n{{password_line}}• *Enlace de ingreso:* {{login_url}}\n\n⚠️ *Nota:* Esta cuenta es de uso personal e intransferible. Al ingresar, el sistema le solicitará cambiar su contraseña por motivos de seguridad.",
+                'contenido' => "👋 *Bienvenido al Sistema Ministerial MMM Venezuela*\n\nEstimado Presbítero *{{nombre}}*, se ha creado su cuenta de acceso institucional:\n\n🔐 *Credenciales de acceso:*\n• *Usuario:* {{email}}\n{{password_line}}• *Enlace de ingreso:* {{login_url}}\n\n⚠️ *Nota:* Esta cuenta es de uso personal e intransferible. Al ingresar, el sistema le solicitará cambiar su contraseña por motivos de seguridad.",
                 'variables' => ['nombre', 'email', 'password_line', 'login_url', 'empresa'],
                 'activo' => true,
             ],
             [
                 'nombre' => 'Bienvenida de Usuario al Sistema',
                 'categoria' => 'seguridad',
-                'contenido' => "👋 *{¡Bienvenido a la Plataforma MMM Venezuela!|Dios le bendiga, Saludos Cordiales}*\n\nEstimado(a) *{{nombre}}*,\n\nSe ha configurado su cuenta de acceso institucional a la plataforma administrativa de {{empresa}}.\n\n📋 *Detalles de su cuenta:*\n• *Rol asignado:* {{rol}}\n• *Institución:* {{empresa}}\n\n🔐 *Sus credenciales:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}\n🌐 *Enlace de ingreso:*\n{{login_url}}\n\n_{Por seguridad, mantenga sus credenciales en resguardo y cambie su clave periódicamente.|Agradecemos su compromiso en el servicio.}_",
+                'contenido' => "👋 *Bienvenido a la Plataforma MMM Venezuela*\n\nEstimado(a) *{{nombre}}*,\n\nSe ha configurado su cuenta de acceso institucional a la plataforma de {{empresa}}.\n\n📋 *Detalles de su cuenta:*\n• *Rol asignado:* {{rol}}\n• *Institución:* {{empresa}}\n\n🔐 *Sus credenciales:*\n• *Usuario / Correo:* {{email}}\n{{password_line}}🌐 *Enlace de ingreso:*\n{{login_url}}\n\n⚠️ *Nota:* Esta cuenta es de uso personal e intransferible. Por seguridad, al ingresar el sistema le solicitará cambiar su contraseña.",
                 'variables' => ['nombre', 'rol', 'email', 'password_line', 'login_url', 'empresa'],
                 'activo' => true,
             ],
