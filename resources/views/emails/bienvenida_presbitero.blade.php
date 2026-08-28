@@ -33,7 +33,7 @@
             .banner-logo-img { width: 50px !important; }
             /* Banner: texto — se reduce para caber en una línea sin wrap */
             .banner-text-td { padding: 10px 10px 10px 4px !important; }
-            .banner-text-sub  { font-size: 7.5px !important; letter-spacing: 0.8px !important; white-space: nowrap !important; }
+            .banner-text-sub  { font-size: 7.5px !important; letter-spacing: 1.55px !important; white-space: nowrap !important; }
             .banner-text-main { font-size: 14px !important; white-space: nowrap !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
             /* Footer */
             .footer-col { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding-right: 0 !important; margin-bottom: 14px !important; }
