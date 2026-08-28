@@ -8,10 +8,11 @@
         body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
-        body { margin: 0; padding: 0; width: 100% !important; background-color: #f1ede5; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #1a3786; }
+        body { margin: 0; padding: 0; width: 100% !important; background-color: #f1ede5; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #0f172a; }
         @media only screen and (max-width: 640px) {
             .container-padding { padding-left: 20px !important; padding-right: 20px !important; }
-            .col-stack { display: block !important; width: 100% !important; box-sizing: border-box !important; padding-left: 0 !important; padding-right: 0 !important; margin-bottom: 12px !important; }
+            .footer-col { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding-right: 0 !important; margin-bottom: 14px !important; }
+            .footer-logo { margin: 0 auto 10px auto !important; }
         }
     </style>
 </head>
@@ -32,23 +33,20 @@
                         <td style="height: 5px; background: linear-gradient(90deg, #1a3786 0%, #01a1ff 55%, #eca100 100%);"></td>
                     </tr>
 
-                    <!-- Membrete Oficial según Manual de Marca (Pág. 30, 31, 84) -->
+                    <!-- Banner Institucional Superior MMM (Manual de Marca) -->
                     <tr>
-                        <td class="container-padding" style="padding: 28px 36px 20px 36px; background-color: #ffffff; border-bottom: 2px solid #1a3786;">
+                        <td class="container-padding" style="padding: 24px 32px; background: linear-gradient(135deg, #0a2160 0%, #1a3786 60%, #184bb8 100%); text-align: left; border-bottom: 3px solid #eca100;">
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
-                                    <td width="90" style="vertical-align: middle; text-align: left; padding-right: 18px;">
-                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="85" style="display: block; width: 85px; height: auto; border: 0; outline: none;">
+                                    <td width="95" style="vertical-align: middle; text-align: left; padding-right: 18px;">
+                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="88" style="display: block; width: 88px; height: auto; border: 0; outline: none; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));">
                                     </td>
                                     <td style="vertical-align: middle; text-align: left;">
-                                        <div style="font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.3;">
+                                        <div style="font-size: 12px; font-weight: 700; color: #ffffff; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.25; opacity: 0.95;">
                                             Iglesia Cristiana Pentecostés de Venezuela
                                         </div>
-                                        <div style="font-size: 16px; font-weight: 900; color: #1a3786; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 2px;">
+                                        <div style="font-size: 18px; font-weight: 900; color: #ffffff; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 4px; line-height: 1.2;">
                                             Movimiento Misionero Mundial
-                                        </div>
-                                        <div style="font-size: 11px; font-weight: 600; color: #eca100; letter-spacing: 0.6px; text-transform: uppercase; margin-top: 3px;">
-                                            Oficina Nacional de Secretaría y Supervisión Pastoral
                                         </div>
                                     </td>
                                 </tr>
@@ -58,7 +56,7 @@
 
                     <!-- Cuerpo del Mensaje -->
                     <tr>
-                        <td class="container-padding" style="padding: 30px 36px 24px 36px;">
+                        <td class="container-padding" style="padding: 30px 36px 20px 36px;">
                             
                             <!-- Saludo Oficial -->
                             <p style="font-size: 16px; line-height: 1.5; color: #1a3786; margin: 0 0 14px 0;">
@@ -86,7 +84,7 @@
                                 </table>
                             </div>
 
-                            <!-- Sección 2: Credenciales de Acceso (Azul Marino #1a3786 y Dorado #eca100) -->
+                            <!-- Sección 2: Credenciales de Acceso -->
                             <div style="margin-bottom: 24px;">
                                 <div style="font-size: 12px; font-weight: 900; color: #1a3786; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
                                     🔐 Credenciales de Acceso
@@ -115,7 +113,7 @@
                                             </div>
                                             
                                             <div style="text-align: center; margin-top: 14px; font-size: 11px; color: #93c5fd;">
-                                                Enlace de acceso: <a href="{{ $loginUrl }}" target="_blank" style="color: #ffffff; text-decoration: underline;">{{ $loginUrl }}</a>
+                                                Enlace directo: <a href="{{ $loginUrl }}" target="_blank" style="color: #ffffff; text-decoration: underline;">{{ $loginUrl }}</a>
                                             </div>
                                         </td>
                                     </tr>
@@ -135,7 +133,7 @@
                             </div>
 
                             <!-- Sección 4: Nota de Seguridad -->
-                            <div style="margin-bottom: 22px; background-color: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #eca100; border-radius: 6px; padding: 14px 18px;">
+                            <div style="margin-bottom: 8px; background-color: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #eca100; border-radius: 6px; padding: 14px 18px;">
                                 <div style="font-size: 12px; font-weight: 800; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
                                     📌 Recomendación de Seguridad
                                 </div>
@@ -144,36 +142,59 @@
                                 </p>
                             </div>
 
-                            <!-- Sección 5: Soporte -->
-                            <div style="font-size: 12px; line-height: 1.6; color: #64748b; padding-top: 14px; border-top: 1px solid #e2e8f0;">
-                                Para mayor información o asistencia con el sistema, puede comunicarse con la Oficina Nacional:
-                                <br>
-                                @if(!empty($telefonoContacto))
-                                    📞 <strong>Teléfono / WhatsApp:</strong> {{ $telefonoContacto }} &nbsp;|&nbsp;
-                                @endif
-                                @if(!empty($emailContacto))
-                                    ✉️ <strong>Correo:</strong> <a href="mailto:{{ $emailContacto }}" style="color: #1a3786; text-decoration: none; font-weight: 600;">{{ $emailContacto }}</a>
-                                @endif
-                            </div>
-
                         </td>
                     </tr>
 
-                    <!-- Firma Digital Institucional según Manual (Pág. 105, 106) -->
+                    <!-- Footer Oficial Firma Web según Manual de Marca (Pág. 105) -->
                     <tr>
-                        <td class="container-padding" style="background-color: #1a3786; padding: 26px 36px; text-align: center; color: #ffffff;">
-                            <div style="font-size: 12px; font-weight: 600; color: #93c5fd; margin-bottom: 4px;">
-                                Fraternalmente en Cristo,
-                            </div>
-                            <div style="font-size: 14px; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.8px;">
-                                Oficina Nacional de Secretaría
-                            </div>
-                            <div style="font-size: 12px; font-weight: 800; color: #eca100; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
-                                Movimiento Misionero Mundial Venezuela
-                            </div>
-                            <div style="font-size: 10px; color: #93c5fd; margin-top: 12px; opacity: 0.85;">
-                                © {{ date('Y') }} Todos los derechos reservados.
-                            </div>
+                        <td class="container-padding" style="padding: 24px 32px; background: linear-gradient(135deg, #0a2160 0%, #1a3786 60%, #184bb8 100%); text-align: left; border-top: 3px solid #eca100; color: #ffffff;">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <!-- Logo a la izquierda -->
+                                    <td class="footer-col" width="95" style="vertical-align: middle; text-align: left; padding-right: 18px;">
+                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="85" class="footer-logo" style="display: block; width: 85px; height: auto; border: 0; outline: none; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));">
+                                    </td>
+                                    <!-- Información de la Oficina Nacional a la derecha -->
+                                    <td class="footer-col" style="vertical-align: middle; text-align: left;">
+                                        <div style="font-size: 15px; font-weight: 900; color: #ffffff; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.2;">
+                                            Oficina Nacional de Secretaría
+                                        </div>
+                                        <div style="font-size: 11px; font-weight: 700; color: #eca100; letter-spacing: 0.6px; text-transform: uppercase; margin-top: 2px;">
+                                            Movimiento Misionero Mundial Venezuela
+                                        </div>
+                                        
+                                        <!-- Datos de contacto oficiales -->
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-top: 8px; font-size: 12px; line-height: 1.6;">
+                                            @if(!empty($telefonoContacto))
+                                            <tr>
+                                                <td style="padding: 1px 0; color: #ffffff;">
+                                                    📞 <span style="color: #ffffff; font-weight: 600;">{{ $telefonoContacto }}</span>
+                                                </td>
+                                            </tr>
+                                            @endif
+                                            @if(!empty($emailContacto))
+                                            <tr>
+                                                <td style="padding: 1px 0; color: #ffffff;">
+                                                    ✉️ <a href="mailto:{{ $emailContacto }}" style="color: #ffffff; text-decoration: none; font-weight: 600;">{{ $emailContacto }}</a>
+                                                </td>
+                                            </tr>
+                                            @endif
+                                            <tr>
+                                                <td style="padding: 1px 0; color: #ffffff;">
+                                                    🌐 <a href="https://mmmvenezuela.org" target="_blank" style="color: #93c5fd; text-decoration: none; font-weight: 600;">mmmvenezuela.org</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Barra Final de Derechos -->
+                    <tr>
+                        <td style="background-color: #0a1945; padding: 12px 32px; text-align: center; color: #93c5fd; font-size: 10px; letter-spacing: 0.5px;">
+                            © {{ date('Y') }} Movimiento Misionero Mundial Venezuela. Todos los derechos reservados.
                         </td>
                     </tr>
 
