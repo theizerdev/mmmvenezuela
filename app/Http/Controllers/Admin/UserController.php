@@ -8,6 +8,7 @@ use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\WhatsAppService;
+use App\Services\MailNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -110,6 +111,9 @@ class UserController extends Controller
 
             // Enviar mensaje de bienvenida por WhatsApp si tiene teléfono
             $this->notificarBienvenidaWhatsApp($user, $rawPassword);
+
+            // Enviar correo de bienvenida con credenciales
+            $this->notificarBienvenidaEmail($user, $rawPassword);
 
             return back()->with('notification', [
                 'type' => 'success',
@@ -318,6 +322,31 @@ class UserController extends Controller
             }
         } catch (\Throwable $e) {
             Log::error('Error al enviar WhatsApp de bienvenida a usuario: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Envía correo de bienvenida con credenciales al usuario creado.
+     */
+    private function notificarBienvenidaEmail(User $user, ?string $rawPassword = null): void
+    {
+        try {
+            if (empty($user->email)) {
+                return;
+            }
+
+            $user->loadMissing(['roles', 'empresa']);
+            $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
+
+            if ($isPresbitero) {
+                $mailService = new MailNotificationService($user->empresa);
+                $mailService->enviarBienvenidaPresbitero($user, $rawPassword);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error al enviar correo de bienvenida a usuario: ' . $e->getMessage(), [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
