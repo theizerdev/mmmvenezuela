@@ -157,12 +157,8 @@
                                     <!-- Información de la Oficina Nacional a la derecha -->
                                     <td class="footer-col" style="vertical-align: middle; text-align: left;">
                                         <div style="font-size: 15px; font-weight: 900; color: #ffffff; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.2;">
-                                            Oficina Nacional de Secretaría
-                                        </div>
-                                        <div style="font-size: 11px; font-weight: 700; color: #eca100; letter-spacing: 0.6px; text-transform: uppercase; margin-top: 2px;">
-                                            Movimiento Misionero Mundial Venezuela
-                                        </div>
-                                        
+                                            Oficina Nacional
+                                        </div>                                       
                                         <!-- Datos de contacto oficiales -->
                                         <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-top: 8px; font-size: 12px; line-height: 1.6;">
                                             @if(!empty($telefonoContacto))
