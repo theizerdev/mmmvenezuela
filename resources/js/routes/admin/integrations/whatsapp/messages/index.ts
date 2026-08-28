@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
- * @see app/Http/Controllers/Admin/IntegrationController.php:1348
+ * @see app/Http/Controllers/Admin/IntegrationController.php:1358
  * @route '/admin/integrations/whatsapp/messages/{id}/retry'
  */
 export const retry = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ retry.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
- * @see app/Http/Controllers/Admin/IntegrationController.php:1348
+ * @see app/Http/Controllers/Admin/IntegrationController.php:1358
  * @route '/admin/integrations/whatsapp/messages/{id}/retry'
  */
 retry.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ retry.url = (args: { id: string | number } | [id: string | number ] | string | n
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
- * @see app/Http/Controllers/Admin/IntegrationController.php:1348
+ * @see app/Http/Controllers/Admin/IntegrationController.php:1358
  * @route '/admin/integrations/whatsapp/messages/{id}/retry'
  */
 retry.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -54,7 +54,7 @@ retry.post = (args: { id: string | number } | [id: string | number ] | string | 
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
- * @see app/Http/Controllers/Admin/IntegrationController.php:1348
+ * @see app/Http/Controllers/Admin/IntegrationController.php:1358
  * @route '/admin/integrations/whatsapp/messages/{id}/retry'
  */
     const retryForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -64,7 +64,7 @@ retry.post = (args: { id: string | number } | [id: string | number ] | string | 
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
- * @see app/Http/Controllers/Admin/IntegrationController.php:1348
+ * @see app/Http/Controllers/Admin/IntegrationController.php:1358
  * @route '/admin/integrations/whatsapp/messages/{id}/retry'
  */
         retryForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:527
+ * @see app/Http/Controllers/Admin/IntegrationController.php:537
  * @route '/admin/integrations/control-acceso'
  */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -16,7 +16,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:527
+ * @see app/Http/Controllers/Admin/IntegrationController.php:537
  * @route '/admin/integrations/control-acceso'
  */
 update.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ update.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:527
+ * @see app/Http/Controllers/Admin/IntegrationController.php:537
  * @route '/admin/integrations/control-acceso'
  */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -35,7 +35,7 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:527
+ * @see app/Http/Controllers/Admin/IntegrationController.php:537
  * @route '/admin/integrations/control-acceso'
  */
     const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -50,7 +50,7 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:527
+ * @see app/Http/Controllers/Admin/IntegrationController.php:537
  * @route '/admin/integrations/control-acceso'
  */
         updateForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -66,7 +66,7 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:561
+ * @see app/Http/Controllers/Admin/IntegrationController.php:571
  * @route '/admin/integrations/control-acceso/test'
  */
 export const test = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -81,7 +81,7 @@ test.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:561
+ * @see app/Http/Controllers/Admin/IntegrationController.php:571
  * @route '/admin/integrations/control-acceso/test'
  */
 test.url = (options?: RouteQueryOptions) => {
@@ -90,7 +90,7 @@ test.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:561
+ * @see app/Http/Controllers/Admin/IntegrationController.php:571
  * @route '/admin/integrations/control-acceso/test'
  */
 test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -100,7 +100,7 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:561
+ * @see app/Http/Controllers/Admin/IntegrationController.php:571
  * @route '/admin/integrations/control-acceso/test'
  */
     const testForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -110,7 +110,7 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:561
+ * @see app/Http/Controllers/Admin/IntegrationController.php:571
  * @route '/admin/integrations/control-acceso/test'
  */
         testForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

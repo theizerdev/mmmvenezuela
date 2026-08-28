@@ -49,7 +49,7 @@ class MailNotificationService
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
         $data = [
-            'nombre' => mb_strtoupper($user->name, 'UTF-8'),
+            'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
             'email' => $user->email,
             'password' => $rawPassword,
             'zonas' => $zonasTexto ?: 'Sin asignar',
@@ -59,6 +59,7 @@ class MailNotificationService
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => url('/icons/logo_mmm-a-color-sin-fondo.png'),
+            'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
         ];
 
         $htmlContent = view('emails.bienvenida_presbitero', $data)->render();
@@ -111,7 +112,12 @@ class MailNotificationService
         Empresa $empresa
     ): bool {
         try {
-            $host = $empresa->mailpit_host ?: '127.0.0.1';
+            $rawHost = $empresa->mailpit_host ?: '127.0.0.1';
+            $host = preg_replace('#^https?://#i', '', $rawHost);
+            $host = explode(':', $host)[0];
+            $host = rtrim($host, '/');
+            $host = $host ?: '127.0.0.1';
+
             $port = (int) ($empresa->mailpit_port ?: 1025);
             $fromAddress = $empresa->mailpit_from_address ?: 'no-reply@mmmvenezuela.org';
             $fromName = $empresa->mailpit_from_name ?: ($empresa->razon_social ?: 'MMM Venezuela');

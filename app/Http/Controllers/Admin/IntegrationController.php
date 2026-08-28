@@ -442,8 +442,13 @@ class IntegrationController extends Controller
             'mailpit_active' => 'required|boolean',
         ]);
 
+        $rawHost = $validated['mailpit_host'] ? trim($validated['mailpit_host']) : '127.0.0.1';
+        $cleanHost = preg_replace('#^https?://#i', '', $rawHost);
+        $cleanHost = explode(':', $cleanHost)[0];
+        $cleanHost = rtrim($cleanHost, '/');
+
         $updateData = [
-            'mailpit_host' => $validated['mailpit_host'] ? trim($validated['mailpit_host']) : '127.0.0.1',
+            'mailpit_host' => $cleanHost ?: '127.0.0.1',
             'mailpit_port' => $validated['mailpit_port'] ?? 1025,
             'mailpit_from_address' => $validated['mailpit_from_address'] ? trim($validated['mailpit_from_address']) : null,
             'mailpit_from_name' => $validated['mailpit_from_name'] ? trim($validated['mailpit_from_name']) : null,
@@ -483,7 +488,12 @@ class IntegrationController extends Controller
         }
 
         try {
-            $host = $empresa->mailpit_host ?: '127.0.0.1';
+            $rawHost = $empresa->mailpit_host ?: '127.0.0.1';
+            $host = preg_replace('#^https?://#i', '', $rawHost);
+            $host = explode(':', $host)[0];
+            $host = rtrim($host, '/');
+            $host = $host ?: '127.0.0.1';
+
             $port = (int) ($empresa->mailpit_port ?: 1025);
             $fromAddress = $empresa->mailpit_from_address ?: 'no-reply@mmmvenezuela.org';
             $fromName = $empresa->mailpit_from_name ?: ($empresa->razon_social ?: 'MMM Venezuela');
