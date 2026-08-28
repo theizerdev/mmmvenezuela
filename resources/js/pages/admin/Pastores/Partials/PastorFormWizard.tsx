@@ -76,7 +76,7 @@ export default function PastorFormWizard({
         conyuge_id: pastor?.conyuge_id ? String(pastor.conyuge_id) : '',
 
         // Eclesiásticos
-        nivel_ministerial: pastor?.nivel_ministerial || 'Colaborador',
+        nivel_ministerial: (pastor?.nivel_ministerial === 'Colaborador' ? 'Pastor Asociado' : pastor?.nivel_ministerial) || 'Pastor Asociado',
         zona: pastor?.zona || '',
         distrito: pastor?.distrito || '',
         ano_promocion: pastor?.ano_promocion || '',
@@ -1114,7 +1114,7 @@ export default function PastorFormWizard({
                                 </Label>
                                 <Select2
                                     options={[
-                                        { value: 'Colaborador', label: __('Colaborador') },
+                                        { value: 'Pastor Asociado', label: __('Pastor Asociado') },
                                         { value: 'Laico', label: __('Laico') },
                                         { value: 'Licenciado', label: __('Licenciado') },
                                         { value: 'Ministro Ordenado', label: __('Ministro Ordenado') },
@@ -1198,7 +1198,7 @@ export default function PastorFormWizard({
 
                             <div>
                                 <Label htmlFor="tiempo_colaborando" className="text-xs font-semibold uppercase tracking-wider">
-                                    {__('Tiempo Colaborando')}
+                                    {__('Tiempo en el Ministerio')}
                                 </Label>
                                 <Input
                                     id="tiempo_colaborando"

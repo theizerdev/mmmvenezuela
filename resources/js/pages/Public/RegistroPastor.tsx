@@ -3662,7 +3662,7 @@ export default function RegistroPastor({
                                                     Pastor Asistente / Sin Extensión a Cargo
                                                 </h4>
                                                 <p className="text-xs sm:text-sm text-indigo-800 mt-1 leading-relaxed">
-                                                    Ha indicado que labora como colaborador o pastor asistente sin tener una extensión propia a su cargo.
+                                                    Ha indicado que labora como pastor asociado o asistente sin tener una extensión propia a su cargo.
                                                     Su ficha ministerial será registrada con su grado y datos eclesiásticos.
                                                 </p>
                                             </div>

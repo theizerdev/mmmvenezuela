@@ -149,7 +149,7 @@ class PastorController extends Controller
             'conyuge_id' => ['nullable', 'exists:pastores,id'],
 
             // Eclesiásticos
-            'nivel_ministerial' => ['required', 'in:Colaborador,Laico,Licenciado,Ministro Ordenado'],
+            'nivel_ministerial' => ['required', 'in:Pastor Asociado,Colaborador,Laico,Licenciado,Ministro Ordenado'],
             'zona' => ['nullable', 'string', 'max:191'],
             'distrito' => ['nullable', 'string', 'max:191'],
             'ano_promocion' => ['nullable', 'string', 'max:50'],
@@ -198,6 +198,10 @@ class PastorController extends Controller
 
         if (! empty($validated['fe_nacimiento'])) {
             $validated['edad'] = Carbon::parse($validated['fe_nacimiento'])->age;
+        }
+
+        if (($validated['nivel_ministerial'] ?? '') === 'Colaborador') {
+            $validated['nivel_ministerial'] = 'Pastor Asociado';
         }
 
         // Procesar foto si es un string base64 proveniente de la cámara web o drag & drop
@@ -325,7 +329,7 @@ class PastorController extends Controller
             'conyuge_id' => ['nullable', 'exists:pastores,id'],
 
             // Eclesiásticos
-            'nivel_ministerial' => ['required', 'in:Colaborador,Laico,Licenciado,Ministro Ordenado'],
+            'nivel_ministerial' => ['required', 'in:Pastor Asociado,Colaborador,Laico,Licenciado,Ministro Ordenado'],
             'zona' => ['nullable', 'string', 'max:191'],
             'distrito' => ['nullable', 'string', 'max:191'],
             'ano_promocion' => ['nullable', 'string', 'max:50'],
@@ -374,6 +378,10 @@ class PastorController extends Controller
 
         if (! empty($validated['fe_nacimiento'])) {
             $validated['edad'] = Carbon::parse($validated['fe_nacimiento'])->age;
+        }
+
+        if (($validated['nivel_ministerial'] ?? '') === 'Colaborador') {
+            $validated['nivel_ministerial'] = 'Pastor Asociado';
         }
 
         // Procesar foto si es un string base64 proveniente de la cámara web o drag & drop

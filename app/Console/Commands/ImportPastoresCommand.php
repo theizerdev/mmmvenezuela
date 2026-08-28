@@ -86,6 +86,9 @@ class ImportPastoresCommand extends Command
             $apellidos = $this->cleanString($values[3]);
             $documento = $this->cleanString($values[4]);
             $nivelMinisterial = $this->cleanString($values[5]);
+            if ($nivelMinisterial === 'Colaborador') {
+                $nivelMinisterial = 'Pastor Asociado';
+            }
             $zona = $this->cleanString($values[6]);
             $distrito = $this->cleanString($values[7]);
             $genero = strtoupper($this->cleanString($values[8]) ?: 'M');
@@ -149,7 +152,7 @@ class ImportPastoresCommand extends Command
                 'estado_civil' => $estadoCivil,
                 'nombre_conyuge' => $nombreConyuge,
                 'conyuge_id' => $conyugeId,
-                'nivel_ministerial' => $nivelMinisterial ?: 'Colaborador',
+                'nivel_ministerial' => $nivelMinisterial ?: 'Pastor Asociado',
                 'zona' => $zona,
                 'distrito' => $distrito,
                 'ano_promocion' => $anoPromocion,

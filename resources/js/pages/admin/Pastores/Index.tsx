@@ -56,7 +56,7 @@ export interface Pastor {
     nombre_conyuge?: string;
     conyuge_id?: number;
     conyuge?: Pastor;
-    nivel_ministerial: 'Colaborador' | 'Laico' | 'Licenciado' | 'Ministro Ordenado';
+    nivel_ministerial: 'Pastor Asociado' | 'Laico' | 'Licenciado' | 'Ministro Ordenado' | 'Colaborador';
     zona?: string;
     distrito?: string;
     cargo_nacional?: string;
@@ -536,7 +536,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                 <Select2
                                     options={[
                                         { value: '', label: __('All grades') },
-                                        { value: 'Colaborador', label: __('Colaborador') },
+                                        { value: 'Pastor Asociado', label: __('Pastor Asociado') },
                                         { value: 'Laico', label: __('Laico') },
                                         { value: 'Licenciado', label: __('Licenciado') },
                                         { value: 'Ministro Ordenado', label: __('Ministro Ordenado') },

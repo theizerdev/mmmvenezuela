@@ -290,7 +290,7 @@ export default function AdminDashboard({
                 {/* StatCards por Grado Ministerial */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
-                        title={__('COLABORADORES')}
+                        title={__('PASTORES ASOCIADOS')}
                         value={gradosStats.colaboradores}
                         icon={<Users className="size-5" />}
                         colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"

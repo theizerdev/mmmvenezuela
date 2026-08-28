@@ -53,7 +53,7 @@ class PastorRegistroPublicoController extends Controller
             ->get();
 
         $gradosMinisteriales = [
-            'Colaborador',
+            'Pastor Asociado',
             'Laico',
             'Licenciado',
             'Ministro Ordenado',
@@ -296,7 +296,7 @@ class PastorRegistroPublicoController extends Controller
             'instituto_teologico' => ['nullable', 'string', 'max:191'],
 
             // Paso 3: Eclesiásticos
-            'nivel_ministerial' => ['required', 'string', 'in:Colaborador,Laico,Licenciado,Ministro Ordenado'],
+            'nivel_ministerial' => ['required', 'string', 'in:Pastor Asociado,Colaborador,Laico,Licenciado,Ministro Ordenado'],
             'zona' => ['nullable', 'string', 'max:191'],
             'distrito' => ['nullable', 'string', 'max:191'],
             'ano_promocion' => ['nullable', 'string', 'max:50'],
@@ -459,7 +459,7 @@ class PastorRegistroPublicoController extends Controller
                 'titulo_teologico' => $validated['titulo_teologico'] ?? null,
                 'tiempo_de_estudio_teologico' => $validated['tiempo_de_estudio_teologico'] ?? null,
                 'instituto_teologico' => $validated['instituto_teologico'] ?? null,
-                'nivel_ministerial' => $validated['nivel_ministerial'] ?? 'Colaborador',
+                'nivel_ministerial' => ($validated['nivel_ministerial'] ?? '') === 'Colaborador' ? 'Pastor Asociado' : ($validated['nivel_ministerial'] ?? 'Pastor Asociado'),
                 'zona' => $zonaLimpiada,
                 'distrito' => $distritoLimpiado,
                 'ano_promocion' => $validated['ano_promocion'] ?? null,
@@ -562,7 +562,7 @@ class PastorRegistroPublicoController extends Controller
                         'estado_civil' => 'Casado',
                         'nombre_conyuge' => $pastor->nombre_completo,
                         'conyuge_id' => $pastor->id,
-                        'nivel_ministerial' => $validated['nivel_ministerial'] ?? 'Colaborador',
+                        'nivel_ministerial' => ($validated['nivel_ministerial'] ?? '') === 'Colaborador' ? 'Pastor Asociado' : ($validated['nivel_ministerial'] ?? 'Pastor Asociado'),
                         'zona' => $zonaLimpiada,
                         'distrito' => $distritoLimpiado,
                         'estado_id' => $validated['estado_id'] ?? null,

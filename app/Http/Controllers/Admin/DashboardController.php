@@ -18,7 +18,7 @@ class DashboardController extends Controller
         $inactivosCount = Pastor::where('status', false)->count();
 
         $gradosStats = [
-            'colaboradores' => Pastor::where('nivel_ministerial', 'Colaborador')->count(),
+            'colaboradores' => Pastor::whereIn('nivel_ministerial', ['Pastor Asociado', 'Colaborador'])->count(),
             'laicos' => Pastor::where('nivel_ministerial', 'Laico')->count(),
             'licenciados' => Pastor::where('nivel_ministerial', 'Licenciado')->count(),
             'ordenados' => Pastor::where('nivel_ministerial', 'Ministro Ordenado')->count(),

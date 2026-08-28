@@ -30,7 +30,7 @@ return new class extends Migration
             $table->foreignId('conyuge_id')->nullable()->constrained('pastores')->nullOnDelete();
 
             // Datos Eclesiásticos y Ministerio
-            $table->enum('nivel_ministerial', ['Colaborador', 'Laico', 'Licenciado', 'Ministro Ordenado'])->default('Colaborador');
+            $table->enum('nivel_ministerial', ['Pastor Asociado', 'Laico', 'Licenciado', 'Ministro Ordenado'])->default('Pastor Asociado');
             $table->string('zona')->nullable();
             $table->string('distrito')->nullable();
             $table->string('ano_promocion')->nullable();
