@@ -1802,10 +1802,10 @@ export default function RegistroPastor({
                         />
                         <div>
                             <h1 className="font-black text-sm sm:text-lg text-slate-900 leading-tight">
-                                MOVIMIENTO MISIONERO MUNDIAL
+                                IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA
                             </h1>
                             <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                                República Bolivariana de Venezuela
+                                Movimiento Misionero Mundial
                             </p>
                         </div>
                     </div>
