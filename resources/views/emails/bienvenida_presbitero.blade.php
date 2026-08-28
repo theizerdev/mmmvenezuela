@@ -61,13 +61,9 @@
                                     <!-- Bloque de texto institucional en blanco -->
                                     <td style="padding: 18px 20px 18px 4px; vertical-align: middle; text-align: left;">
                                         <!-- Línea superior — Denominación (Cocogoose Regular) -->
-                                        <div style="font-family: 'Cocogoose', 'Trebuchet MS', 'Arial Narrow', Arial, Helvetica, sans-serif; font-size: 10px; font-weight: 400; color: #ffffff; letter-spacing: 2px; text-transform: uppercase; line-height: 1.4; margin-bottom: 1px;">
-                                            IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA
-                                        </div>
+                                        <div style="font-family: 'Cocogoose', 'Trebuchet MS', Arial, sans-serif; font-size: 10px; font-weight: 400; color: #ffffff; letter-spacing: 0; text-transform: uppercase; line-height: 1.4; margin: 0 0 1px 0; padding: 0; display: block;">IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA</div>
                                         <!-- Línea inferior — Organización (Cocogoose Bold) -->
-                                        <div style="font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0px; text-transform: uppercase; line-height: 1.05; white-space: nowrap;">
-                                            MOVIMIENTO MISIONERO MUNDIAL
-                                        </div>
+                                        <div style="font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0; text-transform: uppercase; line-height: 1.05; white-space: nowrap; margin: 0; padding: 0; display: block;">MOVIMIENTO MISIONERO MUNDIAL</div>
                                     </td>
                                 </tr>
                             </table>
