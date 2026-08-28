@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso</title>
     <style>
+        @if(!empty($cocogooseBoldB64))
+        @font-face {
+            font-family: 'Cocogoose';
+            src: url('{{ $cocogooseBoldB64 }}') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+        }
+        @endif
+        @if(!empty($cocogooseRegularB64))
+        @font-face {
+            font-family: 'Cocogoose';
+            src: url('{{ $cocogooseRegularB64 }}') format('truetype');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @endif
         body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
@@ -39,25 +55,17 @@
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <!-- Logo MMM -->
-                                    <td width="115" style="padding: 20px 14px 20px 24px; vertical-align: middle; text-align: left;">
-                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="90" style="display: block; width: 90px; height: auto; border: 0; outline: none;">
+                                    <td width="100" style="padding: 18px 12px 18px 20px; vertical-align: middle; text-align: left;">
+                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="82" style="display: block; width: 82px; height: auto; border: 0; outline: none;">
                                     </td>
                                     <!-- Bloque de texto institucional en blanco -->
-                                    <td style="padding: 20px 24px 20px 6px; vertical-align: middle; text-align: left;">
-                                        <!--
-                                            Línea superior — Denominación
-                                            Fuente objetivo: Cocogoose (bold condensed)
-                                            Email-safe: Trebuchet MS con letter-spacing amplio
-                                        -->
-                                        <div style="font-family: 'Trebuchet MS', 'Arial Narrow', Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; color: #ffffff; letter-spacing: 2.5px; text-transform: uppercase; line-height: 1.4; margin-bottom: 2px;">
+                                    <td style="padding: 18px 20px 18px 4px; vertical-align: middle; text-align: left;">
+                                        <!-- Línea superior — Denominación (Cocogoose Regular) -->
+                                        <div style="font-family: 'Cocogoose', 'Trebuchet MS', 'Arial Narrow', Arial, Helvetica, sans-serif; font-size: 10px; font-weight: 400; color: #ffffff; letter-spacing: 2px; text-transform: uppercase; line-height: 1.4; margin-bottom: 1px;">
                                             IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA
                                         </div>
-                                        <!--
-                                            Línea inferior — Nombre de la organización
-                                            Fuente objetivo: Aribau Grotesk (extra-bold, condensed)
-                                            Email-safe: Impact es la mejor aproximación disponible en todos los clientes
-                                        -->
-                                        <div style="font-family: Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.0; text-shadow: 1px 1px 3px rgba(0,0,0,0.3);">
+                                        <!-- Línea inferior — Organización (Cocogoose Bold) -->
+                                        <div style="font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0px; text-transform: uppercase; line-height: 1.05; white-space: nowrap;">
                                             MOVIMIENTO MISIONERO MUNDIAL
                                         </div>
                                     </td>
@@ -172,7 +180,7 @@
                                     </td>
                                     <!-- Información de la Oficina Nacional a la derecha -->
                                     <td class="footer-col" style="vertical-align: middle; text-align: left;">
-                                        <div style="font-size: 15px; font-weight: 900; color: #ffffff; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.2;">
+                                        <div style=" font-size: 15px; font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0px; text-transform: uppercase; line-height: 1.05; white-space: nowrap;">
                                             Oficina Nacional
                                         </div>                                       
                                         <!-- Datos de contacto oficiales -->

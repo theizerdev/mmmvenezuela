@@ -55,6 +55,16 @@ class MailNotificationService
             $logoDataUri = url('/icons/logo_mmm-a-color-sin-fondo.png');
         }
 
+        $cocogooseBoldPath = base_path('cocogoose/Cocogoose-Pro-Bold-trial.ttf');
+        $cocogooseBoldB64 = file_exists($cocogooseBoldPath)
+            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseBoldPath))
+            : null;
+
+        $cocogooseRegularPath = base_path('cocogoose/Cocogoose-Pro-Regular-trial.ttf');
+        $cocogooseRegularB64 = file_exists($cocogooseRegularPath)
+            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseRegularPath))
+            : null;
+
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
             'email' => $user->email,
@@ -67,6 +77,8 @@ class MailNotificationService
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => $logoDataUri,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
+            'cocogooseBoldB64' => $cocogooseBoldB64,
+            'cocogooseRegularB64' => $cocogooseRegularB64,
         ];
 
         $htmlContent = view('emails.bienvenida_presbitero', $data)->render();
