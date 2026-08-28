@@ -80,12 +80,19 @@ class Empresa extends Model
         'mailgun_from_address',
         'mailgun_from_name',
         'mailgun_active',
+        'mailpit_host',
+        'mailpit_port',
+        'mailpit_from_address',
+        'mailpit_from_name',
+        'mailpit_web_port',
+        'mailpit_active',
     ];
 
     protected $casts = [
         'whatsapp_warmup_mode' => 'boolean',
         'whatsapp_working_hours_enabled' => 'boolean',
         'whatsapp_active' => 'boolean',
+        'mailpit_active' => 'boolean',
     ];
 
     protected function casts(): array
@@ -107,6 +114,9 @@ class Empresa extends Model
             'google_smtp_active' => 'boolean',
             'mailgun_secret' => 'encrypted',
             'mailgun_active' => 'boolean',
+            'mailpit_port' => 'integer',
+            'mailpit_web_port' => 'integer',
+            'mailpit_active' => 'boolean',
         ];
     }
 

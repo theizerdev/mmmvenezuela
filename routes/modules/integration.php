@@ -13,6 +13,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/integrations/google-smtp/test', [IntegrationController::class, 'googleSmtpTest'])->name('integrations.google-smtp.test')->can('integrations.edit');
     Route::put('/integrations/mailgun', [IntegrationController::class, 'updateMailgun'])->name('integrations.mailgun.update')->can('integrations.edit');
     Route::post('/integrations/mailgun/test', [IntegrationController::class, 'mailgunTest'])->name('integrations.mailgun.test')->can('integrations.edit');
+    Route::put('/integrations/mailpit', [IntegrationController::class, 'updateMailpit'])->name('integrations.mailpit.update')->can('integrations.edit');
+    Route::post('/integrations/mailpit/test', [IntegrationController::class, 'mailpitTest'])->name('integrations.mailpit.test')->can('integrations.edit');
     Route::put('/integrations/control-acceso', [IntegrationController::class, 'updateControlAcceso'])->name('integrations.control-acceso.update')->can('integrations.edit');
     Route::post('/integrations/control-acceso/test', [IntegrationController::class, 'controlAccesoTest'])->name('integrations.control-acceso.test')->can('integrations.edit');
 

@@ -59,6 +59,12 @@ class IntegrationController extends Controller
             'mailgun_from_address' => $empresa->mailgun_from_address,
             'mailgun_from_name' => $empresa->mailgun_from_name,
             'mailgun_active' => (bool) $empresa->mailgun_active,
+            'mailpit_host' => $empresa->mailpit_host ?? '127.0.0.1',
+            'mailpit_port' => (int) ($empresa->mailpit_port ?? 1025),
+            'mailpit_from_address' => $empresa->mailpit_from_address,
+            'mailpit_from_name' => $empresa->mailpit_from_name,
+            'mailpit_web_port' => (int) ($empresa->mailpit_web_port ?? 8025),
+            'mailpit_active' => (bool) $empresa->mailpit_active,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
             'control_acceso_base_url' => $empresa->control_acceso_base_url,
@@ -409,6 +415,108 @@ class IntegrationController extends Controller
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('Mailgun test failed: ').$e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Actualiza la configuración de Mailpit de la empresa del usuario.
+     */
+    public function updateMailpit(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'mailpit_host' => 'nullable|string|max:255',
+            'mailpit_port' => 'nullable|integer|min:1|max:65535',
+            'mailpit_from_address' => 'nullable|email|max:255',
+            'mailpit_from_name' => 'nullable|string|max:255',
+            'mailpit_web_port' => 'nullable|integer|min:1|max:65535',
+            'mailpit_active' => 'required|boolean',
+        ]);
+
+        $updateData = [
+            'mailpit_host' => $validated['mailpit_host'] ? trim($validated['mailpit_host']) : '127.0.0.1',
+            'mailpit_port' => $validated['mailpit_port'] ?? 1025,
+            'mailpit_from_address' => $validated['mailpit_from_address'] ? trim($validated['mailpit_from_address']) : null,
+            'mailpit_from_name' => $validated['mailpit_from_name'] ? trim($validated['mailpit_from_name']) : null,
+            'mailpit_web_port' => $validated['mailpit_web_port'] ?? 8025,
+            'mailpit_active' => $validated['mailpit_active'],
+        ];
+
+        $empresa->update($updateData);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Mailpit settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Envía un correo de prueba a través de Mailpit.
+     */
+    public function mailpitTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $recipientEmail = $request->input('test_email', $request->user()->email);
+
+        if (! $recipientEmail || ! filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please provide a valid recipient email address.'),
+            ]);
+        }
+
+        try {
+            $host = $empresa->mailpit_host ?: '127.0.0.1';
+            $port = (int) ($empresa->mailpit_port ?: 1025);
+            $fromAddress = $empresa->mailpit_from_address ?: 'no-reply@mmmvenezuela.org';
+            $fromName = $empresa->mailpit_from_name ?: ($empresa->razon_social ?: 'MMM Venezuela');
+
+            config([
+                'mail.mailers.mailpit_test' => [
+                    'transport' => 'smtp',
+                    'host' => $host,
+                    'port' => $port,
+                    'encryption' => null,
+                    'timeout' => 5,
+                ],
+            ]);
+
+            $companyName = $empresa->razon_social ?: 'MMM Venezuela';
+
+            \Illuminate\Support\Facades\Mail::mailer('mailpit_test')->raw(
+                "¡Hola!\n\nEste es un mensaje de prueba enviado desde {$companyName} para verificar que la integración de Mailpit (SMTP Local) está funcionando correctamente.\n\nFecha y hora: ".now()->translatedFormat('d/m/Y h:i A')."\n\nAtentamente,\nEquipo de {$companyName}",
+                function ($message) use ($recipientEmail, $fromAddress, $fromName, $companyName) {
+                    $message->from($fromAddress, $fromName)
+                        ->to($recipientEmail)
+                        ->subject("Prueba de Integración Mailpit - {$companyName}");
+                }
+            );
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Test email sent successfully to :email via Mailpit.', ['email' => $recipientEmail]),
+            ]);
+        } catch (\Throwable $e) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Mailpit test failed: ').$e->getMessage(),
             ]);
         }
     }

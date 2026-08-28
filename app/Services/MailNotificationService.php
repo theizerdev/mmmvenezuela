@@ -68,7 +68,7 @@ class MailNotificationService
     }
 
     /**
-     * Envía un correo utilizando el proveedor activo (Google SMTP o Mailgun).
+     * Envía un correo utilizando el proveedor activo (Mailpit, Google SMTP o Mailgun).
      */
     public function sendHtmlEmail(
         string $toEmail,
@@ -80,18 +80,76 @@ class MailNotificationService
     ): bool {
         $empresa = $empresa ?: $this->empresa;
 
-        // 1. Prioridad: Google SMTP si está activo y configurado
+        // 1. Mailpit si está activo (ideal para entornos locales de pruebas / Laragon)
+        if ($empresa && $empresa->mailpit_active) {
+            return $this->sendViaMailpit($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+        }
+
+        // 2. Google SMTP si está activo y configurado
         if ($empresa && $empresa->google_smtp_active && !empty($empresa->google_smtp_email) && !empty($empresa->google_smtp_password)) {
             return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
         }
 
-        // 2. Segunda opción: Mailgun si está activo y configurado
+        // 3. Mailgun si está activo y configurado
         if ($empresa && $empresa->mailgun_active && !empty($empresa->mailgun_domain) && !empty($empresa->mailgun_secret)) {
             return $this->sendViaMailgun($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
         }
 
-        // 3. Fallback: Mailer por defecto de Laravel
+        // 4. Fallback: Mailer por defecto de Laravel
         return $this->sendViaDefaultMailer($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+    }
+
+    /**
+     * Envío a través de Mailpit (SMTP Local).
+     */
+    protected function sendViaMailpit(
+        string $toEmail,
+        string $toName,
+        string $subject,
+        string $htmlContent,
+        string $plainTextContent,
+        Empresa $empresa
+    ): bool {
+        try {
+            $host = $empresa->mailpit_host ?: '127.0.0.1';
+            $port = (int) ($empresa->mailpit_port ?: 1025);
+            $fromAddress = $empresa->mailpit_from_address ?: 'no-reply@mmmvenezuela.org';
+            $fromName = $empresa->mailpit_from_name ?: ($empresa->razon_social ?: 'MMM Venezuela');
+
+            config([
+                'mail.mailers.mailpit_dynamic' => [
+                    'transport' => 'smtp',
+                    'host' => $host,
+                    'port' => $port,
+                    'encryption' => null,
+                    'timeout' => 5,
+                ],
+            ]);
+
+            Mail::mailer('mailpit_dynamic')->send([], [], function ($message) use ($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $fromAddress, $fromName) {
+                $message->from($fromAddress, $fromName)
+                    ->to($toEmail, $toName)
+                    ->subject($subject)
+                    ->html($htmlContent);
+
+                if (!empty($plainTextContent)) {
+                    $message->text($plainTextContent);
+                }
+            });
+
+            Log::info("Correo enviado exitosamente vía Mailpit a {$toEmail} ({$subject})");
+            return true;
+        } catch (\Throwable $e) {
+            $this->lastError = "Mailpit Error: " . $e->getMessage();
+            Log::error("Error al enviar correo vía Mailpit a {$toEmail}: " . $e->getMessage());
+
+            // Fallback a Google SMTP si está configurado
+            if ($empresa->google_smtp_active && !empty($empresa->google_smtp_email)) {
+                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+            }
+
+            return false;
+        }
     }
 
     /**

@@ -29,6 +29,12 @@ interface PageProps {
     mailgun_from_address: string | null;
     mailgun_from_name: string | null;
     mailgun_active: boolean;
+    mailpit_host: string | null;
+    mailpit_port: number | null;
+    mailpit_from_address: string | null;
+    mailpit_from_name: string | null;
+    mailpit_web_port: number | null;
+    mailpit_active: boolean;
     whatsapp_active: boolean;
     whatsapp_connected: boolean;
     control_acceso_base_url: string | null;
@@ -56,6 +62,12 @@ export default function Integrations({
     mailgun_from_address,
     mailgun_from_name,
     mailgun_active,
+    mailpit_host,
+    mailpit_port,
+    mailpit_from_address,
+    mailpit_from_name,
+    mailpit_web_port,
+    mailpit_active,
     whatsapp_active,
     whatsapp_connected,
     control_acceso_base_url,
@@ -69,6 +81,7 @@ export default function Integrations({
     const [showSmtpPassword, setShowSmtpPassword] = useState(false);
     const [testingMailgun, setTestingMailgun] = useState(false);
     const [showMailgunSecret, setShowMailgunSecret] = useState(false);
+    const [testingMailpit, setTestingMailpit] = useState(false);
 
     const mapboxForm = useForm({
         mapbox_api_key: mapbox_api_key || '',
@@ -98,6 +111,15 @@ export default function Integrations({
         mailgun_from_address: mailgun_from_address || '',
         mailgun_from_name: mailgun_from_name || '',
         mailgun_active: mailgun_active,
+    });
+
+    const mailpitForm = useForm({
+        mailpit_host: mailpit_host || '127.0.0.1',
+        mailpit_port: mailpit_port || 1025,
+        mailpit_from_address: mailpit_from_address || '',
+        mailpit_from_name: mailpit_from_name || '',
+        mailpit_web_port: mailpit_web_port || 8025,
+        mailpit_active: mailpit_active,
     });
 
     const controlAccesoForm = useForm({
@@ -221,6 +243,49 @@ export default function Integrations({
             router.post('/admin/integrations/mailgun/test', { test_email: email }, {
                 preserveScroll: true,
                 onFinish: () => setTestingMailgun(false),
+            });
+        }
+    };
+
+    const handleSaveMailpit = (e: React.FormEvent) => {
+        e.preventDefault();
+        mailpitForm.put('/admin/integrations/mailpit', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: __('Mailpit integration settings updated successfully.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+        });
+    };
+
+    const handleTestMailpit = async () => {
+        const { value: email } = await Swal.fire({
+            title: __('Test Mailpit Connection'),
+            text: __('Enter a recipient email address to send a verification test message:'),
+            input: 'email',
+            inputPlaceholder: 'tu-correo@ejemplo.com',
+            inputValue: mailpitForm.data.mailpit_from_address || '',
+            showCancelButton: true,
+            confirmButtonText: __('Send Test Email'),
+            cancelButtonText: __('Cancel'),
+            confirmButtonColor: '#06b6d4',
+            inputValidator: (value) => {
+                if (!value) {
+                    return __('Please enter a valid email address.');
+                }
+            }
+        });
+
+        if (email) {
+            setTestingMailpit(true);
+            router.post('/admin/integrations/mailpit/test', { test_email: email }, {
+                preserveScroll: true,
+                onFinish: () => setTestingMailpit(false),
             });
         }
     };
@@ -721,6 +786,144 @@ export default function Integrations({
                                     {__('Test Connection')}
                                 </Button>
                                 <Button type="submit" disabled={mailgunForm.processing || !mailgunForm.data.mailgun_active} className="gap-2">
+                                    <Save className="h-4 w-4" />
+                                    {__('Save Changes')}
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </Card>
+
+                    {/* Mailpit Integration */}
+                    <Card className="shadow-sm border-t-4 border-t-cyan-500 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded bg-cyan-50 dark:bg-cyan-950/20 text-cyan-600">
+                                        <Mail className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('Mailpit (Local SMTP / Laragon)')}</CardTitle>
+                                        <CardDescription>{__('Local email testing server with web inbox interface for developers.')}</CardDescription>
+                                    </div>
+                                </div>
+                                <BadgeStatus active={mailpitForm.data.mailpit_active} />
+                            </div>
+                        </CardHeader>
+                        <form onSubmit={handleSaveMailpit}>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">{__('Enable Mailpit')}</Label>
+                                        <p className="text-xs text-muted-foreground">{__('Intercept and capture all outgoing emails locally in Mailpit web interface.')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={mailpitForm.data.mailpit_active}
+                                        onCheckedChange={(checked) => mailpitForm.setData('mailpit_active', checked)}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailpit_host">{__('SMTP Host')}</Label>
+                                        <Input
+                                            id="mailpit_host"
+                                            type="text"
+                                            placeholder="127.0.0.1"
+                                            value={mailpitForm.data.mailpit_host}
+                                            onChange={(e) => mailpitForm.setData('mailpit_host', e.target.value)}
+                                            disabled={!mailpitForm.data.mailpit_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailpit_port">{__('SMTP Port')}</Label>
+                                        <Input
+                                            id="mailpit_port"
+                                            type="number"
+                                            placeholder="1025"
+                                            value={mailpitForm.data.mailpit_port}
+                                            onChange={(e) => mailpitForm.setData('mailpit_port', parseInt(e.target.value) || 1025)}
+                                            disabled={!mailpitForm.data.mailpit_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailpit_web_port">{__('Web UI Port')}</Label>
+                                        <Input
+                                            id="mailpit_web_port"
+                                            type="number"
+                                            placeholder="8025"
+                                            value={mailpitForm.data.mailpit_web_port}
+                                            onChange={(e) => mailpitForm.setData('mailpit_web_port', parseInt(e.target.value) || 8025)}
+                                            disabled={!mailpitForm.data.mailpit_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailpit_from_name">{__('Sender Name (From Name)')}</Label>
+                                        <Input
+                                            id="mailpit_from_name"
+                                            type="text"
+                                            placeholder="MMM Venezuela"
+                                            value={mailpitForm.data.mailpit_from_name}
+                                            onChange={(e) => mailpitForm.setData('mailpit_from_name', e.target.value)}
+                                            disabled={!mailpitForm.data.mailpit_active}
+                                            className="text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mailpit_from_address">{__('Sender Email (From Email)')}</Label>
+                                        <Input
+                                            id="mailpit_from_address"
+                                            type="email"
+                                            placeholder="no-reply@mmmvenezuela.org"
+                                            value={mailpitForm.data.mailpit_from_address}
+                                            onChange={(e) => mailpitForm.setData('mailpit_from_address', e.target.value)}
+                                            disabled={!mailpitForm.data.mailpit_active}
+                                            className="font-mono text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="p-3 rounded-lg bg-cyan-50/80 dark:bg-cyan-950/20 border border-cyan-200/80 dark:border-cyan-900/50 text-xs text-cyan-900 dark:text-cyan-300 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 font-semibold">
+                                            <HelpCircle className="h-4 w-4 text-cyan-600 dark:text-cyan-400 flex-shrink-0" />
+                                            <span>{__('Mailpit Web Inbox (Laragon)')}</span>
+                                        </div>
+                                        <a
+                                            href={`http://localhost:${mailpitForm.data.mailpit_web_port || 8025}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300 hover:underline bg-cyan-100/80 dark:bg-cyan-900/50 px-2 py-1 rounded"
+                                        >
+                                            {__('Open Mailpit Web Inbox')} <ExternalLink className="h-3 w-3 inline" />
+                                        </a>
+                                    </div>
+                                    <p className="text-[11px] leading-relaxed text-cyan-800 dark:text-cyan-300/90">
+                                        {__('When Mailpit is enabled, emails sent by the platform are safely intercepted locally without sending to real inboxes.')}
+                                    </p>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-between">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50 hover:text-cyan-800 dark:border-cyan-900/50 dark:text-cyan-400 dark:hover:bg-cyan-950/20"
+                                    disabled={!mailpitForm.data.mailpit_active || testingMailpit}
+                                    onClick={handleTestMailpit}
+                                >
+                                    {testingMailpit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    {__('Test Connection')}
+                                </Button>
+                                <Button type="submit" disabled={mailpitForm.processing || !mailpitForm.data.mailpit_active} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
