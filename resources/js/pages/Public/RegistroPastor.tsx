@@ -40,7 +40,9 @@ import {
     Radio,
     Crown,
     Heart,
-    X
+    X,
+    XCircle,
+    Info
 } from 'lucide-react';
 import LocationMapPicker, { GeocodedAddressDetails } from '@/components/location-map-picker';
 import BiometricCameraModal, { BiometricCaptureResult, BiometricMode, optimizeAndCompressImage } from '@/components/biometric-camera-modal';
@@ -1411,6 +1413,10 @@ export default function RegistroPastor({
     };
 
     const isStepValid = (stepNumber: number): boolean => {
+        if (!data.tiene_extension && stepNumber >= 6) {
+            return true;
+        }
+
         if (stepNumber >= 6 && (data.extension_rol_pastor === 'conyuge_principal' || data.extension_rol_pastor === 'asistente')) {
             return true;
         }
@@ -1464,6 +1470,7 @@ export default function RegistroPastor({
 
     const handleTabClick = (targetStep: number) => {
         if (targetStep === activeTab) return;
+        if (!data.tiene_extension && targetStep > 5) return;
 
         if (targetStep > activeTab) {
             for (let s = 1; s < targetStep; s++) {
@@ -1487,16 +1494,24 @@ export default function RegistroPastor({
             return;
         }
 
+        if (currentStepNumber === 5 && !data.tiene_extension) {
+            handleSubmit();
+            return;
+        }
+
         setActiveTab(currentStepNumber + 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     // Envío del Formulario con Modal de Progreso (0% a 100%)
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = (e?: React.FormEvent) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+        }
 
-        // Validar rigurosamente los 8 pasos
-        for (let s = 1; s <= 8; s++) {
+        // Validar rigurosamente los pasos correspondientes (1 a 5 si no tiene extensión, 1 a 8 si tiene)
+        const maxSteps = data.tiene_extension ? 8 : 5;
+        for (let s = 1; s <= maxSteps; s++) {
             if (!isStepValid(s)) {
                 setAttemptedSteps((prev) => ({ ...prev, [s]: true }));
                 setActiveTab(s);
@@ -2021,7 +2036,9 @@ export default function RegistroPastor({
                                 Registro Unificado de Pastor & Extensión
                             </h2>
                             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                                Complete los 8 pasos de la ficha ministerial y los datos de su Iglesia / Extensión.
+                                {data.tiene_extension
+                                    ? 'Complete los 8 pasos de la ficha ministerial y los datos de su Iglesia / Extensión.'
+                                    : 'Complete los 5 pasos de su ficha ministerial personal.'}
                             </p>
                         </div>
 
@@ -2040,7 +2057,7 @@ export default function RegistroPastor({
                                     Anterior
                                 </Button>
                             )}
-                            {activeTab < 8 && (
+                            {activeTab < (data.tiene_extension ? 8 : 5) ? (
                                 <Button
                                     type="button"
                                     onClick={() => handleNextStep(activeTab)}
@@ -2048,6 +2065,16 @@ export default function RegistroPastor({
                                 >
                                     Siguiente
                                     <ArrowRight className="w-4 h-4 ml-1.5" />
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={processing}
+                                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-black flex-1 md:flex-initial shadow-lg text-xs sm:text-sm py-2.5 px-6 rounded-xl transition-all"
+                                >
+                                    <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                                    Finalizar Registro
                                 </Button>
                             )}
                         </div>
@@ -2059,21 +2086,23 @@ export default function RegistroPastor({
                         <div className="block sm:hidden bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
                             <div className="flex items-center justify-between text-xs mb-2">
                                 <span className="font-bold text-blue-700 text-sm">
-                                    Paso {activeTab} de 8: {steps[activeTab - 1]?.title}
+                                    Paso {activeTab} de {data.tiene_extension ? 8 : 5}: {steps[activeTab - 1]?.title}
                                 </span>
-                                <span className="font-mono font-bold text-slate-600">{Math.round((activeTab / 8) * 100)}%</span>
+                                <span className="font-mono font-bold text-slate-600">
+                                    {Math.round((activeTab / (data.tiene_extension ? 8 : 5)) * 100)}%
+                                </span>
                             </div>
                             <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
                                 <div
                                     className="bg-blue-600 h-full transition-all duration-300 rounded-full"
-                                    style={{ width: `${(activeTab / 8) * 100}%` }}
+                                    style={{ width: `${(activeTab / (data.tiene_extension ? 8 : 5)) * 100}%` }}
                                 />
                             </div>
                         </div>
 
                         {/* Grid de Pasos */}
-                        <div className="flex gap-3 overflow-x-auto pb-1 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 scrollbar-thin">
-                            {steps.map((step) => {
+                        <div className={`flex gap-3 overflow-x-auto pb-1 sm:pb-0 sm:grid ${data.tiene_extension ? 'sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8' : 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'} scrollbar-thin`}>
+                            {(data.tiene_extension ? steps : steps.filter((s) => s.id <= 5)).map((step) => {
                                 const Icon = step.icon;
                                 const isActive = activeTab === step.id;
                                 const isCompleted = activeTab > step.id;
@@ -3615,6 +3644,68 @@ export default function RegistroPastor({
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Pregunta: ¿Tiene Extensión / Iglesia a su cargo? */}
+                                <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-slate-50 p-6 rounded-3xl border-2 border-blue-200/90 shadow-xs space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <Building2 className="w-5 h-5 text-blue-700" />
+                                                <h4 className="font-bold text-base text-slate-900">
+                                                    ¿Tiene una Iglesia / Extensión a su cargo? <span className="text-rose-500">*</span>
+                                                </h4>
+                                            </div>
+                                            <p className="text-xs text-slate-600">
+                                                Indique si actualmente pastorea o es responsable de una iglesia/extensión para registrar sus datos geográficos y membresía.
+                                            </p>
+                                        </div>
+
+                                        {/* Interruptor de Selección Sí / No */}
+                                        <div className="flex items-center bg-white p-1.5 rounded-2xl border border-slate-200 shadow-inner shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('tiene_extension', true);
+                                                    if (data.extension_rol_pastor === 'asistente') {
+                                                        setData('extension_rol_pastor', 'principal');
+                                                    }
+                                                }}
+                                                className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${
+                                                    data.tiene_extension
+                                                        ? 'bg-blue-700 text-white shadow-md'
+                                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                <CheckCircle2 className={`w-4 h-4 ${data.tiene_extension ? 'text-white' : 'text-slate-400'}`} />
+                                                SÍ, tengo extensión
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('tiene_extension', false);
+                                                    setData('extension_rol_pastor', 'asistente');
+                                                }}
+                                                className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${
+                                                    !data.tiene_extension
+                                                        ? 'bg-amber-600 text-white shadow-md'
+                                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                <XCircle className={`w-4 h-4 ${!data.tiene_extension ? 'text-white' : 'text-slate-400'}`} />
+                                                NO, sin extensión
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {!data.tiene_extension && (
+                                        <div className="bg-amber-50/90 border border-amber-200 p-3.5 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
+                                            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                            <span>
+                                                Al seleccionar <strong>"NO"</strong>, solo se registrará su ficha ministerial personal (Pasos 1 al 5). Podrá finalizar y enviar su registro inmediatamente.
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </CardContent>
                             <CardFooter className="p-4 sm:p-6 bg-slate-50/70 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 rounded-b-2xl">
                                 <Button
@@ -3629,14 +3720,27 @@ export default function RegistroPastor({
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     Anterior: Estado de Salud
                                 </Button>
-                                <Button
-                                    type="button"
-                                    onClick={() => handleNextStep(5)}
-                                    className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
-                                >
-                                    Siguiente: Datos de la Iglesia
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
+
+                                {data.tiene_extension ? (
+                                    <Button
+                                        type="button"
+                                        onClick={() => handleNextStep(5)}
+                                        className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md text-sm"
+                                    >
+                                        Siguiente: Datos de la Iglesia
+                                        <ArrowRight className="w-4 h-4 ml-2" />
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={processing}
+                                        className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-black py-2.5 px-6 rounded-xl shadow-lg hover:shadow-xl text-sm transition-all"
+                                    >
+                                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                                        Finalizar y Enviar Registro Ministerial
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
                     )}
