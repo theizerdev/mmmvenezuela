@@ -121,6 +121,107 @@ export default function RegistroPastor({
     flash,
 }: RegistroPastorProps) {
     const { props } = usePage<any>();
+    const { data, setData, post, processing, errors } = useForm({
+        codigo: '',
+        nombres: '',
+        apellidos: '',
+        tipo_documento: 'V',
+        numero_documento: '',
+        documento: '',
+        genero: 'Masculino',
+        fe_nacimiento: '',
+        edad: '',
+        estado_civil: 'Casado(a)',
+        nombre_conyuge: '',
+        tipo_documento_conyuge: 'V',
+        numero_documento_conyuge: '',
+        cedula_conyuge: '',
+        conyuge_pastorea: false,
+        conyuge_id: '',
+
+        // Académicos
+        grado_instruccion: 'Universitario',
+        titulo_obtenido: '',
+        estudio_teologico: false,
+        titulo_teologico: '',
+        tiempo_de_estudio_teologico: '',
+        instituto_teologico: '',
+
+        // Eclesiásticos
+        nivel_ministerial: 'Ministro Ordenado',
+        zona: '',
+        distrito: '',
+        ano_promocion: '',
+        tiempo_colaborando: '',
+        batizado_espiritu_santo: true,
+        pertenece_ministerio: true,
+        cargo_nacional: '',
+        mencion: '',
+        nota: '',
+
+        // Fotografías
+        foto: '',
+        foto_cedula: '',
+
+        // Contacto y Ubicación Pastor
+        edificio_casa_quinta: '',
+        piso: '',
+        apartamento: '',
+        calle_avenida: '',
+        urbanizacion: '',
+        estado_id: '',
+        municipio_id: '',
+        parroquia_id: '',
+        municipio: '',
+        telefono_hab: '',
+        telefono_tlf: '',
+        telefono_otro: '',
+        email: '',
+
+        // Salud y Emergencia
+        grupo_sanguineo: 'O+',
+        condicion_salud: 'Buena',
+        padece_enfermedad: false,
+        enfermedades_cronicas: '',
+        toma_medicamentos: false,
+        medicamentos_recetados: '',
+        alergias: '',
+        contacto_emergencia_nombre: '',
+        contacto_emergencia_telefono: '',
+        observaciones_salud: '',
+
+        // Iglesia / Extensión a su Cargo
+        tiene_extension: true,
+        extension_id: '',
+        extension_nombre: '',
+        extension_tipo_local_id: '',
+        extension_estado_id: '',
+        extension_municipio_id: '',
+        extension_parroquia_id: '',
+        extension_direccion: '',
+        extension_sector: '',
+        extension_calle: '',
+        extension_avenida: '',
+        extension_latitud: '',
+        extension_longitud: '',
+        extension_zona: '',
+        extension_distrito: '',
+        extension_fecha_fundacion: '',
+        extension_anios_activa: '',
+        extension_tiempo_trabajo: '',
+        extension_descripcion: '',
+        extension_miembros_activos: '',
+        extension_cantidad_campos_blancos: '',
+        extension_miembro_probante: '',
+        extension_logros_obtenidos: '',
+        extension_iglesias_fundadas: '',
+        extension_pastores_ministerio: '',
+        extension_posee_medio_comunicacion: false,
+        extension_medios_lista: [] as MediaItem[],
+        extension_rol_pastor: 'principal' as 'principal' | 'conyuge_principal' | 'asistente',
+    });
+
+    const esCasado = (data.estado_civil || '').toLowerCase().includes('casad');
     const [activeTab, setActiveTab] = useState<number>(1);
     const [attemptedSteps, setAttemptedSteps] = useState<Record<number, boolean>>({});
     const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
@@ -232,108 +333,6 @@ export default function RegistroPastor({
         iglesia?: string | null;
         mensaje: string;
     } | null>(null);
-
-    const { data, setData, post, processing, errors } = useForm({
-        codigo: '',
-        nombres: '',
-        apellidos: '',
-        tipo_documento: 'V',
-        numero_documento: '',
-        documento: '',
-        genero: 'Masculino',
-        fe_nacimiento: '',
-        edad: '',
-        estado_civil: 'Casado(a)',
-        nombre_conyuge: '',
-        tipo_documento_conyuge: 'V',
-        numero_documento_conyuge: '',
-        cedula_conyuge: '',
-        conyuge_pastorea: false,
-        conyuge_id: '',
-
-        // Académicos
-        grado_instruccion: 'Universitario',
-        titulo_obtenido: '',
-        estudio_teologico: false,
-        titulo_teologico: '',
-        tiempo_de_estudio_teologico: '',
-        instituto_teologico: '',
-
-        // Eclesiásticos
-        nivel_ministerial: 'Ministro Ordenado',
-        zona: '',
-        distrito: '',
-        ano_promocion: '',
-        tiempo_colaborando: '',
-        batizado_espiritu_santo: true,
-        pertenece_ministerio: true,
-        cargo_nacional: '',
-        mencion: '',
-        nota: '',
-
-        // Fotografías
-        foto: '',
-        foto_cedula: '',
-
-        // Contacto y Ubicación Pastor
-        edificio_casa_quinta: '',
-        piso: '',
-        apartamento: '',
-        calle_avenida: '',
-        urbanizacion: '',
-        estado_id: '',
-        municipio_id: '',
-        parroquia_id: '',
-        municipio: '',
-        telefono_hab: '',
-        telefono_tlf: '',
-        telefono_otro: '',
-        email: '',
-
-        // Salud y Emergencia
-        grupo_sanguineo: 'O+',
-        condicion_salud: 'Buena',
-        padece_enfermedad: false,
-        enfermedades_cronicas: '',
-        toma_medicamentos: false,
-        medicamentos_recetados: '',
-        alergias: '',
-        contacto_emergencia_nombre: '',
-        contacto_emergencia_telefono: '',
-        observaciones_salud: '',
-
-        // Iglesia / Extensión a su Cargo
-        tiene_extension: true,
-        extension_id: '',
-        extension_nombre: '',
-        extension_tipo_local_id: '',
-        extension_estado_id: '',
-        extension_municipio_id: '',
-        extension_parroquia_id: '',
-        extension_direccion: '',
-        extension_sector: '',
-        extension_calle: '',
-        extension_avenida: '',
-        extension_latitud: '',
-        extension_longitud: '',
-        extension_zona: '',
-        extension_distrito: '',
-        extension_fecha_fundacion: '',
-        extension_anios_activa: '',
-        extension_tiempo_trabajo: '',
-        extension_descripcion: '',
-        extension_miembros_activos: '',
-        extension_cantidad_campos_blancos: '',
-        extension_miembro_probante: '',
-        extension_logros_obtenidos: '',
-        extension_iglesias_fundadas: '',
-        extension_pastores_ministerio: '',
-        extension_posee_medio_comunicacion: false,
-        extension_medios_lista: [] as MediaItem[],
-        extension_rol_pastor: 'principal' as 'principal' | 'conyuge_principal' | 'asistente',
-    });
-
-    const esCasado = data.estado_civil.toLowerCase().includes('casad');
 
     // Parse de medicamentos si existen
     const medicamentosList = useMemo(() => {
@@ -1487,22 +1486,6 @@ export default function RegistroPastor({
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleNextStep = (currentStepNumber: number) => {
-        if (!isStepValid(currentStepNumber)) {
-            setAttemptedSteps((prev) => ({ ...prev, [currentStepNumber]: true }));
-            window.scrollTo({ top: 120, behavior: 'smooth' });
-            return;
-        }
-
-        if (currentStepNumber === 5 && !data.tiene_extension) {
-            handleSubmit();
-            return;
-        }
-
-        setActiveTab(currentStepNumber + 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
     // Envío del Formulario con Modal de Progreso (0% a 100%)
     const handleSubmit = (e?: React.FormEvent) => {
         if (e && e.preventDefault) {
@@ -1594,6 +1577,22 @@ export default function RegistroPastor({
                 }
             },
         });
+    };
+
+    const handleNextStep = (currentStepNumber: number) => {
+        if (!isStepValid(currentStepNumber)) {
+            setAttemptedSteps((prev) => ({ ...prev, [currentStepNumber]: true }));
+            window.scrollTo({ top: 120, behavior: 'smooth' });
+            return;
+        }
+
+        if (currentStepNumber === 5 && !data.tiene_extension) {
+            handleSubmit();
+            return;
+        }
+
+        setActiveTab(currentStepNumber + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const steps = [
