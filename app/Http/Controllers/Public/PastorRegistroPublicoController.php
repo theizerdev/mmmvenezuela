@@ -211,8 +211,10 @@ class PastorRegistroPublicoController extends Controller
                 'contacto_emergencia_nombre' => $pastor->contacto_emergencia_nombre ?: '',
                 'contacto_emergencia_telefono' => $pastor->contacto_emergencia_telefono ?: '',
                 'observaciones_salud' => $pastor->observaciones_salud ?: '',
-                'foto' => $pastor->foto ?: '',
-                'foto_cedula' => $pastor->foto_cedula ?: '',
+                'foto' => $pastor->foto_url ?: ($pastor->foto ?: ''),
+                'foto_cedula' => $pastor->foto_cedula_url ?: ($pastor->foto_cedula ?: ''),
+                'foto_url' => $pastor->foto_url,
+                'foto_cedula_url' => $pastor->foto_cedula_url,
             ],
             'extension' => $extension,
         ]);
@@ -375,11 +377,12 @@ class PastorRegistroPublicoController extends Controller
                     $imageData = base64_decode($imageData);
                     if ($imageData !== false) {
                         $filename = 'pastor_' . preg_replace('/\D/', '', $validated['documento'] ?? 'foto') . '_' . time() . '.' . $type;
+                        Storage::disk('public')->put('pastores/' . $filename, $imageData);
                         $destinationPath = public_path('pastores');
                         if (!file_exists($destinationPath)) {
-                            mkdir($destinationPath, 0755, true);
+                            @mkdir($destinationPath, 0755, true);
                         }
-                        file_put_contents($destinationPath . '/' . $filename, $imageData);
+                        @file_put_contents($destinationPath . '/' . $filename, $imageData);
                         $fotoPath = $filename;
                     }
                 }
@@ -402,11 +405,12 @@ class PastorRegistroPublicoController extends Controller
                     $imageData = base64_decode($imageData);
                     if ($imageData !== false) {
                         $filename = 'cedula_' . preg_replace('/\D/', '', $validated['documento'] ?? 'doc') . '_' . time() . '.' . $type;
+                        Storage::disk('public')->put('pastores_cedulas/' . $filename, $imageData);
                         $destinationPath = public_path('pastores_cedulas');
                         if (!file_exists($destinationPath)) {
-                            mkdir($destinationPath, 0755, true);
+                            @mkdir($destinationPath, 0755, true);
                         }
-                        file_put_contents($destinationPath . '/' . $filename, $imageData);
+                        @file_put_contents($destinationPath . '/' . $filename, $imageData);
                         $fotoCedulaPath = $filename;
                     }
                 }

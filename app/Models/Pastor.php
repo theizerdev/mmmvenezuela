@@ -157,6 +157,9 @@ class Pastor extends Model
         }
 
         if (str_starts_with($trimmed, 'pastores/')) {
+            if (file_exists(public_path($trimmed))) {
+                return '/' . $trimmed;
+            }
             return '/storage/' . $trimmed;
         }
 
@@ -194,6 +197,9 @@ class Pastor extends Model
         }
 
         if (str_starts_with($trimmed, 'pastores_cedulas/')) {
+            if (file_exists(public_path($trimmed))) {
+                return '/' . $trimmed;
+            }
             return '/storage/' . $trimmed;
         }
 
@@ -201,7 +207,11 @@ class Pastor extends Model
             return $trimmed;
         }
 
-        return '/storage/' . $trimmed;
+        if (file_exists(public_path('pastores_cedulas/' . $trimmed))) {
+            return '/pastores_cedulas/' . $trimmed;
+        }
+
+        return '/storage/pastores_cedulas/' . $trimmed;
     }
 
     /**

@@ -160,11 +160,55 @@ export default function RegistroPastor({
     const [biometricInitialFacing, setBiometricInitialFacing] = useState<'user' | 'environment'>('user');
     const [fotoSizeKb, setFotoSizeKb] = useState<number | null>(null);
     const [fotoCedulaSizeKb, setFotoCedulaSizeKb] = useState<number | null>(null);
+    const [fotoLoadError, setFotoLoadError] = useState<boolean>(false);
+    const [fotoCedulaLoadError, setFotoCedulaLoadError] = useState<boolean>(false);
+    const fotoInputRef = useRef<HTMLInputElement | null>(null);
+    const fotoCedulaInputRef = useRef<HTMLInputElement | null>(null);
     const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
     const [activeCameraTarget, setActiveCameraTarget] = useState<'foto' | 'foto_cedula'>('foto');
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
+
+    const fotoPreviewUrl = useMemo(() => {
+        setFotoLoadError(false);
+        if (!data.foto || typeof data.foto !== 'string') return null;
+        const trimmed = data.foto.trim();
+        if (!trimmed) return null;
+        if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+        if (trimmed.startsWith('storage/')) {
+            return `/${trimmed}`;
+        }
+        if (trimmed.startsWith('pastores/')) {
+            return `/${trimmed}`;
+        }
+        if (trimmed.startsWith('/')) {
+            return trimmed;
+        }
+        return `/pastores/${trimmed}`;
+    }, [data.foto]);
+
+    const fotoCedulaPreviewUrl = useMemo(() => {
+        setFotoCedulaLoadError(false);
+        if (!data.foto_cedula || typeof data.foto_cedula !== 'string') return null;
+        const trimmed = data.foto_cedula.trim();
+        if (!trimmed) return null;
+        if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+        if (trimmed.startsWith('storage/')) {
+            return `/${trimmed}`;
+        }
+        if (trimmed.startsWith('pastores_cedulas/')) {
+            return `/${trimmed}`;
+        }
+        if (trimmed.startsWith('/')) {
+            return trimmed;
+        }
+        return `/pastores_cedulas/${trimmed}`;
+    }, [data.foto_cedula]);
 
     // Estados para Medicamentos Dinámicos
     const [nuevoMedicamentoNombre, setNuevoMedicamentoNombre] = useState<string>('');
@@ -708,7 +752,19 @@ export default function RegistroPastor({
                 };
                 localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
                 setLastSavedTime(payload.savedAt);
-            } catch (e) { } finally {
+            } catch (e) {
+                try {
+                    // Si excede la cuota de localStorage por imágenes base64, guardamos sin las fotos pesadas para no perder los datos del formulario
+                    const fallbackData = { ...data, foto: '', foto_cedula: '' };
+                    const fallbackPayload = {
+                        data: fallbackData,
+                        activeTab,
+                        savedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    };
+                    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(fallbackPayload));
+                    setLastSavedTime(fallbackPayload.savedAt);
+                } catch (err2) { }
+            } finally {
                 setIsSavingDraft(false);
             }
         }, 800);
@@ -904,8 +960,8 @@ export default function RegistroPastor({
                         contacto_emergencia_nombre: p.contacto_emergencia_nombre || prev.contacto_emergencia_nombre,
                         contacto_emergencia_telefono: p.contacto_emergencia_telefono || prev.contacto_emergencia_telefono,
                         observaciones_salud: p.observaciones_salud || prev.observaciones_salud,
-                        foto: p.foto || prev.foto,
-                        foto_cedula: p.foto_cedula || prev.foto_cedula,
+                        foto: p.foto_url || p.foto || prev.foto,
+                        foto_cedula: p.foto_cedula_url || p.foto_cedula || prev.foto_cedula,
                     }));
 
                     if (result.extension) {
@@ -3330,11 +3386,28 @@ export default function RegistroPastor({
                             </CardHeader>
                             <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Input oculto para subir archivo de foto */}
+                                    <input
+                                        ref={fotoInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => handleFileUpload(e, 'foto')}
+                                    />
+                                    {/* Input oculto para subir archivo de cédula */}
+                                    <input
+                                        ref={fotoCedulaInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => handleFileUpload(e, 'foto_cedula')}
+                                    />
+
                                     {/* Fotografía de Perfil / Carnet */}
                                     <div
                                         className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${isFieldVisibleError('foto', 5)
                                             ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
-                                            : data.foto
+                                            : data.foto && !fotoLoadError
                                                 ? 'border-emerald-500/50 bg-emerald-50/10 shadow-sm'
                                                 : 'border-slate-200 hover:border-slate-300'
                                             }`}
@@ -3344,7 +3417,7 @@ export default function RegistroPastor({
                                                 <User className="w-4 h-4 text-blue-600" />
                                                 Foto de Perfil (Tipo Carnet) <span className="text-rose-500 ml-0.5">*</span>
                                             </h4>
-                                            {data.foto && (
+                                            {data.foto && !fotoLoadError && (
                                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3" /> Verificada {fotoSizeKb ? `(${fotoSizeKb} KB)` : ''}
                                                 </span>
@@ -3353,15 +3426,28 @@ export default function RegistroPastor({
 
                                         {/* Marco de Previsualización */}
                                         <div
-                                            className={`w-40 h-52 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto
-                                                ? 'border-emerald-500 bg-black'
-                                                : isFieldVisibleError('foto', 5)
-                                                    ? 'border-rose-400 bg-rose-50/30'
-                                                    : 'border-slate-300 bg-white'
+                                            className={`w-40 h-52 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto && !fotoLoadError
+                                                ? 'border-emerald-500 bg-slate-900'
+                                                : fotoLoadError
+                                                    ? 'border-amber-400 bg-amber-50/40'
+                                                    : isFieldVisibleError('foto', 5)
+                                                        ? 'border-rose-400 bg-rose-50/30'
+                                                        : 'border-slate-300 bg-white'
                                                 }`}
                                         >
-                                            {data.foto ? (
-                                                <img src={data.foto} alt="Foto Perfil" className="w-full h-full object-cover" />
+                                            {data.foto && !fotoLoadError && fotoPreviewUrl ? (
+                                                <img
+                                                    src={fotoPreviewUrl}
+                                                    alt="Foto Perfil"
+                                                    className="w-full h-full object-cover"
+                                                    onError={() => setFotoLoadError(true)}
+                                                />
+                                            ) : data.foto && fotoLoadError ? (
+                                                <div className="text-amber-700 text-xs flex flex-col items-center p-3 text-center space-y-1">
+                                                    <AlertCircle className="w-8 h-8 text-amber-500 mb-1" />
+                                                    <span className="font-bold">Foto no disponible</span>
+                                                    <span className="text-[10px] text-slate-500">Capture o suba una nueva foto</span>
+                                                </div>
                                             ) : (
                                                 <div className="text-slate-400 text-xs flex flex-col items-center p-3 text-center space-y-1">
                                                     <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
@@ -3374,14 +3460,25 @@ export default function RegistroPastor({
                                         </div>
 
                                         {/* Botones de Acción */}
-                                        <div className="flex items-center gap-2 w-full justify-center">
+                                        <div className="flex flex-wrap items-center gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
                                                 onClick={() => handleOpenBiometricCamera('foto', 'user')}
-                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm sm:text-xs rounded-2xl shadow-md h-12 sm:h-11 px-5 gap-2 flex-1 transition-transform active:scale-98"
+                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-2xl shadow-md h-11 px-4 gap-2 flex-1 transition-transform active:scale-98"
                                             >
-                                                <Camera className="w-5 h-5 sm:w-4 sm:h-4 text-blue-200" />
+                                                <Camera className="w-4 h-4 text-blue-200" />
                                                 Cámara Biométrica
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => fotoInputRef.current?.click()}
+                                                className="border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-2xl h-11 px-3 gap-1.5"
+                                                title="Subir desde galería o archivo"
+                                            >
+                                                <Upload className="w-4 h-4 text-slate-500" />
+                                                Subir
                                             </Button>
 
                                             {data.foto && (
@@ -3392,8 +3489,9 @@ export default function RegistroPastor({
                                                     onClick={() => {
                                                         setData('foto', '');
                                                         setFotoSizeKb(null);
+                                                        setFotoLoadError(false);
                                                     }}
-                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-2xl h-12 sm:h-11 px-3.5"
+                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-2xl h-11 px-3"
                                                     title="Eliminar Fotografía"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -3413,7 +3511,7 @@ export default function RegistroPastor({
                                     <div
                                         className={`bg-slate-50/80 p-6 rounded-3xl border-2 flex flex-col items-center text-center space-y-4 transition-all duration-200 ${isFieldVisibleError('foto_cedula', 5)
                                             ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
-                                            : data.foto_cedula
+                                            : data.foto_cedula && !fotoCedulaLoadError
                                                 ? 'border-emerald-500/50 bg-emerald-50/10 shadow-sm'
                                                 : 'border-slate-200 hover:border-slate-300'
                                             }`}
@@ -3423,7 +3521,7 @@ export default function RegistroPastor({
                                                 <IdCard className="w-4 h-4 text-blue-600" />
                                                 Foto de la Cédula de Identidad <span className="text-rose-500 ml-0.5">*</span>
                                             </h4>
-                                            {data.foto_cedula && (
+                                            {data.foto_cedula && !fotoCedulaLoadError && (
                                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3" /> Verificada {fotoCedulaSizeKb ? `(${fotoCedulaSizeKb} KB)` : ''}
                                                 </span>
@@ -3432,15 +3530,28 @@ export default function RegistroPastor({
 
                                         {/* Marco de Previsualización Cédula */}
                                         <div
-                                            className={`w-56 h-36 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto_cedula
-                                                ? 'border-emerald-500 bg-black'
-                                                : isFieldVisibleError('foto_cedula', 5)
-                                                    ? 'border-rose-400 bg-rose-50/30'
-                                                    : 'border-slate-300 bg-white'
+                                            className={`w-56 h-36 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto_cedula && !fotoCedulaLoadError
+                                                ? 'border-emerald-500 bg-slate-900'
+                                                : fotoCedulaLoadError
+                                                    ? 'border-amber-400 bg-amber-50/40'
+                                                    : isFieldVisibleError('foto_cedula', 5)
+                                                        ? 'border-rose-400 bg-rose-50/30'
+                                                        : 'border-slate-300 bg-white'
                                                 }`}
                                         >
-                                            {data.foto_cedula ? (
-                                                <img src={data.foto_cedula} alt="Cédula" className="w-full h-full object-cover" />
+                                            {data.foto_cedula && !fotoCedulaLoadError && fotoCedulaPreviewUrl ? (
+                                                <img
+                                                    src={fotoCedulaPreviewUrl}
+                                                    alt="Cédula"
+                                                    className="w-full h-full object-cover"
+                                                    onError={() => setFotoCedulaLoadError(true)}
+                                                />
+                                            ) : data.foto_cedula && fotoCedulaLoadError ? (
+                                                <div className="text-amber-700 text-xs flex flex-col items-center p-3 text-center space-y-1">
+                                                    <AlertCircle className="w-8 h-8 text-amber-500 mb-1" />
+                                                    <span className="font-bold">Cédula no disponible</span>
+                                                    <span className="text-[10px] text-slate-500">Capture o suba una nueva cédula</span>
+                                                </div>
                                             ) : (
                                                 <div className="text-slate-400 text-xs flex flex-col items-center p-3 text-center space-y-1">
                                                     <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
@@ -3453,14 +3564,25 @@ export default function RegistroPastor({
                                         </div>
 
                                         {/* Botones de Acción */}
-                                        <div className="flex items-center gap-2 w-full justify-center">
+                                        <div className="flex flex-wrap items-center gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
                                                 onClick={() => handleOpenBiometricCamera('foto_cedula', 'environment')}
-                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm sm:text-xs rounded-2xl shadow-md h-12 sm:h-11 px-5 gap-2 flex-1 transition-transform active:scale-98"
+                                                className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-2xl shadow-md h-11 px-4 gap-2 flex-1 transition-transform active:scale-98"
                                             >
-                                                <Camera className="w-5 h-5 sm:w-4 sm:h-4 text-blue-200" />
+                                                <Camera className="w-4 h-4 text-blue-200" />
                                                 Escanear Cédula
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => fotoCedulaInputRef.current?.click()}
+                                                className="border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-2xl h-11 px-3 gap-1.5"
+                                                title="Subir desde galería o archivo"
+                                            >
+                                                <Upload className="w-4 h-4 text-slate-500" />
+                                                Subir
                                             </Button>
 
                                             {data.foto_cedula && (
@@ -3471,8 +3593,9 @@ export default function RegistroPastor({
                                                     onClick={() => {
                                                         setData('foto_cedula', '');
                                                         setFotoCedulaSizeKb(null);
+                                                        setFotoCedulaLoadError(false);
                                                     }}
-                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-2xl h-12 sm:h-11 px-3.5"
+                                                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-2xl h-11 px-3"
                                                     title="Eliminar Fotografía"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
