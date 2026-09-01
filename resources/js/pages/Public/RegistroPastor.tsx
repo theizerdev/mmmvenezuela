@@ -3419,20 +3419,22 @@ export default function RegistroPastor({
                                             </h4>
                                             {data.foto && !fotoLoadError && (
                                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                                                    <CheckCircle2 className="w-3 h-3" /> Verificada {fotoSizeKb ? `(${fotoSizeKb} KB)` : ''}
+                                                    <CheckCircle2 className="w-3 h-3" /> Lista {fotoSizeKb ? `(${fotoSizeKb} KB)` : ''}
                                                 </span>
                                             )}
                                         </div>
 
-                                        {/* Marco de Previsualización */}
+                                        {/* Marco de Previsualización Clickeable */}
                                         <div
-                                            className={`w-40 h-52 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto && !fotoLoadError
+                                            onClick={() => fotoInputRef.current?.click()}
+                                            title="Haga clic para seleccionar o tomar foto"
+                                            className={`w-40 h-52 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner cursor-pointer transition-all hover:opacity-95 ${data.foto && !fotoLoadError
                                                 ? 'border-emerald-500 bg-slate-900'
                                                 : fotoLoadError
-                                                    ? 'border-amber-400 bg-amber-50/40'
+                                                    ? 'border-amber-400 bg-amber-50/40 hover:border-amber-500'
                                                     : isFieldVisibleError('foto', 5)
                                                         ? 'border-rose-400 bg-rose-50/30'
-                                                        : 'border-slate-300 bg-white'
+                                                        : 'border-slate-300 bg-white hover:border-blue-400'
                                                 }`}
                                         >
                                             {data.foto && !fotoLoadError && fotoPreviewUrl ? (
@@ -3446,15 +3448,15 @@ export default function RegistroPastor({
                                                 <div className="text-amber-700 text-xs flex flex-col items-center p-3 text-center space-y-1">
                                                     <AlertCircle className="w-8 h-8 text-amber-500 mb-1" />
                                                     <span className="font-bold">Foto no disponible</span>
-                                                    <span className="text-[10px] text-slate-500">Capture o suba una nueva foto</span>
+                                                    <span className="text-[10px] text-slate-500">Toque aquí para seleccionar una foto</span>
                                                 </div>
                                             ) : (
                                                 <div className="text-slate-400 text-xs flex flex-col items-center p-3 text-center space-y-1">
                                                     <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
                                                         <User className="w-6 h-6 opacity-60" />
                                                     </div>
-                                                    <span className="font-semibold text-slate-500">Sin Fotografía</span>
-                                                    <span className="text-[10px] text-slate-400">Encuadre 3:4 requerido</span>
+                                                    <span className="font-semibold text-slate-600">Toque para seleccionar</span>
+                                                    <span className="text-[10px] text-slate-400">Desde galería o archivo</span>
                                                 </div>
                                             )}
                                         </div>
@@ -3463,22 +3465,22 @@ export default function RegistroPastor({
                                         <div className="flex flex-wrap items-center gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
-                                                onClick={() => handleOpenBiometricCamera('foto', 'user')}
+                                                onClick={() => fotoInputRef.current?.click()}
                                                 className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-2xl shadow-md h-11 px-4 gap-2 flex-1 transition-transform active:scale-98"
                                             >
-                                                <Camera className="w-4 h-4 text-blue-200" />
-                                                Cámara Biométrica
+                                                <Upload className="w-4 h-4 text-blue-200" />
+                                                {data.foto ? 'Cambiar Foto' : 'Seleccionar Foto'}
                                             </Button>
 
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                onClick={() => fotoInputRef.current?.click()}
+                                                onClick={() => handleOpenBiometricCamera('foto', 'user')}
                                                 className="border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-2xl h-11 px-3 gap-1.5"
-                                                title="Subir desde galería o archivo"
+                                                title="Usar cámara web en vivo"
                                             >
-                                                <Upload className="w-4 h-4 text-slate-500" />
-                                                Subir
+                                                <Camera className="w-4 h-4 text-slate-500" />
+                                                Cámara
                                             </Button>
 
                                             {data.foto && (
@@ -3523,20 +3525,22 @@ export default function RegistroPastor({
                                             </h4>
                                             {data.foto_cedula && !fotoCedulaLoadError && (
                                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                                                    <CheckCircle2 className="w-3 h-3" /> Verificada {fotoCedulaSizeKb ? `(${fotoCedulaSizeKb} KB)` : ''}
+                                                    <CheckCircle2 className="w-3 h-3" /> Lista {fotoCedulaSizeKb ? `(${fotoCedulaSizeKb} KB)` : ''}
                                                 </span>
                                             )}
                                         </div>
 
-                                        {/* Marco de Previsualización Cédula */}
+                                        {/* Marco de Previsualización Cédula Clickeable */}
                                         <div
-                                            className={`w-56 h-36 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner transition-colors ${data.foto_cedula && !fotoCedulaLoadError
+                                            onClick={() => fotoCedulaInputRef.current?.click()}
+                                            title="Haga clic para seleccionar o tomar foto de la cédula"
+                                            className={`w-56 h-36 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center relative shadow-inner cursor-pointer transition-all hover:opacity-95 ${data.foto_cedula && !fotoCedulaLoadError
                                                 ? 'border-emerald-500 bg-slate-900'
                                                 : fotoCedulaLoadError
-                                                    ? 'border-amber-400 bg-amber-50/40'
+                                                    ? 'border-amber-400 bg-amber-50/40 hover:border-amber-500'
                                                     : isFieldVisibleError('foto_cedula', 5)
                                                         ? 'border-rose-400 bg-rose-50/30'
-                                                        : 'border-slate-300 bg-white'
+                                                        : 'border-slate-300 bg-white hover:border-blue-400'
                                                 }`}
                                         >
                                             {data.foto_cedula && !fotoCedulaLoadError && fotoCedulaPreviewUrl ? (
@@ -3550,15 +3554,15 @@ export default function RegistroPastor({
                                                 <div className="text-amber-700 text-xs flex flex-col items-center p-3 text-center space-y-1">
                                                     <AlertCircle className="w-8 h-8 text-amber-500 mb-1" />
                                                     <span className="font-bold">Cédula no disponible</span>
-                                                    <span className="text-[10px] text-slate-500">Capture o suba una nueva cédula</span>
+                                                    <span className="text-[10px] text-slate-500">Toque aquí para seleccionar cédula</span>
                                                 </div>
                                             ) : (
                                                 <div className="text-slate-400 text-xs flex flex-col items-center p-3 text-center space-y-1">
                                                     <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
                                                         <IdCard className="w-6 h-6 opacity-60" />
                                                     </div>
-                                                    <span className="font-semibold text-slate-500">Sin Cédula</span>
-                                                    <span className="text-[10px] text-slate-400">Debe ser nítida y legible</span>
+                                                    <span className="font-semibold text-slate-600">Toque para seleccionar</span>
+                                                    <span className="text-[10px] text-slate-400">Desde galería o archivo</span>
                                                 </div>
                                             )}
                                         </div>
@@ -3567,22 +3571,22 @@ export default function RegistroPastor({
                                         <div className="flex flex-wrap items-center gap-2 w-full justify-center">
                                             <Button
                                                 type="button"
-                                                onClick={() => handleOpenBiometricCamera('foto_cedula', 'environment')}
+                                                onClick={() => fotoCedulaInputRef.current?.click()}
                                                 className="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-2xl shadow-md h-11 px-4 gap-2 flex-1 transition-transform active:scale-98"
                                             >
-                                                <Camera className="w-4 h-4 text-blue-200" />
-                                                Escanear Cédula
+                                                <Upload className="w-4 h-4 text-blue-200" />
+                                                {data.foto_cedula ? 'Cambiar Cédula' : 'Seleccionar Cédula'}
                                             </Button>
 
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                onClick={() => fotoCedulaInputRef.current?.click()}
+                                                onClick={() => handleOpenBiometricCamera('foto_cedula', 'environment')}
                                                 className="border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-2xl h-11 px-3 gap-1.5"
-                                                title="Subir desde galería o archivo"
+                                                title="Usar cámara web en vivo"
                                             >
-                                                <Upload className="w-4 h-4 text-slate-500" />
-                                                Subir
+                                                <Camera className="w-4 h-4 text-slate-500" />
+                                                Cámara
                                             </Button>
 
                                             {data.foto_cedula && (
