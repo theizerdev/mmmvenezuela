@@ -72,12 +72,25 @@ createInertiaApp({
 // This will set light / dark mode on load...
 initializeTheme();
 
-// Register PWA service worker (Kiosko offline support)
+// Register PWA service worker only on Kiosko routes, unregister zombie service workers on other routes
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker
-            .register('/sw.js', { scope: '/' })
-            .then((r) => console.info('[PWA] Service Worker registrado:', r.scope))
-            .catch((e) => console.warn('[PWA] SW no disponible en dev:', e));
-    });
+    if (window.location.pathname.startsWith('/admin/reloj-checador/kiosko')) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker
+                .register('/build/sw.js', { scope: '/admin/reloj-checador/kiosko' })
+                .then((r) => console.info('[PWA] Service Worker registrado:', r.scope))
+                .catch((e) => console.warn('[PWA] SW no disponible:', e));
+        });
+    } else {
+        // En rutas públicas (como /registro) desregistrar service workers previos para evitar que sirvan JS obsoleto
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (const registration of registrations) {
+                    registration.unregister().then(() => {
+                        console.info('[PWA] Service worker desregistrado en ruta pública.');
+                    });
+                }
+            });
+        });
+    }
 }

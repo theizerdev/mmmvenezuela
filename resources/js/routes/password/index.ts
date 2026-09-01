@@ -1,5 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 import confirmD7e05f from './confirm'
+import change from './change'
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::request
 * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
@@ -632,6 +633,7 @@ const password = {
     sendOtp: Object.assign(sendOtp, sendOtp),
     verifyOtp: Object.assign(verifyOtp, verifyOtp),
     otpReset: Object.assign(otpReset, otpReset),
+    change: Object.assign(change, change),
 }
 
 export default password

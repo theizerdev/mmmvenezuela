@@ -1,4 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
+import blacklist from './blacklist'
+import messages4ba6e9 from './messages'
+import templates from './templates'
+import broadcast from './broadcast'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
 * @see app/Http/Controllers/Admin/IntegrationController.php:623
@@ -79,6 +83,87 @@ indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 })
 
 index.form = indexForm
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::docs
+* @see app/Http/Controllers/Admin/IntegrationController.php:600
+* @route '/admin/integrations/whatsapp/docs'
+*/
+export const docs = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: docs.url(options),
+    method: 'get',
+})
+
+docs.definition = {
+    methods: ["get","head"],
+    url: '/admin/integrations/whatsapp/docs',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::docs
+* @see app/Http/Controllers/Admin/IntegrationController.php:600
+* @route '/admin/integrations/whatsapp/docs'
+*/
+docs.url = (options?: RouteQueryOptions) => {
+    return docs.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::docs
+* @see app/Http/Controllers/Admin/IntegrationController.php:600
+* @route '/admin/integrations/whatsapp/docs'
+*/
+docs.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: docs.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::docs
+* @see app/Http/Controllers/Admin/IntegrationController.php:600
+* @route '/admin/integrations/whatsapp/docs'
+*/
+docs.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: docs.url(options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::docs
+* @see app/Http/Controllers/Admin/IntegrationController.php:600
+* @route '/admin/integrations/whatsapp/docs'
+*/
+const docsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: docs.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::docs
+* @see app/Http/Controllers/Admin/IntegrationController.php:600
+* @route '/admin/integrations/whatsapp/docs'
+*/
+docsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: docs.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::docs
+* @see app/Http/Controllers/Admin/IntegrationController.php:600
+* @route '/admin/integrations/whatsapp/docs'
+*/
+docsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: docs.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+docs.form = docsForm
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::status
@@ -162,6 +247,87 @@ statusForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => (
 status.form = statusForm
 
 /**
+* @see \App\Http\Controllers\Admin\IntegrationController::queueStats
+* @see app/Http/Controllers/Admin/IntegrationController.php:914
+* @route '/admin/integrations/whatsapp/queue-stats'
+*/
+export const queueStats = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: queueStats.url(options),
+    method: 'get',
+})
+
+queueStats.definition = {
+    methods: ["get","head"],
+    url: '/admin/integrations/whatsapp/queue-stats',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::queueStats
+* @see app/Http/Controllers/Admin/IntegrationController.php:914
+* @route '/admin/integrations/whatsapp/queue-stats'
+*/
+queueStats.url = (options?: RouteQueryOptions) => {
+    return queueStats.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::queueStats
+* @see app/Http/Controllers/Admin/IntegrationController.php:914
+* @route '/admin/integrations/whatsapp/queue-stats'
+*/
+queueStats.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: queueStats.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::queueStats
+* @see app/Http/Controllers/Admin/IntegrationController.php:914
+* @route '/admin/integrations/whatsapp/queue-stats'
+*/
+queueStats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: queueStats.url(options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::queueStats
+* @see app/Http/Controllers/Admin/IntegrationController.php:914
+* @route '/admin/integrations/whatsapp/queue-stats'
+*/
+const queueStatsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: queueStats.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::queueStats
+* @see app/Http/Controllers/Admin/IntegrationController.php:914
+* @route '/admin/integrations/whatsapp/queue-stats'
+*/
+queueStatsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: queueStats.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::queueStats
+* @see app/Http/Controllers/Admin/IntegrationController.php:914
+* @route '/admin/integrations/whatsapp/queue-stats'
+*/
+queueStatsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: queueStats.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+queueStats.form = queueStatsForm
+
+/**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
 * @see app/Http/Controllers/Admin/IntegrationController.php:712
 * @route '/admin/integrations/whatsapp/update'
@@ -226,6 +392,62 @@ updateForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => (
 })
 
 update.form = updateForm
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::antiban
+* @see app/Http/Controllers/Admin/IntegrationController.php:988
+* @route '/admin/integrations/whatsapp/antiban'
+*/
+export const antiban = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: antiban.url(options),
+    method: 'post',
+})
+
+antiban.definition = {
+    methods: ["post"],
+    url: '/admin/integrations/whatsapp/antiban',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::antiban
+* @see app/Http/Controllers/Admin/IntegrationController.php:988
+* @route '/admin/integrations/whatsapp/antiban'
+*/
+antiban.url = (options?: RouteQueryOptions) => {
+    return antiban.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::antiban
+* @see app/Http/Controllers/Admin/IntegrationController.php:988
+* @route '/admin/integrations/whatsapp/antiban'
+*/
+antiban.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: antiban.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::antiban
+* @see app/Http/Controllers/Admin/IntegrationController.php:988
+* @route '/admin/integrations/whatsapp/antiban'
+*/
+const antibanForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: antiban.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::antiban
+* @see app/Http/Controllers/Admin/IntegrationController.php:988
+* @route '/admin/integrations/whatsapp/antiban'
+*/
+antibanForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: antiban.url(options),
+    method: 'post',
+})
+
+antiban.form = antibanForm
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::generateToken
@@ -563,16 +785,300 @@ sendMessageForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'
 
 sendMessage.form = sendMessageForm
 
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::checkNumber
+* @see app/Http/Controllers/Admin/IntegrationController.php:934
+* @route '/admin/integrations/whatsapp/check-number'
+*/
+export const checkNumber = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: checkNumber.url(options),
+    method: 'post',
+})
+
+checkNumber.definition = {
+    methods: ["post"],
+    url: '/admin/integrations/whatsapp/check-number',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::checkNumber
+* @see app/Http/Controllers/Admin/IntegrationController.php:934
+* @route '/admin/integrations/whatsapp/check-number'
+*/
+checkNumber.url = (options?: RouteQueryOptions) => {
+    return checkNumber.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::checkNumber
+* @see app/Http/Controllers/Admin/IntegrationController.php:934
+* @route '/admin/integrations/whatsapp/check-number'
+*/
+checkNumber.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: checkNumber.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::checkNumber
+* @see app/Http/Controllers/Admin/IntegrationController.php:934
+* @route '/admin/integrations/whatsapp/check-number'
+*/
+const checkNumberForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: checkNumber.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::checkNumber
+* @see app/Http/Controllers/Admin/IntegrationController.php:934
+* @route '/admin/integrations/whatsapp/check-number'
+*/
+checkNumberForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: checkNumber.url(options),
+    method: 'post',
+})
+
+checkNumber.form = checkNumberForm
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::previewSpintax
+* @see app/Http/Controllers/Admin/IntegrationController.php:958
+* @route '/admin/integrations/whatsapp/preview-spintax'
+*/
+export const previewSpintax = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: previewSpintax.url(options),
+    method: 'post',
+})
+
+previewSpintax.definition = {
+    methods: ["post"],
+    url: '/admin/integrations/whatsapp/preview-spintax',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::previewSpintax
+* @see app/Http/Controllers/Admin/IntegrationController.php:958
+* @route '/admin/integrations/whatsapp/preview-spintax'
+*/
+previewSpintax.url = (options?: RouteQueryOptions) => {
+    return previewSpintax.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::previewSpintax
+* @see app/Http/Controllers/Admin/IntegrationController.php:958
+* @route '/admin/integrations/whatsapp/preview-spintax'
+*/
+previewSpintax.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: previewSpintax.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::previewSpintax
+* @see app/Http/Controllers/Admin/IntegrationController.php:958
+* @route '/admin/integrations/whatsapp/preview-spintax'
+*/
+const previewSpintaxForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: previewSpintax.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::previewSpintax
+* @see app/Http/Controllers/Admin/IntegrationController.php:958
+* @route '/admin/integrations/whatsapp/preview-spintax'
+*/
+previewSpintaxForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: previewSpintax.url(options),
+    method: 'post',
+})
+
+previewSpintax.form = previewSpintaxForm
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::diagnostic
+* @see app/Http/Controllers/Admin/IntegrationController.php:1266
+* @route '/admin/integrations/whatsapp/diagnostic'
+*/
+export const diagnostic = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: diagnostic.url(options),
+    method: 'get',
+})
+
+diagnostic.definition = {
+    methods: ["get","head"],
+    url: '/admin/integrations/whatsapp/diagnostic',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::diagnostic
+* @see app/Http/Controllers/Admin/IntegrationController.php:1266
+* @route '/admin/integrations/whatsapp/diagnostic'
+*/
+diagnostic.url = (options?: RouteQueryOptions) => {
+    return diagnostic.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::diagnostic
+* @see app/Http/Controllers/Admin/IntegrationController.php:1266
+* @route '/admin/integrations/whatsapp/diagnostic'
+*/
+diagnostic.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: diagnostic.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::diagnostic
+* @see app/Http/Controllers/Admin/IntegrationController.php:1266
+* @route '/admin/integrations/whatsapp/diagnostic'
+*/
+diagnostic.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: diagnostic.url(options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::diagnostic
+* @see app/Http/Controllers/Admin/IntegrationController.php:1266
+* @route '/admin/integrations/whatsapp/diagnostic'
+*/
+const diagnosticForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: diagnostic.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::diagnostic
+* @see app/Http/Controllers/Admin/IntegrationController.php:1266
+* @route '/admin/integrations/whatsapp/diagnostic'
+*/
+diagnosticForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: diagnostic.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::diagnostic
+* @see app/Http/Controllers/Admin/IntegrationController.php:1266
+* @route '/admin/integrations/whatsapp/diagnostic'
+*/
+diagnosticForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: diagnostic.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+diagnostic.form = diagnosticForm
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::messages
+* @see app/Http/Controllers/Admin/IntegrationController.php:1302
+* @route '/admin/integrations/whatsapp/messages'
+*/
+export const messages = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: messages.url(options),
+    method: 'get',
+})
+
+messages.definition = {
+    methods: ["get","head"],
+    url: '/admin/integrations/whatsapp/messages',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::messages
+* @see app/Http/Controllers/Admin/IntegrationController.php:1302
+* @route '/admin/integrations/whatsapp/messages'
+*/
+messages.url = (options?: RouteQueryOptions) => {
+    return messages.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::messages
+* @see app/Http/Controllers/Admin/IntegrationController.php:1302
+* @route '/admin/integrations/whatsapp/messages'
+*/
+messages.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: messages.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::messages
+* @see app/Http/Controllers/Admin/IntegrationController.php:1302
+* @route '/admin/integrations/whatsapp/messages'
+*/
+messages.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: messages.url(options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::messages
+* @see app/Http/Controllers/Admin/IntegrationController.php:1302
+* @route '/admin/integrations/whatsapp/messages'
+*/
+const messagesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: messages.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::messages
+* @see app/Http/Controllers/Admin/IntegrationController.php:1302
+* @route '/admin/integrations/whatsapp/messages'
+*/
+messagesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: messages.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\IntegrationController::messages
+* @see app/Http/Controllers/Admin/IntegrationController.php:1302
+* @route '/admin/integrations/whatsapp/messages'
+*/
+messagesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: messages.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+messages.form = messagesForm
+
 const whatsapp = {
     index: Object.assign(index, index),
+    docs: Object.assign(docs, docs),
     status: Object.assign(status, status),
+    queueStats: Object.assign(queueStats, queueStats),
     update: Object.assign(update, update),
+    antiban: Object.assign(antiban, antiban),
     generateToken: Object.assign(generateToken, generateToken),
     sync: Object.assign(sync, sync),
     connect: Object.assign(connect, connect),
     disconnect: Object.assign(disconnect, disconnect),
     reconnect: Object.assign(reconnect, reconnect),
     sendMessage: Object.assign(sendMessage, sendMessage),
+    checkNumber: Object.assign(checkNumber, checkNumber),
+    previewSpintax: Object.assign(previewSpintax, previewSpintax),
+    blacklist: Object.assign(blacklist, blacklist),
+    diagnostic: Object.assign(diagnostic, diagnostic),
+    messages: Object.assign(messages, messages4ba6e9),
+    templates: Object.assign(templates, templates),
+    broadcast: Object.assign(broadcast, broadcast),
 }
 
 export default whatsapp

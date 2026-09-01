@@ -1,6 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 import mapbox from './mapbox'
 import googleMaps from './google-maps'
+import googleSmtp from './google-smtp'
+import mailgun from './mailgun'
+import mailpit from './mailpit'
 import controlAcceso from './control-acceso'
 import whatsapp from './whatsapp'
 import validaciones from './validaciones'
@@ -90,6 +93,9 @@ const integrations = {
     index: Object.assign(index, index),
     mapbox: Object.assign(mapbox, mapbox),
     googleMaps: Object.assign(googleMaps, googleMaps),
+    googleSmtp: Object.assign(googleSmtp, googleSmtp),
+    mailgun: Object.assign(mailgun, mailgun),
+    mailpit: Object.assign(mailpit, mailpit),
     controlAcceso: Object.assign(controlAcceso, controlAcceso),
     whatsapp: Object.assign(whatsapp, whatsapp),
     validaciones: Object.assign(validaciones, validaciones),
