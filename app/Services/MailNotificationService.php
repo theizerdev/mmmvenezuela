@@ -67,6 +67,8 @@ class MailNotificationService
             $footerDataUri = url('/image/footer_correo.jpeg');
         }
 
+        $headerImageUrl = 'https://mmmvenezuela.org/images/mails/banner-correo-mmmvenezuela.png';
+
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
             'email' => $user->email,
@@ -78,6 +80,7 @@ class MailNotificationService
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => $logoUrl,
+            'headerImageUrl' => $headerImageUrl,
             'cocogooseB64' => $cocogooseB64,
             'aribauB64' => $aribauB64,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
@@ -137,6 +140,8 @@ class MailNotificationService
             $footerDataUri = url('/image/footer_correo.jpeg');
         }
 
+        $headerImageUrl = 'https://mmmvenezuela.org/images/mails/footer_correo.png';
+
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
             'email' => $user->email,
@@ -149,6 +154,7 @@ class MailNotificationService
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => $logoUrl,
+            'headerImageUrl' => $headerImageUrl,
             'cocogooseB64' => $cocogooseB64,
             'aribauB64' => $aribauB64,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),

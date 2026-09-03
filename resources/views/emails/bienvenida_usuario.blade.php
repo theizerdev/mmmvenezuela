@@ -50,32 +50,24 @@
                 <!-- Contenedor Estándar 640px Normativa MMM -->
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(26, 55, 134, 0.08); border: 1px solid #e5dfd5;">
                     
-                    <!-- Banner Institucional — Fondo Azul Marino Profundo (igual a imagen de referencia) -->
+                    <!-- Banner Institucional de Cabecera (Imagen Oficial) -->
                     <tr>
-                        <td style="padding: 0; background-color: #1a3786; border-top: 3px solid #1230a0; border-bottom: 2px solid #0f2460;">
+                        <td style="padding: 0; margin: 0; background-color: #1a3786; line-height: 0; font-size: 0;">
                             <!--[if mso]>
-                            <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:640px;">
-                            <v:fill type="solid" color="#1a3786"/>
-                            <v:textbox style="mso-fit-shape-to-text:true" inset="0,0,0,0">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="640">
+                            <tr>
+                            <td width="640" style="line-height:0; font-size:0;">
                             <![endif]-->
-                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <!-- Logo MMM -->
-                                    <td class="banner-logo-td" width="95" style="padding: 16px 10px 16px 20px; vertical-align: middle; text-align: left;">
-                                        <img class="banner-logo-img" src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="76" style="display: block; width: 76px; height: auto; border: 0; outline: none;">
-                                    </td>
-                                    <!-- Bloque de texto institucional en blanco -->
-                                    <td class="banner-text-td" style="padding: 16px 20px 16px 2px; vertical-align: middle; text-align: left;">
-                                        <!-- Línea superior — Denominación (AribauGrotesk) -->
-                                        <div class="banner-text-sub" style="font-family: 'AribauGrotesk', 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 10px; font-weight: 500; color: #ffffff; letter-spacing: 3.55px; text-transform: uppercase; line-height: 1.35; margin: 0 0 3px 0; padding: 0; display: block;">IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA</div>
-                                        <!-- Línea inferior — Organización (Cocogoose) -->
-                                        <div class="banner-text-main" style="font-family: 'Cocogoose', 'Arial Black', Arial, sans-serif; font-size: 21px; font-weight: 700; color: #ffffff; letter-spacing: 0.1px; text-transform: uppercase; line-height: 1.05; white-space: nowrap; margin: 0; padding: 0; display: block;">MOVIMIENTO MISIONERO MUNDIAL</div>
-                                    </td>
-                                </tr>
-                            </table>
+                            <a href="https://mmmvenezuela.org" target="_blank" style="display: block; text-decoration: none; border: 0; outline: none; margin: 0; padding: 0;">
+                                <img src="{{ $headerImageUrl ?? 'https://mmmvenezuela.org/images/mails/footer_correo.png' }}" 
+                                     alt="Movimiento Misionero Mundial Venezuela" 
+                                     width="640" 
+                                     style="display: block; width: 100%; max-width: 640px; height: auto; border: 0; outline: none; margin: 0; padding: 0; -ms-interpolation-mode: bicubic;" />
+                            </a>
                             <!--[if mso]>
-                            </v:textbox>
-                            </v:rect>
+                            </td>
+                            </tr>
+                            </table>
                             <![endif]-->
                         </td>
                     </tr>
