@@ -4,39 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenida al Sistema | Credenciales de acceso</title>
-    <style>
-        @font-face {
-            font-family: 'Cocogoose';
-            src: url('{{ $cocogooseB64 }}') format('opentype'),
-                 url('https://mmmvenezuela.org/templates/mmmvenezuela/fonts/COCOGOOSE.otf') format('opentype');
-            font-weight: 700;
-            font-style: normal;
-        }
-        @font-face {
-            font-family: 'AribauGrotesk';
-            src: url('{{ $aribauB64 }}') format('opentype'),
-                 url('https://mmmvenezuela.org/templates/mmmvenezuela/fonts/AribauGroteskTRIAL-Md.otf') format('opentype');
-            font-weight: 500;
-            font-style: normal;
-        }
-        body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-        img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
-        body { margin: 0; padding: 0; width: 100% !important; background-color: #f1ede5; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #0f172a; }
-        @media only screen and (max-width: 480px) {
-            /* Contenedor general */
-            .container-padding { padding-left: 16px !important; padding-right: 16px !important; }
-            /* Banner: logo — se achica pero se mantiene al lado del texto */
-            .banner-logo-td { padding: 10px 8px 10px 10px !important; width: 50px !important; }
-            .banner-logo-img { width: 46px !important; }
-            /* Banner: texto — se reduce para caber en una línea sin wrap */
-            .banner-text-td { padding: 10px 10px 10px 4px !important; }
-            .banner-text-sub  { font-size: 6.8px !important; letter-spacing: 2.2px !important; white-space: nowrap !important; }
-            .banner-text-main { font-size: 14.5px !important; white-space: nowrap !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
-            /* Footer */
-            .footer-banner-img { width: 100% !important; height: auto !important; display: block !important; }
-        }
-    </style>
+    
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1ede5; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1ede5; padding: 36px 12px;">

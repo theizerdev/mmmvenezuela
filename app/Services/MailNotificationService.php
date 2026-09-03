@@ -48,26 +48,8 @@ class MailNotificationService
         $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
-        $logoUrl = 'https://mmmvenezuela.org/templates/mmmvenezuela/images/LOGO.png';
-
-        $cocogoosePath = public_path('fonts/COCOGOOSE.otf');
-        $cocogooseB64 = file_exists($cocogoosePath)
-            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($cocogoosePath))
-            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/COCOGOOSE.otf';
-
-        $aribauPath = public_path('fonts/AribauGroteskTRIAL-Md.otf');
-        $aribauB64 = file_exists($aribauPath)
-            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($aribauPath))
-            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/AribauGroteskTRIAL-Md.otf';
-
-        $footerPath = public_path('image/footer_correo.jpeg');
-        if (file_exists($footerPath)) {
-            $footerDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($footerPath));
-        } else {
-            $footerDataUri = url('/image/footer_correo.jpeg');
-        }
-
         $headerImageUrl = 'https://mmmvenezuela.org/images/mails/banner-correo-mmmvenezuela.png';
+        $footerImageUrl = 'https://mmmvenezuela.org/images/mails/footer_correo.png';
 
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
@@ -79,12 +61,9 @@ class MailNotificationService
             'telefonoContacto' => $empresa?->telefono ?: '+58 (Oficina Nacional)',
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
-            'logoUrl' => $logoUrl,
             'headerImageUrl' => $headerImageUrl,
-            'cocogooseB64' => $cocogooseB64,
-            'aribauB64' => $aribauB64,
+            'footerImageUrl' => $footerImageUrl,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
-            'footerImageUrl' => $footerDataUri,
         ];
 
         $htmlContent = view('emails.bienvenida_presbitero', $data)->render();
@@ -121,26 +100,8 @@ class MailNotificationService
         $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
-        $logoUrl = 'https://mmmvenezuela.org/templates/mmmvenezuela/images/LOGO.png';
-
-        $cocogoosePath = public_path('fonts/COCOGOOSE.otf');
-        $cocogooseB64 = file_exists($cocogoosePath)
-            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($cocogoosePath))
-            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/COCOGOOSE.otf';
-
-        $aribauPath = public_path('fonts/AribauGroteskTRIAL-Md.otf');
-        $aribauB64 = file_exists($aribauPath)
-            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($aribauPath))
-            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/AribauGroteskTRIAL-Md.otf';
-
-        $footerPath = public_path('image/footer_correo.jpeg');
-        if (file_exists($footerPath)) {
-            $footerDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($footerPath));
-        } else {
-            $footerDataUri = url('/image/footer_correo.jpeg');
-        }
-
         $headerImageUrl = 'https://mmmvenezuela.org/images/mails/banner-correo-mmmvenezuela.png';
+        $footerImageUrl = 'https://mmmvenezuela.org/images/mails/footer_correo.png';
 
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
@@ -153,12 +114,9 @@ class MailNotificationService
             'telefonoContacto' => $empresa?->telefono ?: '+58 (Oficina Nacional)',
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
-            'logoUrl' => $logoUrl,
             'headerImageUrl' => $headerImageUrl,
-            'cocogooseB64' => $cocogooseB64,
-            'aribauB64' => $aribauB64,
+            'footerImageUrl' => $footerImageUrl,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
-            'footerImageUrl' => $footerDataUri,
         ];
 
         $htmlContent = view('emails.bienvenida_usuario', $data)->render();
