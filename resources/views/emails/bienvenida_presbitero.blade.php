@@ -59,7 +59,7 @@
                             <td width="640" style="line-height:0; font-size:0;">
                             <![endif]-->
                             <a href="https://mmmvenezuela.org" target="_blank" style="display: block; text-decoration: none; border: 0; outline: none; margin: 0; padding: 0;">
-                                <img src="{{ $headerImageUrl ?? 'https://mmmvenezuela.org/images/mails/footer_correo.png' }}" 
+                                <img src="{{ 'https://mmmvenezuela.org/images/mails/banner-correo-mmmvenezuela.png' }}" 
                                      alt="Movimiento Misionero Mundial Venezuela" 
                                      width="640" 
                                      style="display: block; width: 100%; max-width: 640px; height: auto; border: 0; outline: none; margin: 0; padding: 0; -ms-interpolation-mode: bicubic;" />
