@@ -48,7 +48,7 @@ class MailNotificationService
         $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
-        $logoUrl = 'https://mmmvenezuela.org/logo.png';
+        $logoUrl = 'https://mmmvenezuela.org/templates/mmmvenezuela/images/LOGO.png';
 
         $cocogooseBoldPath = base_path('cocogoose/Cocogoose-Pro-Bold-trial.ttf');
         $cocogooseBoldB64 = file_exists($cocogooseBoldPath)
