@@ -10,9 +10,9 @@ import validaciones from './validaciones'
 import jaak from './jaak'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
-* @see app/Http/Controllers/Admin/IntegrationController.php:24
-* @route '/admin/integrations'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:24
+ * @route '/admin/integrations'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -25,81 +25,78 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
-* @see app/Http/Controllers/Admin/IntegrationController.php:24
-* @route '/admin/integrations'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:24
+ * @route '/admin/integrations'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
-* @see app/Http/Controllers/Admin/IntegrationController.php:24
-* @route '/admin/integrations'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:24
+ * @route '/admin/integrations'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
-* @see app/Http/Controllers/Admin/IntegrationController.php:24
-* @route '/admin/integrations'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:24
+ * @route '/admin/integrations'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
 })
 
-/**
+    /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
-* @see app/Http/Controllers/Admin/IntegrationController.php:24
-* @route '/admin/integrations'
-*/
-const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-    action: index.url(options),
-    method: 'get',
-})
+ * @see app/Http/Controllers/Admin/IntegrationController.php:24
+ * @route '/admin/integrations'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
 
-/**
+            /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
-* @see app/Http/Controllers/Admin/IntegrationController.php:24
-* @route '/admin/integrations'
-*/
-indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-    action: index.url(options),
-    method: 'get',
-})
-
-/**
+ * @see app/Http/Controllers/Admin/IntegrationController.php:24
+ * @route '/admin/integrations'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
 * @see \App\Http\Controllers\Admin\IntegrationController::index
-* @see app/Http/Controllers/Admin/IntegrationController.php:24
-* @route '/admin/integrations'
-*/
-indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-    action: index.url({
-        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-            _method: 'HEAD',
-            ...(options?.query ?? options?.mergeQuery ?? {}),
-        }
-    }),
-    method: 'get',
-})
-
-index.form = indexForm
-
+ * @see app/Http/Controllers/Admin/IntegrationController.php:24
+ * @route '/admin/integrations'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 const integrations = {
     index: Object.assign(index, index),
-    mapbox: Object.assign(mapbox, mapbox),
-    googleMaps: Object.assign(googleMaps, googleMaps),
-    googleSmtp: Object.assign(googleSmtp, googleSmtp),
-    mailgun: Object.assign(mailgun, mailgun),
-    mailpit: Object.assign(mailpit, mailpit),
-    controlAcceso: Object.assign(controlAcceso, controlAcceso),
-    whatsapp: Object.assign(whatsapp, whatsapp),
-    validaciones: Object.assign(validaciones, validaciones),
-    jaak: Object.assign(jaak, jaak),
+mapbox: Object.assign(mapbox, mapbox),
+googleMaps: Object.assign(googleMaps, googleMaps),
+googleSmtp: Object.assign(googleSmtp, googleSmtp),
+mailgun: Object.assign(mailgun, mailgun),
+mailpit: Object.assign(mailpit, mailpit),
+controlAcceso: Object.assign(controlAcceso, controlAcceso),
+whatsapp: Object.assign(whatsapp, whatsapp),
+validaciones: Object.assign(validaciones, validaciones),
+jaak: Object.assign(jaak, jaak),
 }
 
 export default integrations
