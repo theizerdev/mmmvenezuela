@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Database, Activity, HardDrive, Hash, ShieldAlert, Cpu, RefreshCw, Layers } from 'lucide-react';
+import { Database, Activity, HardDrive, Hash, ShieldAlert, Cpu, RefreshCw, Layers, Download } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslate } from '@/hooks/use-translate';
+import DatabaseExportWizardModal from './partials/DatabaseExportWizardModal';
 
 interface TableInfo {
     name: string;
@@ -65,6 +66,7 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
     const [qpsHistory, setQpsHistory] = useState<number[]>(Array(15).fill(0));
     const [timeLabels, setTimeLabels] = useState<string[]>(Array(15).fill(''));
     const [loading, setLoading] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     const fetchMetrics = async () => {
         try {
@@ -214,16 +216,26 @@ return '0';
                             {__('View SQL engine metrics, live queries, slow logs, and storage optimization.')}
                         </p>
                     </div>
-                    <Button 
-                        onClick={fetchMetrics} 
-                        variant="outline" 
-                        size="sm" 
-                        className="gap-2 shrink-0 self-start md:self-auto"
-                        disabled={loading}
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                        {__('Refrescar')}
-                    </Button>
+                    <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
+                        <Button 
+                            onClick={() => setIsExportModalOpen(true)} 
+                            size="sm" 
+                            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                        >
+                            <Download className="h-4 w-4" />
+                            {__('Exportar Base de Datos')}
+                        </Button>
+                        <Button 
+                            onClick={fetchMetrics} 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                            disabled={loading}
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            {__('Refrescar')}
+                        </Button>
+                    </div>
                 </div>
 
 
@@ -333,9 +345,20 @@ return '0';
                     {/* Tab 1: Tablas y filas */}
                     <TabsContent value="tables" className="mt-4">
                         <Card className="shadow-sm">
-                            <CardHeader>
-                                <CardTitle>{__('Tamaño de Tablas y Almacenamiento')}</CardTitle>
-                                <CardDescription>{__('Listado y volumen físico de datos por cada tabla en la BD.')}</CardDescription>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>{__('Tamaño de Tablas y Almacenamiento')}</CardTitle>
+                                    <CardDescription>{__('Listado y volumen físico de datos por cada tabla en la BD.')}</CardDescription>
+                                </div>
+                                <Button
+                                    onClick={() => setIsExportModalOpen(true)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1.5 text-xs border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400"
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    {__('Exportar')}
+                                </Button>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -443,6 +466,15 @@ return '0';
                         </Card>
                     </TabsContent>
                 </Tabs>
+
+                {/* Modal Wizard de Exportación de Base de Datos */}
+                <DatabaseExportWizardModal
+                    open={isExportModalOpen}
+                    onOpenChange={setIsExportModalOpen}
+                    tables={dbInfo.tables}
+                    totalSizeMb={dbInfo.total_size_mb}
+                    totalRows={dbInfo.total_rows}
+                />
             </div>
         </>
     );

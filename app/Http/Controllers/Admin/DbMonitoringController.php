@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\DatabaseExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class DbMonitoringController extends Controller
@@ -128,5 +130,102 @@ class DbMonitoringController extends Controller
                 ['id' => 1026, 'user' => 'root', 'host' => 'localhost', 'db' => 'larareact', 'command' => 'Query', 'time' => 0, 'state' => 'Init', 'info' => 'show processlist'],
             ],
         ]);
+    }
+
+    /**
+     * Verifica la contraseña del usuario autenticado para autorizar la exportación.
+     */
+    public function verifyPassword(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ], [
+            'password.required' => 'Debe ingresar su contraseña para continuar.',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'valid' => false,
+                'message' => __('La contraseña ingresada es incorrecta. Por favor intente nuevamente.'),
+            ], 422);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'message' => __('Contraseña verificada exitosamente.'),
+        ]);
+    }
+
+    /**
+     * Ejecuta el volcado y descarga del archivo de respaldo de base de datos.
+     */
+    public function export(Request $request, DatabaseExportService $exportService)
+    {
+        $validated = $request->validate([
+            'password' => ['required', 'string'],
+            'tables' => ['nullable', 'array'],
+            'tables.*' => ['string'],
+            'mode' => ['nullable', 'string', 'in:full,structure,data'],
+            'compress' => ['nullable', 'boolean'],
+            'drop_tables' => ['nullable', 'boolean'],
+            'disable_fk' => ['nullable', 'boolean'],
+            'add_comments' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+
+        // Validar contraseña nuevamente por estricta seguridad del endpoint
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'message' => __('No autorizado. La contraseña es incorrecta.'),
+            ], 403);
+        }
+
+        try {
+            $tables = $validated['tables'] ?? [];
+            $mode = $validated['mode'] ?? 'full';
+            $options = [
+                'compress' => filter_var($validated['compress'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'drop_tables' => filter_var($validated['drop_tables'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'disable_fk' => filter_var($validated['disable_fk'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'add_comments' => filter_var($validated['add_comments'] ?? true, FILTER_VALIDATE_BOOLEAN),
+            ];
+
+            $result = $exportService->export($tables, $mode, $options);
+
+            // Registrar actividad
+            if (function_exists('activity')) {
+                try {
+                    activity('database')
+                        ->causedBy($user)
+                        ->withProperties([
+                            'filename' => $result['filename'],
+                            'tables_count' => $result['tables_count'],
+                            'mode' => $mode,
+                            'compressed' => $options['compress'],
+                            'size_bytes' => $result['size_bytes'],
+                        ])
+                        ->log("Exportó la base de datos: {$result['filename']} ({$result['tables_count']} tablas)");
+                } catch (\Throwable $e) {
+                    Log::warning('No se pudo registrar log de actividad en exportación DB: ' . $e->getMessage());
+                }
+            }
+
+            return response()->download($result['path'], $result['filename'], [
+                'Content-Type' => $options['compress'] ? 'application/gzip' : 'application/sql',
+                'Access-Control-Expose-Headers' => 'Content-Disposition',
+            ])->deleteFileAfterSend(true);
+
+        } catch (\Throwable $e) {
+            Log::error('Error exportando base de datos: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => __('Ocurrió un error al generar la exportación: :error', ['error' => $e->getMessage()]),
+            ], 500);
+        }
     }
 }
