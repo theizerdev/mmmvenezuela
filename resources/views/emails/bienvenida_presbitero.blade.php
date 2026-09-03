@@ -36,8 +36,7 @@
             .banner-text-sub  { font-size: 7.5px !important; letter-spacing: 1.55px !important; white-space: nowrap !important; }
             .banner-text-main { font-size: 14px !important; white-space: nowrap !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
             /* Footer */
-            .footer-col { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding-right: 0 !important; margin-bottom: 14px !important; }
-            .footer-logo { margin: 0 auto 10px auto !important; }
+            .footer-banner-img { width: 100% !important; height: auto !important; display: block !important; }
         }
     </style>
 </head>
@@ -174,45 +173,22 @@
                         </td>
                     </tr>
 
-                    <!-- Footer Oficial Firma Web según Manual de Marca (Pág. 105) -->
+                    <!-- Footer Oficial Gráfico Institucional -->
                     <tr>
-                        <td class="container-padding" style="padding: 24px 32px; background: linear-gradient(135deg, #0a2160 0%, #1a3786 60%, #184bb8 100%); text-align: left; border-top: 3px solid #eca100; color: #ffffff;">
-                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <!-- Logo a la izquierda -->
-                                    <td class="footer-col" width="95" style="vertical-align: middle; text-align: left; padding-right: 18px;">
-                                        <img src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="85" class="footer-logo" style="display: block; width: 85px; height: auto; border: 0; outline: none; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));">
-                                    </td>
-                                    <!-- Información de la Oficina Nacional a la derecha -->
-                                    <td class="footer-col" style="vertical-align: middle; text-align: left;">
-                                        <div style=" font-size: 15px; font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0px; text-transform: uppercase; line-height: 1.05; white-space: nowrap;">
-                                            Oficina Nacional
-                                        </div>                                       
-                                        <!-- Datos de contacto oficiales -->
-                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-top: 8px; font-size: 12px; line-height: 1.6;">
-                                            @if(!empty($telefonoContacto))
-                                            <tr>
-                                                <td style="padding: 1px 0; color: #ffffff;">
-                                                    📞 <span style="color: #ffffff; font-weight: 600;">{{ $telefonoContacto }}</span>
-                                                </td>
-                                            </tr>
-                                            @endif
-                                            @if(!empty($emailContacto))
-                                            <tr>
-                                                <td style="padding: 1px 0; color: #ffffff;">
-                                                    ✉️ <a href="mailto:{{ $emailContacto }}" style="color: #ffffff; text-decoration: none; font-weight: 600;">{{ $emailContacto }}</a>
-                                                </td>
-                                            </tr>
-                                            @endif
-                                            <tr>
-                                                <td style="padding: 1px 0; color: #ffffff;">
-                                                    🌐 <a href="https://mmmvenezuela.org" target="_blank" style="color: #93c5fd; text-decoration: none; font-weight: 600;">mmmvenezuela.org</a>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
+                        <td style="padding: 0; margin: 0; background-color: #0a2160; border-top: 3px solid #eca100; line-height: 0; font-size: 0;">
+                            <!--[if mso]>
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="640">
+                            <tr>
+                            <td width="640" style="line-height:0; font-size:0;">
+                            <![endif]-->
+                            <a href="https://mmmvenezuela.org" target="_blank" style="display: block; text-decoration: none; border: 0; outline: none; margin: 0; padding: 0;">
+                                <img src="{{ $footerImageUrl }}" alt="Oficina Nacional - Movimiento Misionero Mundial Venezuela" width="640" class="footer-banner-img" style="display: block; width: 100%; max-width: 640px; height: auto; border: 0; outline: none; margin: 0; padding: 0; -ms-interpolation-mode: bicubic;" />
+                            </a>
+                            <!--[if mso]>
+                            </td>
+                            </tr>
                             </table>
+                            <![endif]-->
                         </td>
                     </tr>
 
