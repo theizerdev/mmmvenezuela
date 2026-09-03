@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Database, Activity, HardDrive, Hash, ShieldAlert, Cpu, RefreshCw, Layers, Download } from 'lucide-react';
+import { Database, Activity, HardDrive, Hash, ShieldAlert, Cpu, RefreshCw, Layers, Download, Upload } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslate } from '@/hooks/use-translate';
 import DatabaseExportWizardModal from './partials/DatabaseExportWizardModal';
+import DatabaseImportWizardModal from './partials/DatabaseImportWizardModal';
 
 interface TableInfo {
     name: string;
@@ -68,6 +69,7 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
     const [timeLabels, setTimeLabels] = useState<string[]>(Array(15).fill(''));
     const [loading, setLoading] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     const refreshTables = async () => {
         try {
@@ -252,6 +254,15 @@ return '0';
                     </div>
                     <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
                         <Button 
+                            onClick={() => setIsImportModalOpen(true)} 
+                            size="sm" 
+                            variant="outline" 
+                            className="gap-2 border-amber-300 hover:border-amber-400 hover:bg-amber-50/50 text-amber-700 dark:border-amber-700 dark:text-amber-400 shadow-sm"
+                        >
+                            <Upload className="h-4 w-4" />
+                            {__('Importar Base de Datos')}
+                        </Button>
+                        <Button 
                             onClick={() => setIsExportModalOpen(true)} 
                             size="sm" 
                             className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
@@ -384,15 +395,26 @@ return '0';
                                     <CardTitle>{__('Tamaño de Tablas y Almacenamiento')}</CardTitle>
                                     <CardDescription>{__('Listado y volumen físico de datos por cada tabla en la BD.')}</CardDescription>
                                 </div>
-                                <Button
-                                    onClick={() => setIsExportModalOpen(true)}
-                                    size="sm"
-                                    variant="outline"
-                                    className="gap-1.5 text-xs border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400"
-                                >
-                                    <Download className="h-3.5 w-3.5" />
-                                    {__('Exportar')}
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        onClick={() => setIsImportModalOpen(true)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs border-amber-200 hover:border-amber-400 hover:bg-amber-50/50 text-amber-700 dark:border-amber-800 dark:text-amber-400"
+                                    >
+                                        <Upload className="h-3.5 w-3.5" />
+                                        {__('Importar')}
+                                    </Button>
+                                    <Button
+                                        onClick={() => setIsExportModalOpen(true)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400"
+                                    >
+                                        <Download className="h-3.5 w-3.5" />
+                                        {__('Exportar')}
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -508,6 +530,16 @@ return '0';
                     tables={currentDbInfo.tables}
                     totalSizeMb={currentDbInfo.total_size_mb}
                     totalRows={currentDbInfo.total_rows}
+                />
+
+                {/* Modal Wizard de Importación de Base de Datos */}
+                <DatabaseImportWizardModal
+                    open={isImportModalOpen}
+                    onOpenChange={setIsImportModalOpen}
+                    onImportSuccess={() => {
+                        refreshTables();
+                        fetchMetrics();
+                    }}
                 />
             </div>
         </>

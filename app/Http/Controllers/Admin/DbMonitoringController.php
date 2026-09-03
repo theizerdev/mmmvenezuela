@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\DatabaseExportService;
+use App\Services\DatabaseImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -273,6 +274,86 @@ class DbMonitoringController extends Controller
 
             return response()->json([
                 'message' => __('Ocurrió un error al generar la exportación: :error', ['error' => $e->getMessage()]),
+            ], 500);
+        }
+    }
+
+    /**
+     * Importa un archivo de respaldo (.sql, .sql.gz, .zip) en la base de datos previa autenticación.
+     */
+    public function import(Request $request, DatabaseImportService $importService)
+    {
+        $user = $request->user();
+
+        // 1. Validar parámetros de entrada
+        $request->validate([
+            'password' => 'required|string',
+            'file' => 'required|file|max:204800', // Máx 200MB
+            'disable_fk' => 'nullable|boolean',
+        ], [
+            'password.required' => 'Debe ingresar su contraseña para confirmar la importación.',
+            'file.required' => 'Debe adjuntar un archivo de respaldo para importar.',
+            'file.max' => 'El archivo supera el límite permitido de 200MB.',
+        ]);
+
+        // 2. Verificar contraseña del usuario autenticado
+        if (!Hash::check($request->input('password'), $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Contraseña incorrecta. La importación fue cancelada por seguridad.',
+            ], 422);
+        }
+
+        $uploadedFile = $request->file('file');
+        $extension = strtolower($uploadedFile->getClientOriginalExtension());
+        $originalName = $uploadedFile->getClientOriginalName();
+
+        // Permitir .sql, .gz, .zip o nombres con .sql.gz
+        if (!in_array($extension, ['sql', 'gz', 'zip']) && !str_ends_with(strtolower($originalName), '.sql.gz')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Formato no soportado. El archivo debe tener extensión .sql, .sql.gz, .gz o .zip.',
+            ], 422);
+        }
+
+        try {
+            // Aumentar tiempo de ejecución para bases de datos pesadas
+            set_time_limit(600);
+            ini_set('memory_limit', '512M');
+
+            $disableFk = $request->boolean('disable_fk', true);
+
+            $result = $importService->import($uploadedFile, [
+                'disable_fk' => $disableFk,
+            ]);
+
+            // Registrar en activity log
+            try {
+                activity('database_monitoring')
+                    ->causedBy($user)
+                    ->withProperties([
+                        'filename' => $result['filename'],
+                        'file_size' => $result['file_size_bytes'],
+                        'queries_count' => $result['queries_count'],
+                        'tables_affected' => $result['tables_affected'],
+                        'duration_seconds' => $result['duration_seconds'],
+                    ])
+                    ->log("Importó la base de datos desde respaldo: {$result['filename']}");
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo registrar log de actividad en importación DB: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Base de datos importada y restaurada exitosamente.',
+                'data' => $result,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error en importación de base de datos: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al importar la base de datos: ' . $e->getMessage(),
             ], 500);
         }
     }

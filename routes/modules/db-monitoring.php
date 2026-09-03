@@ -9,4 +9,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/monitoring/database/metrics', [DbMonitoringController::class, 'getMetrics'])->name('monitoring.database.metrics');
     Route::post('/monitoring/database/verify-password', [DbMonitoringController::class, 'verifyPassword'])->name('monitoring.database.verify-password');
     Route::post('/monitoring/database/export', [DbMonitoringController::class, 'export'])->name('monitoring.database.export');
+    Route::post('/monitoring/database/import', [DbMonitoringController::class, 'import'])->name('monitoring.database.import');
 });

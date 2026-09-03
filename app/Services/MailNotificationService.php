@@ -140,7 +140,7 @@ class MailNotificationService
             $footerDataUri = url('/image/footer_correo.jpeg');
         }
 
-        $headerImageUrl = 'https://mmmvenezuela.org/images/mails/footer_correo.png';
+        $headerImageUrl = 'https://mmmvenezuela.org/images/mails/banner-correo-mmmvenezuela.png';
 
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
