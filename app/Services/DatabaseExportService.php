@@ -249,12 +249,21 @@ class DatabaseExportService
             $rows = DB::select('
                 SELECT table_name AS name 
                 FROM information_schema.TABLES 
-                WHERE table_schema = ? AND table_type = "BASE TABLE"
+                WHERE (table_schema = DATABASE() OR LOWER(table_schema) = LOWER(?))
+                  AND (table_type = "BASE TABLE" OR table_type IS NULL)
                 ORDER BY table_name ASC
             ', [$dbName]);
 
-            foreach ($rows as $r) {
-                $tables[] = $r->name;
+            if (empty($rows)) {
+                $rawTables = DB::select('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
+                foreach ($rawTables as $raw) {
+                    $rawArray = (array) $raw;
+                    $tables[] = reset($rawArray);
+                }
+            } else {
+                foreach ($rows as $r) {
+                    $tables[] = $r->name;
+                }
             }
         } elseif ($driver === 'sqlite') {
             $rows = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name ASC");
