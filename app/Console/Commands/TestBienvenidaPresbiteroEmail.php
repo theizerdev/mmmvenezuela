@@ -45,10 +45,13 @@ class TestBienvenidaPresbiteroEmail extends Command
 
         $mailService = new MailNotificationService($empresa);
 
+        $copyEmail = 'oficina@mmmvenezuela.org';
+        $this->info("Copia del correo (CC) a: {$copyEmail}");
+
         $this->info("Intentando enviar correo...");
         $res = ($tipo === 'usuario')
-            ? $mailService->enviarBienvenidaUsuario($testUser, 'ClaveTemporal123*')
-            : $mailService->enviarBienvenidaPresbitero($testUser, 'ClaveTemporal123*');
+            ? $mailService->enviarBienvenidaUsuario($testUser, 'ClaveTemporal123*', $copyEmail)
+            : $mailService->enviarBienvenidaPresbitero($testUser, 'ClaveTemporal123*', $copyEmail);
 
         if ($res) {
             $this->info('✓ Correo de bienvenida enviado exitosamente.');

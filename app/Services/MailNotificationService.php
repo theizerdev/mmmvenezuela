@@ -26,7 +26,7 @@ class MailNotificationService
     /**
      * Envía correo de bienvenida con credenciales a un usuario Presbítero.
      */
-    public function enviarBienvenidaPresbitero(User $user, ?string $rawPassword = null): bool
+    public function enviarBienvenidaPresbitero(User $user, ?string $rawPassword = null, ?string $ccEmail = null): bool
     {
         if (empty($user->email) || !filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
             Log::warning("No se puede enviar correo de bienvenida: email inválido o vacío para el usuario ID {$user->id}");
@@ -92,13 +92,13 @@ class MailNotificationService
         $htmlContent = view('emails.bienvenida_presbitero', $data)->render();
         $plainTextContent = $this->buildPlainTextContent($data);
 
-        return $this->sendHtmlEmail($user->email, $user->name, $subject, $htmlContent, $plainTextContent, $empresa);
+        return $this->sendHtmlEmail($user->email, $user->name, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
     }
 
     /**
      * Envía correo de bienvenida con credenciales a cualquier usuario del sistema.
      */
-    public function enviarBienvenidaUsuario(User $user, ?string $rawPassword = null): bool
+    public function enviarBienvenidaUsuario(User $user, ?string $rawPassword = null, ?string $ccEmail = null): bool
     {
         if (empty($user->email) || !filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
             Log::warning("No se puede enviar correo de bienvenida: email inválido o vacío para el usuario ID {$user->id}");
@@ -168,7 +168,7 @@ class MailNotificationService
         $htmlContent = view('emails.bienvenida_usuario', $data)->render();
         $plainTextContent = $this->buildPlainTextContentUsuario($data);
 
-        return $this->sendHtmlEmail($user->email, $user->name, $subject, $htmlContent, $plainTextContent, $empresa);
+        return $this->sendHtmlEmail($user->email, $user->name, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
     }
 
     /**
@@ -181,31 +181,32 @@ class MailNotificationService
         string $subject,
         string $htmlContent,
         string $plainTextContent = '',
-        ?Empresa $empresa = null
+        ?Empresa $empresa = null,
+        ?string $ccEmail = null
     ): bool {
         $empresa = $empresa ?: $this->empresa;
 
         // 1. Google SMTP si está activo y tiene credenciales
         if ($empresa && $empresa->google_smtp_active && !empty($empresa->google_smtp_email)) {
             Log::info("Enviando correo vía Google SMTP activo a {$toEmail} con asunto: '{$subject}'");
-            return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+            return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
         }
 
         // 2. Mailgun si está activo y tiene credenciales
         if ($empresa && $empresa->mailgun_active && !empty($empresa->mailgun_domain)) {
             Log::info("Enviando correo vía Mailgun activo a {$toEmail} con asunto: '{$subject}'");
-            return $this->sendViaMailgun($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+            return $this->sendViaMailgun($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
         }
 
         // 3. Mailpit si está activo (entorno local de pruebas cuando ni Google ni Mailgun están activos)
         if ($empresa && $empresa->mailpit_active) {
             Log::info("Enviando correo vía Mailpit activo a {$toEmail} con asunto: '{$subject}'");
-            return $this->sendViaMailpit($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+            return $this->sendViaMailpit($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
         }
 
         // 4. Fallback: Mailer por defecto de Laravel
         Log::info("Enviando correo vía Mailer por defecto a {$toEmail} con asunto: '{$subject}'");
-        return $this->sendViaDefaultMailer($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+        return $this->sendViaDefaultMailer($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
     }
 
     /**
@@ -217,7 +218,8 @@ class MailNotificationService
         string $subject,
         string $htmlContent,
         string $plainTextContent,
-        Empresa $empresa
+        Empresa $empresa,
+        ?string $ccEmail = null
     ): bool {
         try {
             $rawHost = $empresa->mailpit_host ?: '127.0.0.1';
@@ -240,11 +242,15 @@ class MailNotificationService
                 ],
             ]);
 
-            Mail::mailer('mailpit_dynamic')->send([], [], function ($message) use ($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $fromAddress, $fromName) {
+            Mail::mailer('mailpit_dynamic')->send([], [], function ($message) use ($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $fromAddress, $fromName, $ccEmail) {
                 $message->from($fromAddress, $fromName)
                     ->to($toEmail, $toName)
                     ->subject($subject)
                     ->html($htmlContent);
+
+                if (!empty($ccEmail) && strtolower($toEmail) !== strtolower($ccEmail)) {
+                    $message->cc($ccEmail);
+                }
 
                 if (!empty($plainTextContent)) {
                     $message->text($plainTextContent);
@@ -259,7 +265,7 @@ class MailNotificationService
 
             // Fallback a Google SMTP si está configurado
             if ($empresa->google_smtp_active && !empty($empresa->google_smtp_email)) {
-                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
             }
 
             return false;
@@ -275,7 +281,8 @@ class MailNotificationService
         string $subject,
         string $htmlContent,
         string $plainTextContent,
-        Empresa $empresa
+        Empresa $empresa,
+        ?string $ccEmail = null
     ): bool {
         try {
             $host = $empresa->google_smtp_host ?: 'smtp.gmail.com';
@@ -298,11 +305,15 @@ class MailNotificationService
                 ],
             ]);
 
-            Mail::mailer('google_smtp_dynamic')->send([], [], function ($message) use ($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $fromAddress, $fromName) {
+            Mail::mailer('google_smtp_dynamic')->send([], [], function ($message) use ($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $fromAddress, $fromName, $ccEmail) {
                 $message->from($fromAddress, $fromName)
                     ->to($toEmail, $toName)
                     ->subject($subject)
                     ->html($htmlContent);
+
+                if (!empty($ccEmail) && strtolower($toEmail) !== strtolower($ccEmail)) {
+                    $message->cc($ccEmail);
+                }
 
                 if (!empty($plainTextContent)) {
                     $message->text($plainTextContent);
@@ -318,12 +329,12 @@ class MailNotificationService
             // 1. Fallback a Mailgun si está configurado
             if ($empresa->mailgun_active && !empty($empresa->mailgun_domain) && !empty($empresa->mailgun_secret)) {
                 Log::info("Intentando envío de respaldo vía Mailgun a {$toEmail}");
-                return $this->sendViaMailgun($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+                return $this->sendViaMailgun($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
             }
 
             // 2. Fallback al mailer del sistema si es diferente
             if (config('mail.default') !== 'google_smtp_dynamic') {
-                return $this->sendViaDefaultMailer($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+                return $this->sendViaDefaultMailer($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
             }
 
             return false;
@@ -339,7 +350,8 @@ class MailNotificationService
         string $subject,
         string $htmlContent,
         string $plainTextContent,
-        Empresa $empresa
+        Empresa $empresa,
+        ?string $ccEmail = null
     ): bool {
         try {
             $domain = trim($empresa->mailgun_domain);
@@ -353,16 +365,22 @@ class MailNotificationService
 
             $url = "https://{$endpoint}/v3/{$domain}/messages";
 
+            $postData = [
+                'from' => $from,
+                'to' => "{$toName} <{$toEmail}>",
+                'subject' => $subject,
+                'html' => $htmlContent,
+                'text' => $plainTextContent,
+            ];
+
+            if (!empty($ccEmail) && strtolower($toEmail) !== strtolower($ccEmail)) {
+                $postData['cc'] = $ccEmail;
+            }
+
             $response = Http::asForm()
                 ->withBasicAuth('api', $secret)
                 ->timeout(15)
-                ->post($url, [
-                    'from' => $from,
-                    'to' => "{$toName} <{$toEmail}>",
-                    'subject' => $subject,
-                    'html' => $htmlContent,
-                    'text' => $plainTextContent,
-                ]);
+                ->post($url, $postData);
 
             if ($response->successful()) {
                 Log::info("Correo enviado exitosamente vía Mailgun a {$toEmail} ({$subject})");
@@ -375,7 +393,7 @@ class MailNotificationService
             // Fallback a Google SMTP si está configurado
             if (!empty($empresa->google_smtp_email) && !empty($empresa->google_smtp_password)) {
                 Log::info("Intentando envío de respaldo vía Google SMTP a {$toEmail}");
-                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
             }
 
             return false;
@@ -386,7 +404,7 @@ class MailNotificationService
             // Fallback a Google SMTP si está configurado
             if (!empty($empresa->google_smtp_email) && !empty($empresa->google_smtp_password)) {
                 Log::info("Intentando envío de respaldo vía Google SMTP a {$toEmail}");
-                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa, $ccEmail);
             }
 
             return false;
@@ -402,17 +420,22 @@ class MailNotificationService
         string $subject,
         string $htmlContent,
         string $plainTextContent,
-        ?Empresa $empresa = null
+        ?Empresa $empresa = null,
+        ?string $ccEmail = null
     ): bool {
         try {
             $fromAddress = $empresa?->google_smtp_from_address ?: ($empresa?->mailgun_from_address ?: config('mail.from.address'));
             $fromName = $empresa?->razon_social ?: config('mail.from.name');
 
-            Mail::send([], [], function ($message) use ($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $fromAddress, $fromName) {
+            Mail::send([], [], function ($message) use ($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $fromAddress, $fromName, $ccEmail) {
                 $message->from($fromAddress, $fromName)
                     ->to($toEmail, $toName)
                     ->subject($subject)
                     ->html($htmlContent);
+
+                if (!empty($ccEmail) && strtolower($toEmail) !== strtolower($ccEmail)) {
+                    $message->cc($ccEmail);
+                }
 
                 if (!empty($plainTextContent)) {
                     $message->text($plainTextContent);

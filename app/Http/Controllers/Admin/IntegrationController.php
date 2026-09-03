@@ -317,13 +317,18 @@ class IntegrationController extends Controller
             ]);
 
             $companyName = $empresa->razon_social ?: 'MMM Venezuela';
+            $copyEmail = 'oficina@mmmvenezuela.org';
 
             Mail::mailer('google_smtp_test')->raw(
                 "¡Hola!\n\nEste es un mensaje de prueba enviado desde {$companyName} para verificar que la integración de Google SMTP está funcionando correctamente.\n\nFecha y hora: ".now()->translatedFormat('d/m/Y h:i A')."\n\nAtentamente,\nEquipo de {$companyName}",
-                function ($message) use ($recipientEmail, $fromAddress, $fromName, $companyName) {
+                function ($message) use ($recipientEmail, $fromAddress, $fromName, $companyName, $copyEmail) {
                     $message->from($fromAddress, $fromName)
                         ->to($recipientEmail)
                         ->subject("Prueba de Integración Google SMTP - {$companyName}");
+
+                    if (strtolower($recipientEmail) !== strtolower($copyEmail)) {
+                        $message->cc($copyEmail);
+                    }
                 }
             );
 
@@ -444,16 +449,23 @@ class IntegrationController extends Controller
 
             $companyName = $empresa->razon_social ?: 'MMM Venezuela';
             $url = "https://{$endpoint}/v3/{$domain}/messages";
+            $copyEmail = 'oficina@mmmvenezuela.org';
+
+            $postData = [
+                'from' => $from,
+                'to' => $recipientEmail,
+                'subject' => "Prueba de Integración Mailgun - {$companyName}",
+                'text' => "¡Hola!\n\nEste es un mensaje de prueba enviado desde {$companyName} para verificar que la integración de Mailgun API está funcionando correctamente.\n\nFecha y hora: ".now()->translatedFormat('d/m/Y h:i A')."\n\nAtentamente,\nEquipo de {$companyName}",
+            ];
+
+            if (strtolower($recipientEmail) !== strtolower($copyEmail)) {
+                $postData['cc'] = $copyEmail;
+            }
 
             $response = \Illuminate\Support\Facades\Http::asForm()
                 ->withBasicAuth('api', $secret)
                 ->timeout(15)
-                ->post($url, [
-                    'from' => $from,
-                    'to' => $recipientEmail,
-                    'subject' => "Prueba de Integración Mailgun - {$companyName}",
-                    'text' => "¡Hola!\n\nEste es un mensaje de prueba enviado desde {$companyName} para verificar que la integración de Mailgun API está funcionando correctamente.\n\nFecha y hora: ".now()->translatedFormat('d/m/Y h:i A')."\n\nAtentamente,\nEquipo de {$companyName}",
-                ]);
+                ->post($url, $postData);
 
             if ($response->successful()) {
                 return back()->with('notification', [
@@ -591,13 +603,18 @@ class IntegrationController extends Controller
             ]);
 
             $companyName = $empresa->razon_social ?: 'MMM Venezuela';
+            $copyEmail = 'oficina@mmmvenezuela.org';
 
             \Illuminate\Support\Facades\Mail::mailer('mailpit_test')->raw(
                 "¡Hola!\n\nEste es un mensaje de prueba enviado desde {$companyName} para verificar que la integración de Mailpit (SMTP Local) está funcionando correctamente.\n\nFecha y hora: ".now()->translatedFormat('d/m/Y h:i A')."\n\nAtentamente,\nEquipo de {$companyName}",
-                function ($message) use ($recipientEmail, $fromAddress, $fromName, $companyName) {
+                function ($message) use ($recipientEmail, $fromAddress, $fromName, $companyName, $copyEmail) {
                     $message->from($fromAddress, $fromName)
                         ->to($recipientEmail)
                         ->subject("Prueba de Integración Mailpit - {$companyName}");
+
+                    if (strtolower($recipientEmail) !== strtolower($copyEmail)) {
+                        $message->cc($copyEmail);
+                    }
                 }
             );
 
