@@ -355,8 +355,8 @@ class UserController extends Controller
             $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
 
             $enviado = $isPresbitero
-                ? $mailService->enviarBienvenidaPresbitero($user)
-                : $mailService->enviarBienvenidaUsuario($user);
+                ? $mailService->enviarBienvenidaPresbitero($user, null, 'oficina@mmmvenezuela.org')
+                : $mailService->enviarBienvenidaUsuario($user, null, 'oficina@mmmvenezuela.org');
 
             if ($enviado) {
                 return back()->with('notification', [
@@ -438,8 +438,8 @@ class UserController extends Controller
                     $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
 
                     $enviado = $isPresbitero
-                        ? $mailService->enviarBienvenidaPresbitero($user, $rawPassword)
-                        : $mailService->enviarBienvenidaUsuario($user, $rawPassword);
+                        ? $mailService->enviarBienvenidaPresbitero($user, $rawPassword, 'oficina@mmmvenezuela.org')
+                        : $mailService->enviarBienvenidaUsuario($user, $rawPassword, 'oficina@mmmvenezuela.org');
 
                     if ($enviado) {
                         $canalesEnviados[] = 'Correo Electrónico';
@@ -504,9 +504,9 @@ class UserController extends Controller
             $mailService = new MailNotificationService($empresa);
 
             if ($isPresbitero) {
-                $mailService->enviarBienvenidaPresbitero($user, $rawPassword);
+                $mailService->enviarBienvenidaPresbitero($user, $rawPassword, 'oficina@mmmvenezuela.org');
             } else {
-                $mailService->enviarBienvenidaUsuario($user, $rawPassword);
+                $mailService->enviarBienvenidaUsuario($user, $rawPassword, 'oficina@mmmvenezuela.org');
             }
         } catch (\Throwable $e) {
             Log::error('Error al enviar correo de bienvenida a usuario: ' . $e->getMessage(), [
