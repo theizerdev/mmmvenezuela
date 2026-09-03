@@ -197,12 +197,14 @@ class DbMonitoringController extends Controller
         if (!Hash::check($request->password, $user->password)) {
             return response()->json([
                 'valid' => false,
+                'success' => false,
                 'message' => __('La contraseña ingresada es incorrecta. Por favor intente nuevamente.'),
             ], 422);
         }
 
         return response()->json([
             'valid' => true,
+            'success' => true,
             'message' => __('Contraseña verificada exitosamente.'),
         ]);
     }

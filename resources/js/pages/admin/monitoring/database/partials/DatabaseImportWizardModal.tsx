@@ -170,8 +170,9 @@ export default function DatabaseImportWizardModal({
 
             const data = await res.json();
 
-            if (res.ok && data.success) {
+            if (res.ok && (data.success || data.valid)) {
                 setIsPasswordVerified(true);
+                setPasswordError(null);
                 setCurrentStep(4);
                 // Iniciar proceso de importación
                 triggerImport();
