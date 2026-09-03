@@ -1,6 +1,6 @@
 import { Head, useForm, router } from '@inertiajs/react';
 import { IdCard, Save, Wifi, Loader2, ExternalLink } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,47 @@ interface PageProps {
 export default function Validaciones({ jaak_api_key, jaak_environment, jaak_active }: PageProps) {
     const { __ } = useTranslate();
     const [testingConnection, setTestingConnection] = useState(false);
+    const [togglingJaak, setTogglingJaak] = useState(false);
 
     const jaakForm = useForm({
         jaak_api_key: jaak_api_key || '',
         jaak_environment: jaak_environment || 'sandbox',
         jaak_active: jaak_active,
     });
+
+    useEffect(() => {
+        jaakForm.setData('jaak_active', jaak_active);
+    }, [jaak_active]);
+
+    const handleToggleJaak = (checked: boolean) => {
+        jaakForm.setData('jaak_active', checked);
+        setTogglingJaak(true);
+        router.put('/admin/integrations/jaak', {
+            jaak_active: checked,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: checked
+                        ? __('JAAK integration settings updated successfully.')
+                        : __('JAAK integration has been successfully deactivated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                jaakForm.setData('jaak_active', !checked);
+                Swal.fire({
+                    title: __('Error'),
+                    text: __('Failed to update JAAK status.'),
+                    icon: 'error',
+                });
+            },
+            onFinish: () => setTogglingJaak(false),
+        });
+    };
 
     const handleSaveJaak = (e: React.FormEvent) => {
         e.preventDefault();
@@ -102,7 +137,8 @@ export default function Validaciones({ jaak_api_key, jaak_environment, jaak_acti
                                     </div>
                                     <Switch
                                         checked={jaakForm.data.jaak_active}
-                                        onCheckedChange={(checked) => jaakForm.setData('jaak_active', checked)}
+                                        onCheckedChange={handleToggleJaak}
+                                        disabled={togglingJaak || jaakForm.processing}
                                     />
                                 </div>
 
@@ -158,7 +194,7 @@ export default function Validaciones({ jaak_api_key, jaak_environment, jaak_acti
                                     {testingConnection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
                                     {__('Test Connection')}
                                 </Button>
-                                <Button type="submit" disabled={jaakForm.processing || !jaakForm.data.jaak_active} className="gap-2">
+                                <Button type="submit" disabled={jaakForm.processing} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>

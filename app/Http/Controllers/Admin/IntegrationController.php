@@ -134,13 +134,20 @@ class IntegrationController extends Controller
 
         $validated = $request->validate([
             'mapbox_api_key' => 'nullable|string|max:255',
-            'mapbox_active' => 'required|boolean',
+            'mapbox_active' => 'sometimes|required|boolean',
         ]);
 
-        $empresa->update([
-            'mapbox_api_key' => $validated['mapbox_api_key'],
-            'mapbox_active' => $validated['mapbox_active'],
-        ]);
+        $updateData = [];
+        if ($request->has('mapbox_active')) {
+            $updateData['mapbox_active'] = $validated['mapbox_active'];
+        }
+        if ($request->has('mapbox_api_key')) {
+            $updateData['mapbox_api_key'] = $validated['mapbox_api_key'];
+        }
+
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -164,13 +171,20 @@ class IntegrationController extends Controller
 
         $validated = $request->validate([
             'google_maps_api_key' => 'nullable|string|max:255',
-            'google_maps_active' => 'required|boolean',
+            'google_maps_active' => 'sometimes|required|boolean',
         ]);
 
-        $empresa->update([
-            'google_maps_api_key' => $validated['google_maps_api_key'],
-            'google_maps_active' => $validated['google_maps_active'],
-        ]);
+        $updateData = [];
+        if ($request->has('google_maps_active')) {
+            $updateData['google_maps_active'] = $validated['google_maps_active'];
+        }
+        if ($request->has('google_maps_api_key')) {
+            $updateData['google_maps_api_key'] = $validated['google_maps_api_key'];
+        }
+
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -200,24 +214,46 @@ class IntegrationController extends Controller
             'google_smtp_password' => 'nullable|string|max:255',
             'google_smtp_from_address' => 'nullable|email|max:255',
             'google_smtp_from_name' => 'nullable|string|max:255',
-            'google_smtp_active' => 'required|boolean',
+            'google_smtp_active' => 'sometimes|required|boolean',
         ]);
 
-        $updateData = [
-            'google_smtp_host' => $validated['google_smtp_host'] ?: 'smtp.gmail.com',
-            'google_smtp_port' => $validated['google_smtp_port'] ?: 587,
-            'google_smtp_encryption' => $validated['google_smtp_encryption'] ?: 'tls',
-            'google_smtp_email' => $validated['google_smtp_email'],
-            'google_smtp_from_address' => $validated['google_smtp_from_address'],
-            'google_smtp_from_name' => $validated['google_smtp_from_name'],
-            'google_smtp_active' => $validated['google_smtp_active'],
-        ];
+        $updateData = [];
 
-        if (array_key_exists('google_smtp_password', $validated) && $validated['google_smtp_password'] !== null) {
+        if ($request->has('google_smtp_active')) {
+            $updateData['google_smtp_active'] = $validated['google_smtp_active'];
+        }
+
+        if ($request->has('google_smtp_host')) {
+            $updateData['google_smtp_host'] = $validated['google_smtp_host'] ?: 'smtp.gmail.com';
+        }
+
+        if ($request->has('google_smtp_port')) {
+            $updateData['google_smtp_port'] = $validated['google_smtp_port'] ?: 587;
+        }
+
+        if ($request->has('google_smtp_encryption')) {
+            $updateData['google_smtp_encryption'] = $validated['google_smtp_encryption'] ?: 'tls';
+        }
+
+        if ($request->has('google_smtp_email')) {
+            $updateData['google_smtp_email'] = $validated['google_smtp_email'];
+        }
+
+        if ($request->has('google_smtp_from_address')) {
+            $updateData['google_smtp_from_address'] = $validated['google_smtp_from_address'];
+        }
+
+        if ($request->has('google_smtp_from_name')) {
+            $updateData['google_smtp_from_name'] = $validated['google_smtp_from_name'];
+        }
+
+        if (array_key_exists('google_smtp_password', $validated) && $validated['google_smtp_password'] !== null && $validated['google_smtp_password'] !== '') {
             $updateData['google_smtp_password'] = $validated['google_smtp_password'];
         }
 
-        $empresa->update($updateData);
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -319,22 +355,38 @@ class IntegrationController extends Controller
             'mailgun_endpoint' => 'nullable|string|max:100',
             'mailgun_from_address' => 'nullable|email|max:255',
             'mailgun_from_name' => 'nullable|string|max:255',
-            'mailgun_active' => 'required|boolean',
+            'mailgun_active' => 'sometimes|required|boolean',
         ]);
 
-        $updateData = [
-            'mailgun_domain' => $validated['mailgun_domain'] ? trim($validated['mailgun_domain']) : null,
-            'mailgun_endpoint' => $validated['mailgun_endpoint'] ?: 'api.mailgun.net',
-            'mailgun_from_address' => $validated['mailgun_from_address'],
-            'mailgun_from_name' => $validated['mailgun_from_name'],
-            'mailgun_active' => $validated['mailgun_active'],
-        ];
+        $updateData = [];
 
-        if (array_key_exists('mailgun_secret', $validated) && $validated['mailgun_secret'] !== null) {
+        if ($request->has('mailgun_active')) {
+            $updateData['mailgun_active'] = $validated['mailgun_active'];
+        }
+
+        if ($request->has('mailgun_domain')) {
+            $updateData['mailgun_domain'] = $validated['mailgun_domain'] ? trim($validated['mailgun_domain']) : null;
+        }
+
+        if ($request->has('mailgun_endpoint')) {
+            $updateData['mailgun_endpoint'] = $validated['mailgun_endpoint'] ?: 'api.mailgun.net';
+        }
+
+        if ($request->has('mailgun_from_address')) {
+            $updateData['mailgun_from_address'] = $validated['mailgun_from_address'];
+        }
+
+        if ($request->has('mailgun_from_name')) {
+            $updateData['mailgun_from_name'] = $validated['mailgun_from_name'];
+        }
+
+        if (array_key_exists('mailgun_secret', $validated) && $validated['mailgun_secret'] !== null && $validated['mailgun_secret'] !== '') {
             $updateData['mailgun_secret'] = trim($validated['mailgun_secret']);
         }
 
-        $empresa->update($updateData);
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -439,24 +491,42 @@ class IntegrationController extends Controller
             'mailpit_from_address' => 'nullable|email|max:255',
             'mailpit_from_name' => 'nullable|string|max:255',
             'mailpit_web_port' => 'nullable|integer|min:1|max:65535',
-            'mailpit_active' => 'required|boolean',
+            'mailpit_active' => 'sometimes|required|boolean',
         ]);
 
-        $rawHost = $validated['mailpit_host'] ? trim($validated['mailpit_host']) : '127.0.0.1';
-        $cleanHost = preg_replace('#^https?://#i', '', $rawHost);
-        $cleanHost = explode(':', $cleanHost)[0];
-        $cleanHost = rtrim($cleanHost, '/');
+        $updateData = [];
 
-        $updateData = [
-            'mailpit_host' => $cleanHost ?: '127.0.0.1',
-            'mailpit_port' => $validated['mailpit_port'] ?? 1025,
-            'mailpit_from_address' => $validated['mailpit_from_address'] ? trim($validated['mailpit_from_address']) : null,
-            'mailpit_from_name' => $validated['mailpit_from_name'] ? trim($validated['mailpit_from_name']) : null,
-            'mailpit_web_port' => $validated['mailpit_web_port'] ?? 8025,
-            'mailpit_active' => $validated['mailpit_active'],
-        ];
+        if ($request->has('mailpit_active')) {
+            $updateData['mailpit_active'] = $validated['mailpit_active'];
+        }
 
-        $empresa->update($updateData);
+        if ($request->has('mailpit_host')) {
+            $rawHost = $validated['mailpit_host'] ? trim($validated['mailpit_host']) : '127.0.0.1';
+            $cleanHost = preg_replace('#^https?://#i', '', $rawHost);
+            $cleanHost = explode(':', $cleanHost)[0];
+            $cleanHost = rtrim($cleanHost, '/');
+            $updateData['mailpit_host'] = $cleanHost ?: '127.0.0.1';
+        }
+
+        if ($request->has('mailpit_port')) {
+            $updateData['mailpit_port'] = $validated['mailpit_port'] ?? 1025;
+        }
+
+        if ($request->has('mailpit_from_address')) {
+            $updateData['mailpit_from_address'] = $validated['mailpit_from_address'] ? trim($validated['mailpit_from_address']) : null;
+        }
+
+        if ($request->has('mailpit_from_name')) {
+            $updateData['mailpit_from_name'] = $validated['mailpit_from_name'] ? trim($validated['mailpit_from_name']) : null;
+        }
+
+        if ($request->has('mailpit_web_port')) {
+            $updateData['mailpit_web_port'] = $validated['mailpit_web_port'] ?? 8025;
+        }
+
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -549,15 +619,30 @@ class IntegrationController extends Controller
             'control_acceso_base_url' => 'nullable|url|max:255',
             'control_acceso_app_token' => 'nullable|string|max:255',
             'control_acceso_user_token' => 'nullable|string|max:255',
-            'control_acceso_active' => 'required|boolean',
+            'control_acceso_active' => 'sometimes|required|boolean',
         ]);
 
-        $empresa->update([
-            'control_acceso_base_url' => $validated['control_acceso_base_url'] ? rtrim($validated['control_acceso_base_url'], '/') : null,
-            'control_acceso_app_token' => $validated['control_acceso_app_token'],
-            'control_acceso_user_token' => $validated['control_acceso_user_token'],
-            'control_acceso_active' => $validated['control_acceso_active'],
-        ]);
+        $updateData = [];
+
+        if ($request->has('control_acceso_active')) {
+            $updateData['control_acceso_active'] = $validated['control_acceso_active'];
+        }
+
+        if ($request->has('control_acceso_base_url')) {
+            $updateData['control_acceso_base_url'] = $validated['control_acceso_base_url'] ? rtrim($validated['control_acceso_base_url'], '/') : null;
+        }
+
+        if ($request->has('control_acceso_app_token')) {
+            $updateData['control_acceso_app_token'] = $validated['control_acceso_app_token'];
+        }
+
+        if ($request->has('control_acceso_user_token')) {
+            $updateData['control_acceso_user_token'] = $validated['control_acceso_user_token'];
+        }
+
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -1179,15 +1264,27 @@ class IntegrationController extends Controller
 
         $validated = $request->validate([
             'jaak_api_key' => 'nullable|string|max:4000',
-            'jaak_environment' => 'required|in:sandbox,production',
-            'jaak_active' => 'required|boolean',
+            'jaak_environment' => 'sometimes|required|in:sandbox,production',
+            'jaak_active' => 'sometimes|required|boolean',
         ]);
 
-        $empresa->update([
-            'jaak_api_key' => $validated['jaak_api_key'] ? trim($validated['jaak_api_key']) : null,
-            'jaak_environment' => $validated['jaak_environment'],
-            'jaak_active' => $validated['jaak_active'],
-        ]);
+        $updateData = [];
+
+        if ($request->has('jaak_active')) {
+            $updateData['jaak_active'] = $validated['jaak_active'];
+        }
+
+        if ($request->has('jaak_api_key')) {
+            $updateData['jaak_api_key'] = $validated['jaak_api_key'] ? trim($validated['jaak_api_key']) : null;
+        }
+
+        if ($request->has('jaak_environment')) {
+            $updateData['jaak_environment'] = $validated['jaak_environment'];
+        }
+
+        if (! empty($updateData)) {
+            $empresa->update($updateData);
+        }
 
         return back()->with('notification', [
             'type' => 'success',

@@ -1,6 +1,6 @@
 import { Head, useForm, Link, router } from '@inertiajs/react';
 import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink, Wifi, Loader2, Mail, Eye, EyeOff, Send, HelpCircle } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
@@ -83,6 +83,13 @@ export default function Integrations({
     const [showMailgunSecret, setShowMailgunSecret] = useState(false);
     const [testingMailpit, setTestingMailpit] = useState(false);
 
+    const [togglingMapbox, setTogglingMapbox] = useState(false);
+    const [togglingGoogleMaps, setTogglingGoogleMaps] = useState(false);
+    const [togglingSmtp, setTogglingSmtp] = useState(false);
+    const [togglingMailgun, setTogglingMailgun] = useState(false);
+    const [togglingMailpit, setTogglingMailpit] = useState(false);
+    const [togglingControlAcceso, setTogglingControlAcceso] = useState(false);
+
     const mapboxForm = useForm({
         mapbox_api_key: mapbox_api_key || '',
         mapbox_active: mapbox_active,
@@ -128,6 +135,210 @@ export default function Integrations({
         control_acceso_user_token: control_acceso_user_token || '',
         control_acceso_active: control_acceso_active,
     });
+
+    useEffect(() => {
+        mapboxForm.setData('mapbox_active', mapbox_active);
+    }, [mapbox_active]);
+
+    useEffect(() => {
+        googleMapsForm.setData('google_maps_active', google_maps_active);
+    }, [google_maps_active]);
+
+    useEffect(() => {
+        googleSmtpForm.setData('google_smtp_active', google_smtp_active);
+    }, [google_smtp_active]);
+
+    useEffect(() => {
+        mailgunForm.setData('mailgun_active', mailgun_active);
+    }, [mailgun_active]);
+
+    useEffect(() => {
+        mailpitForm.setData('mailpit_active', mailpit_active);
+    }, [mailpit_active]);
+
+    useEffect(() => {
+        controlAccesoForm.setData('control_acceso_active', control_acceso_active);
+    }, [control_acceso_active]);
+
+    const handleToggleMapbox = (checked: boolean) => {
+        mapboxForm.setData('mapbox_active', checked);
+        setTogglingMapbox(true);
+        router.put('/admin/integrations/mapbox', {
+            mapbox_active: checked,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: checked
+                        ? __('Mapbox integration has been successfully enabled.')
+                        : __('Mapbox integration has been successfully deactivated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                mapboxForm.setData('mapbox_active', !checked);
+                Swal.fire({
+                    title: __('Error'),
+                    text: __('Failed to update Mapbox status.'),
+                    icon: 'error',
+                });
+            },
+            onFinish: () => setTogglingMapbox(false),
+        });
+    };
+
+    const handleToggleGoogleMaps = (checked: boolean) => {
+        googleMapsForm.setData('google_maps_active', checked);
+        setTogglingGoogleMaps(true);
+        router.put('/admin/integrations/google-maps', {
+            google_maps_active: checked,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: checked
+                        ? __('Google Maps integration has been successfully enabled.')
+                        : __('Google Maps integration has been successfully deactivated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                googleMapsForm.setData('google_maps_active', !checked);
+                Swal.fire({
+                    title: __('Error'),
+                    text: __('Failed to update Google Maps status.'),
+                    icon: 'error',
+                });
+            },
+            onFinish: () => setTogglingGoogleMaps(false),
+        });
+    };
+
+    const handleToggleGoogleSmtp = (checked: boolean) => {
+        googleSmtpForm.setData('google_smtp_active', checked);
+        setTogglingSmtp(true);
+        router.put('/admin/integrations/google-smtp', {
+            google_smtp_active: checked,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: checked
+                        ? __('Google SMTP settings updated successfully.')
+                        : __('Google SMTP integration has been successfully deactivated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                googleSmtpForm.setData('google_smtp_active', !checked);
+                Swal.fire({
+                    title: __('Error'),
+                    text: __('Failed to update Google SMTP status.'),
+                    icon: 'error',
+                });
+            },
+            onFinish: () => setTogglingSmtp(false),
+        });
+    };
+
+    const handleToggleMailgun = (checked: boolean) => {
+        mailgunForm.setData('mailgun_active', checked);
+        setTogglingMailgun(true);
+        router.put('/admin/integrations/mailgun', {
+            mailgun_active: checked,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: checked
+                        ? __('Mailgun integration settings updated successfully.')
+                        : __('Mailgun integration has been successfully deactivated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                mailgunForm.setData('mailgun_active', !checked);
+                Swal.fire({
+                    title: __('Error'),
+                    text: __('Failed to update Mailgun status.'),
+                    icon: 'error',
+                });
+            },
+            onFinish: () => setTogglingMailgun(false),
+        });
+    };
+
+    const handleToggleMailpit = (checked: boolean) => {
+        mailpitForm.setData('mailpit_active', checked);
+        setTogglingMailpit(true);
+        router.put('/admin/integrations/mailpit', {
+            mailpit_active: checked,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: checked
+                        ? __('Mailpit integration settings updated successfully.')
+                        : __('Mailpit integration has been successfully deactivated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                mailpitForm.setData('mailpit_active', !checked);
+                Swal.fire({
+                    title: __('Error'),
+                    text: __('Failed to update Mailpit status.'),
+                    icon: 'error',
+                });
+            },
+            onFinish: () => setTogglingMailpit(false),
+        });
+    };
+
+    const handleToggleControlAcceso = (checked: boolean) => {
+        controlAccesoForm.setData('control_acceso_active', checked);
+        setTogglingControlAcceso(true);
+        router.put('/admin/integrations/control-acceso', {
+            control_acceso_active: checked,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: checked
+                        ? __('Access Control middleware settings updated successfully.')
+                        : __('Access Control middleware has been successfully deactivated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                controlAccesoForm.setData('control_acceso_active', !checked);
+                Swal.fire({
+                    title: __('Error'),
+                    text: __('Failed to update Access Control middleware status.'),
+                    icon: 'error',
+                });
+            },
+            onFinish: () => setTogglingControlAcceso(false),
+        });
+    };
 
     const handleSaveMapbox = (e: React.FormEvent) => {
         e.preventDefault();
@@ -365,7 +576,8 @@ export default function Integrations({
                                     </div>
                                     <Switch
                                         checked={mapboxForm.data.mapbox_active}
-                                        onCheckedChange={(checked) => mapboxForm.setData('mapbox_active', checked)}
+                                        onCheckedChange={handleToggleMapbox}
+                                        disabled={togglingMapbox || mapboxForm.processing}
                                     />
                                 </div>
 
@@ -400,7 +612,7 @@ export default function Integrations({
                                         {__('View Routes')}
                                     </Button>
                                 </Link>
-                                <Button type="submit" disabled={mapboxForm.processing || !mapboxForm.data.mapbox_active} className="gap-2">
+                                <Button type="submit" disabled={mapboxForm.processing} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
@@ -433,7 +645,8 @@ export default function Integrations({
                                     </div>
                                     <Switch
                                         checked={googleMapsForm.data.google_maps_active}
-                                        onCheckedChange={(checked) => googleMapsForm.setData('google_maps_active', checked)}
+                                        onCheckedChange={handleToggleGoogleMaps}
+                                        disabled={togglingGoogleMaps || googleMapsForm.processing}
                                     />
                                 </div>
 
@@ -462,7 +675,7 @@ export default function Integrations({
                                 </div>
                             </CardContent>
                             <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
-                                <Button type="submit" disabled={googleMapsForm.processing || !googleMapsForm.data.google_maps_active} className="gap-2">
+                                <Button type="submit" disabled={googleMapsForm.processing} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
@@ -495,7 +708,8 @@ export default function Integrations({
                                     </div>
                                     <Switch
                                         checked={googleSmtpForm.data.google_smtp_active}
-                                        onCheckedChange={(checked) => googleSmtpForm.setData('google_smtp_active', checked)}
+                                        onCheckedChange={handleToggleGoogleSmtp}
+                                        disabled={togglingSmtp || googleSmtpForm.processing}
                                     />
                                 </div>
 
@@ -637,7 +851,7 @@ export default function Integrations({
                                     {testingSmtp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                     {__('Test Connection')}
                                 </Button>
-                                <Button type="submit" disabled={googleSmtpForm.processing || !googleSmtpForm.data.google_smtp_active} className="gap-2">
+                                <Button type="submit" disabled={googleSmtpForm.processing} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
@@ -670,7 +884,8 @@ export default function Integrations({
                                     </div>
                                     <Switch
                                         checked={mailgunForm.data.mailgun_active}
-                                        onCheckedChange={(checked) => mailgunForm.setData('mailgun_active', checked)}
+                                        onCheckedChange={handleToggleMailgun}
+                                        disabled={togglingMailgun || mailgunForm.processing}
                                     />
                                 </div>
 
@@ -785,7 +1000,7 @@ export default function Integrations({
                                     {testingMailgun ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                     {__('Test Connection')}
                                 </Button>
-                                <Button type="submit" disabled={mailgunForm.processing || !mailgunForm.data.mailgun_active} className="gap-2">
+                                <Button type="submit" disabled={mailgunForm.processing} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
@@ -818,7 +1033,8 @@ export default function Integrations({
                                     </div>
                                     <Switch
                                         checked={mailpitForm.data.mailpit_active}
-                                        onCheckedChange={(checked) => mailpitForm.setData('mailpit_active', checked)}
+                                        onCheckedChange={handleToggleMailpit}
+                                        disabled={togglingMailpit || mailpitForm.processing}
                                     />
                                 </div>
 
@@ -923,7 +1139,7 @@ export default function Integrations({
                                     {testingMailpit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                     {__('Test Connection')}
                                 </Button>
-                                <Button type="submit" disabled={mailpitForm.processing || !mailpitForm.data.mailpit_active} className="gap-2">
+                                <Button type="submit" disabled={mailpitForm.processing} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
@@ -987,7 +1203,8 @@ export default function Integrations({
                                     </div>
                                     <Switch
                                         checked={controlAccesoForm.data.control_acceso_active}
-                                        onCheckedChange={(checked) => controlAccesoForm.setData('control_acceso_active', checked)}
+                                        onCheckedChange={handleToggleControlAcceso}
+                                        disabled={togglingControlAcceso || controlAccesoForm.processing}
                                     />
                                 </div>
 
@@ -1044,7 +1261,7 @@ export default function Integrations({
                                     {testingConnection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
                                     {__('Test Connection')}
                                 </Button>
-                                <Button type="submit" disabled={controlAccesoForm.processing || !controlAccesoForm.data.control_acceso_active} className="gap-2">
+                                <Button type="submit" disabled={controlAccesoForm.processing} className="gap-2">
                                     <Save className="h-4 w-4" />
                                     {__('Save Changes')}
                                 </Button>
