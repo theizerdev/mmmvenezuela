@@ -9,30 +9,24 @@ use Illuminate\Console\Command;
 
 class TestBienvenidaPresbiteroEmail extends Command
 {
-    protected $signature = 'test:bienvenida-presbitero-email {email? : Correo destinatario de prueba} {--mailpit : Forzar envío a través de Mailpit local}';
-    protected $description = 'Prueba el envío de correo de bienvenida con credenciales para un presbítero';
+    protected $signature = 'test:bienvenida-presbitero-email {email? : Correo destinatario de prueba} {--mailpit : Forzar envío a través de Mailpit local} {--tipo=presbitero : Tipo de bienvenida (presbitero o usuario)}';
+    protected $description = 'Prueba el envío de correo de bienvenida con credenciales (presbítero o usuario general)';
 
     public function handle(): int
     {
-        $presbitero = User::whereHas('roles', function ($q) {
-                $q->whereIn('name', ['Presbitero', 'Presbítero', 'presbitero']);
-            })
-            ->whereNotNull('email')
-            ->first();
+        $tipo = strtolower($this->option('tipo') ?: 'presbitero');
 
-        if (!$presbitero) {
-            $presbitero = User::first();
-        }
+        $user = User::whereNotNull('email')->first();
 
-        if (!$presbitero) {
+        if (!$user) {
             $this->error('No se encontró ningún usuario en la base de datos.');
             return 1;
         }
 
-        $targetEmail = $this->argument('email') ?: $presbitero->email;
-        $this->info("Probando envío de correo de bienvenida a: {$targetEmail}");
+        $targetEmail = $this->argument('email') ?: $user->email;
+        $this->info("Probando envío de correo de bienvenida ({$tipo}) a: {$targetEmail}");
 
-        $testUser = clone $presbitero;
+        $testUser = clone $user;
         $testUser->email = $targetEmail;
 
         $empresa = Empresa::first();
@@ -45,14 +39,16 @@ class TestBienvenidaPresbiteroEmail extends Command
         }
 
         $this->info("Empresa: " . ($empresa?->razon_social ?: 'MMM Venezuela'));
-        $this->info("Mailpit (Local) Activo: " . ($empresa?->mailpit_active ? 'Sí (' . ($empresa->mailpit_host ?: '127.0.0.1') . ':' . ($empresa->mailpit_port ?: 1025) . ')' : 'No'));
         $this->info("Google SMTP Activo: " . ($empresa?->google_smtp_active ? 'Sí (' . $empresa->google_smtp_email . ')' : 'No'));
         $this->info("Mailgun Activo: " . ($empresa?->mailgun_active ? 'Sí (' . $empresa->mailgun_domain . ')' : 'No'));
+        $this->info("Mailpit (Local) Activo: " . ($empresa?->mailpit_active ? 'Sí (' . ($empresa->mailpit_host ?: '127.0.0.1') . ':' . ($empresa->mailpit_port ?: 1025) . ')' : 'No'));
 
         $mailService = new MailNotificationService($empresa);
 
         $this->info("Intentando enviar correo...");
-        $res = $mailService->enviarBienvenidaPresbitero($testUser, 'ClaveTemporal123*');
+        $res = ($tipo === 'usuario')
+            ? $mailService->enviarBienvenidaUsuario($testUser, 'ClaveTemporal123*')
+            : $mailService->enviarBienvenidaPresbitero($testUser, 'ClaveTemporal123*');
 
         if ($res) {
             $this->info('✓ Correo de bienvenida enviado exitosamente.');

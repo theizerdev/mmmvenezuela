@@ -478,6 +478,85 @@ sendWelcomeWhatsApp.post = (args: { user: number | { id: number } } | [user: num
         })
     
     sendWelcomeWhatsApp.form = sendWelcomeWhatsAppForm
-const UserController = { index, store, update, destroy, toggleStatus, sendWelcomeWhatsApp }
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
+ * @see app/Http/Controllers/Admin/UserController.php:334
+ * @route '/admin/usuarios/{user}/send-welcome-email'
+ */
+export const sendWelcomeEmail = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sendWelcomeEmail.url(args, options),
+    method: 'post',
+})
+
+sendWelcomeEmail.definition = {
+    methods: ["post"],
+    url: '/admin/usuarios/{user}/send-welcome-email',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
+ * @see app/Http/Controllers/Admin/UserController.php:334
+ * @route '/admin/usuarios/{user}/send-welcome-email'
+ */
+sendWelcomeEmail.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return sendWelcomeEmail.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
+ * @see app/Http/Controllers/Admin/UserController.php:334
+ * @route '/admin/usuarios/{user}/send-welcome-email'
+ */
+sendWelcomeEmail.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sendWelcomeEmail.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
+ * @see app/Http/Controllers/Admin/UserController.php:334
+ * @route '/admin/usuarios/{user}/send-welcome-email'
+ */
+    const sendWelcomeEmailForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: sendWelcomeEmail.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
+ * @see app/Http/Controllers/Admin/UserController.php:334
+ * @route '/admin/usuarios/{user}/send-welcome-email'
+ */
+        sendWelcomeEmailForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: sendWelcomeEmail.url(args, options),
+            method: 'post',
+        })
+    
+    sendWelcomeEmail.form = sendWelcomeEmailForm
+const UserController = { index, store, update, destroy, toggleStatus, sendWelcomeWhatsApp, sendWelcomeEmail }
 
 export default UserController

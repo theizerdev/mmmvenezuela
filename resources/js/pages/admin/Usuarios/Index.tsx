@@ -18,6 +18,7 @@ import {
     Sparkles,
     Eye,
     EyeOff,
+    Mail,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 
@@ -337,6 +338,14 @@ export default function UsersIndexPage({
         );
     };
 
+    const handleSendWelcomeEmail = (user: User) => {
+        router.post(
+            `/admin/usuarios/${user.id}/send-welcome-email`,
+            {},
+            { preserveScroll: true }
+        );
+    };
+
     const handleDeleteConfirm = () => {
         if (!deletingUser) {
 return;
@@ -505,6 +514,13 @@ return;
                         >
                             <MessageCircle className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             {__('Enviar Bienvenida (WhatsApp)')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => handleSendWelcomeEmail(user)}
+                            className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 dark:text-blue-400 dark:focus:bg-blue-950/30"
+                        >
+                            <Mail className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            {__('Enviar Bienvenida (Correo)')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(user)}>
                             <Pencil className="mr-2 h-4 w-4" />

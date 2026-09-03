@@ -66,7 +66,7 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:267
+ * @see app/Http/Controllers/Admin/IntegrationController.php:271
  * @route '/admin/integrations/google-smtp/test'
  */
 export const test = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -81,7 +81,7 @@ test.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:267
+ * @see app/Http/Controllers/Admin/IntegrationController.php:271
  * @route '/admin/integrations/google-smtp/test'
  */
 test.url = (options?: RouteQueryOptions) => {
@@ -90,7 +90,7 @@ test.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:267
+ * @see app/Http/Controllers/Admin/IntegrationController.php:271
  * @route '/admin/integrations/google-smtp/test'
  */
 test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -100,7 +100,7 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:267
+ * @see app/Http/Controllers/Admin/IntegrationController.php:271
  * @route '/admin/integrations/google-smtp/test'
  */
     const testForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -110,7 +110,7 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
- * @see app/Http/Controllers/Admin/IntegrationController.php:267
+ * @see app/Http/Controllers/Admin/IntegrationController.php:271
  * @route '/admin/integrations/google-smtp/test'
  */
         testForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

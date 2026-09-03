@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsapp
- * @see app/Http/Controllers/Admin/IntegrationController.php:685
+ * @see app/Http/Controllers/Admin/IntegrationController.php:697
  * @route '/docs'
  */
 export const whatsapp = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ whatsapp.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsapp
- * @see app/Http/Controllers/Admin/IntegrationController.php:685
+ * @see app/Http/Controllers/Admin/IntegrationController.php:697
  * @route '/docs'
  */
 whatsapp.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ whatsapp.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsapp
- * @see app/Http/Controllers/Admin/IntegrationController.php:685
+ * @see app/Http/Controllers/Admin/IntegrationController.php:697
  * @route '/docs'
  */
 whatsapp.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ whatsapp.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsapp
- * @see app/Http/Controllers/Admin/IntegrationController.php:685
+ * @see app/Http/Controllers/Admin/IntegrationController.php:697
  * @route '/docs'
  */
 whatsapp.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ whatsapp.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsapp
- * @see app/Http/Controllers/Admin/IntegrationController.php:685
+ * @see app/Http/Controllers/Admin/IntegrationController.php:697
  * @route '/docs'
  */
     const whatsappForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ whatsapp.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsapp
- * @see app/Http/Controllers/Admin/IntegrationController.php:685
+ * @see app/Http/Controllers/Admin/IntegrationController.php:697
  * @route '/docs'
  */
         whatsappForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ whatsapp.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsapp
- * @see app/Http/Controllers/Admin/IntegrationController.php:685
+ * @see app/Http/Controllers/Admin/IntegrationController.php:697
  * @route '/docs'
  */
         whatsappForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

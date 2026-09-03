@@ -65,6 +65,13 @@ class MailNotificationService
             ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseRegularPath))
             : null;
 
+        $footerPath = public_path('image/footer_correo.jpeg');
+        if (file_exists($footerPath)) {
+            $footerDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($footerPath));
+        } else {
+            $footerDataUri = url('/image/footer_correo.jpeg');
+        }
+
         $data = [
             'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
             'email' => $user->email,
@@ -79,6 +86,7 @@ class MailNotificationService
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
             'cocogooseBoldB64' => $cocogooseBoldB64,
             'cocogooseRegularB64' => $cocogooseRegularB64,
+            'footerImageUrl' => $footerDataUri,
         ];
 
         $htmlContent = view('emails.bienvenida_presbitero', $data)->render();
@@ -88,7 +96,84 @@ class MailNotificationService
     }
 
     /**
-     * Envía un correo utilizando el proveedor activo (Mailpit, Google SMTP o Mailgun).
+     * Envía correo de bienvenida con credenciales a cualquier usuario del sistema.
+     */
+    public function enviarBienvenidaUsuario(User $user, ?string $rawPassword = null): bool
+    {
+        if (empty($user->email) || !filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            Log::warning("No se puede enviar correo de bienvenida: email inválido o vacío para el usuario ID {$user->id}");
+            return false;
+        }
+
+        $empresa = $this->empresa ?: ($user->empresa_id ? Empresa::find($user->empresa_id) : Empresa::first());
+
+        $user->loadMissing(['roles', 'sucursal']);
+        $rolesList = $user->roles->pluck('name')->implode(', ') ?: 'Usuario del Sistema';
+
+        $zonasTexto = $user->zona ?: '';
+        if (!empty($user->zona_2)) {
+            $zonasTexto .= ($zonasTexto ? ", " : "") . $user->zona_2;
+        }
+
+        $distritosTexto = $user->distrito ? "Distrito {$user->distrito}" : '';
+        if (!empty($user->distrito_2)) {
+            $distritosTexto .= ($distritosTexto ? ", " : "") . "Distrito {$user->distrito_2}";
+        }
+
+        $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
+        $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
+
+        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
+        if (file_exists($logoPath)) {
+            $logoDataUri = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        } else {
+            $logoDataUri = url('/icons/logo_mmm-a-color-sin-fondo.png');
+        }
+
+        $cocogooseBoldPath = base_path('cocogoose/Cocogoose-Pro-Bold-trial.ttf');
+        $cocogooseBoldB64 = file_exists($cocogooseBoldPath)
+            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseBoldPath))
+            : null;
+
+        $cocogooseRegularPath = base_path('cocogoose/Cocogoose-Pro-Regular-trial.ttf');
+        $cocogooseRegularB64 = file_exists($cocogooseRegularPath)
+            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseRegularPath))
+            : null;
+
+        $footerPath = public_path('image/footer_correo.jpeg');
+        if (file_exists($footerPath)) {
+            $footerDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($footerPath));
+        } else {
+            $footerDataUri = url('/image/footer_correo.jpeg');
+        }
+
+        $data = [
+            'nombre' => mb_convert_case($user->name, MB_CASE_TITLE, 'UTF-8'),
+            'email' => $user->email,
+            'password' => $rawPassword,
+            'rol' => $rolesList,
+            'zonas' => $zonasTexto,
+            'distritos' => $distritosTexto,
+            'loginUrl' => $loginUrl,
+            'telefonoContacto' => $empresa?->telefono ?: '+58 (Oficina Nacional)',
+            'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
+            'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
+            'logoUrl' => $logoDataUri,
+            'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
+            'cocogooseBoldB64' => $cocogooseBoldB64,
+            'cocogooseRegularB64' => $cocogooseRegularB64,
+            'footerImageUrl' => $footerDataUri,
+        ];
+
+        $htmlContent = view('emails.bienvenida_usuario', $data)->render();
+        $plainTextContent = $this->buildPlainTextContentUsuario($data);
+
+        return $this->sendHtmlEmail($user->email, $user->name, $subject, $htmlContent, $plainTextContent, $empresa);
+    }
+
+    /**
+     * Envía un correo utilizando el proveedor que esté activo (Google SMTP o Mailgun).
+     * Si ambos están inactivos, utiliza Mailpit si está activo, o el mailer por defecto.
      */
     public function sendHtmlEmail(
         string $toEmail,
@@ -100,22 +185,26 @@ class MailNotificationService
     ): bool {
         $empresa = $empresa ?: $this->empresa;
 
-        // 1. Mailpit si está activo (ideal para entornos locales de pruebas / Laragon)
-        if ($empresa && $empresa->mailpit_active) {
-            return $this->sendViaMailpit($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
-        }
-
-        // 2. Google SMTP si está activo y configurado
-        if ($empresa && $empresa->google_smtp_active && !empty($empresa->google_smtp_email) && !empty($empresa->google_smtp_password)) {
+        // 1. Google SMTP si está activo y tiene credenciales
+        if ($empresa && $empresa->google_smtp_active && !empty($empresa->google_smtp_email)) {
+            Log::info("Enviando correo vía Google SMTP activo a {$toEmail} con asunto: '{$subject}'");
             return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
         }
 
-        // 3. Mailgun si está activo y configurado
-        if ($empresa && $empresa->mailgun_active && !empty($empresa->mailgun_domain) && !empty($empresa->mailgun_secret)) {
+        // 2. Mailgun si está activo y tiene credenciales
+        if ($empresa && $empresa->mailgun_active && !empty($empresa->mailgun_domain)) {
+            Log::info("Enviando correo vía Mailgun activo a {$toEmail} con asunto: '{$subject}'");
             return $this->sendViaMailgun($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
         }
 
+        // 3. Mailpit si está activo (entorno local de pruebas cuando ni Google ni Mailgun están activos)
+        if ($empresa && $empresa->mailpit_active) {
+            Log::info("Enviando correo vía Mailpit activo a {$toEmail} con asunto: '{$subject}'");
+            return $this->sendViaMailpit($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+        }
+
         // 4. Fallback: Mailer por defecto de Laravel
+        Log::info("Enviando correo vía Mailer por defecto a {$toEmail} con asunto: '{$subject}'");
         return $this->sendViaDefaultMailer($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
     }
 
@@ -282,10 +371,24 @@ class MailNotificationService
 
             $this->lastError = "Mailgun Error ({$response->status()}): " . ($response->json('message') ?? $response->body());
             Log::error("Fallo envío Mailgun a {$toEmail}: " . $response->body());
+
+            // Fallback a Google SMTP si está configurado
+            if (!empty($empresa->google_smtp_email) && !empty($empresa->google_smtp_password)) {
+                Log::info("Intentando envío de respaldo vía Google SMTP a {$toEmail}");
+                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+            }
+
             return false;
         } catch (\Throwable $e) {
             $this->lastError = "Mailgun Exception: " . $e->getMessage();
             Log::error("Error al enviar correo vía Mailgun a {$toEmail}: " . $e->getMessage());
+
+            // Fallback a Google SMTP si está configurado
+            if (!empty($empresa->google_smtp_email) && !empty($empresa->google_smtp_password)) {
+                Log::info("Intentando envío de respaldo vía Google SMTP a {$toEmail}");
+                return $this->sendViaGoogleSmtp($toEmail, $toName, $subject, $htmlContent, $plainTextContent, $empresa);
+            }
+
             return false;
         }
     }
@@ -326,7 +429,7 @@ class MailNotificationService
     }
 
     /**
-     * Construye versión texto plano del correo para clientes que no soportan HTML.
+     * Construye versión texto plano del correo para clientes que no soportan HTML (Presbítero).
      */
     protected function buildPlainTextContent(array $data): string
     {
@@ -354,6 +457,45 @@ Desde su panel administrativo podrá dar seguimiento a las fichas ministeriales 
 
 ⚠️ RECOMENDACIÓN DE SEGURIDAD:
 Esta cuenta es de uso personal e intransferible. Al ingresar por primera vez, el sistema le solicitará cambiar su contraseña obligatoriamente por motivos de seguridad.
+
+Para mayor información o asistencia, comuníquese con la Oficina Nacional al {$data['telefonoContacto']}.
+
+Atentamente,
+Movimiento Misionero Mundial Venezuela
+Oficina Nacional
+TEXT;
+    }
+
+    /**
+     * Construye versión texto plano del correo para clientes que no soportan HTML (Usuario General).
+     */
+    protected function buildPlainTextContentUsuario(array $data): string
+    {
+        $passwordLine = !empty($data['password']) ? "• Contraseña temporal: {$data['password']}\n" : "";
+        $zonasLine = !empty($data['zonas']) ? "• Zona(s): {$data['zonas']}\n" : "";
+        $distritosLine = !empty($data['distritos']) ? "• Distrito(s): {$data['distritos']}\n" : "";
+
+        return <<<TEXT
+IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA
+MOVIMIENTO MISIONERO MUNDIAL
+
+Estimado(a) {$data['nombre']}:
+
+El Movimiento Misionero Mundial Venezuela le informa que se ha creado exitosamente su cuenta de acceso institucional a SAPRCOE (Sistema Automatizado de Registro y Control de Obreros y Extensiones).
+
+📋 ROL ASIGNADO:
+• Rol: {$data['rol']}
+{$zonasLine}{$distritosLine}
+🔐 CREDENCIALES DE ACCESO:
+• Usuario / Correo: {$data['email']}
+{$passwordLine}
+🔗 ENLACE DE ACCESO:
+{$data['loginUrl']}
+
+Desde su panel administrativo podrá acceder a los módulos autorizados y recibir balances y notificaciones oficiales.
+
+⚠️ RECOMENDACIÓN DE SEGURIDAD:
+Esta cuenta es de uso personal e intransferible. Al ingresar por primera vez, le sugerimos cambiar su contraseña temporal por motivos de seguridad.
 
 Para mayor información o asistencia, comuníquese con la Oficina Nacional al {$data['telefonoContacto']}.
 

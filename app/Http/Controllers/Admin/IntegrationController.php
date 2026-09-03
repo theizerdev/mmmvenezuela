@@ -221,6 +221,10 @@ class IntegrationController extends Controller
 
         if ($request->has('google_smtp_active')) {
             $updateData['google_smtp_active'] = $validated['google_smtp_active'];
+            if ($validated['google_smtp_active']) {
+                $updateData['mailgun_active'] = false;
+                $updateData['mailpit_active'] = false;
+            }
         }
 
         if ($request->has('google_smtp_host')) {
@@ -362,6 +366,10 @@ class IntegrationController extends Controller
 
         if ($request->has('mailgun_active')) {
             $updateData['mailgun_active'] = $validated['mailgun_active'];
+            if ($validated['mailgun_active']) {
+                $updateData['google_smtp_active'] = false;
+                $updateData['mailpit_active'] = false;
+            }
         }
 
         if ($request->has('mailgun_domain')) {
@@ -498,6 +506,10 @@ class IntegrationController extends Controller
 
         if ($request->has('mailpit_active')) {
             $updateData['mailpit_active'] = $validated['mailpit_active'];
+            if ($validated['mailpit_active']) {
+                $updateData['google_smtp_active'] = false;
+                $updateData['mailgun_active'] = false;
+            }
         }
 
         if ($request->has('mailpit_host')) {

@@ -329,6 +329,58 @@ class UserController extends Controller
     }
 
     /**
+     * Reenvía el correo de bienvenida institucional a un usuario.
+     */
+    public function sendWelcomeEmail(User $user)
+    {
+        try {
+            $user->loadMissing(['roles', 'empresa', 'sucursal']);
+
+            if (empty($user->email)) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => 'El usuario no tiene una dirección de correo electrónico registrada.',
+                ]);
+            }
+
+            $empresa = $user->empresa ?: ($user->empresa_id ? Empresa::find($user->empresa_id) : Empresa::first());
+            if (! $empresa || (! $empresa->google_smtp_active && ! $empresa->mailgun_active && ! $empresa->mailpit_active)) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => 'No hay ningún servicio de correo (Google SMTP o Mailgun) activo en la configuración.',
+                ]);
+            }
+
+            $mailService = new MailNotificationService($empresa);
+            $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
+
+            $enviado = $isPresbitero
+                ? $mailService->enviarBienvenidaPresbitero($user)
+                : $mailService->enviarBienvenidaUsuario($user);
+
+            if ($enviado) {
+                return back()->with('notification', [
+                    'type' => 'success',
+                    'message' => "Correo de bienvenida enviado exitosamente a {$user->email}.",
+                ]);
+            }
+
+            $errorMsg = $mailService->getLastError() ?: 'No se pudo entregar el correo.';
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => "Ocurrió un error al enviar el correo: {$errorMsg}",
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al enviar correo a usuario {$user->id}: " . $e->getMessage());
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'Ocurrió un error inesperado al enviar el correo de bienvenida.',
+            ]);
+        }
+    }
+
+    /**
      * Envía correo de bienvenida con credenciales al usuario creado.
      */
     private function notificarBienvenidaEmail(User $user, ?string $rawPassword = null): void
@@ -339,11 +391,15 @@ class UserController extends Controller
             }
 
             $user->loadMissing(['roles', 'empresa']);
+            $empresa = $user->empresa ?: ($user->empresa_id ? Empresa::find($user->empresa_id) : Empresa::first());
             $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
 
+            $mailService = new MailNotificationService($empresa);
+
             if ($isPresbitero) {
-                $mailService = new MailNotificationService($user->empresa);
                 $mailService->enviarBienvenidaPresbitero($user, $rawPassword);
+            } else {
+                $mailService->enviarBienvenidaUsuario($user, $rawPassword);
             }
         } catch (\Throwable $e) {
             Log::error('Error al enviar correo de bienvenida a usuario: ' . $e->getMessage(), [
