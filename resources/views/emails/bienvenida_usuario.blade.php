@@ -4,8 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenida al Sistema | Credenciales de acceso</title>
-    <link href="https://fonts.cdnfonts.com/css/cocogoose" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'Cocogoose';
+            src: url('{{ $cocogooseB64 }}') format('opentype'),
+                 url('https://mmmvenezuela.org/templates/mmmvenezuela/fonts/COCOGOOSE.otf') format('opentype');
+            font-weight: 700;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'AribauGrotesk';
+            src: url('{{ $aribauB64 }}') format('opentype'),
+                 url('https://mmmvenezuela.org/templates/mmmvenezuela/fonts/AribauGroteskTRIAL-Md.otf') format('opentype');
+            font-weight: 500;
+            font-style: normal;
+        }
         body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
@@ -14,12 +27,12 @@
             /* Contenedor general */
             .container-padding { padding-left: 16px !important; padding-right: 16px !important; }
             /* Banner: logo — se achica pero se mantiene al lado del texto */
-            .banner-logo-td { padding: 10px 8px 10px 10px !important; width: 54px !important; }
-            .banner-logo-img { width: 50px !important; }
+            .banner-logo-td { padding: 10px 8px 10px 10px !important; width: 50px !important; }
+            .banner-logo-img { width: 46px !important; }
             /* Banner: texto — se reduce para caber en una línea sin wrap */
             .banner-text-td { padding: 10px 10px 10px 4px !important; }
-            .banner-text-sub  { font-size: 7.5px !important; letter-spacing: 1.55px !important; white-space: nowrap !important; }
-            .banner-text-main { font-size: 14px !important; white-space: nowrap !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
+            .banner-text-sub  { font-size: 6.8px !important; letter-spacing: 2.2px !important; white-space: nowrap !important; }
+            .banner-text-main { font-size: 14.5px !important; white-space: nowrap !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
             /* Footer */
             .footer-banner-img { width: 100% !important; height: auto !important; display: block !important; }
         }
@@ -48,15 +61,15 @@
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <!-- Logo MMM -->
-                                    <td class="banner-logo-td" width="100" style="padding: 18px 12px 18px 20px; vertical-align: middle; text-align: left;">
-                                        <img class="banner-logo-img" src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="82" style="display: block; width: 82px; height: auto; border: 0; outline: none;">
+                                    <td class="banner-logo-td" width="95" style="padding: 16px 10px 16px 20px; vertical-align: middle; text-align: left;">
+                                        <img class="banner-logo-img" src="{{ $logoUrl }}" alt="Logo MMM Venezuela" width="76" style="display: block; width: 76px; height: auto; border: 0; outline: none;">
                                     </td>
                                     <!-- Bloque de texto institucional en blanco -->
-                                    <td class="banner-text-td" style="padding: 18px 20px 18px 4px; vertical-align: middle; text-align: left;">
-                                        <!-- Línea superior — Denominación (Cocogoose Regular) -->
-                                        <div class="banner-text-sub" style="font-family: 'Cocogoose', 'Trebuchet MS', Arial, sans-serif; font-size: 10px; font-weight: 400; color: #ffffff; letter-spacing: 3.52px; text-transform: uppercase; line-height: 1.4; margin: 0 0 1px 0; padding: 0; display: block;">IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA</div>
-                                        <!-- Línea inferior — Organización (Cocogoose Bold) -->
-                                        <div class="banner-text-main" style="font-family: 'Cocogoose', Impact, 'Franklin Gothic Heavy', 'Arial Black', Arial, sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0; text-transform: uppercase; line-height: 1.05; white-space: nowrap; margin: 0; padding: 0; display: block;">MOVIMIENTO MISIONERO MUNDIAL</div>
+                                    <td class="banner-text-td" style="padding: 16px 20px 16px 2px; vertical-align: middle; text-align: left;">
+                                        <!-- Línea superior — Denominación (AribauGrotesk) -->
+                                        <div class="banner-text-sub" style="font-family: 'AribauGrotesk', 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 10px; font-weight: 500; color: #ffffff; letter-spacing: 3.55px; text-transform: uppercase; line-height: 1.35; margin: 0 0 3px 0; padding: 0; display: block;">IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA</div>
+                                        <!-- Línea inferior — Organización (Cocogoose) -->
+                                        <div class="banner-text-main" style="font-family: 'Cocogoose', 'Arial Black', Arial, sans-serif; font-size: 21px; font-weight: 700; color: #ffffff; letter-spacing: 0.1px; text-transform: uppercase; line-height: 1.05; white-space: nowrap; margin: 0; padding: 0; display: block;">MOVIMIENTO MISIONERO MUNDIAL</div>
                                     </td>
                                 </tr>
                             </table>

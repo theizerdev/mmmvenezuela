@@ -50,6 +50,16 @@ class MailNotificationService
 
         $logoUrl = 'https://mmmvenezuela.org/templates/mmmvenezuela/images/LOGO.png';
 
+        $cocogoosePath = public_path('fonts/COCOGOOSE.otf');
+        $cocogooseB64 = file_exists($cocogoosePath)
+            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($cocogoosePath))
+            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/COCOGOOSE.otf';
+
+        $aribauPath = public_path('fonts/AribauGroteskTRIAL-Md.otf');
+        $aribauB64 = file_exists($aribauPath)
+            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($aribauPath))
+            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/AribauGroteskTRIAL-Md.otf';
+
         $footerPath = public_path('image/footer_correo.jpeg');
         if (file_exists($footerPath)) {
             $footerDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($footerPath));
@@ -68,6 +78,8 @@ class MailNotificationService
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => $logoUrl,
+            'cocogooseB64' => $cocogooseB64,
+            'aribauB64' => $aribauB64,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
             'footerImageUrl' => $footerDataUri,
         ];
@@ -108,6 +120,16 @@ class MailNotificationService
 
         $logoUrl = 'https://mmmvenezuela.org/templates/mmmvenezuela/images/LOGO.png';
 
+        $cocogoosePath = public_path('fonts/COCOGOOSE.otf');
+        $cocogooseB64 = file_exists($cocogoosePath)
+            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($cocogoosePath))
+            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/COCOGOOSE.otf';
+
+        $aribauPath = public_path('fonts/AribauGroteskTRIAL-Md.otf');
+        $aribauB64 = file_exists($aribauPath)
+            ? 'data:font/opentype;base64,' . base64_encode(file_get_contents($aribauPath))
+            : 'https://mmmvenezuela.org/templates/mmmvenezuela/fonts/AribauGroteskTRIAL-Md.otf';
+
         $footerPath = public_path('image/footer_correo.jpeg');
         if (file_exists($footerPath)) {
             $footerDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($footerPath));
@@ -127,6 +149,8 @@ class MailNotificationService
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => $logoUrl,
+            'cocogooseB64' => $cocogooseB64,
+            'aribauB64' => $aribauB64,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
             'footerImageUrl' => $footerDataUri,
         ];
