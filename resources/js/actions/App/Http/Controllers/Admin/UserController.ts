@@ -557,6 +557,85 @@ sendWelcomeEmail.post = (args: { user: number | { id: number } } | [user: number
         })
     
     sendWelcomeEmail.form = sendWelcomeEmailForm
-const UserController = { index, store, update, destroy, toggleStatus, sendWelcomeWhatsApp, sendWelcomeEmail }
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendCredentials
+ * @see app/Http/Controllers/Admin/UserController.php:386
+ * @route '/admin/usuarios/{user}/send-credentials'
+ */
+export const sendCredentials = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sendCredentials.url(args, options),
+    method: 'post',
+})
+
+sendCredentials.definition = {
+    methods: ["post"],
+    url: '/admin/usuarios/{user}/send-credentials',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendCredentials
+ * @see app/Http/Controllers/Admin/UserController.php:386
+ * @route '/admin/usuarios/{user}/send-credentials'
+ */
+sendCredentials.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return sendCredentials.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\UserController::sendCredentials
+ * @see app/Http/Controllers/Admin/UserController.php:386
+ * @route '/admin/usuarios/{user}/send-credentials'
+ */
+sendCredentials.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sendCredentials.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\UserController::sendCredentials
+ * @see app/Http/Controllers/Admin/UserController.php:386
+ * @route '/admin/usuarios/{user}/send-credentials'
+ */
+    const sendCredentialsForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: sendCredentials.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\UserController::sendCredentials
+ * @see app/Http/Controllers/Admin/UserController.php:386
+ * @route '/admin/usuarios/{user}/send-credentials'
+ */
+        sendCredentialsForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: sendCredentials.url(args, options),
+            method: 'post',
+        })
+    
+    sendCredentials.form = sendCredentialsForm
+const UserController = { index, store, update, destroy, toggleStatus, sendWelcomeWhatsApp, sendWelcomeEmail, sendCredentials }
 
 export default UserController

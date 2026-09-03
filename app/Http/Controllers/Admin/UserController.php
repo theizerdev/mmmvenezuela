@@ -381,6 +381,113 @@ class UserController extends Controller
     }
 
     /**
+     * Envía y/o regenera credenciales de acceso al usuario por Correo y/o WhatsApp.
+     */
+    public function sendCredentials(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'reset_password' => 'required|boolean',
+            'password' => [
+                'nullable',
+                'string',
+                'min:8',
+                'max:12',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&._\-])[A-Za-z\d@$!%*#?&._\-]{8,12}$/',
+                'required_if:reset_password,true,1',
+            ],
+            'send_email' => 'required|boolean',
+            'send_whatsapp' => 'required|boolean',
+        ], [
+            'password.required_if' => 'Debe ingresar o generar una contraseña temporal.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.max' => 'La contraseña no puede superar los 12 caracteres.',
+            'password.regex' => 'La contraseña debe tener entre 8 y 12 caracteres, incluir al menos una mayúscula, una minúscula, un número y un símbolo (@, $, !, %, *, #, ?, &, ., _, -).',
+        ]);
+
+        if (! $validated['send_email'] && ! $validated['send_whatsapp']) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'Debe seleccionar al menos un canal de envío (Correo o WhatsApp).',
+            ]);
+        }
+
+        try {
+            $rawPassword = null;
+
+            if ($validated['reset_password'] && ! empty($validated['password'])) {
+                $rawPassword = $validated['password'];
+                $user->password = Hash::make($rawPassword);
+                $user->must_change_password = true;
+                $user->save();
+            }
+
+            $user->loadMissing(['roles', 'empresa', 'sucursal']);
+            $empresa = $user->empresa ?: ($user->empresa_id ? Empresa::find($user->empresa_id) : Empresa::first());
+
+            $canalesEnviados = [];
+            $errores = [];
+
+            // 1. Envío por Correo Electrónico
+            if ($validated['send_email']) {
+                if (empty($user->email)) {
+                    $errores[] = 'El usuario no tiene correo electrónico registrado.';
+                } elseif (! $empresa || (! $empresa->google_smtp_active && ! $empresa->mailgun_active && ! $empresa->mailpit_active)) {
+                    $errores[] = 'No hay ningún servicio de correo activo (Google SMTP o Mailgun).';
+                } else {
+                    $mailService = new MailNotificationService($empresa);
+                    $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
+
+                    $enviado = $isPresbitero
+                        ? $mailService->enviarBienvenidaPresbitero($user, $rawPassword)
+                        : $mailService->enviarBienvenidaUsuario($user, $rawPassword);
+
+                    if ($enviado) {
+                        $canalesEnviados[] = 'Correo Electrónico';
+                    } else {
+                        $errores[] = 'Fallo en envío de correo: ' . ($mailService->getLastError() ?: 'Error desconocido');
+                    }
+                }
+            }
+
+            // 2. Envío por WhatsApp
+            if ($validated['send_whatsapp']) {
+                if (empty($user->telefono)) {
+                    $errores[] = 'El usuario no tiene número telefónico registrado.';
+                } elseif (! $empresa || ! $empresa->whatsapp_active) {
+                    $errores[] = 'El servicio de WhatsApp se encuentra desactivado.';
+                } else {
+                    $this->notificarBienvenidaWhatsApp($user, $rawPassword);
+                    $canalesEnviados[] = 'WhatsApp';
+                }
+            }
+
+            if (! empty($canalesEnviados)) {
+                $mensaje = 'Credenciales enviadas exitosamente por ' . implode(' y ', $canalesEnviados) . '.';
+                if (! empty($errores)) {
+                    $mensaje .= ' (Nota: ' . implode(' | ', $errores) . ')';
+                }
+
+                return back()->with('notification', [
+                    'type' => 'success',
+                    'message' => $mensaje,
+                ]);
+            }
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'No se pudo enviar por los canales seleccionados: ' . implode(' | ', $errores),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("Error en sendCredentials para usuario {$user->id}: " . $e->getMessage());
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'Ocurrió un error inesperado al procesar las credenciales.',
+            ]);
+        }
+    }
+
+    /**
      * Envía correo de bienvenida con credenciales al usuario creado.
      */
     private function notificarBienvenidaEmail(User $user, ?string $rawPassword = null): void

@@ -11,4 +11,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/usuarios/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle-status');
     Route::post('/usuarios/{user}/send-welcome-whatsapp', [UserController::class, 'sendWelcomeWhatsApp'])->name('usuarios.send-welcome-whatsapp');
     Route::post('/usuarios/{user}/send-welcome-email', [UserController::class, 'sendWelcomeEmail'])->name('usuarios.send-welcome-email');
+    Route::post('/usuarios/{user}/send-credentials', [UserController::class, 'sendCredentials'])->name('usuarios.send-credentials');
 });

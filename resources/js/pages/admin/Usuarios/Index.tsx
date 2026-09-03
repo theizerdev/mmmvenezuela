@@ -188,6 +188,17 @@ export default function UsersIndexPage({
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
     const [isTableLoading, setIsTableLoading] = useState(false);
 
+    // Estados para modal de Envío/Regeneración de Credenciales
+    const [credentialsUser, setCredentialsUser] = useState<User | null>(null);
+    const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
+    const [credentialsResetPassword, setCredentialsResetPassword] = useState(true);
+    const [credentialsPassword, setCredentialsPassword] = useState('');
+    const [showCredentialsPassword, setShowCredentialsPassword] = useState(true);
+    const [credentialsSendEmail, setCredentialsSendEmail] = useState(true);
+    const [credentialsSendWhatsapp, setCredentialsSendWhatsapp] = useState(true);
+    const [isSendingCredentials, setIsSendingCredentials] = useState(false);
+    const [copiedPassword, setCopiedPassword] = useState(false);
+
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
@@ -343,6 +354,64 @@ export default function UsersIndexPage({
             `/admin/usuarios/${user.id}/send-welcome-email`,
             {},
             { preserveScroll: true }
+        );
+    };
+
+    const handleOpenCredentialsModal = (user: User) => {
+        setCredentialsUser(user);
+        const autoPass = generateStrongPassword(10);
+        setCredentialsPassword(autoPass);
+        setCredentialsResetPassword(true);
+        setShowCredentialsPassword(true);
+        setCredentialsSendEmail(Boolean(user.email));
+        setCredentialsSendWhatsapp(Boolean(user.telefono));
+        setCopiedPassword(false);
+        setIsCredentialsModalOpen(true);
+    };
+
+    const handleRegeneratePassword = () => {
+        const autoPass = generateStrongPassword(10);
+        setCredentialsPassword(autoPass);
+        setCopiedPassword(false);
+    };
+
+    const handleCopyPassword = () => {
+        if (!credentialsPassword) return;
+        navigator.clipboard.writeText(credentialsPassword);
+        setCopiedPassword(true);
+        setTimeout(() => setCopiedPassword(false), 2000);
+    };
+
+    const handleSubmitCredentials = () => {
+        if (!credentialsUser) return;
+        if (!credentialsSendEmail && !credentialsSendWhatsapp) {
+            notifyError(__('Debe seleccionar al menos un canal de envío (Correo o WhatsApp).'));
+            return;
+        }
+
+        setIsSendingCredentials(true);
+        router.post(
+            `/admin/usuarios/${credentialsUser.id}/send-credentials`,
+            {
+                reset_password: credentialsResetPassword,
+                password: credentialsResetPassword ? credentialsPassword : null,
+                send_email: credentialsSendEmail,
+                send_whatsapp: credentialsSendWhatsapp,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsCredentialsModalOpen(false);
+                    setCredentialsUser(null);
+                },
+                onError: (errs) => {
+                    const firstMsg = Object.values(errs)[0] as string;
+                    notifyError(firstMsg || __('Error al procesar las credenciales.'));
+                },
+                onFinish: () => {
+                    setIsSendingCredentials(false);
+                },
+            }
         );
     };
 
@@ -508,6 +577,13 @@ return;
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                            onClick={() => handleOpenCredentialsModal(user)}
+                            className="font-medium text-amber-600 focus:text-amber-700 focus:bg-amber-50 dark:text-amber-400 dark:focus:bg-amber-950/30"
+                        >
+                            <KeyRound className="mr-2 h-4 w-4 text-amber-600 dark:text-amber-400" />
+                            {__('Enviar / Restablecer Credenciales')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => handleSendWelcomeWhatsApp(user)}
                             className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 dark:text-emerald-400 dark:focus:bg-emerald-950/30"
@@ -1022,6 +1098,206 @@ return;
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Modal de Envío y Regeneración de Credenciales */}
+            <Dialog open={isCredentialsModalOpen} onOpenChange={(open) => !open && setIsCredentialsModalOpen(false)}>
+                <DialogContent className="max-w-md sm:max-w-lg">
+                    <DialogHeader>
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
+                            <KeyRound className="h-5 w-5" />
+                            <DialogTitle className="text-lg font-bold">
+                                {__('Enviar Credenciales de Acceso')}
+                            </DialogTitle>
+                        </div>
+                        <DialogDescription>
+                            {__('Configure la contraseña temporal y seleccione los canales para notificar al usuario.')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {credentialsUser && (
+                        <div className="space-y-5 py-2">
+                            {/* Tarjeta de información del usuario */}
+                            <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-bold flex items-center justify-center text-sm shrink-0">
+                                    {credentialsUser.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                                        {credentialsUser.name}
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                                        <span>📧 {credentialsUser.email || __('Sin correo')}</span>
+                                        <span>📱 {credentialsUser.telefono || __('Sin teléfono')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Opción 1: Regenerar o Mantener Contraseña */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                        {__('Gestión de Contraseña')}
+                                    </Label>
+                                    <div className="flex items-center gap-2">
+                                        <Switch
+                                            id="reset-pass-switch"
+                                            checked={credentialsResetPassword}
+                                            onCheckedChange={(checked) => setCredentialsResetPassword(checked)}
+                                        />
+                                        <Label htmlFor="reset-pass-switch" className="text-xs cursor-pointer select-none">
+                                            {credentialsResetPassword ? __('Generar nueva contraseña') : __('Mantener actual')}
+                                        </Label>
+                                    </div>
+                                </div>
+
+                                {credentialsResetPassword ? (
+                                    <div className="space-y-2 bg-amber-50/50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200/70 dark:border-amber-900/40">
+                                        <div className="flex items-center justify-between text-xs text-amber-800 dark:text-amber-300 font-medium">
+                                            <span>{__('Contraseña temporal a asignar:')}</span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-2 text-xs text-amber-700 hover:text-amber-800 dark:text-amber-300"
+                                                onClick={handleRegeneratePassword}
+                                            >
+                                                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                                                {__('Regenerar')}
+                                            </Button>
+                                        </div>
+                                        <div className="relative flex items-center">
+                                            <Input
+                                                type={showCredentialsPassword ? 'text' : 'password'}
+                                                value={credentialsPassword}
+                                                onChange={(e) => setCredentialsPassword(e.target.value)}
+                                                className="font-mono text-sm pr-20 bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-800"
+                                            />
+                                            <div className="absolute right-1 flex items-center gap-0.5">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-slate-500 hover:text-slate-700"
+                                                    onClick={() => setShowCredentialsPassword(!showCredentialsPassword)}
+                                                    title={showCredentialsPassword ? __('Ocultar') : __('Ver')}
+                                                >
+                                                    {showCredentialsPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-slate-500 hover:text-slate-700"
+                                                    onClick={handleCopyPassword}
+                                                    title={copiedPassword ? __('¡Copiado!') : __('Copiar')}
+                                                >
+                                                    {copiedPassword ? <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                            {__('Se solicitará al usuario cambiar esta contraseña al iniciar sesión por primera vez.')}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 p-2.5 rounded-md border">
+                                        ℹ️ {__('No se modificará la contraseña actual. El usuario recibirá un recordatorio con su usuario, enlace de acceso e instrucciones.')}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Opción 2: Canales de envío */}
+                            <div className="space-y-2.5 border-t pt-3">
+                                <Label className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                    {__('Canales de Envío')}
+                                </Label>
+                                <div className="space-y-2">
+                                    {/* Canal Correo */}
+                                    <div className={cn(
+                                        "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
+                                        credentialsSendEmail
+                                            ? "border-blue-300 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-950/20"
+                                            : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40",
+                                        !credentialsUser.email && "opacity-50 cursor-not-allowed"
+                                    )}>
+                                        <Checkbox
+                                            id="cred-channel-email"
+                                            checked={credentialsSendEmail}
+                                            disabled={!credentialsUser.email}
+                                            onCheckedChange={(checked) => setCredentialsSendEmail(!!checked)}
+                                            className="mt-0.5"
+                                        />
+                                        <div className="flex-1 cursor-pointer select-none" onClick={() => credentialsUser.email && setCredentialsSendEmail(!credentialsSendEmail)}>
+                                            <Label htmlFor="cred-channel-email" className="font-semibold text-xs flex items-center gap-1.5 cursor-pointer text-blue-700 dark:text-blue-400">
+                                                <Mail className="h-3.5 w-3.5" />
+                                                {__('Correo Electrónico')}
+                                            </Label>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                {credentialsUser.email ? credentialsUser.email : __('El usuario no tiene correo registrado')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Canal WhatsApp */}
+                                    <div className={cn(
+                                        "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
+                                        credentialsSendWhatsapp
+                                            ? "border-emerald-300 bg-emerald-50/40 dark:border-emerald-800 dark:bg-emerald-950/20"
+                                            : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40",
+                                        !credentialsUser.telefono && "opacity-50 cursor-not-allowed"
+                                    )}>
+                                        <Checkbox
+                                            id="cred-channel-whatsapp"
+                                            checked={credentialsSendWhatsapp}
+                                            disabled={!credentialsUser.telefono}
+                                            onCheckedChange={(checked) => setCredentialsSendWhatsapp(!!checked)}
+                                            className="mt-0.5"
+                                        />
+                                        <div className="flex-1 cursor-pointer select-none" onClick={() => credentialsUser.telefono && setCredentialsSendWhatsapp(!credentialsSendWhatsapp)}>
+                                            <Label htmlFor="cred-channel-whatsapp" className="font-semibold text-xs flex items-center gap-1.5 cursor-pointer text-emerald-700 dark:text-emerald-400">
+                                                <MessageCircle className="h-3.5 w-3.5" />
+                                                {__('Mensaje de WhatsApp')}
+                                            </Label>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                {credentialsUser.telefono ? credentialsUser.telefono : __('El usuario no tiene teléfono registrado')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="mt-4 pt-4 border-t gap-2 sm:gap-0">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsCredentialsModalOpen(false)}
+                            disabled={isSendingCredentials}
+                        >
+                            {__('Cancel')}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleSubmitCredentials}
+                            disabled={isSendingCredentials || (!credentialsSendEmail && !credentialsSendWhatsapp)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                            {isSendingCredentials ? (
+                                <>
+                                    <span className="animate-spin mr-2">⏳</span>
+                                    {__('Enviando...')}
+                                </>
+                            ) : (
+                                <>
+                                    <KeyRound className="h-4 w-4 mr-2" />
+                                    {__('Enviar Credenciales')}
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
