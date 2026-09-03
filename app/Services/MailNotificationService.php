@@ -48,12 +48,7 @@ class MailNotificationService
         $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
-        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
-        if (file_exists($logoPath)) {
-            $logoDataUri = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-        } else {
-            $logoDataUri = url('/icons/logo_mmm-a-color-sin-fondo.png');
-        }
+        $logoUrl = 'https://mmmvenezuela.org/logo.png';
 
         $cocogooseBoldPath = base_path('cocogoose/Cocogoose-Pro-Bold-trial.ttf');
         $cocogooseBoldB64 = file_exists($cocogooseBoldPath)
@@ -82,7 +77,7 @@ class MailNotificationService
             'telefonoContacto' => $empresa?->telefono ?: '+58 (Oficina Nacional)',
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
-            'logoUrl' => $logoDataUri,
+            'logoUrl' => $logoUrl,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
             'cocogooseBoldB64' => $cocogooseBoldB64,
             'cocogooseRegularB64' => $cocogooseRegularB64,
@@ -123,12 +118,7 @@ class MailNotificationService
         $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
-        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
-        if (file_exists($logoPath)) {
-            $logoDataUri = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-        } else {
-            $logoDataUri = url('/icons/logo_mmm-a-color-sin-fondo.png');
-        }
+        $logoUrl = 'https://mmmvenezuela.org/logo.png';
 
         $cocogooseBoldPath = base_path('cocogoose/Cocogoose-Pro-Bold-trial.ttf');
         $cocogooseBoldB64 = file_exists($cocogooseBoldPath)
@@ -158,7 +148,7 @@ class MailNotificationService
             'telefonoContacto' => $empresa?->telefono ?: '+58 (Oficina Nacional)',
             'emailContacto' => $empresa?->email ?: ($empresa?->google_smtp_from_address ?: 'contacto@mmmvenezuela.org'),
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
-            'logoUrl' => $logoDataUri,
+            'logoUrl' => $logoUrl,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
             'cocogooseBoldB64' => $cocogooseBoldB64,
             'cocogooseRegularB64' => $cocogooseRegularB64,
