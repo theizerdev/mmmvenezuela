@@ -334,7 +334,7 @@ export default function DatabaseExportWizardModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 overflow-hidden border shadow-2xl">
+            <DialogContent className="w-[96vw] max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[92vh] flex flex-col p-0 overflow-hidden border shadow-2xl">
                 {/* Header Institucional del Wizard */}
                 <DialogHeader className="p-6 pb-4 border-b bg-muted/20">
                     <div className="flex items-center justify-between">
@@ -550,38 +550,38 @@ export default function DatabaseExportWizardModal({
                                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                                     {__('3. Opciones de Integridad y Compatibilidad')}
                                 </Label>
-                                <div className="space-y-2.5">
-                                    <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/10">
-                                        <div className="space-y-0.5">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="flex items-center justify-between p-3.5 rounded-xl border bg-muted/10">
+                                        <div className="space-y-0.5 pr-2">
                                             <Label htmlFor="drop_tables" className="text-xs font-semibold cursor-pointer">
-                                                {__('Incluir DROP TABLE IF EXISTS')}
+                                                {__('DROP TABLE IF EXISTS')}
                                             </Label>
                                             <p className="text-[11px] text-muted-foreground">
-                                                {__('Elimina y recrea las tablas al momento de restaurar el respaldo.')}
+                                                {__('Recrea tablas al restaurar.')}
                                             </p>
                                         </div>
                                         <Switch id="drop_tables" checked={dropTables} onCheckedChange={setDropTables} />
                                     </div>
 
-                                    <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/10">
-                                        <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between p-3.5 rounded-xl border bg-muted/10">
+                                        <div className="space-y-0.5 pr-2">
                                             <Label htmlFor="disable_fk" className="text-xs font-semibold cursor-pointer">
-                                                {__('Deshabilitar FOREIGN_KEY_CHECKS durante importación')}
+                                                {__('Deshabilitar FOREIGN_KEY_CHECKS')}
                                             </Label>
                                             <p className="text-[11px] text-muted-foreground">
-                                                {__('Evita bloqueos de integridad referencial al restaurar en orden arbitrario.')}
+                                                {__('Evita bloqueos de llaves foráneas.')}
                                             </p>
                                         </div>
                                         <Switch id="disable_fk" checked={disableFk} onCheckedChange={setDisableFk} />
                                     </div>
 
-                                    <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/10">
-                                        <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between p-3.5 rounded-xl border bg-muted/10">
+                                        <div className="space-y-0.5 pr-2">
                                             <Label htmlFor="add_comments" className="text-xs font-semibold cursor-pointer">
-                                                {__('Añadir comentarios de cabecera con fecha y versión')}
+                                                {__('Metadatos en Cabecera')}
                                             </Label>
                                             <p className="text-[11px] text-muted-foreground">
-                                                {__('Agrega metadatos explicativos al inicio del archivo SQL.')}
+                                                {__('Fecha, hora y versión de MySQL.')}
                                             </p>
                                         </div>
                                         <Switch id="add_comments" checked={addComments} onCheckedChange={setAddComments} />
@@ -652,44 +652,46 @@ export default function DatabaseExportWizardModal({
                                 </div>
                             </div>
 
-                            {/* Lista de Tablas con Checkboxes */}
-                            <div className="border rounded-xl divide-y max-h-[360px] overflow-y-auto bg-card">
+                            {/* Lista de Tablas con Checkboxes en Grilla de 2 Columnas para pantalla XL */}
+                            <div className="border rounded-xl p-3 max-h-[440px] overflow-y-auto bg-card">
                                 {filteredTables.length === 0 ? (
                                     <div className="p-8 text-center text-xs text-muted-foreground">
                                         {__('No se encontraron tablas que coincidan con la búsqueda.')}
                                     </div>
                                 ) : (
-                                    filteredTables.map((table) => {
-                                        const isChecked = selectedTables.includes(table.name);
-                                        return (
-                                            <div
-                                                key={table.name}
-                                                onClick={() => handleToggleTable(table.name)}
-                                                className={`p-3 flex items-center justify-between cursor-pointer transition-colors ${
-                                                    isChecked ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : 'hover:bg-muted/40'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <Checkbox
-                                                        checked={isChecked}
-                                                        onCheckedChange={() => handleToggleTable(table.name)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                    <span className="font-mono text-xs font-semibold text-foreground">
-                                                        {table.name}
-                                                    </span>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                        {filteredTables.map((table) => {
+                                            const isChecked = selectedTables.includes(table.name);
+                                            return (
+                                                <div
+                                                    key={table.name}
+                                                    onClick={() => handleToggleTable(table.name)}
+                                                    className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                                                        isChecked ? 'bg-indigo-50/40 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-800 shadow-xs' : 'hover:bg-muted/40 border-border/60'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                                        <Checkbox
+                                                            checked={isChecked}
+                                                            onCheckedChange={() => handleToggleTable(table.name)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                        <span className="font-mono text-xs font-semibold text-foreground truncate" title={table.name}>
+                                                            {table.name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <Badge variant="outline" className="text-[10px] tabular-nums font-mono py-0 px-1.5">
+                                                            {table.rows.toLocaleString()} {__('filas')}
+                                                        </Badge>
+                                                        <Badge variant="secondary" className="text-[10px] tabular-nums font-mono py-0 px-1.5 text-indigo-600 dark:text-indigo-300">
+                                                            {table.size_mb.toFixed(2)} MB
+                                                        </Badge>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className="text-[11px] tabular-nums font-mono">
-                                                        {table.rows.toLocaleString()} {__('filas')}
-                                                    </Badge>
-                                                    <Badge variant="secondary" className="text-[11px] tabular-nums font-mono text-indigo-600 dark:text-indigo-300">
-                                                        {table.size_mb.toFixed(2)} MB
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        );
-                                    })
+                                            );
+                                        })}
+                                    </div>
                                 )}
                             </div>
 

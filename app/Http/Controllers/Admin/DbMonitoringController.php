@@ -19,78 +19,111 @@ class DbMonitoringController extends Controller
         // Obtener estadísticas reales del motor de base de datos
         $dbConnection = config('database.default');
         $dbDriver = config("database.connections.{$dbConnection}.driver");
-
-        $tablesInfo = [];
-        $totalSizeMb = 0;
-        $totalRows = 0;
         $version = 'Desconocido';
 
         try {
             if ($dbDriver === 'mysql') {
-                $dbName = config("database.connections.{$dbConnection}.database");
-
-                // Versión de MySQL
                 $versionRow = DB::select('SELECT VERSION() as version');
                 $version = $versionRow[0]->version ?? 'MySQL';
+            } elseif ($dbDriver === 'sqlite') {
+                $versionRow = DB::select('select sqlite_version() as version');
+                $version = $versionRow[0]->version ?? 'SQLite';
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error obteniendo versión de BD: ' . $e->getMessage());
+        }
 
-                // Información de Tablas (nombre, filas, tamaño) con fallback robusto
-                $tables = DB::select('
-                    SELECT 
-                        table_name AS name, 
-                        table_rows AS rows, 
-                        ROUND(((data_length + index_length) / 1024 / 1024), 2) AS size_mb 
-                    FROM information_schema.TABLES 
-                    WHERE (table_schema = DATABASE() OR LOWER(table_schema) = LOWER(?))
-                      AND (table_type = "BASE TABLE" OR table_type IS NULL)
-                    ORDER BY (data_length + index_length) DESC
-                ', [$dbName]);
+        $tablesData = $this->getTablesData();
 
-                // Fallback si information_schema no devolvió filas por restricciones de permisos en producción
-                if (empty($tables)) {
-                    $rawTables = DB::select('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
+        return inertia('admin/monitoring/database/index', [
+            'dbInfo' => [
+                'connection' => $dbConnection,
+                'driver' => $dbDriver,
+                'version' => $version,
+                'total_tables' => count($tablesData['tables']),
+                'total_size_mb' => $tablesData['total_size_mb'],
+                'total_rows' => $tablesData['total_rows'],
+                'tables' => $tablesData['tables'],
+            ],
+        ]);
+    }
+
+    /**
+     * Retorna los datos de tablas en formato JSON para el modal o consumo asíncrono.
+     */
+    public function getTables()
+    {
+        return response()->json($this->getTablesData());
+    }
+
+    /**
+     * Extrae información de tablas, tamaño y filas de forma universal (SHOW TABLE STATUS).
+     */
+    public function getTablesData(): array
+    {
+        $dbConnection = config('database.default');
+        $dbDriver = config("database.connections.{$dbConnection}.driver");
+
+        $tablesInfo = [];
+        $totalSizeMb = 0;
+        $totalRows = 0;
+
+        try {
+            if ($dbDriver === 'mysql') {
+                // SHOW TABLE STATUS es soportado por todas las versiones de MySQL/MariaDB y no requiere privilegios especiales
+                $status = DB::select('SHOW TABLE STATUS');
+
+                foreach ($status as $row) {
+                    $r = array_change_key_case((array) $row, CASE_LOWER);
+                    $tableName = $r['name'] ?? null;
+                    if (!$tableName) {
+                        continue;
+                    }
+                    if (isset($r['comment']) && strtoupper((string) $r['comment']) === 'VIEW') {
+                        continue;
+                    }
+
+                    $rows = (int) ($r['rows'] ?? 0);
+                    $dataLen = (float) ($r['data_length'] ?? 0);
+                    $idxLen = (float) ($r['index_length'] ?? 0);
+                    $sizeMb = round(($dataLen + $idxLen) / 1024 / 1024, 2);
+
+                    $tablesInfo[] = [
+                        'name' => $tableName,
+                        'rows' => $rows,
+                        'size_mb' => $sizeMb,
+                    ];
+                    $totalSizeMb += $sizeMb;
+                    $totalRows += $rows;
+                }
+
+                // Fallback de ultra contingencia
+                if (empty($tablesInfo)) {
+                    $rawTables = DB::select('SHOW TABLES');
                     foreach ($rawTables as $raw) {
-                        $rawArray = (array) $raw;
-                        $tableName = reset($rawArray);
-                        try {
-                            $countRow = DB::select("SELECT COUNT(*) as count FROM `{$tableName}`");
-                            $rowsCount = (int) ($countRow[0]->count ?? 0);
-                        } catch (\Throwable $e) {
-                            $rowsCount = 0;
-                        }
-                        $tables[] = (object) [
-                            'name' => $tableName,
-                            'rows' => $rowsCount,
+                        $arr = (array) $raw;
+                        $tName = reset($arr);
+                        $tablesInfo[] = [
+                            'name' => $tName,
+                            'rows' => 0,
                             'size_mb' => 0.05,
                         ];
                     }
                 }
-
-                foreach ($tables as $t) {
-                    $tablesInfo[] = [
-                        'name' => $t->name,
-                        'rows' => (int) ($t->rows ?? 0),
-                        'size_mb' => (float) ($t->size_mb ?? 0),
-                    ];
-                    $totalSizeMb += (float) ($t->size_mb ?? 0);
-                    $totalRows += (int) ($t->rows ?? 0);
-                }
             } elseif ($dbDriver === 'sqlite') {
-                $versionRow = DB::select('select sqlite_version() as version');
-                $version = $versionRow[0]->version ?? 'SQLite';
-
-                // Obtener nombres de tabla en SQLite
                 $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
                 foreach ($tables as $t) {
                     $countRow = DB::select("SELECT COUNT(*) as count FROM \"{$t->name}\"");
-                    $rows = $countRow[0]->count ?? 0;
+                    $rows = (int) ($countRow[0]->count ?? 0);
+                    $sizeMb = round(($rows * 0.001), 3);
 
-                    // Simular tamaño para SQLite o dejar fijo en base a archivos si es necesario
                     $tablesInfo[] = [
                         'name' => $t->name,
-                        'rows' => (int) $rows,
-                        'size_mb' => round(($rows * 0.001), 3), // Estimación ficticia por fila en MB
+                        'rows' => $rows,
+                        'size_mb' => $sizeMb,
                     ];
                     $totalRows += $rows;
+                    $totalSizeMb += $sizeMb;
                 }
 
                 $dbPath = config("database.connections.{$dbConnection}.database");
@@ -98,21 +131,15 @@ class DbMonitoringController extends Controller
                     $totalSizeMb = round(filesize($dbPath) / 1024 / 1024, 2);
                 }
             }
-        } catch (\Exception $e) {
-            Log::error('Error obteniendo métricas de base de datos: '.$e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Error obteniendo tablas de base de datos: ' . $e->getMessage());
         }
 
-        return inertia('admin/monitoring/database/index', [
-            'dbInfo' => [
-                'connection' => $dbConnection,
-                'driver' => $dbDriver,
-                'version' => $version,
-                'total_tables' => count($tablesInfo),
-                'total_size_mb' => round($totalSizeMb, 2),
-                'total_rows' => $totalRows,
-                'tables' => $tablesInfo,
-            ],
-        ]);
+        return [
+            'tables' => $tablesInfo,
+            'total_size_mb' => round($totalSizeMb, 2),
+            'total_rows' => $totalRows,
+        ];
     }
 
     /**
