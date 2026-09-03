@@ -4,23 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso</title>
+    <link href="https://fonts.cdnfonts.com/css/cocogoose" rel="stylesheet">
     <style>
-        @if(!empty($cocogooseBoldB64))
-        @font-face {
-            font-family: 'Cocogoose';
-            src: url('{{ $cocogooseBoldB64 }}') format('truetype');
-            font-weight: 700;
-            font-style: normal;
-        }
-        @endif
-        @if(!empty($cocogooseRegularB64))
-        @font-face {
-            font-family: 'Cocogoose';
-            src: url('{{ $cocogooseRegularB64 }}') format('truetype');
-            font-weight: 400;
-            font-style: normal;
-        }
-        @endif
         body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }

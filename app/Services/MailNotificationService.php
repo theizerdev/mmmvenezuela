@@ -50,16 +50,6 @@ class MailNotificationService
 
         $logoUrl = 'https://mmmvenezuela.org/templates/mmmvenezuela/images/LOGO.png';
 
-        $cocogooseBoldPath = base_path('cocogoose/Cocogoose-Pro-Bold-trial.ttf');
-        $cocogooseBoldB64 = file_exists($cocogooseBoldPath)
-            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseBoldPath))
-            : null;
-
-        $cocogooseRegularPath = base_path('cocogoose/Cocogoose-Pro-Regular-trial.ttf');
-        $cocogooseRegularB64 = file_exists($cocogooseRegularPath)
-            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseRegularPath))
-            : null;
-
         $footerPath = public_path('image/footer_correo.jpeg');
         if (file_exists($footerPath)) {
             $footerDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($footerPath));
@@ -79,8 +69,6 @@ class MailNotificationService
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => $logoUrl,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
-            'cocogooseBoldB64' => $cocogooseBoldB64,
-            'cocogooseRegularB64' => $cocogooseRegularB64,
             'footerImageUrl' => $footerDataUri,
         ];
 
@@ -118,17 +106,7 @@ class MailNotificationService
         $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
         $subject = 'Bienvenida al Sistema Automatizado de Registro Pastoral | Credenciales de acceso';
 
-        $logoUrl = 'https://mmmvenezuela.org/logo.png';
-
-        $cocogooseBoldPath = base_path('cocogoose/Cocogoose-Pro-Bold-trial.ttf');
-        $cocogooseBoldB64 = file_exists($cocogooseBoldPath)
-            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseBoldPath))
-            : null;
-
-        $cocogooseRegularPath = base_path('cocogoose/Cocogoose-Pro-Regular-trial.ttf');
-        $cocogooseRegularB64 = file_exists($cocogooseRegularPath)
-            ? 'data:font/truetype;base64,' . base64_encode(file_get_contents($cocogooseRegularPath))
-            : null;
+        $logoUrl = 'https://mmmvenezuela.org/templates/mmmvenezuela/images/LOGO.png';
 
         $footerPath = public_path('image/footer_correo.jpeg');
         if (file_exists($footerPath)) {
@@ -150,8 +128,6 @@ class MailNotificationService
             'empresaNombre' => $empresa?->razon_social ?: 'Movimiento Misionero Mundial Venezuela',
             'logoUrl' => $logoUrl,
             'fechaFormal' => now()->translatedFormat('d \d\e F \d\e Y'),
-            'cocogooseBoldB64' => $cocogooseBoldB64,
-            'cocogooseRegularB64' => $cocogooseRegularB64,
             'footerImageUrl' => $footerDataUri,
         ];
 
