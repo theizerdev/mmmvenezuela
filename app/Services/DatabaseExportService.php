@@ -246,23 +246,28 @@ class DatabaseExportService
         $tables = [];
 
         if ($driver === 'mysql') {
-            $rows = DB::select('
-                SELECT table_name AS name 
-                FROM information_schema.TABLES 
-                WHERE (table_schema = DATABASE() OR LOWER(table_schema) = LOWER(?))
-                  AND (table_type = "BASE TABLE" OR table_type IS NULL)
-                ORDER BY table_name ASC
-            ', [$dbName]);
+            try {
+                $statusRows = DB::select('SHOW TABLE STATUS');
+                foreach ($statusRows as $row) {
+                    $r = array_change_key_case((array) $row, CASE_LOWER);
+                    $tableName = $r['name'] ?? null;
+                    if (!$tableName) {
+                        continue;
+                    }
+                    if (isset($r['comment']) && strtoupper((string) $r['comment']) === 'VIEW') {
+                        continue;
+                    }
+                    $tables[] = $tableName;
+                }
+            } catch (\Throwable $e) {
+                // Fallback
+            }
 
-            if (empty($rows)) {
-                $rawTables = DB::select('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
+            if (empty($tables)) {
+                $rawTables = DB::select('SHOW TABLES');
                 foreach ($rawTables as $raw) {
                     $rawArray = (array) $raw;
                     $tables[] = reset($rawArray);
-                }
-            } else {
-                foreach ($rows as $r) {
-                    $tables[] = $r->name;
                 }
             }
         } elseif ($driver === 'sqlite') {

@@ -78,8 +78,86 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     index.form = indexForm
 /**
+* @see \App\Http\Controllers\Admin\DbMonitoringController::getTables
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:54
+ * @route '/admin/monitoring/database/tables'
+ */
+export const getTables = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getTables.url(options),
+    method: 'get',
+})
+
+getTables.definition = {
+    methods: ["get","head"],
+    url: '/admin/monitoring/database/tables',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\DbMonitoringController::getTables
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:54
+ * @route '/admin/monitoring/database/tables'
+ */
+getTables.url = (options?: RouteQueryOptions) => {
+    return getTables.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\DbMonitoringController::getTables
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:54
+ * @route '/admin/monitoring/database/tables'
+ */
+getTables.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getTables.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Admin\DbMonitoringController::getTables
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:54
+ * @route '/admin/monitoring/database/tables'
+ */
+getTables.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: getTables.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\DbMonitoringController::getTables
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:54
+ * @route '/admin/monitoring/database/tables'
+ */
+    const getTablesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getTables.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\DbMonitoringController::getTables
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:54
+ * @route '/admin/monitoring/database/tables'
+ */
+        getTablesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getTables.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\DbMonitoringController::getTables
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:54
+ * @route '/admin/monitoring/database/tables'
+ */
+        getTablesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getTables.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getTables.form = getTablesForm
+/**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::getMetrics
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:121
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:148
  * @route '/admin/monitoring/database/metrics'
  */
 export const getMetrics = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +172,7 @@ getMetrics.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::getMetrics
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:121
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:148
  * @route '/admin/monitoring/database/metrics'
  */
 getMetrics.url = (options?: RouteQueryOptions) => {
@@ -103,7 +181,7 @@ getMetrics.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::getMetrics
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:121
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:148
  * @route '/admin/monitoring/database/metrics'
  */
 getMetrics.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +190,7 @@ getMetrics.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::getMetrics
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:121
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:148
  * @route '/admin/monitoring/database/metrics'
  */
 getMetrics.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +200,7 @@ getMetrics.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::getMetrics
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:121
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:148
  * @route '/admin/monitoring/database/metrics'
  */
     const getMetricsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +210,7 @@ getMetrics.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::getMetrics
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:121
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:148
  * @route '/admin/monitoring/database/metrics'
  */
         getMetricsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +219,7 @@ getMetrics.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::getMetrics
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:121
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:148
  * @route '/admin/monitoring/database/metrics'
  */
         getMetricsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +235,7 @@ getMetrics.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     getMetrics.form = getMetricsForm
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::verifyPassword
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:159
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:186
  * @route '/admin/monitoring/database/verify-password'
  */
 export const verifyPassword = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +250,7 @@ verifyPassword.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::verifyPassword
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:159
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:186
  * @route '/admin/monitoring/database/verify-password'
  */
 verifyPassword.url = (options?: RouteQueryOptions) => {
@@ -181,7 +259,7 @@ verifyPassword.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::verifyPassword
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:159
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:186
  * @route '/admin/monitoring/database/verify-password'
  */
 verifyPassword.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +269,7 @@ verifyPassword.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
 
     /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::verifyPassword
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:159
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:186
  * @route '/admin/monitoring/database/verify-password'
  */
     const verifyPasswordForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +279,7 @@ verifyPassword.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
 
             /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::verifyPassword
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:159
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:186
  * @route '/admin/monitoring/database/verify-password'
  */
         verifyPasswordForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +290,7 @@ verifyPassword.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
     verifyPassword.form = verifyPasswordForm
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::exportMethod
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:185
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:212
  * @route '/admin/monitoring/database/export'
  */
 export const exportMethod = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -227,7 +305,7 @@ exportMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::exportMethod
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:185
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:212
  * @route '/admin/monitoring/database/export'
  */
 exportMethod.url = (options?: RouteQueryOptions) => {
@@ -236,7 +314,7 @@ exportMethod.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::exportMethod
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:185
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:212
  * @route '/admin/monitoring/database/export'
  */
 exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -246,7 +324,7 @@ exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::exportMethod
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:185
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:212
  * @route '/admin/monitoring/database/export'
  */
     const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -256,7 +334,7 @@ exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\DbMonitoringController::exportMethod
- * @see app/Http/Controllers/Admin/DbMonitoringController.php:185
+ * @see app/Http/Controllers/Admin/DbMonitoringController.php:212
  * @route '/admin/monitoring/database/export'
  */
         exportMethodForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -265,6 +343,6 @@ exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
         })
     
     exportMethod.form = exportMethodForm
-const DbMonitoringController = { index, getMetrics, verifyPassword, exportMethod, export: exportMethod }
+const DbMonitoringController = { index, getTables, getMetrics, verifyPassword, exportMethod, export: exportMethod }
 
 export default DbMonitoringController

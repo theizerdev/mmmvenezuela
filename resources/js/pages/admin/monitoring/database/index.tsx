@@ -62,11 +62,39 @@ interface LiveMetrics {
 
 export default function DatabaseMonitoring({ dbInfo }: PageProps) {
     const { __ } = useTranslate();
+    const [currentDbInfo, setCurrentDbInfo] = useState<DbInfo>(dbInfo);
     const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
     const [qpsHistory, setQpsHistory] = useState<number[]>(Array(15).fill(0));
     const [timeLabels, setTimeLabels] = useState<string[]>(Array(15).fill(''));
     const [loading, setLoading] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+    const refreshTables = async () => {
+        try {
+            const res = await fetch('/admin/monitoring/database/tables');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.tables && Array.isArray(data.tables)) {
+                    setCurrentDbInfo((prev) => ({
+                        ...prev,
+                        total_tables: data.tables.length,
+                        total_size_mb: data.total_size_mb ?? prev.total_size_mb,
+                        total_rows: data.total_rows ?? prev.total_rows,
+                        tables: data.tables,
+                    }));
+                }
+            }
+        } catch (err) {
+            console.error('Error auto-refreshing tables in monitoring index:', err);
+        }
+    };
+
+    // Si al cargar dbInfo viene vacío o 0 tablas, refrescar automáticamente del servidor
+    useEffect(() => {
+        if (!currentDbInfo.tables || currentDbInfo.tables.length === 0) {
+            refreshTables();
+        }
+    }, []);
 
     const fetchMetrics = async () => {
         try {
@@ -92,6 +120,12 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
         } catch (err) {
             console.error('Error fetching live DB metrics:', err);
         }
+    };
+
+    const handleManualRefresh = async () => {
+        setLoading(true);
+        await Promise.all([fetchMetrics(), refreshTables()]);
+        setLoading(false);
     };
 
     // Polling en vivo cada 3 segundos
@@ -226,13 +260,13 @@ return '0';
                             {__('Exportar Base de Datos')}
                         </Button>
                         <Button 
-                            onClick={fetchMetrics} 
+                            onClick={handleManualRefresh} 
                             variant="outline" 
                             size="sm" 
                             className="gap-2"
                             disabled={loading}
                         >
-                            <RefreshCw className="h-4 w-4" />
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                             {__('Refrescar')}
                         </Button>
                     </div>
@@ -247,8 +281,8 @@ return '0';
                             <Cpu className="h-5 w-5 text-indigo-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold capitalize">{dbInfo.driver}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{__('Version')} {dbInfo.version}</p>
+                            <div className="text-2xl font-bold capitalize">{currentDbInfo.driver}</div>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Version')} {currentDbInfo.version}</p>
                         </CardContent>
                     </Card>
 
@@ -258,7 +292,7 @@ return '0';
                             <HardDrive className="h-5 w-5 text-blue-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{dbInfo.total_size_mb} MB</div>
+                            <div className="text-2xl font-bold">{currentDbInfo.total_size_mb} MB</div>
                             <p className="text-xs text-muted-foreground mt-1">{__('Occupied storage space')}</p>
                         </CardContent>
                     </Card>
@@ -269,8 +303,8 @@ return '0';
                             <Layers className="h-5 w-5 text-emerald-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{dbInfo.total_tables}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{dbInfo.total_rows.toLocaleString()} {__('rows registered')}</p>
+                            <div className="text-2xl font-bold">{currentDbInfo.total_tables}</div>
+                            <p className="text-xs text-muted-foreground mt-1">{currentDbInfo.total_rows.toLocaleString()} {__('rows registered')}</p>
                         </CardContent>
                     </Card>
 
@@ -370,7 +404,7 @@ return '0';
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {dbInfo.tables.map((t, idx) => (
+                                        {currentDbInfo.tables.map((t, idx) => (
                                             <TableRow key={idx}>
                                                 <TableCell className="font-mono font-medium text-slate-800 dark:text-slate-200">
                                                     {t.name}
@@ -471,9 +505,9 @@ return '0';
                 <DatabaseExportWizardModal
                     open={isExportModalOpen}
                     onOpenChange={setIsExportModalOpen}
-                    tables={dbInfo.tables}
-                    totalSizeMb={dbInfo.total_size_mb}
-                    totalRows={dbInfo.total_rows}
+                    tables={currentDbInfo.tables}
+                    totalSizeMb={currentDbInfo.total_size_mb}
+                    totalRows={currentDbInfo.total_rows}
                 />
             </div>
         </>

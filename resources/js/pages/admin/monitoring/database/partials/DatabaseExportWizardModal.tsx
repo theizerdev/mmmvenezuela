@@ -37,6 +37,7 @@ import {
     HardDrive,
     Sparkles,
     Loader2,
+    RefreshCw,
 } from 'lucide-react';
 
 interface TableInfo {
@@ -98,12 +99,56 @@ export default function DatabaseExportWizardModal({
         blobUrl: string | null;
     } | null>(null);
 
-    // Inicializar tablas seleccionadas con todas las tablas por defecto
+    // Estado local para tablas dinámicas
+    const [localTables, setLocalTables] = useState<TableInfo[]>(tables || []);
+    const [localTotalSizeMb, setLocalTotalSizeMb] = useState<number>(totalSizeMb || 0);
+    const [localTotalRows, setLocalTotalRows] = useState<number>(totalRows || 0);
+    const [isLoadingTables, setIsLoadingTables] = useState<boolean>(false);
+
+    // Sincronizar desde props cuando cambien
     useEffect(() => {
-        if (tables.length > 0) {
+        if (tables && tables.length > 0) {
+            setLocalTables(tables);
+            setLocalTotalSizeMb(totalSizeMb);
+            setLocalTotalRows(totalRows);
             setSelectedTables(tables.map((t) => t.name));
         }
-    }, [tables]);
+    }, [tables, totalSizeMb, totalRows]);
+
+    const effectiveTables = localTables.length > 0 ? localTables : tables;
+    const effectiveTotalSizeMb = localTables.length > 0 ? localTotalSizeMb : totalSizeMb;
+    const effectiveTotalRows = localTables.length > 0 ? localTotalRows : totalRows;
+
+    // Recargar tablas directamente del backend mediante la ruta /admin/monitoring/database/tables
+    const reloadTables = () => {
+        setIsLoadingTables(true);
+        fetch('/admin/monitoring/database/tables')
+            .then((res) => {
+                if (!res.ok) throw new Error('Error al consultar tablas');
+                return res.json();
+            })
+            .then((data) => {
+                if (data.tables && Array.isArray(data.tables)) {
+                    setLocalTables(data.tables);
+                    setLocalTotalSizeMb(data.total_size_mb ?? 0);
+                    setLocalTotalRows(data.total_rows ?? 0);
+                    setSelectedTables(data.tables.map((t: TableInfo) => t.name));
+                }
+            })
+            .catch((err) => {
+                console.error('Error cargando tablas de la base de datos:', err);
+            })
+            .finally(() => {
+                setIsLoadingTables(false);
+            });
+    };
+
+    // Al abrir el modal, si no hay tablas cargadas en memoria, invocar reloadTables automáticamente
+    useEffect(() => {
+        if (open && effectiveTables.length === 0) {
+            reloadTables();
+        }
+    }, [open, effectiveTables.length]);
 
     // Resetear formulario al abrir o cerrar
     useEffect(() => {
@@ -117,25 +162,25 @@ export default function DatabaseExportWizardModal({
             setIsExporting(false);
             setExportError(null);
             setGeneratedFile(null);
-            if (tables.length > 0) {
-                setSelectedTables(tables.map((t) => t.name));
+            if (effectiveTables.length > 0) {
+                setSelectedTables(effectiveTables.map((t) => t.name));
             }
         }
     }, [open]);
 
     // Tablas filtradas por el buscador del Paso 2
     const filteredTables = useMemo(() => {
-        if (!tableSearch.trim()) return tables;
+        if (!tableSearch.trim()) return effectiveTables;
         const query = tableSearch.toLowerCase().trim();
-        return tables.filter((t) => t.name.toLowerCase().includes(query));
-    }, [tables, tableSearch]);
+        return effectiveTables.filter((t) => t.name.toLowerCase().includes(query));
+    }, [effectiveTables, tableSearch]);
 
     // Estadísticas de las tablas seleccionadas
     const selectedStats = useMemo(() => {
         const selectedMap = new Set(selectedTables);
         let rows = 0;
         let size = 0;
-        tables.forEach((t) => {
+        effectiveTables.forEach((t) => {
             if (selectedMap.has(t.name)) {
                 rows += t.rows;
                 size += t.size_mb;
@@ -146,7 +191,7 @@ export default function DatabaseExportWizardModal({
             rows,
             sizeMb: Number(size.toFixed(2)),
         };
-    }, [tables, selectedTables]);
+    }, [effectiveTables, selectedTables]);
 
     // Toggle individual de tabla
     const handleToggleTable = (tableName: string) => {
@@ -161,7 +206,7 @@ export default function DatabaseExportWizardModal({
 
     // Seleccionar todas las tablas
     const handleSelectAll = () => {
-        setSelectedTables(tables.map((t) => t.name));
+        setSelectedTables(effectiveTables.map((t) => t.name));
     };
 
     // Deseleccionar todas
@@ -171,7 +216,7 @@ export default function DatabaseExportWizardModal({
 
     // Seleccionar solo tablas que contienen filas (> 0)
     const handleSelectWithDataOnly = () => {
-        setSelectedTables(tables.filter((t) => t.rows > 0).map((t) => t.name));
+        setSelectedTables(effectiveTables.filter((t) => t.rows > 0).map((t) => t.name));
     };
 
     // Paso 3: Verificación de Contraseña
@@ -353,7 +398,7 @@ export default function DatabaseExportWizardModal({
                         </div>
                         <Badge variant="outline" className="hidden sm:inline-flex gap-1.5 font-mono text-xs px-2.5 py-1">
                             <HardDrive className="h-3.5 w-3.5 text-indigo-500" />
-                            {totalSizeMb} MB • {tables.length} {__('tablas')}
+                            {effectiveTotalSizeMb} MB • {effectiveTables.length} {__('tablas')}
                         </Badge>
                     </div>
 
@@ -406,15 +451,21 @@ export default function DatabaseExportWizardModal({
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="p-3.5 rounded-xl border bg-card flex flex-col justify-between">
                                     <span className="text-xs text-muted-foreground font-medium">{__('Total Tablas')}</span>
-                                    <div className="text-2xl font-bold tracking-tight text-foreground mt-1">{tables.length}</div>
+                                    <div className="text-2xl font-bold tracking-tight text-foreground mt-1">
+                                        {isLoadingTables ? <Loader2 className="h-5 w-5 animate-spin" /> : effectiveTables.length}
+                                    </div>
                                 </div>
                                 <div className="p-3.5 rounded-xl border bg-card flex flex-col justify-between">
                                     <span className="text-xs text-muted-foreground font-medium">{__('Total Filas')}</span>
-                                    <div className="text-2xl font-bold tracking-tight text-foreground mt-1">{totalRows.toLocaleString()}</div>
+                                    <div className="text-2xl font-bold tracking-tight text-foreground mt-1">
+                                        {isLoadingTables ? <Loader2 className="h-5 w-5 animate-spin" /> : effectiveTotalRows.toLocaleString()}
+                                    </div>
                                 </div>
                                 <div className="p-3.5 rounded-xl border bg-card flex flex-col justify-between">
                                     <span className="text-xs text-muted-foreground font-medium">{__('Tamaño Físico')}</span>
-                                    <div className="text-2xl font-bold tracking-tight text-indigo-600 mt-1">{totalSizeMb} MB</div>
+                                    <div className="text-2xl font-bold tracking-tight text-indigo-600 mt-1">
+                                        {isLoadingTables ? <Loader2 className="h-5 w-5 animate-spin" /> : `${effectiveTotalSizeMb} MB`}
+                                    </div>
                                 </div>
                             </div>
 
@@ -642,7 +693,7 @@ export default function DatabaseExportWizardModal({
                             <div className="p-3 rounded-xl bg-muted/40 border flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2">
                                     <Badge variant="secondary" className="font-semibold">
-                                        {selectedStats.count} / {tables.length} {__('tablas')}
+                                        {selectedStats.count} / {effectiveTables.length} {__('tablas')}
                                     </Badge>
                                     <span className="text-muted-foreground">•</span>
                                     <span>~{selectedStats.rows.toLocaleString()} {__('filas estimadas')}</span>
@@ -654,9 +705,25 @@ export default function DatabaseExportWizardModal({
 
                             {/* Lista de Tablas con Checkboxes en Grilla de 2 Columnas para pantalla XL */}
                             <div className="border rounded-xl p-3 max-h-[440px] overflow-y-auto bg-card">
-                                {filteredTables.length === 0 ? (
-                                    <div className="p-8 text-center text-xs text-muted-foreground">
-                                        {__('No se encontraron tablas que coincidan con la búsqueda.')}
+                                {isLoadingTables ? (
+                                    <div className="py-16 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                                        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                                        <p className="text-xs font-medium">{__('Consultando catálogo de tablas del motor MySQL...')}</p>
+                                    </div>
+                                ) : filteredTables.length === 0 ? (
+                                    <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                                        <Database className="h-8 w-8 text-muted-foreground/50" />
+                                        <p className="text-xs">{__('No se encontraron tablas disponibles.')}</p>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={reloadTables}
+                                            className="gap-2 text-xs"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            {__('Reintentar carga de tablas')}
+                                        </Button>
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
