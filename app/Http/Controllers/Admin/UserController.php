@@ -282,7 +282,7 @@ class UserController extends Controller
             $rolesList = $user->roles->pluck('name')->implode(', ');
             $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
 
-            $loginUrl = request()->root() ? request()->root() . '/login' : url('/login');
+            $loginUrl = 'https://saprcoe.mmmvenezuela.org/login';
 
             if ($isPresbitero) {
                 $zonasTexto = $user->zona ?: 'Sin asignar';
