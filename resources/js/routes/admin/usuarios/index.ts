@@ -480,7 +480,7 @@ sendWelcomeWhatsapp.post = (args: { user: number | { id: number } } | [user: num
     sendWelcomeWhatsapp.form = sendWelcomeWhatsappForm
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
- * @see app/Http/Controllers/Admin/UserController.php:334
+ * @see app/Http/Controllers/Admin/UserController.php:340
  * @route '/admin/usuarios/{user}/send-welcome-email'
  */
 export const sendWelcomeEmail = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -495,7 +495,7 @@ sendWelcomeEmail.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
- * @see app/Http/Controllers/Admin/UserController.php:334
+ * @see app/Http/Controllers/Admin/UserController.php:340
  * @route '/admin/usuarios/{user}/send-welcome-email'
  */
 sendWelcomeEmail.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -528,7 +528,7 @@ sendWelcomeEmail.url = (args: { user: number | { id: number } } | [user: number 
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
- * @see app/Http/Controllers/Admin/UserController.php:334
+ * @see app/Http/Controllers/Admin/UserController.php:340
  * @route '/admin/usuarios/{user}/send-welcome-email'
  */
 sendWelcomeEmail.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -538,7 +538,7 @@ sendWelcomeEmail.post = (args: { user: number | { id: number } } | [user: number
 
     /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
- * @see app/Http/Controllers/Admin/UserController.php:334
+ * @see app/Http/Controllers/Admin/UserController.php:340
  * @route '/admin/usuarios/{user}/send-welcome-email'
  */
     const sendWelcomeEmailForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -548,7 +548,7 @@ sendWelcomeEmail.post = (args: { user: number | { id: number } } | [user: number
 
             /**
 * @see \App\Http\Controllers\Admin\UserController::sendWelcomeEmail
- * @see app/Http/Controllers/Admin/UserController.php:334
+ * @see app/Http/Controllers/Admin/UserController.php:340
  * @route '/admin/usuarios/{user}/send-welcome-email'
  */
         sendWelcomeEmailForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -559,7 +559,7 @@ sendWelcomeEmail.post = (args: { user: number | { id: number } } | [user: number
     sendWelcomeEmail.form = sendWelcomeEmailForm
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendCredentials
- * @see app/Http/Controllers/Admin/UserController.php:386
+ * @see app/Http/Controllers/Admin/UserController.php:398
  * @route '/admin/usuarios/{user}/send-credentials'
  */
 export const sendCredentials = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -574,7 +574,7 @@ sendCredentials.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendCredentials
- * @see app/Http/Controllers/Admin/UserController.php:386
+ * @see app/Http/Controllers/Admin/UserController.php:398
  * @route '/admin/usuarios/{user}/send-credentials'
  */
 sendCredentials.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -607,7 +607,7 @@ sendCredentials.url = (args: { user: number | { id: number } } | [user: number |
 
 /**
 * @see \App\Http\Controllers\Admin\UserController::sendCredentials
- * @see app/Http/Controllers/Admin/UserController.php:386
+ * @see app/Http/Controllers/Admin/UserController.php:398
  * @route '/admin/usuarios/{user}/send-credentials'
  */
 sendCredentials.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -617,7 +617,7 @@ sendCredentials.post = (args: { user: number | { id: number } } | [user: number 
 
     /**
 * @see \App\Http\Controllers\Admin\UserController::sendCredentials
- * @see app/Http/Controllers/Admin/UserController.php:386
+ * @see app/Http/Controllers/Admin/UserController.php:398
  * @route '/admin/usuarios/{user}/send-credentials'
  */
     const sendCredentialsForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -627,7 +627,7 @@ sendCredentials.post = (args: { user: number | { id: number } } | [user: number 
 
             /**
 * @see \App\Http\Controllers\Admin\UserController::sendCredentials
- * @see app/Http/Controllers/Admin/UserController.php:386
+ * @see app/Http/Controllers/Admin/UserController.php:398
  * @route '/admin/usuarios/{user}/send-credentials'
  */
         sendCredentialsForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
