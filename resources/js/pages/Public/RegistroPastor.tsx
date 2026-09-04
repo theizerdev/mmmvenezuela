@@ -155,7 +155,7 @@ export default function RegistroPastor({
         tiempo_colaborando: '',
         batizado_espiritu_santo: true,
         pertenece_ministerio: true,
-        cargo_nacional: '',
+        cargo_nacional: 'Ninguno',
         mencion: '',
         nota: '',
 
@@ -3672,8 +3672,8 @@ export default function RegistroPastor({
                                                             }
                                                         }}
                                                         className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${data.tiene_extension
-                                                                ? 'bg-blue-700 text-white shadow-md'
-                                                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                                            ? 'bg-blue-700 text-white shadow-md'
+                                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                                                             }`}
                                                     >
                                                         <CheckCircle2 className={`w-4 h-4 ${data.tiene_extension ? 'text-white' : 'text-slate-400'}`} />
@@ -3686,8 +3686,8 @@ export default function RegistroPastor({
                                                             setData('extension_rol_pastor', 'asistente');
                                                         }}
                                                         className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${!data.tiene_extension
-                                                                ? 'bg-amber-600 text-white shadow-md'
-                                                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                                            ? 'bg-amber-600 text-white shadow-md'
+                                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                                                             }`}
                                                     >
                                                         <XCircle className={`w-4 h-4 ${!data.tiene_extension ? 'text-white' : 'text-slate-400'}`} />
