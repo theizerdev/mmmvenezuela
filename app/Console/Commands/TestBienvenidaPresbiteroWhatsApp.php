@@ -9,11 +9,13 @@ use Illuminate\Console\Command;
 
 class TestBienvenidaPresbiteroWhatsApp extends Command
 {
-    protected $signature = 'test:bienvenida-presbitero';
+    protected $signature = 'test:bienvenida-presbitero {telefono? : Número de teléfono destino de prueba (ej: 584121234567)}';
     protected $description = 'Prueba el envío de mensaje de bienvenida por WhatsApp para un presbítero';
 
     public function handle(): int
     {
+        $targetPhone = $this->argument('telefono');
+
         $presbitero = User::whereHas('roles', function ($q) {
                 $q->whereIn('name', ['Presbitero', 'Presbítero', 'presbitero']);
             })
@@ -22,13 +24,26 @@ class TestBienvenidaPresbiteroWhatsApp extends Command
             ->first();
 
         if (!$presbitero) {
-            $this->error('No se encontró un usuario con rol de presbítero y teléfono asignado.');
+            $presbitero = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['Presbitero', 'Presbítero', 'presbitero']);
+            })->first();
+        }
+
+        if (!$presbitero) {
+            $this->error('No se encontró un usuario con rol de presbítero en la base de datos.');
+            return 1;
+        }
+
+        $phoneToSend = $targetPhone ?: $presbitero->telefono;
+
+        if (!$phoneToSend) {
+            $this->error('Debe indicar un número de teléfono: php artisan test:bienvenida-presbitero <telefono>');
             return 1;
         }
 
         $empresa = Empresa::first();
         $this->info("Presbítero: {$presbitero->name} ({$presbitero->email})");
-        $this->info("Teléfono: {$presbitero->telefono}");
+        $this->info("Teléfono de envío: {$phoneToSend}");
         $zonasTexto = implode(', ', $presbitero->getZonasList()) ?: 'Sin asignar';
         $distritosTexto = !empty($presbitero->getDistritosList())
             ? implode(', ', array_map(fn ($d) => "Distrito {$d}", $presbitero->getDistritosList()))
@@ -36,7 +51,7 @@ class TestBienvenidaPresbiteroWhatsApp extends Command
 
         $this->info("Zonas: {$zonasTexto} | Distritos: {$distritosTexto}");
 
-        $loginUrl = url('/login');
+        $loginUrl = 'https://saprcoe.mmmvenezuela.org/login';
         $rawPassword = 'Password123*';
 
         $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
@@ -48,7 +63,7 @@ class TestBienvenidaPresbiteroWhatsApp extends Command
                  . "⚠️ *Nota:* Esta cuenta es de uso personal e intransferible. Al ingresar, el sistema le solicitará cambiar su contraseña por motivos de seguridad.";
 
         $whatsappService = new WhatsAppService($empresa);
-        $res = $whatsappService->sendMessage($presbitero->telefono, $mensaje);
+        $res = $whatsappService->sendMessage($phoneToSend, $mensaje);
 
         $this->info("Respuesta: " . json_encode($res));
         return 0;

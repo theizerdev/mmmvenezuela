@@ -247,7 +247,13 @@ class UserController extends Controller
                 ]);
             }
 
-            $this->notificarBienvenidaWhatsApp($user);
+            // Generar clave temporal para que WhatsApp siempre incluya la contraseña
+            $rawPassword = $this->generarClaveTemporal();
+            $user->password = Hash::make($rawPassword);
+            $user->must_change_password = true;
+            $user->save();
+
+            $this->notificarBienvenidaWhatsApp($user, $rawPassword);
 
             return back()->with('notification', [
                 'type' => 'success',
@@ -351,12 +357,18 @@ class UserController extends Controller
                 ]);
             }
 
+            // Generar clave temporal para que el correo SIEMPRE incluya la contraseña de acceso
+            $rawPassword = $this->generarClaveTemporal();
+            $user->password = Hash::make($rawPassword);
+            $user->must_change_password = true;
+            $user->save();
+
             $mailService = new MailNotificationService($empresa);
             $isPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
 
             $enviado = $isPresbitero
-                ? $mailService->enviarBienvenidaPresbitero($user, null, 'oficina@mmmvenezuela.org')
-                : $mailService->enviarBienvenidaUsuario($user, null, 'oficina@mmmvenezuela.org');
+                ? $mailService->enviarBienvenidaPresbitero($user, $rawPassword, 'oficina@mmmvenezuela.org')
+                : $mailService->enviarBienvenidaUsuario($user, $rawPassword, 'oficina@mmmvenezuela.org');
 
             if ($enviado) {
                 return back()->with('notification', [
@@ -514,5 +526,33 @@ class UserController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Genera una contraseña temporal segura que cumple con la política del sistema:
+     * 8-12 caracteres, al menos una mayúscula, una minúscula, un número y un símbolo.
+     */
+    private function generarClaveTemporal(int $length = 10): string
+    {
+        $uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $lowercase = 'abcdefghijkmnopqrstuvwxyz';
+        $numbers = '23456789';
+        $symbols = '@$!%*#?&._-';
+
+        $pass = [
+            $uppercase[random_int(0, strlen($uppercase) - 1)],
+            $lowercase[random_int(0, strlen($lowercase) - 1)],
+            $numbers[random_int(0, strlen($numbers) - 1)],
+            $symbols[random_int(0, strlen($symbols) - 1)],
+        ];
+
+        $allChars = $uppercase . $lowercase . $numbers . $symbols;
+        for ($i = count($pass); $i < $length; $i++) {
+            $pass[] = $allChars[random_int(0, strlen($allChars) - 1)];
+        }
+
+        shuffle($pass);
+
+        return implode('', $pass);
     }
 }

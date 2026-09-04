@@ -98,6 +98,11 @@
                                                     <td style="padding: 6px 0; color: #cbd5e1; width: 38%;"><strong>Contraseña temporal:</strong></td>
                                                     <td style="padding: 6px 0; color: #eca100; font-weight: 900; font-family: monospace; font-size: 15px; letter-spacing: 0.5px;">{{ $password }}</td>
                                                 </tr>
+                                                @else
+                                                <tr>
+                                                    <td style="padding: 6px 0; color: #cbd5e1; width: 38%;"><strong>Contraseña:</strong></td>
+                                                    <td style="padding: 6px 0; color: #fde047; font-weight: 700; font-size: 12px;">Use su contraseña actual o restablézcala desde el portal</td>
+                                                </tr>
                                                 @endif
                                             </table>
 
