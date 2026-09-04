@@ -36,7 +36,7 @@ class TestBienvenidaUsuarioGeneralWhatsApp extends Command
         $empresa = Empresa::first();
         $user->load(['roles', 'empresa', 'sucursal']);
         $rolesList = $user->roles->pluck('name')->implode(', ');
-        $loginUrl = 'https://saprcoe.mmmvenezuela.org/login';
+        $loginUrl = 'https://saprcoe.mmmvenezuela.org';
         $rawPassword = 'ClaveTemporal2026*';
 
         $mensaje = "👋 *¡Bienvenido a la Plataforma MMM Venezuela!*\n\n"

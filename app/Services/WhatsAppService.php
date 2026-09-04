@@ -355,7 +355,6 @@ class WhatsAppService
             $response = $this->client()->post($url, [
                 'to' => $toFormatted,
                 'message' => $processedMessage,
-                'variables' => (object) $variables,
                 'sync' => $sync,
                 'simulateTyping' => true,
             ]);
@@ -456,7 +455,6 @@ class WhatsAppService
                 'url' => $mediaUrl,
                 'caption' => $caption,
                 'message' => $caption,
-                'variables' => (object) $variables,
                 'sync' => $sync,
                 'simulateTyping' => true,
             ]);

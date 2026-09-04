@@ -51,7 +51,7 @@ class TestBienvenidaPresbiteroWhatsApp extends Command
 
         $this->info("Zonas: {$zonasTexto} | Distritos: {$distritosTexto}");
 
-        $loginUrl = 'https://saprcoe.mmmvenezuela.org/login';
+        $loginUrl = 'https://saprcoe.mmmvenezuela.org';
         $rawPassword = 'Password123*';
 
         $mensaje = "👋 *¡Bienvenido al Sistema Ministerial MMM Venezuela!*\n\n"
