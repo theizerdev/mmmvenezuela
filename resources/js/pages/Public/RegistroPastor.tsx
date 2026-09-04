@@ -148,7 +148,7 @@ export default function RegistroPastor({
         instituto_teologico: '',
 
         // Eclesiásticos
-        nivel_ministerial: 'Ministro Ordenado',
+        nivel_ministerial: 'Pastor Asociado',
         zona: '',
         distrito: '',
         ano_promocion: '',
