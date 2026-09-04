@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/EmpresaController.php:102
  * @route '/admin/empresas/{empresa}'
  */
-export const update = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -152,7 +152,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/EmpresaController.php:102
  * @route '/admin/empresas/{empresa}'
  */
-update.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
@@ -185,7 +185,7 @@ update.url = (args: { empresa: number | { id: number } } | [empresa: number | { 
  * @see app/Http/Controllers/Admin/EmpresaController.php:102
  * @route '/admin/empresas/{empresa}'
  */
-update.put = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -195,7 +195,7 @@ update.put = (args: { empresa: number | { id: number } } | [empresa: number | { 
  * @see app/Http/Controllers/Admin/EmpresaController.php:102
  * @route '/admin/empresas/{empresa}'
  */
-    const updateForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -210,7 +210,7 @@ update.put = (args: { empresa: number | { id: number } } | [empresa: number | { 
  * @see app/Http/Controllers/Admin/EmpresaController.php:102
  * @route '/admin/empresas/{empresa}'
  */
-        updateForm.put = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -226,7 +226,7 @@ update.put = (args: { empresa: number | { id: number } } | [empresa: number | { 
  * @see app/Http/Controllers/Admin/EmpresaController.php:146
  * @route '/admin/empresas/{empresa}/toggle-status'
  */
-export const toggleStatus = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+export const toggleStatus = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -241,7 +241,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/EmpresaController.php:146
  * @route '/admin/empresas/{empresa}/toggle-status'
  */
-toggleStatus.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
@@ -274,7 +274,7 @@ toggleStatus.url = (args: { empresa: number | { id: number } } | [empresa: numbe
  * @see app/Http/Controllers/Admin/EmpresaController.php:146
  * @route '/admin/empresas/{empresa}/toggle-status'
  */
-toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+toggleStatus.patch = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -284,7 +284,7 @@ toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: num
  * @see app/Http/Controllers/Admin/EmpresaController.php:146
  * @route '/admin/empresas/{empresa}/toggle-status'
  */
-    const toggleStatusForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PATCH',
@@ -299,7 +299,7 @@ toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: num
  * @see app/Http/Controllers/Admin/EmpresaController.php:146
  * @route '/admin/empresas/{empresa}/toggle-status'
  */
-        toggleStatusForm.patch = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.patch = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PATCH',
@@ -315,7 +315,7 @@ toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: num
  * @see app/Http/Controllers/Admin/EmpresaController.php:166
  * @route '/admin/empresas/{empresa}/logos'
  */
-export const logos = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const logos = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: logos.url(args, options),
     method: 'post',
 })
@@ -330,7 +330,7 @@ logos.definition = {
  * @see app/Http/Controllers/Admin/EmpresaController.php:166
  * @route '/admin/empresas/{empresa}/logos'
  */
-logos.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+logos.url = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
@@ -363,7 +363,7 @@ logos.url = (args: { empresa: number | { id: number } } | [empresa: number | { i
  * @see app/Http/Controllers/Admin/EmpresaController.php:166
  * @route '/admin/empresas/{empresa}/logos'
  */
-logos.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+logos.post = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: logos.url(args, options),
     method: 'post',
 })
@@ -373,7 +373,7 @@ logos.post = (args: { empresa: number | { id: number } } | [empresa: number | { 
  * @see app/Http/Controllers/Admin/EmpresaController.php:166
  * @route '/admin/empresas/{empresa}/logos'
  */
-    const logosForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const logosForm = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: logos.url(args, options),
         method: 'post',
     })
@@ -383,7 +383,7 @@ logos.post = (args: { empresa: number | { id: number } } | [empresa: number | { 
  * @see app/Http/Controllers/Admin/EmpresaController.php:166
  * @route '/admin/empresas/{empresa}/logos'
  */
-        logosForm.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        logosForm.post = (args: { empresa: string | number | { id: string | number } } | [empresa: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: logos.url(args, options),
             method: 'post',
         })

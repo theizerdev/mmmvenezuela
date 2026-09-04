@@ -344,7 +344,7 @@ crearParroquiaRapida.post = (options?: RouteQueryOptions): RouteDefinition<'post
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:695
  * @route '/registro/{pastor}/extension'
  */
-export const extensionIndex = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const extensionIndex = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: extensionIndex.url(args, options),
     method: 'get',
 })
@@ -359,7 +359,7 @@ extensionIndex.definition = {
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:695
  * @route '/registro/{pastor}/extension'
  */
-extensionIndex.url = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+extensionIndex.url = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastor: args }
     }
@@ -392,7 +392,7 @@ extensionIndex.url = (args: { pastor: number | { id: number } } | [pastor: numbe
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:695
  * @route '/registro/{pastor}/extension'
  */
-extensionIndex.get = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+extensionIndex.get = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: extensionIndex.url(args, options),
     method: 'get',
 })
@@ -401,7 +401,7 @@ extensionIndex.get = (args: { pastor: number | { id: number } } | [pastor: numbe
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:695
  * @route '/registro/{pastor}/extension'
  */
-extensionIndex.head = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+extensionIndex.head = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: extensionIndex.url(args, options),
     method: 'head',
 })
@@ -411,7 +411,7 @@ extensionIndex.head = (args: { pastor: number | { id: number } } | [pastor: numb
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:695
  * @route '/registro/{pastor}/extension'
  */
-    const extensionIndexForm = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const extensionIndexForm = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: extensionIndex.url(args, options),
         method: 'get',
     })
@@ -421,7 +421,7 @@ extensionIndex.head = (args: { pastor: number | { id: number } } | [pastor: numb
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:695
  * @route '/registro/{pastor}/extension'
  */
-        extensionIndexForm.get = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        extensionIndexForm.get = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: extensionIndex.url(args, options),
             method: 'get',
         })
@@ -430,7 +430,7 @@ extensionIndex.head = (args: { pastor: number | { id: number } } | [pastor: numb
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:695
  * @route '/registro/{pastor}/extension'
  */
-        extensionIndexForm.head = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        extensionIndexForm.head = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: extensionIndex.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -446,7 +446,7 @@ extensionIndex.head = (args: { pastor: number | { id: number } } | [pastor: numb
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:787
  * @route '/registro/{pastor}/extension'
  */
-export const extensionStore = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const extensionStore = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: extensionStore.url(args, options),
     method: 'post',
 })
@@ -461,7 +461,7 @@ extensionStore.definition = {
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:787
  * @route '/registro/{pastor}/extension'
  */
-extensionStore.url = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+extensionStore.url = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastor: args }
     }
@@ -494,7 +494,7 @@ extensionStore.url = (args: { pastor: number | { id: number } } | [pastor: numbe
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:787
  * @route '/registro/{pastor}/extension'
  */
-extensionStore.post = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+extensionStore.post = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: extensionStore.url(args, options),
     method: 'post',
 })
@@ -504,7 +504,7 @@ extensionStore.post = (args: { pastor: number | { id: number } } | [pastor: numb
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:787
  * @route '/registro/{pastor}/extension'
  */
-    const extensionStoreForm = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const extensionStoreForm = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: extensionStore.url(args, options),
         method: 'post',
     })
@@ -514,7 +514,7 @@ extensionStore.post = (args: { pastor: number | { id: number } } | [pastor: numb
  * @see app/Http/Controllers/Public/PastorRegistroPublicoController.php:787
  * @route '/registro/{pastor}/extension'
  */
-        extensionStoreForm.post = (args: { pastor: number | { id: number } } | [pastor: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        extensionStoreForm.post = (args: { pastor: string | number | { id: string | number } } | [pastor: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: extensionStore.url(args, options),
             method: 'post',
         })

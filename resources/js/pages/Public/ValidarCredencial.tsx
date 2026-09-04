@@ -116,7 +116,7 @@ export default function ValidarCredencialPage({ pastor, codigoBuscado }: Validar
                                         Estado de Credencial:
                                     </span>
                                     <span className={`font-bold px-2 py-0.5 rounded-full text-[11px] ${pastor.status ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
-                                        {pastor.status ? 'ACTIVO / HABITADO' : 'INACTIVO'}
+                                        {pastor.status ? 'ACTIVO' : 'INACTIVO'}
                                     </span>
                                 </div>
 

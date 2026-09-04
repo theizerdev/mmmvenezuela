@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/ParroquiaController.php:130
  * @route '/admin/parroquias/{parroquia}'
  */
-export const update = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -152,7 +152,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/ParroquiaController.php:130
  * @route '/admin/parroquias/{parroquia}'
  */
-update.url = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { parroquia: args }
     }
@@ -185,7 +185,7 @@ update.url = (args: { parroquia: number | { id: number } } | [parroquia: number 
  * @see app/Http/Controllers/Admin/ParroquiaController.php:130
  * @route '/admin/parroquias/{parroquia}'
  */
-update.put = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -195,7 +195,7 @@ update.put = (args: { parroquia: number | { id: number } } | [parroquia: number 
  * @see app/Http/Controllers/Admin/ParroquiaController.php:130
  * @route '/admin/parroquias/{parroquia}'
  */
-    const updateForm = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -210,7 +210,7 @@ update.put = (args: { parroquia: number | { id: number } } | [parroquia: number 
  * @see app/Http/Controllers/Admin/ParroquiaController.php:130
  * @route '/admin/parroquias/{parroquia}'
  */
-        updateForm.put = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -226,7 +226,7 @@ update.put = (args: { parroquia: number | { id: number } } | [parroquia: number 
  * @see app/Http/Controllers/Admin/ParroquiaController.php:153
  * @route '/admin/parroquias/{parroquia}/toggle-status'
  */
-export const toggleStatus = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const toggleStatus = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -241,7 +241,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/ParroquiaController.php:153
  * @route '/admin/parroquias/{parroquia}/toggle-status'
  */
-toggleStatus.url = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { parroquia: args }
     }
@@ -274,7 +274,7 @@ toggleStatus.url = (args: { parroquia: number | { id: number } } | [parroquia: n
  * @see app/Http/Controllers/Admin/ParroquiaController.php:153
  * @route '/admin/parroquias/{parroquia}/toggle-status'
  */
-toggleStatus.post = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+toggleStatus.post = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -284,7 +284,7 @@ toggleStatus.post = (args: { parroquia: number | { id: number } } | [parroquia: 
  * @see app/Http/Controllers/Admin/ParroquiaController.php:153
  * @route '/admin/parroquias/{parroquia}/toggle-status'
  */
-    const toggleStatusForm = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, options),
         method: 'post',
     })
@@ -294,7 +294,7 @@ toggleStatus.post = (args: { parroquia: number | { id: number } } | [parroquia: 
  * @see app/Http/Controllers/Admin/ParroquiaController.php:153
  * @route '/admin/parroquias/{parroquia}/toggle-status'
  */
-        toggleStatusForm.post = (args: { parroquia: number | { id: number } } | [parroquia: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.post = (args: { parroquia: string | number | { id: string | number } } | [parroquia: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, options),
             method: 'post',
         })
