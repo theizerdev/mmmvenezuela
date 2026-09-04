@@ -102,13 +102,13 @@
                                             </table>
 
                                             <div style="text-align: center; margin-top: 20px;">
-                                                <a href="{{ $loginUrl }}" target="_blank" style="display: inline-block; background-color: #eca100; color: #1a3786; text-decoration: none; font-size: 13px; font-weight: 900; padding: 12px 30px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.8px;">
+                                                <a href="{{ 'https://saprcoe.mmmvenezuela.org' }}" target="_blank" style="display: inline-block; background-color: #eca100; color: #1a3786; text-decoration: none; font-size: 13px; font-weight: 900; padding: 12px 30px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.8px;">
                                                     Ingresar al Sistema →
                                                 </a>
                                             </div>
                                             
                                             <div style="text-align: center; margin-top: 14px; font-size: 11px; color: #93c5fd;">
-                                                Enlace directo: <a href="{{ $loginUrl }}" target="_blank" style="color: #ffffff; text-decoration: underline;">{{ $loginUrl }}</a>
+                                                Enlace directo: <a href="{{ 'https://saprcoe.mmmvenezuela.org' }}" target="_blank" style="color: #ffffff; text-decoration: underline;">{{'https://saprcoe.mmmvenezuela.org'}}</a>
                                             </div>
                                         </td>
                                     </tr>
