@@ -785,15 +785,15 @@ export default function RegistroPastor({
         let numero = '';
         if (trimmed.startsWith('P-') || trimmed.startsWith('P')) {
             tipo = 'P';
-            numero = trimmed.replace(/^P[-]?/, '').replace(/[^A-Z0-9]/g, '');
+            numero = trimmed.replace(/^P[-]?/, '').replace(/[^A-Z0-9]/g, '').slice(0, 10);
         } else if (trimmed.startsWith('E-') || trimmed.startsWith('E')) {
             tipo = 'E';
-            numero = trimmed.replace(/^E[-]?/, '').replace(/\D/g, '');
+            numero = trimmed.replace(/^E[-]?/, '').replace(/\D/g, '').slice(0, 10);
         } else if (trimmed.startsWith('V-') || trimmed.startsWith('V')) {
             tipo = 'V';
-            numero = trimmed.replace(/^V[-]?/, '').replace(/\D/g, '');
+            numero = trimmed.replace(/^V[-]?/, '').replace(/\D/g, '').slice(0, 10);
         } else {
-            numero = trimmed.replace(/\D/g, '');
+            numero = trimmed.replace(/\D/g, '').slice(0, 10);
         }
         return { tipo: tipo || 'V', numero };
     };
@@ -1293,9 +1293,22 @@ export default function RegistroPastor({
             case 'apellidos':
                 if (!data.apellidos.trim()) return 'Los apellidos son requeridos.';
                 break;
-            case 'numero_documento':
+            case 'numero_documento': {
                 if (!docNumero) return 'El número de cédula / documento es requerido.';
+                const clean = data.tipo_documento === 'P'
+                    ? docNumero.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                    : docNumero.replace(/\D/g, '');
+                if (data.tipo_documento !== 'P' && !/^\d+$/.test(docNumero)) {
+                    return 'La cédula solo debe contener números.';
+                }
+                if (clean.length < 4) {
+                    return 'La cédula debe tener al menos 4 números (mínimo 4, máximo 10).';
+                }
+                if (clean.length > 10) {
+                    return 'La cédula no puede tener más de 10 números (máximo 10).';
+                }
                 break;
+            }
             case 'genero':
                 if (!data.genero) return 'Seleccione el género.';
                 break;
@@ -1308,9 +1321,24 @@ export default function RegistroPastor({
             case 'nombre_conyuge':
                 if (esCasado && !data.nombre_conyuge.trim()) return 'El nombre del cónyuge es requerido.';
                 break;
-            case 'numero_documento_conyuge':
+            case 'numero_documento_conyuge': {
                 if (esCasado && data.conyuge_pastorea && !conyugeDocNum) return 'La cédula del cónyuge es requerida.';
+                if (conyugeDocNum) {
+                    const cleanConyuge = data.tipo_documento_conyuge === 'P'
+                        ? conyugeDocNum.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                        : conyugeDocNum.replace(/\D/g, '');
+                    if (data.tipo_documento_conyuge !== 'P' && !/^\d+$/.test(conyugeDocNum)) {
+                        return 'La cédula del cónyuge solo debe contener números.';
+                    }
+                    if (cleanConyuge.length < 4) {
+                        return 'La cédula del cónyuge debe tener al menos 4 números (mínimo 4, máximo 10).';
+                    }
+                    if (cleanConyuge.length > 10) {
+                        return 'La cédula del cónyuge no puede tener más de 10 números (máximo 10).';
+                    }
+                }
                 break;
+            }
             case 'telefono_tlf':
                 if (!data.telefono_tlf.trim()) return 'El teléfono celular / WhatsApp es requerido.';
                 break;
@@ -1476,9 +1504,11 @@ export default function RegistroPastor({
     };
 
     const isFieldVisibleError = (fieldName: string, stepOfField: number): string | null => {
-        const error = getFieldError(fieldName);
+        const serverErrors = errors as Record<string, string | undefined>;
+        const serverError = serverErrors[fieldName] || (fieldName === 'numero_documento' ? errors.documento : null);
+        const error = getFieldError(fieldName) || serverError;
         if (!error) return null;
-        if (attemptedSteps[stepOfField] || touchedFields[fieldName]) {
+        if (attemptedSteps[stepOfField] || touchedFields[fieldName] || Boolean(serverError)) {
             return error;
         }
         return null;
@@ -1623,7 +1653,7 @@ export default function RegistroPastor({
                 setIsSubmittingModalOpen(false);
                 setSubmitProgress(0);
 
-                if (errs.nombres || errs.apellidos || errs.documento || errs.telefono_tlf) {
+                if (errs.nombres || errs.apellidos || errs.documento || errs.numero_documento || errs.numero_documento_conyuge || errs.telefono_tlf) {
                     setActiveTab(1);
                     setAttemptedSteps((prev) => ({ ...prev, 1: true }));
                 } else if (errs.grado_instruccion || errs.titulo_obtenido) {
@@ -2237,11 +2267,19 @@ export default function RegistroPastor({
                                                     <Label htmlFor="numero_documento" className="text-xs font-bold uppercase text-slate-700 flex items-center">
                                                         Cédula de Identidad <span className="text-rose-500 ml-0.5">*</span>
                                                     </Label>
-                                                    {isCheckingCedula && (
+                                                    {isCheckingCedula ? (
                                                         <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
                                                             <Loader2 className="w-3 h-3 animate-spin" /> Verificando...
                                                         </span>
-                                                    )}
+                                                    ) : data.numero_documento && data.numero_documento.length >= 4 && data.numero_documento.length <= 10 && !getFieldError('numero_documento') ? (
+                                                        <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                                                            <CheckCircle2 className="w-3 h-3" /> Cédula válida
+                                                        </span>
+                                                    ) : data.numero_documento && data.numero_documento.length < 4 ? (
+                                                        <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                                                            Mínimo 4 números
+                                                        </span>
+                                                    ) : null}
                                                 </div>
 
                                                 <div className={`mt-1 flex items-center w-full h-10 border rounded-md shadow-xs overflow-hidden transition-all ${isFieldVisibleError('numero_documento', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600'}`}>
@@ -2249,13 +2287,21 @@ export default function RegistroPastor({
                                                         value={data.tipo_documento || 'V'}
                                                         onValueChange={(val) => {
                                                             markFieldTouched('numero_documento');
+                                                            const cleanNum = (val === 'P'
+                                                                ? data.numero_documento.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                                                                : data.numero_documento.replace(/\D/g, '')
+                                                            ).slice(0, 10);
                                                             setData((prev) => ({
                                                                 ...prev,
                                                                 tipo_documento: val,
-                                                                documento: `${val}-${prev.numero_documento}`,
+                                                                numero_documento: cleanNum,
+                                                                documento: `${val}-${cleanNum}`,
                                                             }));
-                                                            if (data.numero_documento) {
-                                                                checkCedulaDuplicada(`${val}-${data.numero_documento}`, true);
+                                                            if (cleanNum.length >= 4) {
+                                                                checkCedulaDuplicada(`${val}-${cleanNum}`, true);
+                                                            } else {
+                                                                setCedulaExistenteNombre(null);
+                                                                setCedulaExistentePastorId(null);
                                                             }
                                                         }}
                                                     >
@@ -2272,12 +2318,15 @@ export default function RegistroPastor({
                                                     <input
                                                         id="numero_documento"
                                                         type="text"
+                                                        inputMode="numeric"
+                                                        maxLength={10}
                                                         value={data.numero_documento}
                                                         onChange={(e) => {
                                                             const rawVal = e.target.value;
-                                                            const cleanNum = data.tipo_documento === 'P'
+                                                            const cleanNum = (data.tipo_documento === 'P'
                                                                 ? rawVal.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
-                                                                : rawVal.replace(/\D/g, '');
+                                                                : rawVal.replace(/\D/g, '')
+                                                            ).slice(0, 10);
 
                                                             markFieldTouched('numero_documento');
                                                             setData((prev) => ({
@@ -2285,16 +2334,27 @@ export default function RegistroPastor({
                                                                 numero_documento: cleanNum,
                                                                 documento: `${prev.tipo_documento}-${cleanNum}`,
                                                             }));
-                                                            checkCedulaDuplicada(`${data.tipo_documento}-${cleanNum}`, false);
+                                                            if (cleanNum.length >= 4) {
+                                                                checkCedulaDuplicada(`${data.tipo_documento}-${cleanNum}`, false);
+                                                            } else {
+                                                                setCedulaExistenteNombre(null);
+                                                                setCedulaExistentePastorId(null);
+                                                            }
                                                         }}
                                                         onBlur={() => {
-                                                            if (data.numero_documento) {
+                                                            markFieldTouched('numero_documento');
+                                                            if (data.numero_documento && data.numero_documento.length >= 4) {
                                                                 checkCedulaDuplicada(`${data.tipo_documento}-${data.numero_documento}`, true);
                                                             }
                                                         }}
                                                         placeholder={data.tipo_documento === 'P' ? 'Ej. PAS123456' : 'Ej. 12345678'}
                                                         className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden border-0 shadow-none"
                                                     />
+                                                    {data.numero_documento ? (
+                                                        <span className="pr-3 text-[11px] font-mono text-slate-400 select-none shrink-0">
+                                                            {data.numero_documento.length}/10
+                                                        </span>
+                                                    ) : null}
                                                 </div>
 
                                                 {isFieldVisibleError('numero_documento', 1) && (
@@ -2493,22 +2553,44 @@ export default function RegistroPastor({
 
                                                     {data.conyuge_pastorea && (
                                                         <div>
-                                                            <Label htmlFor="numero_documento_conyuge" className="text-xs font-bold uppercase text-slate-700">
-                                                                Cédula de Identidad del Cónyuge <span className="text-rose-500">*</span>
-                                                            </Label>
+                                                            <div className="h-5 flex items-center justify-between">
+                                                                <Label htmlFor="numero_documento_conyuge" className="text-xs font-bold uppercase text-slate-700">
+                                                                    Cédula de Identidad del Cónyuge <span className="text-rose-500">*</span>
+                                                                </Label>
+                                                                {isCheckingConyugeCedula ? (
+                                                                    <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
+                                                                        <Loader2 className="w-3 h-3 animate-spin" /> Verificando...
+                                                                    </span>
+                                                                ) : data.numero_documento_conyuge && data.numero_documento_conyuge.length >= 4 && data.numero_documento_conyuge.length <= 10 && !getFieldError('numero_documento_conyuge') ? (
+                                                                    <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                                                                        <CheckCircle2 className="w-3 h-3" /> Cédula válida
+                                                                    </span>
+                                                                ) : data.numero_documento_conyuge && data.numero_documento_conyuge.length < 4 ? (
+                                                                    <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                                                                        Mínimo 4 números
+                                                                    </span>
+                                                                ) : null}
+                                                            </div>
 
                                                             <div className={`mt-1 flex items-center w-full h-10 border rounded-md shadow-xs overflow-hidden transition-all ${isFieldVisibleError('numero_documento_conyuge', 1) ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20' : 'border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600'}`}>
                                                                 <Select
                                                                     value={data.tipo_documento_conyuge || 'V'}
                                                                     onValueChange={(val) => {
                                                                         markFieldTouched('numero_documento_conyuge');
+                                                                        const cleanNum = (val === 'P'
+                                                                            ? data.numero_documento_conyuge.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                                                                            : data.numero_documento_conyuge.replace(/\D/g, '')
+                                                                        ).slice(0, 10);
                                                                         setData((prev) => ({
                                                                             ...prev,
                                                                             tipo_documento_conyuge: val,
-                                                                            cedula_conyuge: `${val}-${prev.numero_documento_conyuge}`,
+                                                                            numero_documento_conyuge: cleanNum,
+                                                                            cedula_conyuge: `${val}-${cleanNum}`,
                                                                         }));
-                                                                        if (data.numero_documento_conyuge) {
-                                                                            checkConyugeCedula(`${val}-${data.numero_documento_conyuge}`, true);
+                                                                        if (cleanNum.length >= 4) {
+                                                                            checkConyugeCedula(`${val}-${cleanNum}`, true);
+                                                                        } else {
+                                                                            setConyugeExtensionData(null);
                                                                         }
                                                                     }}
                                                                 >
@@ -2525,12 +2607,15 @@ export default function RegistroPastor({
                                                                 <input
                                                                     id="numero_documento_conyuge"
                                                                     type="text"
+                                                                    inputMode="numeric"
+                                                                    maxLength={10}
                                                                     value={data.numero_documento_conyuge}
                                                                     onChange={(e) => {
                                                                         const rawVal = e.target.value;
-                                                                        const cleanNum = data.tipo_documento_conyuge === 'P'
+                                                                        const cleanNum = (data.tipo_documento_conyuge === 'P'
                                                                             ? rawVal.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
-                                                                            : rawVal.replace(/\D/g, '');
+                                                                            : rawVal.replace(/\D/g, '')
+                                                                        ).slice(0, 10);
 
                                                                         markFieldTouched('numero_documento_conyuge');
                                                                         setData((prev) => ({
@@ -2538,16 +2623,26 @@ export default function RegistroPastor({
                                                                             numero_documento_conyuge: cleanNum,
                                                                             cedula_conyuge: `${prev.tipo_documento_conyuge}-${cleanNum}`,
                                                                         }));
-                                                                        checkConyugeCedula(`${data.tipo_documento_conyuge}-${cleanNum}`, false);
+                                                                        if (cleanNum.length >= 4) {
+                                                                            checkConyugeCedula(`${data.tipo_documento_conyuge}-${cleanNum}`, false);
+                                                                        } else {
+                                                                            setConyugeExtensionData(null);
+                                                                        }
                                                                     }}
                                                                     onBlur={() => {
-                                                                        if (data.numero_documento_conyuge) {
+                                                                        markFieldTouched('numero_documento_conyuge');
+                                                                        if (data.numero_documento_conyuge && data.numero_documento_conyuge.length >= 4) {
                                                                             checkConyugeCedula(`${data.tipo_documento_conyuge}-${data.numero_documento_conyuge}`, true);
                                                                         }
                                                                     }}
                                                                     placeholder={data.tipo_documento_conyuge === 'P' ? 'Ej. PAS987654' : 'Ej. 98765432'}
                                                                     className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden border-0 shadow-none"
                                                                 />
+                                                                {data.numero_documento_conyuge ? (
+                                                                    <span className="pr-3 text-[11px] font-mono text-slate-400 select-none shrink-0">
+                                                                        {data.numero_documento_conyuge.length}/10
+                                                                    </span>
+                                                                ) : null}
                                                             </div>
 
                                                             {isFieldVisibleError('numero_documento_conyuge', 1) && (
