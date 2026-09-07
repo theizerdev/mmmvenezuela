@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     UserCheck,
@@ -16,7 +16,8 @@ import {
     FileText,
     LayoutGrid,
     List,
-    IdCard
+    IdCard,
+    RotateCcw
 } from 'lucide-react';
 import { PastorCarnetModal } from './Partials/PastorCarnetModal';
 
@@ -101,11 +102,29 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [nivelFilter, setNivelFilter] = useState(filters.nivel_ministerial || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
+    const [zonaFilter, setZonaFilter] = useState(filters.zona ? (filters.zona.replace(/\D/g, '') || filters.zona) : '');
+    const [distritoFilter, setDistritoFilter] = useState(filters.distrito ? (filters.distrito.replace(/\D/g, '') || filters.distrito) : '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '15');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isTableLoading, setIsTableLoading] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
+
+    const zonaOptions = useMemo(() => [
+        { value: '', label: __('All zones') },
+        ...Array.from({ length: 43 }, (_, i) => ({
+            value: String(i + 1),
+            label: `Zona ${i + 1}`,
+        })),
+    ], [__]);
+
+    const distritoOptions = useMemo(() => [
+        { value: '', label: __('All districts') },
+        ...Array.from({ length: 5 }, (_, i) => ({
+            value: String(i + 1),
+            label: `Distrito ${i + 1}`,
+        })),
+    ], [__]);
     const [carnetPastor, setCarnetPastor] = useState<Pastor | null>(null);
     const [isCarnetModalOpen, setIsCarnetModalOpen] = useState(false);
 
@@ -187,6 +206,8 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     search: searchTerm,
                     nivel_ministerial: nivelFilter,
                     status: statusFilter,
+                    zona: zonaFilter,
+                    distrito: distritoFilter,
                     perPage: perPageFilter,
                     sortBy: filters.sortBy,
                     sortDir: filters.sortDir,
@@ -196,7 +217,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [searchTerm, nivelFilter, statusFilter, perPageFilter]);
+    }, [searchTerm, nivelFilter, statusFilter, zonaFilter, distritoFilter, perPageFilter]);
 
     const handleToggleStatus = (pastor: Pastor) => {
         router.post(`/admin/pastores/${pastor.id}/toggle-status`, {}, {
@@ -526,7 +547,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             <FilterField label={__('Search')}>
                                 <Input
                                     placeholder={__('Search by code, name, document...')}
-                                    className="w-full md:w-64"
+                                    className="w-full md:w-56"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -544,7 +565,27 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                     value={nivelFilter}
                                     onChange={(val) => setNivelFilter(String(val))}
                                     placeholder={__('All grades')}
-                                    className="w-full md:w-48"
+                                    className="w-full md:w-44"
+                                />
+                            </FilterField>
+
+                            <FilterField label={__('Zone')}>
+                                <Select2
+                                    options={zonaOptions}
+                                    value={zonaFilter}
+                                    onChange={(val) => setZonaFilter(String(val))}
+                                    placeholder={__('All zones')}
+                                    className="w-full md:w-36"
+                                />
+                            </FilterField>
+
+                            <FilterField label={__('District')}>
+                                <Select2
+                                    options={distritoOptions}
+                                    value={distritoFilter}
+                                    onChange={(val) => setDistritoFilter(String(val))}
+                                    placeholder={__('All districts')}
+                                    className="w-full md:w-36"
                                 />
                             </FilterField>
 
@@ -558,7 +599,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                     value={statusFilter}
                                     onChange={(val) => setStatusFilter(String(val))}
                                     placeholder={__('All statuses')}
-                                    className="w-full md:w-36"
+                                    className="w-full md:w-32"
                                 />
                             </FilterField>
 
@@ -576,6 +617,26 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                     className="w-20"
                                 />
                             </FilterField>
+
+                            {(searchTerm || nivelFilter || statusFilter || zonaFilter || distritoFilter) && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setNivelFilter('');
+                                        setStatusFilter('');
+                                        setZonaFilter('');
+                                        setDistritoFilter('');
+                                    }}
+                                    className="text-xs text-muted-foreground hover:text-foreground h-10 px-2.5 gap-1.5 self-end"
+                                    title={__('Clear filters')}
+                                >
+                                    <RotateCcw className="size-3.5" />
+                                    <span>{__('Reset')}</span>
+                                </Button>
+                            )}
                         </div>
                     </FilterBar>
 
