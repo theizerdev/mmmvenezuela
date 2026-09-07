@@ -2236,5 +2236,9 @@
     "Ver Original": "Ver Original",
     "Descargar Cédula": "Descargar Cédula",
     "El pastor no tiene cédula adjunta.": "El pastor no tiene cédula adjunta.",
-    "El archivo de la cédula no se encuentra disponible en el servidor.": "El archivo de la cédula no se encuentra disponible en el servidor."
+    "El archivo de la cédula no se encuentra disponible en el servidor.": "El archivo de la cédula no se encuentra disponible en el servidor.",
+    "Filters": "Filtros",
+    "Filter and search pastors by multiple criteria": "Filtrar y buscar pastores por múltiples criterios",
+    "active filter": "filtro activo",
+    "active filters": "filtros activos"
 }

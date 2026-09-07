@@ -18,7 +18,10 @@ import {
     List,
     IdCard,
     RotateCcw,
-    CreditCard
+    CreditCard,
+    Search,
+    SlidersHorizontal,
+    X
 } from 'lucide-react';
 import { PastorCarnetModal } from './Partials/PastorCarnetModal';
 import { PastorCedulaModal } from './Partials/PastorCedulaModal';
@@ -31,6 +34,7 @@ import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
@@ -130,6 +134,27 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
             label: `${__('District')} ${i + 1}`,
         })),
     ], [__]);
+
+    const hasActiveFilters = Boolean(
+        searchTerm || nivelFilter || statusFilter || zonaFilter || distritoFilter
+    );
+
+    const activeFiltersCount = [
+        searchTerm,
+        nivelFilter,
+        statusFilter,
+        zonaFilter,
+        distritoFilter,
+    ].filter(Boolean).length;
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setNivelFilter('');
+        setStatusFilter('');
+        setZonaFilter('');
+        setDistritoFilter('');
+    };
+
     const [carnetPastor, setCarnetPastor] = useState<Pastor | null>(null);
     const [isCarnetModalOpen, setIsCarnetModalOpen] = useState(false);
     const [cedulaPastor, setCedulaPastor] = useState<Pastor | null>(null);
@@ -570,103 +595,169 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                         )}
                     </div>
 
-                    <FilterBar>
-                        <div className="flex flex-wrap items-end gap-4 w-full">
-                            <FilterField label={__('Search')}>
-                                <Input
-                                    placeholder={__('Search by code, name, document...')}
-                                    className="w-full md:w-56"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </FilterField>
+                    <Card className="p-5 md:p-6 shadow-xs border border-border/80 bg-card rounded-xl">
+                        <div className="space-y-4">
+                            {/* Header de Filtros con Contador y Limpieza rápida */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-border/60">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                                        <SlidersHorizontal className="size-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-foreground tracking-tight">
+                                            {__('Filters')}
+                                        </h3>
+                                        <p className="text-xs text-muted-foreground">
+                                            {__('Filter and search pastors by multiple criteria')}
+                                        </p>
+                                    </div>
+                                    {hasActiveFilters && (
+                                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                                            {activeFiltersCount} {activeFiltersCount === 1 ? __('active filter') : __('active filters')}
+                                        </span>
+                                    )}
+                                </div>
 
-                            <FilterField label={__('Ministerial Grade')}>
-                                <Select2
-                                    options={[
-                                        { value: '', label: __('All grades') },
-                                        { value: 'Pastor Asociado', label: __('Pastor Asociado') },
-                                        { value: 'Laico', label: __('Laico') },
-                                        { value: 'Licenciado', label: __('Licenciado') },
-                                        { value: 'Ministro Ordenado', label: __('Ministro Ordenado') },
-                                    ]}
-                                    value={nivelFilter}
-                                    onChange={(val) => setNivelFilter(String(val))}
-                                    placeholder={__('All grades')}
-                                    className="w-full md:w-44"
-                                />
-                            </FilterField>
+                                {hasActiveFilters && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleResetFilters}
+                                        className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-3 gap-1.5 font-medium transition-colors cursor-pointer"
+                                    >
+                                        <RotateCcw className="size-3.5" />
+                                        <span>{__('Clear filters')}</span>
+                                    </Button>
+                                )}
+                            </div>
 
-                            <FilterField label={__('Zone')}>
-                                <Select2
-                                    options={zonaOptions}
-                                    value={zonaFilter}
-                                    onChange={(val) => setZonaFilter(String(val))}
-                                    placeholder={__('All zones')}
-                                    className="w-full md:w-36"
-                                />
-                            </FilterField>
+                            {/* Controles de Filtro en Grid Amplio */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
+                                {/* Fila 1: Búsqueda (6 cols = 50%), Grado Ministerial (3 cols = 25%), Estado (3 cols = 25%) */}
+                                <div className="col-span-1 sm:col-span-2 lg:col-span-6">
+                                    <FilterField label={__('Search')}>
+                                        <div className="relative w-full">
+                                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                                            <Input
+                                                placeholder={__('Search by code, name, document...')}
+                                                className="w-full h-11 pl-10 pr-9 text-sm bg-background rounded-lg border-input hover:border-accent focus:bg-background"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                            />
+                                            {searchTerm && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSearchTerm('')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                                                    title={__('Clear')}
+                                                >
+                                                    <X className="size-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </FilterField>
+                                </div>
 
-                            <FilterField label={__('District')}>
-                                <Select2
-                                    options={distritoOptions}
-                                    value={distritoFilter}
-                                    onChange={(val) => setDistritoFilter(String(val))}
-                                    placeholder={__('All districts')}
-                                    className="w-full md:w-36"
-                                />
-                            </FilterField>
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-3">
+                                    <FilterField label={__('Ministerial Grade')}>
+                                        <Select2
+                                            options={[
+                                                { value: '', label: __('All grades') },
+                                                { value: 'Pastor Asociado', label: __('Pastor Asociado') },
+                                                { value: 'Laico', label: __('Laico') },
+                                                { value: 'Licenciado', label: __('Licenciado') },
+                                                { value: 'Ministro Ordenado', label: __('Ministro Ordenado') },
+                                            ]}
+                                            value={nivelFilter}
+                                            onChange={(val) => setNivelFilter(String(val))}
+                                            placeholder={__('All grades')}
+                                            className="w-full h-11 text-sm bg-background rounded-lg"
+                                        />
+                                    </FilterField>
+                                </div>
 
-                            <FilterField label={__('Status')}>
-                                <Select2
-                                    options={[
-                                        { value: '', label: __('All statuses') },
-                                        { value: '1', label: __('Active') },
-                                        { value: '0', label: __('Inactive') },
-                                    ]}
-                                    value={statusFilter}
-                                    onChange={(val) => setStatusFilter(String(val))}
-                                    placeholder={__('All statuses')}
-                                    className="w-full md:w-32"
-                                />
-                            </FilterField>
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-3">
+                                    <FilterField label={__('Status')}>
+                                        <Select2
+                                            options={[
+                                                { value: '', label: __('All statuses') },
+                                                { value: '1', label: __('Active') },
+                                                { value: '0', label: __('Inactive') },
+                                            ]}
+                                            value={statusFilter}
+                                            onChange={(val) => setStatusFilter(String(val))}
+                                            placeholder={__('All statuses')}
+                                            className="w-full h-11 text-sm bg-background rounded-lg"
+                                        />
+                                    </FilterField>
+                                </div>
 
-                            <FilterField label={__('Show')}>
-                                <Select2
-                                    options={[
-                                        { value: '10', label: '10' },
-                                        { value: '15', label: '15' },
-                                        { value: '25', label: '25' },
-                                        { value: '50', label: '50' },
-                                        { value: '100', label: '100' },
-                                    ]}
-                                    value={perPageFilter}
-                                    onChange={(val) => setPerPageFilter(String(val))}
-                                    className="w-20"
-                                />
-                            </FilterField>
+                                {/* Fila 2: Zona (4 cols = 33%), Distrito (4 cols = 33%), Mostrar (2 cols = 17%), Restablecer (2 cols = 17%) */}
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-4">
+                                    <FilterField label={__('Zone')}>
+                                        <Select2
+                                            options={zonaOptions}
+                                            value={zonaFilter}
+                                            onChange={(val) => setZonaFilter(String(val))}
+                                            placeholder={__('All zones')}
+                                            className="w-full h-11 text-sm bg-background rounded-lg"
+                                        />
+                                    </FilterField>
+                                </div>
 
-                            {(searchTerm || nivelFilter || statusFilter || zonaFilter || distritoFilter) && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                        setSearchTerm('');
-                                        setNivelFilter('');
-                                        setStatusFilter('');
-                                        setZonaFilter('');
-                                        setDistritoFilter('');
-                                    }}
-                                    className="text-xs text-muted-foreground hover:text-foreground h-10 px-2.5 gap-1.5 self-end"
-                                    title={__('Clear filters')}
-                                >
-                                    <RotateCcw className="size-3.5" />
-                                    <span>{__('Reset')}</span>
-                                </Button>
-                            )}
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-4">
+                                    <FilterField label={__('District')}>
+                                        <Select2
+                                            options={distritoOptions}
+                                            value={distritoFilter}
+                                            onChange={(val) => setDistritoFilter(String(val))}
+                                            placeholder={__('All districts')}
+                                            className="w-full h-11 text-sm bg-background rounded-lg"
+                                        />
+                                    </FilterField>
+                                </div>
+
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-2">
+                                    <FilterField label={__('Show')}>
+                                        <Select2
+                                            options={[
+                                                { value: '10', label: '10' },
+                                                { value: '15', label: '15' },
+                                                { value: '25', label: '25' },
+                                                { value: '50', label: '50' },
+                                                { value: '100', label: '100' },
+                                            ]}
+                                            value={perPageFilter}
+                                            onChange={(val) => setPerPageFilter(String(val))}
+                                            className="w-full h-11 text-sm bg-background rounded-lg"
+                                        />
+                                    </FilterField>
+                                </div>
+
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-2">
+                                    <FilterField label="" className="w-full">
+                                        <Button
+                                            type="button"
+                                            variant={hasActiveFilters ? "outline" : "ghost"}
+                                            disabled={!hasActiveFilters}
+                                            onClick={handleResetFilters}
+                                            className={cn(
+                                                "h-11 w-full text-sm font-medium gap-2 rounded-lg transition-all",
+                                                hasActiveFilters
+                                                    ? "border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50 shadow-xs cursor-pointer"
+                                                    : "text-muted-foreground opacity-40 cursor-not-allowed border border-transparent"
+                                            )}
+                                            title={__('Clear filters')}
+                                        >
+                                            <RotateCcw className="size-4" />
+                                            <span>{__('Reset')}</span>
+                                        </Button>
+                                    </FilterField>
+                                </div>
+                            </div>
                         </div>
-                    </FilterBar>
+                    </Card>
 
                     {viewMode === 'grid' ? (
                         <div className="space-y-4">

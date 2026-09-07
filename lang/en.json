@@ -1677,5 +1677,9 @@
     "Ver Original": "View Original",
     "Descargar Cédula": "Download ID Card",
     "El pastor no tiene cédula adjunta.": "The pastor has no attached identity card.",
-    "El archivo de la cédula no se encuentra disponible en el servidor.": "The identity card file is not available on the server."
+    "El archivo de la cédula no se encuentra disponible en el servidor.": "The identity card file is not available on the server.",
+    "Filters": "Filters",
+    "Filter and search pastors by multiple criteria": "Filter and search pastors by multiple criteria",
+    "active filter": "active filter",
+    "active filters": "active filters"
 }

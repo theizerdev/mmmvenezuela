@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  * @property {string} [className] - Clases CSS adicionales para el contenedor del campo.
  */
 interface FilterFieldProps {
-    label: string;
+    label?: string;
     children: React.ReactNode;
     className?: string;
 }
@@ -25,7 +25,15 @@ interface FilterFieldProps {
 export function FilterField({ label, children, className }: FilterFieldProps) {
     return (
         <div className={cn('flex flex-col space-y-1.5', className)}>
-            <label className='text-sm font-medium text-gray-700'>{label}</label>
+            {label ? (
+                <label className='text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider'>
+                    {label}
+                </label>
+            ) : (
+                <span className='text-xs font-semibold uppercase tracking-wider select-none opacity-0 pointer-events-none' aria-hidden="true">
+                    &nbsp;
+                </span>
+            )}
             {children}
         </div>
     );
@@ -35,10 +43,12 @@ export function FilterField({ label, children, className }: FilterFieldProps) {
  * @typedef FilterBarProps
  * @property {React.ReactNode} children - Los elementos que se mostrarán dentro de la barra de filtros.
  * @property {string} [className] - Clases CSS adicionales para el contenedor principal de la tarjeta.
+ * @property {string} [containerClassName] - Clases CSS adicionales para el contenedor interno de elementos.
  */
 interface FilterBarProps {
     children: React.ReactNode;
     className?: string;
+    containerClassName?: string;
 }
 
 /**
@@ -48,10 +58,10 @@ interface FilterBarProps {
  * @param {FilterBarProps} props
  * @returns {JSX.Element}
  */
-export function FilterBar({ children, className }: FilterBarProps) {
+export function FilterBar({ children, className, containerClassName }: FilterBarProps) {
     return (
-        <Card className={cn('p-4', className)}>
-            <div className='flex flex-wrap items-end justify-between gap-4'>
+        <Card className={cn('p-4 sm:p-5', className)}>
+            <div className={cn('flex flex-wrap items-end justify-between gap-4', containerClassName)}>
                 {children}
             </div>
         </Card>
