@@ -102,6 +102,13 @@ class PastorRegistroPublicoController extends Controller
             $query->where('id', '!=', $ignoreId);
         }
 
+        // Si contiene dígitos, la cédula debe tener entre 4 y 10 números
+        if (!empty($numeric)) {
+            if (strlen($numeric) < 4 || strlen($numeric) > 8) {
+                return null;
+            }
+        }
+
         if (!empty($numeric) && strlen($numeric) >= 4) {
             $query->where(function ($q) use ($cleaned, $numeric) {
                 $q->where('documento', $cleaned)
@@ -165,6 +172,9 @@ class PastorRegistroPublicoController extends Controller
         }
 
         // Si no es numérico (ej. pasaporte extranjero con caracteres alfanuméricos)
+        if (strlen($cleaned) < 4 || strlen($cleaned) > 10) {
+            return null;
+        }
         return $query->where('documento', $cleaned)->first();
     }
 
@@ -178,6 +188,22 @@ class PastorRegistroPublicoController extends Controller
         $cleaned = trim($cedula);
         if (empty($cleaned)) {
             return response()->json(['existe' => false]);
+        }
+
+        $numeric = preg_replace('/\D/', '', $cleaned);
+        if (strlen($numeric) > 0 && strlen($numeric) < 4) {
+            return response()->json([
+                'existe' => false,
+                'valida' => false,
+                'mensaje' => 'La cédula debe contener al menos 4 números.',
+            ]);
+        }
+        if (strlen($numeric) > 10) {
+            return response()->json([
+                'existe' => false,
+                'valida' => false,
+                'mensaje' => 'La cédula no puede tener más de 10 números.',
+            ]);
         }
 
         $pastor = $this->buscarPastorPorCedula($cleaned);
@@ -306,9 +332,12 @@ class PastorRegistroPublicoController extends Controller
     {
         if ($request->filled('tipo_documento') && $request->filled('numero_documento')) {
             $tipo = in_array(strtoupper($request->tipo_documento), ['V', 'E', 'P']) ? strtoupper($request->tipo_documento) : 'V';
-            $num = preg_replace('/[^a-zA-Z0-9]/', '', $request->numero_documento);
+            $num = $tipo === 'P'
+                ? substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$request->numero_documento), 0, 10)
+                : substr(preg_replace('/\D/', '', (string)$request->numero_documento), 0, 10);
             if (!empty($num)) {
                 $request->merge([
+                    'numero_documento' => $num,
                     'documento' => "{$tipo}-{$num}",
                 ]);
             }
@@ -316,9 +345,12 @@ class PastorRegistroPublicoController extends Controller
 
         if ($request->filled('tipo_documento_conyuge') && $request->filled('numero_documento_conyuge')) {
             $tipoConyuge = in_array(strtoupper($request->tipo_documento_conyuge), ['V', 'E', 'P']) ? strtoupper($request->tipo_documento_conyuge) : 'V';
-            $numConyuge = preg_replace('/[^a-zA-Z0-9]/', '', $request->numero_documento_conyuge);
+            $numConyuge = $tipoConyuge === 'P'
+                ? substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$request->numero_documento_conyuge), 0, 10)
+                : substr(preg_replace('/\D/', '', (string)$request->numero_documento_conyuge), 0, 10);
             if (!empty($numConyuge)) {
                 $request->merge([
+                    'numero_documento_conyuge' => $numConyuge,
                     'cedula_conyuge' => "{$tipoConyuge}-{$numConyuge}",
                 ]);
             }
@@ -343,15 +375,52 @@ class PastorRegistroPublicoController extends Controller
             'nombres' => ['required', 'string', 'max:191'],
             'apellidos' => ['required', 'string', 'max:191'],
             'tipo_documento' => ['nullable', 'string', 'in:V,E,P,v,e,p'],
-            'numero_documento' => ['nullable', 'string', 'max:50'],
-            'documento' => ['required', 'string', 'max:50'],
+            'numero_documento' => [
+                'required',
+                'string',
+                'min:4',
+                'max:10',
+                function ($attribute, $value, $fail) use ($request) {
+                    $tipo = strtoupper($request->input('tipo_documento', 'V'));
+                    if ($tipo !== 'P' && !preg_match('/^[0-9]+$/', (string)$value)) {
+                        $fail('El número de cédula debe contener únicamente números.');
+                    }
+                },
+            ],
+            'documento' => [
+                'required',
+                'string',
+                'max:50',
+                function ($attribute, $value, $fail) use ($request) {
+                    $tipo = strtoupper($request->input('tipo_documento', 'V'));
+                    $num = preg_replace('/\D/', '', (string)$value);
+                    if ($tipo !== 'P') {
+                        if (strlen($num) < 4 || strlen($num) > 10) {
+                            $fail('La cédula de identidad debe contener entre 4 y 10 números.');
+                        }
+                    }
+                },
+            ],
             'genero' => ['nullable', 'string', 'in:M,F,Masculino,Femenino'],
             'fe_nacimiento' => ['nullable', 'date'],
             'edad' => ['nullable', 'integer', 'min:0', 'max:120'],
             'estado_civil' => ['nullable', 'string', 'max:100'],
             'nombre_conyuge' => ['nullable', 'string', 'max:191'],
             'tipo_documento_conyuge' => ['nullable', 'string', 'in:V,E,P,v,e,p'],
-            'numero_documento_conyuge' => ['nullable', 'string', 'max:50'],
+            'numero_documento_conyuge' => [
+                'nullable',
+                'string',
+                'min:4',
+                'max:10',
+                function ($attribute, $value, $fail) use ($request) {
+                    if (!empty($value)) {
+                        $tipo = strtoupper($request->input('tipo_documento_conyuge', 'V'));
+                        if ($tipo !== 'P' && !preg_match('/^[0-9]+$/', (string)$value)) {
+                            $fail('La cédula del cónyuge debe contener únicamente números.');
+                        }
+                    }
+                },
+            ],
             'cedula_conyuge' => ['nullable', 'string', 'max:50'],
             'conyuge_pastorea' => ['nullable', 'boolean'],
             'conyuge_id' => ['nullable', 'exists:pastores,id'],
@@ -435,6 +504,11 @@ class PastorRegistroPublicoController extends Controller
             'extension_medios_lista' => ['nullable'],
             'extension_rol_pastor' => ['nullable', 'string', 'in:principal,conyuge_principal,asistente'],
         ], [
+            'numero_documento.required' => 'La Cédula de Identidad es obligatoria.',
+            'numero_documento.min' => 'La cédula debe contener al menos 4 números.',
+            'numero_documento.max' => 'La cédula no puede tener más de 10 números.',
+            'numero_documento_conyuge.min' => 'La cédula del cónyuge debe contener al menos 4 números.',
+            'numero_documento_conyuge.max' => 'La cédula del cónyuge no puede tener más de 10 números.',
             'documento.required' => 'La Cédula de Identidad es obligatoria.',
             'nombres.required' => 'El nombre es obligatorio.',
             'apellidos.required' => 'El apellido es obligatorio.',
