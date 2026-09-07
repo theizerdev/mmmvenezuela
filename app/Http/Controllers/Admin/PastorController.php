@@ -47,14 +47,31 @@ class PastorController extends Controller
             $query->where('status', (bool) $request->input('status'));
         }
 
-        // Filtro por Zona
+        // Filtro por Zona (1 al 43)
         if ($request->filled('zona')) {
-            $query->where('zona', 'like', "%{$request->input('zona')}%");
+            $zonaVal = trim((string) $request->input('zona'));
+            $numZona = preg_replace('/\D/', '', $zonaVal);
+            $query->where(function ($q) use ($zonaVal, $numZona) {
+                $q->where('zona', $zonaVal);
+                if (!empty($numZona)) {
+                    $q->orWhere('zona', $numZona)
+                      ->orWhere('zona', "Zona {$numZona}");
+                }
+            });
         }
 
-        // Filtro por Distrito
+        // Filtro por Distrito (1 al 5)
         if ($request->filled('distrito')) {
-            $query->where('distrito', 'like', "%{$request->input('distrito')}%");
+            $distVal = trim((string) $request->input('distrito'));
+            $numDist = preg_replace('/\D/', '', $distVal);
+            $query->where(function ($q) use ($distVal, $numDist) {
+                $q->where('distrito', $distVal);
+                if (!empty($numDist)) {
+                    $q->orWhere('distrito', $numDist)
+                      ->orWhere('distrito', "Distrito {$numDist}")
+                      ->orWhere('distrito', "D-{$numDist}");
+                }
+            });
         }
 
         // Ordenamiento
