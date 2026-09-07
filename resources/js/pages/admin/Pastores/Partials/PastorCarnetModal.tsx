@@ -258,20 +258,22 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                         <span className="text-[15.5px] font-bold italic text-[#0f3563] font-serif tracking-wide block leading-tight">
                                             {pastor.nombres} {pastor.apellidos} ({pastor.documento?.replace(/\D/g, '') || pastor.codigo})
                                         </span>
-                                                             {/* Código QR Real de Verificación */}
+                                    </div>
+
+                                    {/* Código QR Real de Verificación */}
                                     <div className="flex flex-col items-center shrink-0 pr-2" title={__('Scan to verify pastor')}>
-                                         <div className="p-1.5 bg-white border border-slate-300 rounded-xl shadow-sm flex items-center justify-center">
-                                             <img
-                                                 src={qrImageUrl}
-                                                 alt={__('Verification QR Code')}
-                                                 className="size-20 object-contain"
-                                             />
-                                         </div>
-                                         <span className="text-[8.5px] font-extrabold text-slate-700 uppercase tracking-tighter mt-1">
-                                             {__('Scan QR')}
-                                         </span>
-                                     </div>
-                                 </div>
+                                        <div className="p-1.5 bg-white border border-slate-300 rounded-xl shadow-sm flex items-center justify-center">
+                                            <img
+                                                src={qrImageUrl}
+                                                alt={__('Verification QR Code')}
+                                                className="size-20 object-contain"
+                                            />
+                                        </div>
+                                        <span className="text-[8.5px] font-extrabold text-slate-700 uppercase tracking-tighter mt-1">
+                                            {__('Scan QR')}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
