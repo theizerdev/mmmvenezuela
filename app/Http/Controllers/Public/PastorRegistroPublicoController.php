@@ -102,7 +102,7 @@ class PastorRegistroPublicoController extends Controller
             $query->where('id', '!=', $ignoreId);
         }
 
-        // Si contiene dígitos, la cédula debe tener entre 4 y 10 números
+        // Si contiene dígitos, la cédula debe tener entre 4 y 8 números
         if (!empty($numeric)) {
             if (strlen($numeric) < 4 || strlen($numeric) > 8) {
                 return null;
@@ -172,7 +172,7 @@ class PastorRegistroPublicoController extends Controller
         }
 
         // Si no es numérico (ej. pasaporte extranjero con caracteres alfanuméricos)
-        if (strlen($cleaned) < 4 || strlen($cleaned) > 10) {
+        if (strlen($cleaned) < 4 || strlen($cleaned) > 8) {
             return null;
         }
         return $query->where('documento', $cleaned)->first();
@@ -198,11 +198,11 @@ class PastorRegistroPublicoController extends Controller
                 'mensaje' => 'La cédula debe contener al menos 4 números.',
             ]);
         }
-        if (strlen($numeric) > 10) {
+        if (strlen($numeric) > 8) {
             return response()->json([
                 'existe' => false,
                 'valida' => false,
-                'mensaje' => 'La cédula no puede tener más de 10 números.',
+                'mensaje' => 'La cédula no puede tener más de 8 números.',
             ]);
         }
 
@@ -333,8 +333,8 @@ class PastorRegistroPublicoController extends Controller
         if ($request->filled('tipo_documento') && $request->filled('numero_documento')) {
             $tipo = in_array(strtoupper($request->tipo_documento), ['V', 'E', 'P']) ? strtoupper($request->tipo_documento) : 'V';
             $num = $tipo === 'P'
-                ? substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$request->numero_documento), 0, 10)
-                : substr(preg_replace('/\D/', '', (string)$request->numero_documento), 0, 10);
+                ? substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$request->numero_documento), 0, 8)
+                : substr(preg_replace('/\D/', '', (string)$request->numero_documento), 0, 8);
             if (!empty($num)) {
                 $request->merge([
                     'numero_documento' => $num,
@@ -346,8 +346,8 @@ class PastorRegistroPublicoController extends Controller
         if ($request->filled('tipo_documento_conyuge') && $request->filled('numero_documento_conyuge')) {
             $tipoConyuge = in_array(strtoupper($request->tipo_documento_conyuge), ['V', 'E', 'P']) ? strtoupper($request->tipo_documento_conyuge) : 'V';
             $numConyuge = $tipoConyuge === 'P'
-                ? substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$request->numero_documento_conyuge), 0, 10)
-                : substr(preg_replace('/\D/', '', (string)$request->numero_documento_conyuge), 0, 10);
+                ? substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$request->numero_documento_conyuge), 0, 8)
+                : substr(preg_replace('/\D/', '', (string)$request->numero_documento_conyuge), 0, 8);
             if (!empty($numConyuge)) {
                 $request->merge([
                     'numero_documento_conyuge' => $numConyuge,
@@ -379,7 +379,7 @@ class PastorRegistroPublicoController extends Controller
                 'required',
                 'string',
                 'min:4',
-                'max:10',
+                'max:8',
                 function ($attribute, $value, $fail) use ($request) {
                     $tipo = strtoupper($request->input('tipo_documento', 'V'));
                     if ($tipo !== 'P' && !preg_match('/^[0-9]+$/', (string)$value)) {
@@ -395,8 +395,8 @@ class PastorRegistroPublicoController extends Controller
                     $tipo = strtoupper($request->input('tipo_documento', 'V'));
                     $num = preg_replace('/\D/', '', (string)$value);
                     if ($tipo !== 'P') {
-                        if (strlen($num) < 4 || strlen($num) > 10) {
-                            $fail('La cédula de identidad debe contener entre 4 y 10 números.');
+                        if (strlen($num) < 4 || strlen($num) > 8) {
+                            $fail('La cédula de identidad debe contener entre 4 y 8 números.');
                         }
                     }
                 },
@@ -411,7 +411,7 @@ class PastorRegistroPublicoController extends Controller
                 'nullable',
                 'string',
                 'min:4',
-                'max:10',
+                'max:8',
                 function ($attribute, $value, $fail) use ($request) {
                     if (!empty($value)) {
                         $tipo = strtoupper($request->input('tipo_documento_conyuge', 'V'));
@@ -506,9 +506,9 @@ class PastorRegistroPublicoController extends Controller
         ], [
             'numero_documento.required' => 'La Cédula de Identidad es obligatoria.',
             'numero_documento.min' => 'La cédula debe contener al menos 4 números.',
-            'numero_documento.max' => 'La cédula no puede tener más de 10 números.',
+            'numero_documento.max' => 'La cédula no puede tener más de 8 números.',
             'numero_documento_conyuge.min' => 'La cédula del cónyuge debe contener al menos 4 números.',
-            'numero_documento_conyuge.max' => 'La cédula del cónyuge no puede tener más de 10 números.',
+            'numero_documento_conyuge.max' => 'La cédula del cónyuge no puede tener más de 8 números.',
             'documento.required' => 'La Cédula de Identidad es obligatoria.',
             'nombres.required' => 'El nombre es obligatorio.',
             'apellidos.required' => 'El apellido es obligatorio.',

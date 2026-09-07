@@ -1304,8 +1304,8 @@ export default function RegistroPastor({
                 if (clean.length < 4) {
                     return 'La cédula debe tener al menos 4 números (mínimo 4, máximo 10).';
                 }
-                if (clean.length > 10) {
-                    return 'La cédula no puede tener más de 10 números (máximo 10).';
+                if (clean.length > 8) {
+                    return 'La cédula no puede tener más de 8 números (máximo 10).';
                 }
                 break;
             }
