@@ -17,9 +17,11 @@ import {
     LayoutGrid,
     List,
     IdCard,
-    RotateCcw
+    RotateCcw,
+    CreditCard
 } from 'lucide-react';
 import { PastorCarnetModal } from './Partials/PastorCarnetModal';
+import { PastorCedulaModal } from './Partials/PastorCedulaModal';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -53,6 +55,9 @@ export interface Pastor {
     edad?: number;
     fe_nacimiento?: string;
     foto?: string;
+    foto_url?: string;
+    foto_cedula?: string;
+    foto_cedula_url?: string;
     estado_civil?: string;
     nombre_conyuge?: string;
     conyuge_id?: number;
@@ -127,10 +132,17 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
     ], [__]);
     const [carnetPastor, setCarnetPastor] = useState<Pastor | null>(null);
     const [isCarnetModalOpen, setIsCarnetModalOpen] = useState(false);
+    const [cedulaPastor, setCedulaPastor] = useState<Pastor | null>(null);
+    const [isCedulaModalOpen, setIsCedulaModalOpen] = useState(false);
 
     const handleOpenCarnet = (pastor: Pastor) => {
         setCarnetPastor(pastor);
         setIsCarnetModalOpen(true);
+    };
+
+    const handleOpenCedula = (pastor: Pastor) => {
+        setCedulaPastor(pastor);
+        setIsCedulaModalOpen(true);
     };
 
     const handleBulkCarnetPdf = () => {
@@ -296,9 +308,21 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             <span className="font-semibold text-foreground truncate">
                                 {row.nombres} {row.apellidos}
                             </span>
-                            <span className="text-xs text-muted-foreground truncate">
-                                {row.documento} {row.cargo_nacional ? `• ${row.cargo_nacional}` : ''}
-                            </span>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate mt-0.5">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenCedula(row);
+                                    }}
+                                    className="inline-flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 font-mono font-medium transition-colors cursor-pointer group/doc"
+                                    title={__('Ver Cédula de Identidad')}
+                                >
+                                    <CreditCard className="size-3 text-slate-400 group-hover/doc:text-amber-600 transition-colors" />
+                                    <span>{row.documento}</span>
+                                </button>
+                                {row.cargo_nacional ? <span>• {row.cargo_nacional}</span> : null}
+                            </div>
                         </div>
                     </div>
                 );
@@ -394,6 +418,10 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                 <DropdownMenuItem onClick={() => handleOpenCarnet(row)} className="cursor-pointer">
                                     <IdCard className="mr-2 size-4 text-indigo-500" />
                                     {__('Digital Credential')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenCedula(row)} className="cursor-pointer">
+                                    <CreditCard className="mr-2 size-4 text-amber-500" />
+                                    {__('Cédula de Identidad')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <a href={`/admin/pastores/${row.id}/planilla`} target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
@@ -701,9 +729,20 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                     <h3 className="font-bold text-base text-foreground tracking-tight line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                                         {pastor.nombres} {pastor.apellidos}
                                                     </h3>
-                                                    <p className="text-xs text-muted-foreground font-medium line-clamp-1 mt-0.5">
-                                                        {pastor.documento} {pastor.cargo_nacional ? `• ${pastor.cargo_nacional}` : ''}
-                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenCedula(pastor)}
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/50 dark:hover:text-amber-300 text-xs text-muted-foreground font-mono font-semibold transition-all border border-slate-200/60 dark:border-slate-700/60 group/doc cursor-pointer"
+                                                        title={__('Ver Cédula de Identidad')}
+                                                    >
+                                                        <CreditCard className="size-3 text-slate-400 group-hover/doc:text-amber-600 transition-colors" />
+                                                        <span>{pastor.documento}</span>
+                                                        {pastor.cargo_nacional ? (
+                                                            <span className="font-sans font-normal text-muted-foreground text-[11px] truncate">
+                                                                • {pastor.cargo_nacional}
+                                                            </span>
+                                                        ) : null}
+                                                    </button>
 
                                                     {/* Divider */}
                                                     <div className="w-full h-px bg-border/60 my-3" />
@@ -760,6 +799,18 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                     >
                                                         <IdCard className="size-3.5" />
                                                         <span>{__('Credential')}</span>
+                                                    </Button>
+
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleOpenCedula(pastor)}
+                                                        className="h-8 px-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg flex-1 gap-1"
+                                                        title={__('Ver Cédula de Identidad')}
+                                                    >
+                                                        <CreditCard className="size-3.5" />
+                                                        <span>{__('Cédula')}</span>
                                                     </Button>
 
                                                     <Button
@@ -839,6 +890,12 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     pastor={carnetPastor}
                     isOpen={isCarnetModalOpen}
                     onClose={() => setIsCarnetModalOpen(false)}
+                />
+
+                <PastorCedulaModal
+                    pastor={cedulaPastor}
+                    isOpen={isCedulaModalOpen}
+                    onClose={() => setIsCedulaModalOpen(false)}
                 />
             </div>
         </>

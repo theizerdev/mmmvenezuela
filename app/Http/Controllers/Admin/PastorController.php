@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -473,5 +474,67 @@ class PastorController extends Controller
             'type' => 'success',
             'message' => __('Pastores eliminados exitosamente.'),
         ]);
+    }
+
+    /**
+     * Descargar copia digital de la cédula del pastor.
+     */
+    public function descargarCedula(int $id)
+    {
+        $pastor = Pastor::findOrFail($id);
+
+        if (!$pastor->foto_cedula) {
+            return redirect()->back()->with('notification', [
+                'type' => 'error',
+                'message' => __('El pastor no tiene cédula adjunta.'),
+            ]);
+        }
+
+        $trimmed = trim($pastor->foto_cedula);
+        $cleanDoc = preg_replace('/\D/', '', $pastor->documento ?: (string)$pastor->id);
+        $safeFullName = Str::slug($pastor->nombres . ' ' . $pastor->apellidos, '_');
+
+        // Si es base64
+        if (str_starts_with($trimmed, 'data:image/')) {
+            [$meta, $data] = explode(';', $trimmed);
+            [, $data] = explode(',', $data);
+            $binary = base64_decode($data);
+            $ext = 'jpg';
+            if (str_contains($meta, 'png')) $ext = 'png';
+            elseif (str_contains($meta, 'webp')) $ext = 'webp';
+
+            $filename = "Cedula_{$cleanDoc}_{$safeFullName}.{$ext}";
+            return response($binary)
+                ->header('Content-Type', 'image/' . $ext)
+                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        }
+
+        // Buscar en rutas de almacenamiento conocidas
+        $candidates = [
+            public_path('pastores_cedulas/' . basename($trimmed)),
+            storage_path('app/public/pastores_cedulas/' . basename($trimmed)),
+            public_path('storage/pastores_cedulas/' . basename($trimmed)),
+            public_path($trimmed),
+        ];
+
+        $filePath = null;
+        foreach ($candidates as $path) {
+            if (file_exists($path) && is_file($path)) {
+                $filePath = $path;
+                break;
+            }
+        }
+
+        if (!$filePath) {
+            return redirect()->back()->with('notification', [
+                'type' => 'error',
+                'message' => __('El archivo de la cédula no se encuentra disponible en el servidor.'),
+            ]);
+        }
+
+        $ext = pathinfo($filePath, PATHINFO_EXTENSION) ?: 'jpg';
+        $filename = "Cedula_{$cleanDoc}_{$safeFullName}.{$ext}";
+
+        return response()->download($filePath, $filename);
     }
 }

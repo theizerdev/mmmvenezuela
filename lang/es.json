@@ -2219,5 +2219,22 @@
     "View Front": "Ver Frontal",
     "Ver Frontal": "Ver Frontal",
     "Download PDF (Print)": "Descargar PDF (Imprimir)",
-    "Descargar PDF (Imprimir)": "Descargar PDF (Imprimir)"
+    "Descargar PDF (Imprimir)": "Descargar PDF (Imprimir)",
+    "Cédula de Identidad": "Cédula de Identidad",
+    "Identity Card (Cédula)": "Cédula de Identidad",
+    "Cédula": "Cédula",
+    "Ver Cédula de Identidad": "Ver Cédula de Identidad",
+    "Digitalizada": "Digitalizada",
+    "Alejar": "Alejar",
+    "Acercar": "Acercar",
+    "Restablecer zoom": "Restablecer zoom",
+    "Documento": "Documento",
+    "Sin Cédula Digitalizada": "Sin Cédula Digitalizada",
+    "Este pastor no posee una copia de su cédula de identidad registrada en el sistema. Puedes adjuntarla editando los datos del pastor.": "Este pastor no posee una copia de su cédula de identidad registrada en el sistema. Puedes adjuntarla editando los datos del pastor.",
+    "Editar Pastor para Adjuntar": "Editar Pastor para Adjuntar",
+    "Ver en tamaño completo": "Ver en tamaño completo",
+    "Ver Original": "Ver Original",
+    "Descargar Cédula": "Descargar Cédula",
+    "El pastor no tiene cédula adjunta.": "El pastor no tiene cédula adjunta.",
+    "El archivo de la cédula no se encuentra disponible en el servidor.": "El archivo de la cédula no se encuentra disponible en el servidor."
 }

@@ -1660,5 +1660,22 @@
     "View Front": "View Front",
     "Ver Frontal": "View Front",
     "Download PDF (Print)": "Download PDF (Print)",
-    "Descargar PDF (Imprimir)": "Download PDF (Print)"
+    "Descargar PDF (Imprimir)": "Download PDF (Print)",
+    "Cédula de Identidad": "Identity Card (Cédula)",
+    "Identity Card (Cédula)": "Identity Card (Cédula)",
+    "Cédula": "ID Card",
+    "Ver Cédula de Identidad": "View Identity Card",
+    "Digitalizada": "Digitized",
+    "Alejar": "Zoom Out",
+    "Acercar": "Zoom In",
+    "Restablecer zoom": "Reset Zoom",
+    "Documento": "Document",
+    "Sin Cédula Digitalizada": "No Digitized ID Card",
+    "Este pastor no posee una copia de su cédula de identidad registrada en el sistema. Puedes adjuntarla editando los datos del pastor.": "This pastor does not have a copy of their identity card registered in the system. You can attach it by editing the pastor's data.",
+    "Editar Pastor para Adjuntar": "Edit Pastor to Attach",
+    "Ver en tamaño completo": "View full size",
+    "Ver Original": "View Original",
+    "Descargar Cédula": "Download ID Card",
+    "El pastor no tiene cédula adjunta.": "The pastor has no attached identity card.",
+    "El archivo de la cédula no se encuentra disponible en el servidor.": "The identity card file is not available on the server."
 }

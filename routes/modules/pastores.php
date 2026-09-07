@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/pastores/{pastore}/edit', [PastorController::class, 'edit'])->name('pastores.edit');
     Route::get('/pastores/{id}/planilla', [PastorPlanillaController::class, 'planilla'])->name('pastores.planilla');
     Route::get('/pastores/{id}/carnet-pdf', [PastorCarnetController::class, 'carnetPdf'])->name('pastores.carnet-pdf');
+    Route::get('/pastores/{id}/cedula-descargar', [PastorController::class, 'descargarCedula'])->name('pastores.cedula-descargar');
     Route::post('/pastores/bulk-carnet-pdf', [PastorCarnetController::class, 'bulkCarnetPdf'])->name('pastores.bulk-carnet-pdf');
     Route::put('/pastores/{pastore}', [PastorController::class, 'update'])->name('pastores.update');
     Route::post('/pastores/{pastore}/toggle-status', [PastorController::class, 'toggleStatus'])->name('pastores.toggle-status');

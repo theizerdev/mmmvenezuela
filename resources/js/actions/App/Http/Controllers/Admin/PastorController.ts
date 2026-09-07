@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PastorController::index
- * @see app/Http/Controllers/Admin/PastorController.php:24
+ * @see app/Http/Controllers/Admin/PastorController.php:25
  * @route '/admin/pastores'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::index
- * @see app/Http/Controllers/Admin/PastorController.php:24
+ * @see app/Http/Controllers/Admin/PastorController.php:25
  * @route '/admin/pastores'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::index
- * @see app/Http/Controllers/Admin/PastorController.php:24
+ * @see app/Http/Controllers/Admin/PastorController.php:25
  * @route '/admin/pastores'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\PastorController::index
- * @see app/Http/Controllers/Admin/PastorController.php:24
+ * @see app/Http/Controllers/Admin/PastorController.php:25
  * @route '/admin/pastores'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\PastorController::index
- * @see app/Http/Controllers/Admin/PastorController.php:24
+ * @see app/Http/Controllers/Admin/PastorController.php:25
  * @route '/admin/pastores'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\PastorController::index
- * @see app/Http/Controllers/Admin/PastorController.php:24
+ * @see app/Http/Controllers/Admin/PastorController.php:25
  * @route '/admin/pastores'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\PastorController::index
- * @see app/Http/Controllers/Admin/PastorController.php:24
+ * @see app/Http/Controllers/Admin/PastorController.php:25
  * @route '/admin/pastores'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\PastorController::create
- * @see app/Http/Controllers/Admin/PastorController.php:108
+ * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::create
- * @see app/Http/Controllers/Admin/PastorController.php:108
+ * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::create
- * @see app/Http/Controllers/Admin/PastorController.php:108
+ * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\PastorController::create
- * @see app/Http/Controllers/Admin/PastorController.php:108
+ * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\PastorController::create
- * @see app/Http/Controllers/Admin/PastorController.php:108
+ * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\PastorController::create
- * @see app/Http/Controllers/Admin/PastorController.php:108
+ * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\PastorController::create
- * @see app/Http/Controllers/Admin/PastorController.php:108
+ * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\Admin\PastorController::store
- * @see app/Http/Controllers/Admin/PastorController.php:141
+ * @see app/Http/Controllers/Admin/PastorController.php:142
  * @route '/admin/pastores'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::store
- * @see app/Http/Controllers/Admin/PastorController.php:141
+ * @see app/Http/Controllers/Admin/PastorController.php:142
  * @route '/admin/pastores'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::store
- * @see app/Http/Controllers/Admin/PastorController.php:141
+ * @see app/Http/Controllers/Admin/PastorController.php:142
  * @route '/admin/pastores'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\PastorController::store
- * @see app/Http/Controllers/Admin/PastorController.php:141
+ * @see app/Http/Controllers/Admin/PastorController.php:142
  * @route '/admin/pastores'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\PastorController::store
- * @see app/Http/Controllers/Admin/PastorController.php:141
+ * @see app/Http/Controllers/Admin/PastorController.php:142
  * @route '/admin/pastores'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +212,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\PastorController::edit
- * @see app/Http/Controllers/Admin/PastorController.php:285
+ * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
 export const edit = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +227,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::edit
- * @see app/Http/Controllers/Admin/PastorController.php:285
+ * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
 edit.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -260,7 +260,7 @@ edit.url = (args: { pastore: number | { id: number } } | [pastore: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::edit
- * @see app/Http/Controllers/Admin/PastorController.php:285
+ * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
 edit.get = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -269,7 +269,7 @@ edit.get = (args: { pastore: number | { id: number } } | [pastore: number | { id
 })
 /**
 * @see \App\Http\Controllers\Admin\PastorController::edit
- * @see app/Http/Controllers/Admin/PastorController.php:285
+ * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
 edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -279,7 +279,7 @@ edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { i
 
     /**
 * @see \App\Http\Controllers\Admin\PastorController::edit
- * @see app/Http/Controllers/Admin/PastorController.php:285
+ * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
     const editForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -289,7 +289,7 @@ edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { i
 
             /**
 * @see \App\Http\Controllers\Admin\PastorController::edit
- * @see app/Http/Controllers/Admin/PastorController.php:285
+ * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
         editForm.get = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -298,7 +298,7 @@ edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { i
         })
             /**
 * @see \App\Http\Controllers\Admin\PastorController::edit
- * @see app/Http/Controllers/Admin/PastorController.php:285
+ * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
         editForm.head = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -313,8 +313,105 @@ edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { i
     
     edit.form = editForm
 /**
+* @see \App\Http\Controllers\Admin\PastorController::descargarCedula
+ * @see app/Http/Controllers/Admin/PastorController.php:482
+ * @route '/admin/pastores/{id}/cedula-descargar'
+ */
+export const descargarCedula = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: descargarCedula.url(args, options),
+    method: 'get',
+})
+
+descargarCedula.definition = {
+    methods: ["get","head"],
+    url: '/admin/pastores/{id}/cedula-descargar',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\PastorController::descargarCedula
+ * @see app/Http/Controllers/Admin/PastorController.php:482
+ * @route '/admin/pastores/{id}/cedula-descargar'
+ */
+descargarCedula.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return descargarCedula.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\PastorController::descargarCedula
+ * @see app/Http/Controllers/Admin/PastorController.php:482
+ * @route '/admin/pastores/{id}/cedula-descargar'
+ */
+descargarCedula.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: descargarCedula.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Admin\PastorController::descargarCedula
+ * @see app/Http/Controllers/Admin/PastorController.php:482
+ * @route '/admin/pastores/{id}/cedula-descargar'
+ */
+descargarCedula.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: descargarCedula.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\PastorController::descargarCedula
+ * @see app/Http/Controllers/Admin/PastorController.php:482
+ * @route '/admin/pastores/{id}/cedula-descargar'
+ */
+    const descargarCedulaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: descargarCedula.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PastorController::descargarCedula
+ * @see app/Http/Controllers/Admin/PastorController.php:482
+ * @route '/admin/pastores/{id}/cedula-descargar'
+ */
+        descargarCedulaForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: descargarCedula.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\PastorController::descargarCedula
+ * @see app/Http/Controllers/Admin/PastorController.php:482
+ * @route '/admin/pastores/{id}/cedula-descargar'
+ */
+        descargarCedulaForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: descargarCedula.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    descargarCedula.form = descargarCedulaForm
+/**
 * @see \App\Http\Controllers\Admin\PastorController::update
- * @see app/Http/Controllers/Admin/PastorController.php:322
+ * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
 export const update = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -329,7 +426,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::update
- * @see app/Http/Controllers/Admin/PastorController.php:322
+ * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
 update.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -362,7 +459,7 @@ update.url = (args: { pastore: number | { id: number } } | [pastore: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::update
- * @see app/Http/Controllers/Admin/PastorController.php:322
+ * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
 update.put = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -372,7 +469,7 @@ update.put = (args: { pastore: number | { id: number } } | [pastore: number | { 
 
     /**
 * @see \App\Http\Controllers\Admin\PastorController::update
- * @see app/Http/Controllers/Admin/PastorController.php:322
+ * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
     const updateForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -387,7 +484,7 @@ update.put = (args: { pastore: number | { id: number } } | [pastore: number | { 
 
             /**
 * @see \App\Http\Controllers\Admin\PastorController::update
- * @see app/Http/Controllers/Admin/PastorController.php:322
+ * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
         updateForm.put = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -403,7 +500,7 @@ update.put = (args: { pastore: number | { id: number } } | [pastore: number | { 
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\PastorController::toggleStatus
- * @see app/Http/Controllers/Admin/PastorController.php:450
+ * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
 export const toggleStatus = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -418,7 +515,7 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::toggleStatus
- * @see app/Http/Controllers/Admin/PastorController.php:450
+ * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
 toggleStatus.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -451,7 +548,7 @@ toggleStatus.url = (args: { pastore: number | { id: number } } | [pastore: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::toggleStatus
- * @see app/Http/Controllers/Admin/PastorController.php:450
+ * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
 toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -461,7 +558,7 @@ toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: numb
 
     /**
 * @see \App\Http\Controllers\Admin\PastorController::toggleStatus
- * @see app/Http/Controllers/Admin/PastorController.php:450
+ * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
     const toggleStatusForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -471,7 +568,7 @@ toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: numb
 
             /**
 * @see \App\Http\Controllers\Admin\PastorController::toggleStatus
- * @see app/Http/Controllers/Admin/PastorController.php:450
+ * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
         toggleStatusForm.post = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -482,7 +579,7 @@ toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: numb
     toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\Admin\PastorController::bulkDestroy
- * @see app/Http/Controllers/Admin/PastorController.php:463
+ * @see app/Http/Controllers/Admin/PastorController.php:464
  * @route '/admin/pastores/bulk-destroy'
  */
 export const bulkDestroy = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -497,7 +594,7 @@ bulkDestroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::bulkDestroy
- * @see app/Http/Controllers/Admin/PastorController.php:463
+ * @see app/Http/Controllers/Admin/PastorController.php:464
  * @route '/admin/pastores/bulk-destroy'
  */
 bulkDestroy.url = (options?: RouteQueryOptions) => {
@@ -506,7 +603,7 @@ bulkDestroy.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorController::bulkDestroy
- * @see app/Http/Controllers/Admin/PastorController.php:463
+ * @see app/Http/Controllers/Admin/PastorController.php:464
  * @route '/admin/pastores/bulk-destroy'
  */
 bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -516,7 +613,7 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\PastorController::bulkDestroy
- * @see app/Http/Controllers/Admin/PastorController.php:463
+ * @see app/Http/Controllers/Admin/PastorController.php:464
  * @route '/admin/pastores/bulk-destroy'
  */
     const bulkDestroyForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -526,7 +623,7 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\PastorController::bulkDestroy
- * @see app/Http/Controllers/Admin/PastorController.php:463
+ * @see app/Http/Controllers/Admin/PastorController.php:464
  * @route '/admin/pastores/bulk-destroy'
  */
         bulkDestroyForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -535,6 +632,6 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
         })
     
     bulkDestroy.form = bulkDestroyForm
-const PastorController = { index, create, store, edit, update, toggleStatus, bulkDestroy }
+const PastorController = { index, create, store, edit, descargarCedula, update, toggleStatus, bulkDestroy }
 
 export default PastorController
