@@ -79,7 +79,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="size-6 text-indigo-300" />
                             <DialogTitle className="text-xl font-bold text-white tracking-tight">
-                                {__('Carnet Ministerial / Credencial')}
+                                {__('Ministerial Credential / ID')}
                             </DialogTitle>
                         </div>
                         <DialogDescription className="text-xs text-indigo-200 mt-0.5">
@@ -99,7 +99,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                 activeTab === 'front' ? "bg-white text-indigo-950 font-bold" : "text-white hover:bg-white/20"
                             )}
                         >
-                            {__('Frontal')}
+                            {__('Front')}
                         </Button>
                         <Button
                             type="button"
@@ -111,7 +111,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                 activeTab === 'back' ? "bg-white text-indigo-950 font-bold" : "text-white hover:bg-white/20"
                             )}
                         >
-                            {__('Reverso')}
+                            {__('Back')}
                         </Button>
                     </div>
                 </DialogHeader>
@@ -258,29 +258,27 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                         <span className="text-[15.5px] font-bold italic text-[#0f3563] font-serif tracking-wide block leading-tight">
                                             {pastor.nombres} {pastor.apellidos} ({pastor.documento?.replace(/\D/g, '') || pastor.codigo})
                                         </span>
-                                    </div>
-
-                                    {/* Código QR Real de Verificación */}
-                                    <div className="flex flex-col items-center shrink-0 pr-2" title="Escanear para verificar pastor">
-                                        <div className="p-1.5 bg-white border border-slate-300 rounded-xl shadow-sm flex items-center justify-center">
-                                            <img
-                                                src={qrImageUrl}
-                                                alt="Código QR de Verificación"
-                                                className="size-20 object-contain"
-                                            />
-                                        </div>
-                                        <span className="text-[8.5px] font-extrabold text-slate-700 uppercase tracking-tighter mt-1">
-                                            Escanear QR
-                                        </span>
-                                    </div>
-                                </div>
+                                                             {/* Código QR Real de Verificación */}
+                                    <div className="flex flex-col items-center shrink-0 pr-2" title={__('Scan to verify pastor')}>
+                                         <div className="p-1.5 bg-white border border-slate-300 rounded-xl shadow-sm flex items-center justify-center">
+                                             <img
+                                                 src={qrImageUrl}
+                                                 alt={__('Verification QR Code')}
+                                                 className="size-20 object-contain"
+                                             />
+                                         </div>
+                                         <span className="text-[8.5px] font-extrabold text-slate-700 uppercase tracking-tighter mt-1">
+                                             {__('Scan QR')}
+                                         </span>
+                                     </div>
+                                 </div>
                             </div>
                         )}
                     </div>
 
                     <p className="text-[13px] text-muted-foreground mt-4 flex items-center gap-1.5 font-medium">
                         <QrCode className="size-4 text-blue-600" />
-                        Haz clic en la tarjeta o usa los botones para alternar entre el Frontal y el Reverso
+                        {__('Click on the card or use buttons to flip between Front and Back')}
                     </p>
                 </div>
 
@@ -293,7 +291,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                         className="gap-2 text-xs font-semibold h-9 px-4"
                     >
                         <RotateCw className="size-3.5 text-indigo-600" />
-                        {activeTab === 'front' ? __('Ver Reverso') : __('Ver Frontal')}
+                        {activeTab === 'front' ? __('View Back') : __('View Front')}
                     </Button>
 
                     <div className="flex items-center gap-2">
@@ -304,7 +302,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                             onClick={onClose}
                             className="text-xs h-9 px-4"
                         >
-                            {__('Cerrar')}
+                            {__('Close')}
                         </Button>
                         <Button
                             type="button"
@@ -313,7 +311,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                             className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 px-4 shadow-sm"
                         >
                             <Download className="size-3.5" />
-                            {__('Descargar PDF (Imprimir)')}
+                            {__('Download PDF (Print)')}
                         </Button>
                     </div>
                 </DialogFooter>

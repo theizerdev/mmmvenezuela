@@ -114,7 +114,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
         { value: '', label: __('All zones') },
         ...Array.from({ length: 43 }, (_, i) => ({
             value: String(i + 1),
-            label: `Zona ${i + 1}`,
+            label: `${__('Zone')} ${i + 1}`,
         })),
     ], [__]);
 
@@ -122,7 +122,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
         { value: '', label: __('All districts') },
         ...Array.from({ length: 5 }, (_, i) => ({
             value: String(i + 1),
-            label: `Distrito ${i + 1}`,
+            label: `${__('District')} ${i + 1}`,
         })),
     ], [__]);
     const [carnetPastor, setCarnetPastor] = useState<Pastor | null>(null);
@@ -319,7 +319,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                 <div className="flex flex-col gap-1 text-xs">
                     <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
-                            {__('Zona')} {row.zona || '—'}
+                            {__('Zone')} {row.zona || '—'}
                         </span>
                         <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
                             {__('Dist.')} {row.distrito || '—'}
@@ -393,12 +393,12 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             <>
                                 <DropdownMenuItem onClick={() => handleOpenCarnet(row)} className="cursor-pointer">
                                     <IdCard className="mr-2 size-4 text-indigo-500" />
-                                    {__('Carnet Digital')}
+                                    {__('Digital Credential')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <a href={`/admin/pastores/${row.id}/planilla`} target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
                                         <FileText className="mr-2 size-4 text-emerald-500" />
-                                        {__('Planilla PDF')}
+                                        {__('PDF Form')}
                                     </a>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
@@ -497,10 +497,10 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                     size="sm"
                                     onClick={() => setViewMode('table')}
                                     className="h-7 px-2.5 gap-1.5 text-xs shadow-none"
-                                    title={__('Vista de Tabla / Lista')}
+                                    title={__('Table View')}
                                 >
                                     <List className="size-3.5" />
-                                    <span className="hidden sm:inline">{__('Tabla')}</span>
+                                    <span className="hidden sm:inline">{__('Table')}</span>
                                 </Button>
                                 <Button
                                     type="button"
@@ -508,10 +508,10 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                     size="sm"
                                     onClick={() => setViewMode('grid')}
                                     className="h-7 px-2.5 gap-1.5 text-xs shadow-none"
-                                    title={__('Vista de Cuadrícula / Tarjetas')}
+                                    title={__('Grid View')}
                                 >
                                     <LayoutGrid className="size-3.5" />
-                                    <span className="hidden sm:inline">{__('Cuadrícula')}</span>
+                                    <span className="hidden sm:inline">{__('Grid')}</span>
                                 </Button>
                             </div>
                         </div>
@@ -690,7 +690,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                         )}>
                                                             <span>{initials}</span>
                                                             <span className="text-[8px] font-semibold uppercase tracking-wider opacity-75">
-                                                                {__('Sin Foto')}
+                                                                {__('No Photo')}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -711,15 +711,15 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                     {/* MUI Chips / Meta details */}
                                                     <div className="w-full space-y-2 text-xs">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-muted-foreground text-[11px] font-medium">{__('Grado')}:</span>
+                                                            <span className="text-muted-foreground text-[11px] font-medium">{__('Grade')}:</span>
                                                             {getNivelBadge(pastor.nivel_ministerial)}
                                                         </div>
 
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-muted-foreground text-[11px] font-medium">{__('Ubicación')}:</span>
+                                                            <span className="text-muted-foreground text-[11px] font-medium">{__('Location')}:</span>
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80">
-                                                                    {__('Zona')} {pastor.zona || '—'}
+                                                                    {__('Zone')} {pastor.zona || '—'}
                                                                 </span>
                                                                 <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80">
                                                                     {__('Dist.')} {pastor.distrito || '—'}
@@ -734,7 +734,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                             if (!nombreConyuge) return null;
                                                             return (
                                                                 <div className="flex items-center justify-between text-[11px] gap-2 pt-1 border-t border-dashed border-border/40">
-                                                                    <span className="text-muted-foreground font-medium shrink-0">{__('Cónyuge')}:</span>
+                                                                    <span className="text-muted-foreground font-medium shrink-0">{__('Spouse')}:</span>
                                                                     <span
                                                                         className="font-semibold text-rose-600 dark:text-rose-400 truncate text-right flex items-center justify-end gap-1 min-w-0 flex-1"
                                                                         title={nombreConyuge}
@@ -756,10 +756,10 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                         size="sm"
                                                         onClick={() => handleOpenCarnet(pastor)}
                                                         className="h-8 px-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg flex-1 gap-1"
-                                                        title={__('Ver Carnet Ministerial')}
+                                                        title={__('View Ministerial Credential')}
                                                     >
                                                         <IdCard className="size-3.5" />
-                                                        <span>{__('Carnet')}</span>
+                                                        <span>{__('Credential')}</span>
                                                     </Button>
 
                                                     <Button
@@ -768,10 +768,10 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                         size="sm"
                                                         onClick={() => window.open(`/admin/pastores/${pastor.id}/planilla`, '_blank')}
                                                         className="h-8 px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg gap-1"
-                                                        title={__('Ver Planilla PDF')}
+                                                        title={__('View PDF Form')}
                                                     >
                                                         <FileText className="size-3.5" />
-                                                        <span>{__('Planilla')}</span>
+                                                        <span>{__('Form')}</span>
                                                     </Button>
 
                                                     {hasPermission('pastores.edit') && (
@@ -796,7 +796,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                                 setIsDeleteDialogOpen(true);
                                                             }}
                                                             className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
-                                                            title={__('Eliminar Pastor')}
+                                                            title={__('Delete Pastor')}
                                                         >
                                                             <Trash2 className="size-3.5" />
                                                         </Button>
@@ -808,7 +808,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                 </div>
                             ) : (
                                 <div className="p-12 text-center bg-card border rounded-xl text-muted-foreground text-sm">
-                                    {__('No se encontraron registros de pastores.')}
+                                    {__('No pastor records found.')}
                                 </div>
                             )}
                         </div>
@@ -830,8 +830,8 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     title={__('Delete Pastor')}
                     description={
                         selectedIds.length > 1
-                            ? `Esta acción eliminará los ${selectedIds.length} pastores seleccionados permanentemente.`
-                            : 'Esta acción eliminará el pastor seleccionado permanentemente.'
+                            ? __('Are you sure you want to permanently delete :count selected pastors?', { count: String(selectedIds.length) })
+                            : __('Are you sure you want to permanently delete the selected pastor?')
                     }
                 />
 
