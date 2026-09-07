@@ -122,6 +122,7 @@ export default function RegistroPastor({
 }: RegistroPastorProps) {
     const { props } = usePage<any>();
     const { data, setData, post, processing, errors } = useForm({
+        pastor_id: '',
         codigo: '',
         nombres: '',
         apellidos: '',
@@ -250,6 +251,10 @@ export default function RegistroPastor({
     const [cedulaExistentePastorId, setCedulaExistentePastorId] = useState<number | null>(null);
     const [isCheckingConyugeCedula, setIsCheckingConyugeCedula] = useState<boolean>(false);
     const [conyugeExtensionData, setConyugeExtensionData] = useState<any>(null);
+    const cedulaAbortControllerRef = useRef<AbortController | null>(null);
+    const cedulaDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const conyugeCedulaAbortControllerRef = useRef<AbortController | null>(null);
+    const conyugeCedulaDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Estados para borrador automático
     const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
@@ -800,6 +805,10 @@ export default function RegistroPastor({
                 const parsed = JSON.parse(rawDraft);
                 if (parsed.data) {
                     setData((prev) => ({ ...prev, ...parsed.data }));
+                    if (parsed.data.documento || parsed.data.numero_documento) {
+                        const docToCheck = parsed.data.documento || `${parsed.data.tipo_documento || 'V'}-${parsed.data.numero_documento}`;
+                        checkCedulaDuplicada(docToCheck, true);
+                    }
                 }
                 if (parsed.activeTab) {
                     setActiveTab(parsed.activeTab);
@@ -882,210 +891,274 @@ export default function RegistroPastor({
         setData('medicamentos_recetados', nuevaLista.length > 0 ? JSON.stringify(nuevaLista) : '');
     };
 
-    // Búsqueda y Carga de Datos de Cédula en tiempo real
-    const checkCedulaDuplicada = async (doc: string) => {
+    // Búsqueda y Carga de Datos de Cédula en tiempo real con Debounce y Cancelación de Peticiones
+    const checkCedulaDuplicada = (doc: string, immediate: boolean = false) => {
+        if (cedulaDebounceTimerRef.current) {
+            clearTimeout(cedulaDebounceTimerRef.current);
+            cedulaDebounceTimerRef.current = null;
+        }
+
         const trimmed = doc.trim();
         const numOnly = trimmed.replace(/\D/g, '');
         if (numOnly.length < 4) {
+            if (cedulaAbortControllerRef.current) {
+                cedulaAbortControllerRef.current.abort();
+                cedulaAbortControllerRef.current = null;
+            }
             setCedulaExistenteNombre(null);
             setCedulaExistentePastorId(null);
+            setData((prev) => ({ ...prev, pastor_id: '' }));
+            setIsCheckingCedula(false);
             return;
         }
 
-        setIsCheckingCedula(true);
-        try {
-            const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(trimmed)}`);
-            if (res.ok) {
-                const result = await res.json();
-                if (result.existe && result.pastor) {
-                    const p = result.pastor;
-                    const parsedDoc = parseCedula(p.documento || trimmed);
-                    const parsedConyugeDoc = parseCedula(p.cedula_conyuge);
-                    setCedulaExistenteNombre(result.nombre || `${p.nombres} ${p.apellidos}`);
-                    setCedulaExistentePastorId(result.pastor_id || p.id);
+        const executeSearch = async () => {
+            if (cedulaAbortControllerRef.current) {
+                cedulaAbortControllerRef.current.abort();
+            }
+            const abortController = new AbortController();
+            cedulaAbortControllerRef.current = abortController;
 
-                    setData((prev) => ({
-                        ...prev,
-                        codigo: p.codigo || prev.codigo,
-                        nombres: p.nombres || prev.nombres,
-                        apellidos: p.apellidos || prev.apellidos,
-                        tipo_documento: parsedDoc.tipo,
-                        numero_documento: parsedDoc.numero,
-                        documento: p.documento || `${parsedDoc.tipo}-${parsedDoc.numero}`,
-                        genero: p.genero || prev.genero,
-                        fe_nacimiento: p.fe_nacimiento || prev.fe_nacimiento,
-                        edad: p.edad || prev.edad,
-                        estado_civil: p.estado_civil || prev.estado_civil,
-                        nombre_conyuge: p.nombre_conyuge || prev.nombre_conyuge,
-                        tipo_documento_conyuge: parsedConyugeDoc.tipo,
-                        numero_documento_conyuge: parsedConyugeDoc.numero,
-                        cedula_conyuge: p.cedula_conyuge || (parsedConyugeDoc.numero ? `${parsedConyugeDoc.tipo}-${parsedConyugeDoc.numero}` : ''),
-                        conyuge_pastorea: Boolean(p.conyuge_pastorea || p.cedula_conyuge),
-                        conyuge_id: p.conyuge_id || prev.conyuge_id,
-                        telefono_tlf: p.telefono_tlf || prev.telefono_tlf,
-                        telefono_hab: p.telefono_hab || prev.telefono_hab,
-                        telefono_otro: p.telefono_otro || prev.telefono_otro,
-                        email: p.email || prev.email,
-                        estado_id: p.estado_id || prev.estado_id,
-                        municipio_id: p.municipio_id || prev.municipio_id,
-                        parroquia_id: p.parroquia_id || prev.parroquia_id,
-                        municipio: p.municipio || prev.municipio,
-                        edificio_casa_quinta: p.edificio_casa_quinta || prev.edificio_casa_quinta,
-                        piso: p.piso || prev.piso,
-                        apartamento: p.apartamento || prev.apartamento,
-                        calle_avenida: p.calle_avenida || prev.calle_avenida,
-                        urbanizacion: p.urbanizacion || prev.urbanizacion,
-                        grado_instruccion: p.grado_instruccion || prev.grado_instruccion,
-                        titulo_obtenido: p.titulo_obtenido || prev.titulo_obtenido,
-                        estudio_teologico: Boolean(p.estudio_teologico),
-                        titulo_teologico: p.titulo_teologico || prev.titulo_teologico,
-                        tiempo_de_estudio_teologico: p.tiempo_de_estudio_teologico || prev.tiempo_de_estudio_teologico,
-                        instituto_teologico: p.instituto_teologico || prev.instituto_teologico,
-                        nivel_ministerial: p.nivel_ministerial || prev.nivel_ministerial,
-                        zona: p.zona || prev.zona,
-                        distrito: p.distrito || prev.distrito,
-                        ano_promocion: p.ano_promocion || prev.ano_promocion,
-                        tiempo_colaborando: p.tiempo_colaborando || prev.tiempo_colaborando,
-                        batizado_espiritu_santo: p.batizado_espiritu_santo !== undefined ? Boolean(p.batizado_espiritu_santo) : prev.batizado_espiritu_santo,
-                        pertenece_ministerio: p.pertenece_ministerio !== undefined ? Boolean(p.pertenece_ministerio) : prev.pertenece_ministerio,
-                        cargo_nacional: p.cargo_nacional || prev.cargo_nacional,
-                        mencion: p.mencion || prev.mencion,
-                        nota: p.nota || prev.nota,
-                        grupo_sanguineo: p.grupo_sanguineo || prev.grupo_sanguineo,
-                        condicion_salud: p.condicion_salud || prev.condicion_salud,
-                        padece_enfermedad: Boolean(p.padece_enfermedad),
-                        enfermedades_cronicas: p.enfermedades_cronicas || prev.enfermedades_cronicas,
-                        toma_medicamentos: Boolean(p.toma_medicamentos),
-                        medicamentos_recetados: p.medicamentos_recetados || prev.medicamentos_recetados,
-                        alergias: p.alergias || prev.alergias,
-                        contacto_emergencia_nombre: p.contacto_emergencia_nombre || prev.contacto_emergencia_nombre,
-                        contacto_emergencia_telefono: p.contacto_emergencia_telefono || prev.contacto_emergencia_telefono,
-                        observaciones_salud: p.observaciones_salud || prev.observaciones_salud,
-                        foto: p.foto_url || p.foto || prev.foto,
-                        foto_cedula: p.foto_cedula_url || p.foto_cedula || prev.foto_cedula,
-                    }));
-
-                    if (result.extension) {
-                        const ext = result.extension;
-                        let parsedMeds: MediaItem[] = [];
-                        if (ext.medio_comunicacion) {
-                            try {
-                                const m = JSON.parse(ext.medio_comunicacion);
-                                if (Array.isArray(m)) parsedMeds = m;
-                            } catch (e) { }
-                        }
+            setIsCheckingCedula(true);
+            try {
+                const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(trimmed)}`, {
+                    signal: abortController.signal,
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    if (result.existe && result.pastor) {
+                        const p = result.pastor;
+                        const parsedDoc = parseCedula(p.documento || trimmed);
+                        const parsedConyugeDoc = parseCedula(p.cedula_conyuge);
+                        const finalPastorId = String(result.pastor_id || p.id);
+                        setCedulaExistenteNombre(result.nombre || `${p.nombres} ${p.apellidos}`);
+                        setCedulaExistentePastorId(result.pastor_id || p.id);
 
                         setData((prev) => ({
                             ...prev,
-                            tiene_extension: true,
-                            extension_id: ext.id ? String(ext.id) : prev.extension_id,
-                            extension_nombre: ext.nombre || prev.extension_nombre,
-                            extension_tipo_local_id: ext.tipo_local_id ? String(ext.tipo_local_id) : prev.extension_tipo_local_id,
-                            extension_estado_id: ext.estado_id ? String(ext.estado_id) : (p.estado_id ? String(p.estado_id) : prev.extension_estado_id),
-                            extension_municipio_id: ext.municipio_id ? String(ext.municipio_id) : (p.municipio_id ? String(p.municipio_id) : prev.extension_municipio_id),
-                            extension_parroquia_id: ext.parroquia_id ? String(ext.parroquia_id) : (p.parroquia_id ? String(p.parroquia_id) : prev.extension_parroquia_id),
-                            extension_direccion: ext.direccion || prev.extension_direccion,
-                            extension_sector: ext.sector || prev.extension_sector,
-                            extension_calle: ext.calle || prev.extension_calle,
-                            extension_avenida: ext.avenida || prev.extension_avenida,
-                            extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
-                            extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
-                            extension_zona: ext.zona || p.zona || prev.extension_zona,
-                            extension_distrito: ext.distrito || p.distrito || prev.extension_distrito,
-                            extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
-                            extension_anios_activa: ext.anios_activa ? String(ext.anios_activa) : prev.extension_anios_activa,
-                            extension_tiempo_trabajo: ext.tiempo_trabajo || prev.extension_tiempo_trabajo,
-                            extension_descripcion: ext.descripcion || prev.extension_descripcion,
-                            extension_miembros_activos: ext.miembros_activos ? String(ext.miembros_activos) : prev.extension_miembros_activos,
-                            extension_cantidad_campos_blancos: ext.cantidad_campos_blancos ? String(ext.cantidad_campos_blancos) : prev.extension_cantidad_campos_blancos,
-                            extension_miembro_probante: ext.miembro_probante ? String(ext.miembro_probante) : prev.extension_miembro_probante,
-                            extension_logros_obtenidos: ext.logros_obtenidos || prev.extension_logros_obtenidos,
-                            extension_iglesias_fundadas: ext.iglesias_fundadas ? String(ext.iglesias_fundadas) : prev.extension_iglesias_fundadas,
-                            extension_pastores_ministerio: ext.pastores_ministerio ? String(ext.pastores_ministerio) : prev.extension_pastores_ministerio,
-                            extension_posee_medio_comunicacion: Boolean(ext.posee_medio_comunicacion),
-                            extension_medios_lista: parsedMeds.length > 0 ? parsedMeds : prev.extension_medios_lista,
+                            pastor_id: finalPastorId,
+                            codigo: p.codigo || prev.codigo,
+                            nombres: p.nombres || prev.nombres,
+                            apellidos: p.apellidos || prev.apellidos,
+                            tipo_documento: parsedDoc.tipo,
+                            numero_documento: parsedDoc.numero,
+                            documento: p.documento || `${parsedDoc.tipo}-${parsedDoc.numero}`,
+                            genero: p.genero || prev.genero,
+                            fe_nacimiento: p.fe_nacimiento || prev.fe_nacimiento,
+                            edad: p.edad || prev.edad,
+                            estado_civil: p.estado_civil || prev.estado_civil,
+                            nombre_conyuge: p.nombre_conyuge || prev.nombre_conyuge,
+                            tipo_documento_conyuge: parsedConyugeDoc.tipo,
+                            numero_documento_conyuge: parsedConyugeDoc.numero,
+                            cedula_conyuge: p.cedula_conyuge || (parsedConyugeDoc.numero ? `${parsedConyugeDoc.tipo}-${parsedConyugeDoc.numero}` : ''),
+                            conyuge_pastorea: Boolean(p.conyuge_pastorea || p.cedula_conyuge),
+                            conyuge_id: p.conyuge_id || prev.conyuge_id,
+                            telefono_tlf: p.telefono_tlf || prev.telefono_tlf,
+                            telefono_hab: p.telefono_hab || prev.telefono_hab,
+                            telefono_otro: p.telefono_otro || prev.telefono_otro,
+                            email: p.email || prev.email,
+                            estado_id: p.estado_id || prev.estado_id,
+                            municipio_id: p.municipio_id || prev.municipio_id,
+                            parroquia_id: p.parroquia_id || prev.parroquia_id,
+                            municipio: p.municipio || prev.municipio,
+                            edificio_casa_quinta: p.edificio_casa_quinta || prev.edificio_casa_quinta,
+                            piso: p.piso || prev.piso,
+                            apartamento: p.apartamento || prev.apartamento,
+                            calle_avenida: p.calle_avenida || prev.calle_avenida,
+                            urbanizacion: p.urbanizacion || prev.urbanizacion,
+                            grado_instruccion: p.grado_instruccion || prev.grado_instruccion,
+                            titulo_obtenido: p.titulo_obtenido || prev.titulo_obtenido,
+                            estudio_teologico: Boolean(p.estudio_teologico),
+                            titulo_teologico: p.titulo_teologico || prev.titulo_teologico,
+                            tiempo_de_estudio_teologico: p.tiempo_de_estudio_teologico || prev.tiempo_de_estudio_teologico,
+                            instituto_teologico: p.instituto_teologico || prev.instituto_teologico,
+                            nivel_ministerial: p.nivel_ministerial || prev.nivel_ministerial,
+                            zona: p.zona || prev.zona,
+                            distrito: p.distrito || prev.distrito,
+                            ano_promocion: p.ano_promocion || prev.ano_promocion,
+                            tiempo_colaborando: p.tiempo_colaborando || prev.tiempo_colaborando,
+                            batizado_espiritu_santo: p.batizado_espiritu_santo !== undefined ? Boolean(p.batizado_espiritu_santo) : prev.batizado_espiritu_santo,
+                            pertenece_ministerio: p.pertenece_ministerio !== undefined ? Boolean(p.pertenece_ministerio) : prev.pertenece_ministerio,
+                            cargo_nacional: p.cargo_nacional || prev.cargo_nacional,
+                            mencion: p.mencion || prev.mencion,
+                            nota: p.nota || prev.nota,
+                            grupo_sanguineo: p.grupo_sanguineo || prev.grupo_sanguineo,
+                            condicion_salud: p.condicion_salud || prev.condicion_salud,
+                            padece_enfermedad: Boolean(p.padece_enfermedad),
+                            enfermedades_cronicas: p.enfermedades_cronicas || prev.enfermedades_cronicas,
+                            toma_medicamentos: Boolean(p.toma_medicamentos),
+                            medicamentos_recetados: p.medicamentos_recetados || prev.medicamentos_recetados,
+                            alergias: p.alergias || prev.alergias,
+                            contacto_emergencia_nombre: p.contacto_emergencia_nombre || prev.contacto_emergencia_nombre,
+                            contacto_emergencia_telefono: p.contacto_emergencia_telefono || prev.contacto_emergencia_telefono,
+                            observaciones_salud: p.observaciones_salud || prev.observaciones_salud,
+                            foto: p.foto_url || p.foto || prev.foto,
+                            foto_cedula: p.foto_cedula_url || p.foto_cedula || prev.foto_cedula,
+                        }));
+
+                        if (result.extension) {
+                            const ext = result.extension;
+                            let parsedMeds: MediaItem[] = [];
+                            if (ext.medio_comunicacion) {
+                                try {
+                                    const m = JSON.parse(ext.medio_comunicacion);
+                                    if (Array.isArray(m)) parsedMeds = m;
+                                } catch (e) { }
+                            }
+
+                            setData((prev) => ({
+                                ...prev,
+                                tiene_extension: true,
+                                extension_id: ext.id ? String(ext.id) : prev.extension_id,
+                                extension_nombre: ext.nombre || prev.extension_nombre,
+                                extension_tipo_local_id: ext.tipo_local_id ? String(ext.tipo_local_id) : prev.extension_tipo_local_id,
+                                extension_estado_id: ext.estado_id ? String(ext.estado_id) : (p.estado_id ? String(p.estado_id) : prev.extension_estado_id),
+                                extension_municipio_id: ext.municipio_id ? String(ext.municipio_id) : (p.municipio_id ? String(p.municipio_id) : prev.extension_municipio_id),
+                                extension_parroquia_id: ext.parroquia_id ? String(ext.parroquia_id) : (p.parroquia_id ? String(p.parroquia_id) : prev.extension_parroquia_id),
+                                extension_direccion: ext.direccion || prev.extension_direccion,
+                                extension_sector: ext.sector || prev.extension_sector,
+                                extension_calle: ext.calle || prev.extension_calle,
+                                extension_avenida: ext.avenida || prev.extension_avenida,
+                                extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
+                                extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
+                                extension_zona: ext.zona || p.zona || prev.extension_zona,
+                                extension_distrito: ext.distrito || p.distrito || prev.extension_distrito,
+                                extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
+                                extension_anios_activa: ext.anios_activa ? String(ext.anios_activa) : prev.extension_anios_activa,
+                                extension_tiempo_trabajo: ext.tiempo_trabajo || prev.extension_tiempo_trabajo,
+                                extension_descripcion: ext.descripcion || prev.extension_descripcion,
+                                extension_miembros_activos: ext.miembros_activos ? String(ext.miembros_activos) : prev.extension_miembros_activos,
+                                extension_cantidad_campos_blancos: ext.cantidad_campos_blancos ? String(ext.cantidad_campos_blancos) : prev.extension_cantidad_campos_blancos,
+                                extension_miembro_probante: ext.miembro_probante ? String(ext.miembro_probante) : prev.extension_miembro_probante,
+                                extension_logros_obtenidos: ext.logros_obtenidos || prev.extension_logros_obtenidos,
+                                extension_iglesias_fundadas: ext.iglesias_fundadas ? String(ext.iglesias_fundadas) : prev.extension_iglesias_fundadas,
+                                extension_pastores_ministerio: ext.pastores_ministerio ? String(ext.pastores_ministerio) : prev.extension_pastores_ministerio,
+                                extension_posee_medio_comunicacion: Boolean(ext.posee_medio_comunicacion),
+                                extension_medios_lista: parsedMeds.length > 0 ? parsedMeds : prev.extension_medios_lista,
+                            }));
+                        }
+                    } else {
+                        setCedulaExistenteNombre(null);
+                        setCedulaExistentePastorId(null);
+                        setData((prev) => ({
+                            ...prev,
+                            pastor_id: '',
                         }));
                     }
-                } else {
-                    setCedulaExistenteNombre(null);
-                    setCedulaExistentePastorId(null);
                 }
+            } catch (e: any) {
+                if (e.name !== 'AbortError') {
+                    console.error('Error al verificar cédula', e);
+                }
+            } finally {
+                setIsCheckingCedula(false);
             }
-        } catch (e) {
-            console.error('Error al verificar cédula', e);
-        } finally {
-            setIsCheckingCedula(false);
+        };
+
+        if (immediate) {
+            executeSearch();
+        } else {
+            cedulaDebounceTimerRef.current = setTimeout(executeSearch, 400);
         }
     };
 
-    // Búsqueda y Carga de Datos de la Cédula del Cónyuge
-    const checkConyugeCedula = async (doc: string) => {
+    // Búsqueda y Carga de Datos de la Cédula del Cónyuge con Debounce y Cancelación
+    const checkConyugeCedula = (doc: string, immediate: boolean = false) => {
+        if (conyugeCedulaDebounceTimerRef.current) {
+            clearTimeout(conyugeCedulaDebounceTimerRef.current);
+            conyugeCedulaDebounceTimerRef.current = null;
+        }
+
         const trimmed = doc.trim();
         const numOnly = trimmed.replace(/\D/g, '');
         if (numOnly.length < 4) {
+            if (conyugeCedulaAbortControllerRef.current) {
+                conyugeCedulaAbortControllerRef.current.abort();
+                conyugeCedulaAbortControllerRef.current = null;
+            }
             setConyugeExtensionData(null);
+            setIsCheckingConyugeCedula(false);
             return;
         }
 
-        setIsCheckingConyugeCedula(true);
-        try {
-            const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(trimmed)}`);
-            if (res.ok) {
-                const result = await res.json();
-                if (result.existe) {
-                    if (!data.nombre_conyuge && result.nombre) {
-                        setData((prev) => ({
-                            ...prev,
-                            nombre_conyuge: result.nombre,
-                        }));
-                    }
-                    if (result.extension) {
-                        setConyugeExtensionData(result.extension);
-                        const ext = result.extension;
-                        let parsedMeds: MediaItem[] = [];
-                        if (ext.medio_comunicacion) {
-                            try {
-                                const m = JSON.parse(ext.medio_comunicacion);
-                                if (Array.isArray(m)) parsedMeds = m;
-                            } catch (e) { }
+        const executeConyugeSearch = async () => {
+            if (conyugeCedulaAbortControllerRef.current) {
+                conyugeCedulaAbortControllerRef.current.abort();
+            }
+            const abortController = new AbortController();
+            conyugeCedulaAbortControllerRef.current = abortController;
+
+            setIsCheckingConyugeCedula(true);
+            try {
+                const res = await fetch(`/registro/verificar-cedula/${encodeURIComponent(trimmed)}`, {
+                    signal: abortController.signal,
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    if (result.existe) {
+                        if (!data.nombre_conyuge && result.nombre) {
+                            setData((prev) => ({
+                                ...prev,
+                                nombre_conyuge: result.nombre,
+                                conyuge_id: result.pastor_id ? String(result.pastor_id) : prev.conyuge_id,
+                            }));
                         }
-                        setData((prev) => ({
-                            ...prev,
-                            extension_rol_pastor: 'conyuge_principal',
-                            extension_id: ext.id ? String(ext.id) : prev.extension_id,
-                            extension_nombre: ext.nombre || prev.extension_nombre,
-                            extension_tipo_local_id: ext.tipo_local_id ? String(ext.tipo_local_id) : prev.extension_tipo_local_id,
-                            extension_estado_id: ext.estado_id ? String(ext.estado_id) : prev.extension_estado_id,
-                            extension_municipio_id: ext.municipio_id ? String(ext.municipio_id) : prev.extension_municipio_id,
-                            extension_parroquia_id: ext.parroquia_id ? String(ext.parroquia_id) : prev.extension_parroquia_id,
-                            extension_direccion: ext.direccion || prev.extension_direccion,
-                            extension_sector: ext.sector || prev.extension_sector,
-                            extension_calle: ext.calle || prev.extension_calle,
-                            extension_avenida: ext.avenida || prev.extension_avenida,
-                            extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
-                            extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
-                            extension_zona: ext.zona || prev.extension_zona,
-                            extension_distrito: ext.distrito || prev.extension_distrito,
-                            extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
-                            extension_anios_activa: ext.anios_activa ? String(ext.anios_activa) : prev.extension_anios_activa,
-                            extension_tiempo_trabajo: ext.tiempo_trabajo || prev.extension_tiempo_trabajo,
-                            extension_descripcion: ext.descripcion || prev.extension_descripcion,
-                            extension_miembros_activos: ext.miembros_activos ? String(ext.miembros_activos) : prev.extension_miembros_activos,
-                            extension_cantidad_campos_blancos: ext.cantidad_campos_blancos ? String(ext.cantidad_campos_blancos) : prev.extension_cantidad_campos_blancos,
-                            extension_miembro_probante: ext.miembro_probante ? String(ext.miembro_probante) : prev.extension_miembro_probante,
-                            extension_logros_obtenidos: ext.logros_obtenidos || prev.extension_logros_obtenidos,
-                            extension_iglesias_fundadas: ext.iglesias_fundadas ? String(ext.iglesias_fundadas) : prev.extension_iglesias_fundadas,
-                            extension_pastores_ministerio: ext.pastores_ministerio ? String(ext.pastores_ministerio) : prev.extension_pastores_ministerio,
-                            extension_posee_medio_comunicacion: Boolean(ext.posee_medio_comunicacion),
-                            extension_medios_lista: parsedMeds.length > 0 ? parsedMeds : prev.extension_medios_lista,
-                        }));
+                        if (result.extension) {
+                            setConyugeExtensionData(result.extension);
+                            const ext = result.extension;
+                            let parsedMeds: MediaItem[] = [];
+                            if (ext.medio_comunicacion) {
+                                try {
+                                    const m = JSON.parse(ext.medio_comunicacion);
+                                    if (Array.isArray(m)) parsedMeds = m;
+                                } catch (e) { }
+                            }
+                            setData((prev) => ({
+                                ...prev,
+                                extension_rol_pastor: 'conyuge_principal',
+                                extension_id: ext.id ? String(ext.id) : prev.extension_id,
+                                extension_nombre: ext.nombre || prev.extension_nombre,
+                                extension_tipo_local_id: ext.tipo_local_id ? String(ext.tipo_local_id) : prev.extension_tipo_local_id,
+                                extension_estado_id: ext.estado_id ? String(ext.estado_id) : prev.extension_estado_id,
+                                extension_municipio_id: ext.municipio_id ? String(ext.municipio_id) : prev.extension_municipio_id,
+                                extension_parroquia_id: ext.parroquia_id ? String(ext.parroquia_id) : prev.extension_parroquia_id,
+                                extension_direccion: ext.direccion || prev.extension_direccion,
+                                extension_sector: ext.sector || prev.extension_sector,
+                                extension_calle: ext.calle || prev.extension_calle,
+                                extension_avenida: ext.avenida || prev.extension_avenida,
+                                extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
+                                extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
+                                extension_zona: ext.zona || prev.extension_zona,
+                                extension_distrito: ext.distrito || prev.extension_distrito,
+                                extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
+                                extension_anios_activa: ext.anios_activa ? String(ext.anios_activa) : prev.extension_anios_activa,
+                                extension_tiempo_trabajo: ext.tiempo_trabajo || prev.extension_tiempo_trabajo,
+                                extension_descripcion: ext.descripcion || prev.extension_descripcion,
+                                extension_miembros_activos: ext.miembros_activos ? String(ext.miembros_activos) : prev.extension_miembros_activos,
+                                extension_cantidad_campos_blancos: ext.cantidad_campos_blancos ? String(ext.cantidad_campos_blancos) : prev.extension_cantidad_campos_blancos,
+                                extension_miembro_probante: ext.miembro_probante ? String(ext.miembro_probante) : prev.extension_miembro_probante,
+                                extension_logros_obtenidos: ext.logros_obtenidos || prev.extension_logros_obtenidos,
+                                extension_iglesias_fundadas: ext.iglesias_fundadas ? String(ext.iglesias_fundadas) : prev.extension_iglesias_fundadas,
+                                extension_pastores_ministerio: ext.pastores_ministerio ? String(ext.pastores_ministerio) : prev.extension_pastores_ministerio,
+                                extension_posee_medio_comunicacion: Boolean(ext.posee_medio_comunicacion),
+                                extension_medios_lista: parsedMeds.length > 0 ? parsedMeds : prev.extension_medios_lista,
+                            }));
+                        }
                     }
                 }
+            } catch (e: any) {
+                if (e.name !== 'AbortError') {
+                    console.error('Error al verificar cédula del cónyuge:', e);
+                }
+            } finally {
+                setIsCheckingConyugeCedula(false);
             }
-        } catch (e) {
-            console.error('Error al verificar cédula del cónyuge:', e);
-        } finally {
-            setIsCheckingConyugeCedula(false);
+        };
+
+        if (immediate) {
+            executeConyugeSearch();
+        } else {
+            conyugeCedulaDebounceTimerRef.current = setTimeout(executeConyugeSearch, 400);
         }
     };
 
@@ -2182,7 +2255,7 @@ export default function RegistroPastor({
                                                                 documento: `${val}-${prev.numero_documento}`,
                                                             }));
                                                             if (data.numero_documento) {
-                                                                checkCedulaDuplicada(`${val}-${data.numero_documento}`);
+                                                                checkCedulaDuplicada(`${val}-${data.numero_documento}`, true);
                                                             }
                                                         }}
                                                     >
@@ -2212,7 +2285,12 @@ export default function RegistroPastor({
                                                                 numero_documento: cleanNum,
                                                                 documento: `${prev.tipo_documento}-${cleanNum}`,
                                                             }));
-                                                            checkCedulaDuplicada(`${data.tipo_documento}-${cleanNum}`);
+                                                            checkCedulaDuplicada(`${data.tipo_documento}-${cleanNum}`, false);
+                                                        }}
+                                                        onBlur={() => {
+                                                            if (data.numero_documento) {
+                                                                checkCedulaDuplicada(`${data.tipo_documento}-${data.numero_documento}`, true);
+                                                            }
                                                         }}
                                                         placeholder={data.tipo_documento === 'P' ? 'Ej. PAS123456' : 'Ej. 12345678'}
                                                         className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden border-0 shadow-none"
@@ -2227,9 +2305,21 @@ export default function RegistroPastor({
                                                 )}
 
                                                 {cedulaExistenteNombre && (
-                                                    <div className="mt-1 p-1.5 bg-emerald-50 border border-emerald-200 rounded-md text-[11px] text-emerald-800 font-medium flex items-center gap-1">
-                                                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                        <span>Ficha encontrada: <b>{cedulaExistenteNombre}</b> (Modo Edición)</span>
+                                                    <div className="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 font-medium flex items-start gap-2 shadow-xs">
+                                                        <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                                                        <div className="flex-1">
+                                                            <div className="font-semibold text-blue-950 flex items-center gap-1.5">
+                                                                <span>Modo Actualización de Ficha Activo</span>
+                                                                {(cedulaExistentePastorId || data.pastor_id) && (
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-200 text-blue-800">
+                                                                        ID: {cedulaExistentePastorId || data.pastor_id}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[11px] text-blue-800 mt-0.5">
+                                                                Ficha encontrada para <b>{cedulaExistenteNombre}</b>. Se han cargado los datos previamente registrados. Al enviar el formulario, sus datos se <b>actualizarán</b> en el sistema nacional sin crear un pastor duplicado.
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -2418,7 +2508,7 @@ export default function RegistroPastor({
                                                                             cedula_conyuge: `${val}-${prev.numero_documento_conyuge}`,
                                                                         }));
                                                                         if (data.numero_documento_conyuge) {
-                                                                            checkConyugeCedula(`${val}-${data.numero_documento_conyuge}`);
+                                                                            checkConyugeCedula(`${val}-${data.numero_documento_conyuge}`, true);
                                                                         }
                                                                     }}
                                                                 >
@@ -2448,7 +2538,12 @@ export default function RegistroPastor({
                                                                             numero_documento_conyuge: cleanNum,
                                                                             cedula_conyuge: `${prev.tipo_documento_conyuge}-${cleanNum}`,
                                                                         }));
-                                                                        checkConyugeCedula(`${data.tipo_documento_conyuge}-${cleanNum}`);
+                                                                        checkConyugeCedula(`${data.tipo_documento_conyuge}-${cleanNum}`, false);
+                                                                    }}
+                                                                    onBlur={() => {
+                                                                        if (data.numero_documento_conyuge) {
+                                                                            checkConyugeCedula(`${data.tipo_documento_conyuge}-${data.numero_documento_conyuge}`, true);
+                                                                        }
                                                                     }}
                                                                     placeholder={data.tipo_documento_conyuge === 'P' ? 'Ej. PAS987654' : 'Ej. 98765432'}
                                                                     className="flex-1 h-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden border-0 shadow-none"
