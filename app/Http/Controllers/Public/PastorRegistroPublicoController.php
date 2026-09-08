@@ -3,21 +3,16 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Empresa;
 use App\Models\Estado;
 use App\Models\Iglesia;
 use App\Models\Municipio;
 use App\Models\Parroquia;
 use App\Models\Pastor;
 use App\Models\TipoLocal;
-use App\Models\User;
-use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -905,6 +900,8 @@ class PastorRegistroPublicoController extends Controller
                 $this->syncPastorConyuge($iglesiaRegistrada, $pastor->id);
             }
 
+            // Nota: En este registro público no se envía notificación a WhatsApp
+
             return redirect()->route('registro-pastor.index')->with('success', [
                 'pastor_id' => $pastor->id,
                 'codigo' => $pastor->codigo,
@@ -1184,114 +1181,6 @@ class PastorRegistroPublicoController extends Controller
         $iglesia->pastores()->sync($idsToSync);
     }
 
-    /**
-     * Envía notificación por WhatsApp al presbítero asignado a la misma zona o distrito.
-     */
-    private function notificarPresbiteroWhatsApp(Pastor $pastor): void
-    {
-        try {
-            $empresa = Empresa::first();
-            if (!$empresa || !$empresa->whatsapp_active) {
-                return;
-            }
-
-            // Buscar presbíteros que tengan asignada la misma zona o distrito
-            $zonaPastor = trim($pastor->zona ?? '');
-            $distritoPastor = trim($pastor->distrito ?? '');
-
-            $presbiteros = User::whereHas('roles', function ($q) {
-                    $q->whereIn('name', ['Presbitero', 'Presbítero', 'presbitero']);
-                })
-                ->where(function ($query) use ($zonaPastor, $distritoPastor) {
-                    if (!empty($zonaPastor)) {
-                        $query->where('zona', $zonaPastor)
-                              ->orWhere('zona_2', $zonaPastor);
-                    }
-                    if (!empty($distritoPastor)) {
-                        $query->orWhere('distrito', $distritoPastor)
-                              ->orWhere('distrito_2', $distritoPastor);
-                    }
-                })
-                ->whereNotNull('telefono')
-                ->where('telefono', '!=', '')
-                ->get();
-
-            // Si no hay presbítero asignado con esa zona exacta, notificar a presbíteros con teléfono configurado
-            if ($presbiteros->isEmpty()) {
-                $presbiteros = User::whereHas('roles', function ($q) {
-                        $q->whereIn('name', ['Presbitero', 'Presbítero', 'presbitero']);
-                    })
-                    ->whereNotNull('telefono')
-                    ->where('telefono', '!=', '')
-                    ->limit(2)
-                    ->get();
-            }
-
-            if ($presbiteros->isEmpty()) {
-                return;
-            }
-
-            $whatsappService = new WhatsAppService($empresa);
-
-            $variables = [
-                'nombre' => $pastor->nombre_completo,
-                'documento' => $pastor->documento,
-                'codigo' => $pastor->codigo,
-                'grado' => $pastor->nivel_ministerial,
-                'zona' => $pastor->zona ?: 'Sin asignar',
-                'distrito' => $pastor->distrito ?: 'Sin asignar',
-                'telefono' => $pastor->telefono_tlf ?: 'N/A',
-                'estado_civil' => $pastor->estado_civil ?: 'N/A',
-                'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
-            ];
-
-            foreach ($presbiteros as $presbitero) {
-                if (!empty($presbitero->telefono)) {
-                    $whatsappService->sendTemplate($presbitero->telefono, 'Notificación Ministerial a Presbítero', $variables);
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::error('Error al enviar WhatsApp a presbítero: ' . $e->getMessage(), [
-                'pastor_id' => $pastor->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * Envía mensaje de confirmación y bienvenida al WhatsApp del propio pastor recién registrado.
-     */
-    private function notificarPastorBienvenidaWhatsApp(Pastor $pastor): void
-    {
-        try {
-            $phone = $pastor->telefono_tlf ?: $pastor->telefono_hab;
-            if (empty($phone)) {
-                return;
-            }
-
-            $empresa = Empresa::first();
-            if (!$empresa || !$empresa->whatsapp_active) {
-                return;
-            }
-
-            $variables = [
-                'nombre' => $pastor->nombre_completo,
-                'codigo' => $pastor->codigo,
-                'zona' => $pastor->zona ?: 'Sin asignar',
-                'distrito' => $pastor->distrito ?: 'Sin asignar',
-                'grado' => $pastor->nivel_ministerial,
-                'empresa' => $empresa->razon_social ?? 'MMM Venezuela',
-            ];
-
-            $whatsappService = new WhatsAppService($empresa);
-            $whatsappService->sendTemplate($phone, 'Bienvenida / Registro de Pastor', $variables);
-        } catch (\Throwable $e) {
-            Log::error('Error al enviar WhatsApp de bienvenida al pastor: ' . $e->getMessage(), [
-                'pastor_id' => $pastor->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
 
     /**
      * Permite registrar rápidamente un municipio que no se encuentre en el listado.
