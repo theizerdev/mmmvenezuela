@@ -934,6 +934,22 @@ export default function RegistroPastor({
                         setCedulaExistenteNombre(result.nombre || `${p.nombres} ${p.apellidos}`);
                         setCedulaExistentePastorId(result.pastor_id || p.id);
 
+                        const rawGenero = p.genero;
+                        const normalizedGenero = (rawGenero === 'F' || rawGenero?.toLowerCase()?.startsWith('f'))
+                            ? 'Femenino'
+                            : ((rawGenero === 'M' || rawGenero?.toLowerCase()?.startsWith('m')) ? 'Masculino' : (rawGenero || prev.genero));
+
+                        const rawEstadoCivil = p.estado_civil;
+                        const normalizedEstadoCivil = rawEstadoCivil?.toLowerCase()?.startsWith('casad')
+                            ? 'Casado(a)'
+                            : (rawEstadoCivil?.toLowerCase()?.startsWith('solter')
+                                ? 'Soltero(a)'
+                                : (rawEstadoCivil?.toLowerCase()?.startsWith('viud')
+                                    ? 'Viudo(a)'
+                                    : (rawEstadoCivil?.toLowerCase()?.startsWith('divorc') ? 'Divorciado(a)' : (rawEstadoCivil || prev.estado_civil))));
+
+                        const hasConyugeMinisterial = Boolean(p.conyuge_pastorea || p.cedula_conyuge || p.conyuge_id);
+
                         setData((prev) => ({
                             ...prev,
                             pastor_id: finalPastorId,
@@ -943,16 +959,16 @@ export default function RegistroPastor({
                             tipo_documento: parsedDoc.tipo,
                             numero_documento: parsedDoc.numero,
                             documento: p.documento || `${parsedDoc.tipo}-${parsedDoc.numero}`,
-                            genero: p.genero || prev.genero,
+                            genero: normalizedGenero,
                             fe_nacimiento: p.fe_nacimiento || prev.fe_nacimiento,
                             edad: p.edad || prev.edad,
-                            estado_civil: p.estado_civil || prev.estado_civil,
+                            estado_civil: normalizedEstadoCivil,
                             nombre_conyuge: p.nombre_conyuge || prev.nombre_conyuge,
-                            tipo_documento_conyuge: parsedConyugeDoc.tipo,
-                            numero_documento_conyuge: parsedConyugeDoc.numero,
-                            cedula_conyuge: p.cedula_conyuge || (parsedConyugeDoc.numero ? `${parsedConyugeDoc.tipo}-${parsedConyugeDoc.numero}` : ''),
-                            conyuge_pastorea: Boolean(p.conyuge_pastorea || p.cedula_conyuge),
-                            conyuge_id: p.conyuge_id || prev.conyuge_id,
+                            tipo_documento_conyuge: parsedConyugeDoc.tipo || prev.tipo_documento_conyuge,
+                            numero_documento_conyuge: parsedConyugeDoc.numero || prev.numero_documento_conyuge,
+                            cedula_conyuge: p.cedula_conyuge || (parsedConyugeDoc.numero ? `${parsedConyugeDoc.tipo}-${parsedConyugeDoc.numero}` : prev.cedula_conyuge),
+                            conyuge_pastorea: hasConyugeMinisterial,
+                            conyuge_id: p.conyuge_id ? String(p.conyuge_id) : prev.conyuge_id,
                             telefono_tlf: p.telefono_tlf || prev.telefono_tlf,
                             telefono_hab: p.telefono_hab || prev.telefono_hab,
                             telefono_otro: p.telefono_otro || prev.telefono_otro,
@@ -1009,6 +1025,7 @@ export default function RegistroPastor({
                             setData((prev) => ({
                                 ...prev,
                                 tiene_extension: true,
+                                extension_rol_pastor: (ext.id || p.conyuge_id) ? 'conyuge_principal' : prev.extension_rol_pastor,
                                 extension_id: ext.id ? String(ext.id) : prev.extension_id,
                                 extension_nombre: ext.nombre || prev.extension_nombre,
                                 extension_tipo_local_id: ext.tipo_local_id ? String(ext.tipo_local_id) : prev.extension_tipo_local_id,
@@ -1096,13 +1113,11 @@ export default function RegistroPastor({
                 if (res.ok) {
                     const result = await res.json();
                     if (result.existe) {
-                        if (!data.nombre_conyuge && result.nombre) {
-                            setData((prev) => ({
-                                ...prev,
-                                nombre_conyuge: result.nombre,
-                                conyuge_id: result.pastor_id ? String(result.pastor_id) : prev.conyuge_id,
-                            }));
-                        }
+                        setData((prev) => ({
+                            ...prev,
+                            nombre_conyuge: prev.nombre_conyuge || result.nombre || '',
+                            conyuge_id: result.pastor_id ? String(result.pastor_id) : prev.conyuge_id,
+                        }));
                         if (result.extension) {
                             setConyugeExtensionData(result.extension);
                             const ext = result.extension;
@@ -2514,12 +2529,19 @@ export default function RegistroPastor({
                                         {/* Bloque Condicional de Cónyuge */}
                                         {esCasado && (
                                             <div className="bg-blue-50/50 p-4 sm:p-5 rounded-2xl border border-blue-200 space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <h4 className="text-xs uppercase font-bold text-blue-900 tracking-wider flex items-center gap-1.5">
-                                                        <User className="w-4 h-4 text-blue-600" />
-                                                        Datos del Cónyuge Ministerial
-                                                    </h4>
-                                                    <div className="flex items-center gap-2">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                    <div>
+                                                        <h4 className="text-xs uppercase font-bold text-blue-900 tracking-wider flex items-center gap-1.5">
+                                                            <User className="w-4 h-4 text-blue-600" />
+                                                            Datos del Cónyuge Ministerial
+                                                        </h4>
+                                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                                            {data.conyuge_pastorea
+                                                                ? 'Su cónyuge quedará pre-registrado(a) y vinculado(a) como cónyuge pastoral en su iglesia.'
+                                                                : 'Si su cónyuge también es Pastor/Pastora, active el interruptor para vincularlo(a) al ministerio.'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 bg-white/90 px-3 py-1.5 rounded-xl border border-blue-200/80 shadow-xs self-start sm:self-auto shrink-0">
                                                         <span className="text-xs font-semibold text-slate-700">¿Es Pastor/Pastora?</span>
                                                         <Switch
                                                             checked={data.conyuge_pastorea}

@@ -107,9 +107,7 @@ class PastorRegistroPublicoController extends Controller
             if (strlen($numeric) < 4 || strlen($numeric) > 8) {
                 return null;
             }
-        }
 
-        if (!empty($numeric) && strlen($numeric) >= 4) {
             $query->where(function ($q) use ($cleaned, $numeric) {
                 $q->where('documento', $cleaned)
                   ->orWhere('documento', $numeric)
@@ -120,8 +118,10 @@ class PastorRegistroPublicoController extends Controller
                   ->orWhere('documento', "V{$numeric}")
                   ->orWhere('documento', "E{$numeric}")
                   ->orWhere('documento', "P{$numeric}")
-                  ->orWhere('documento', 'LIKE', "%{$numeric}%")
-                  ->orWhere('codigo', 'LIKE', "{$numeric}%");
+                  ->orWhere('documento', "C{$numeric}")
+                  ->orWhere('documento', "V.{$numeric}")
+                  ->orWhere('documento', "E.{$numeric}")
+                  ->orWhereRaw("REGEXP_REPLACE(documento, '[^0-9]', '') = ?", [$numeric]);
             });
 
             $candidatos = $query->get();
@@ -130,10 +130,10 @@ class PastorRegistroPublicoController extends Controller
                 return null;
             }
 
-            // 1. Prioridad: Coincidencia exacta de la parte numérica, prefiriendo documentos formales (no provisionales C-)
+            // 1. Prioridad: Coincidencia numérica formal exacta (no provisional C-)
             $matchNumericoFormal = $candidatos->first(function ($p) use ($numeric) {
                 $doc = (string)$p->documento;
-                if (str_starts_with($doc, 'C-')) {
+                if (str_starts_with($doc, 'C-') || str_starts_with($doc, 'C')) {
                     return false;
                 }
                 $pNum = preg_replace('/\D/', '', $doc);
@@ -143,7 +143,7 @@ class PastorRegistroPublicoController extends Controller
                 return $matchNumericoFormal;
             }
 
-            // 2. Coincidencia numérica (incluso provisional C-)
+            // 2. Coincidencia numérica exacta (incluso provisional C-)
             $matchNumerico = $candidatos->first(function ($p) use ($numeric) {
                 $pNum = preg_replace('/\D/', '', (string)$p->documento);
                 return !empty($pNum) && $pNum === $numeric;
@@ -158,21 +158,11 @@ class PastorRegistroPublicoController extends Controller
                 return $matchExacto;
             }
 
-            // 4. Coincidencia por código de pastor (empieza con la cédula numérica)
-            $matchCodigo = $candidatos->first(function ($p) use ($numeric) {
-                $cNum = preg_replace('/\D/', '', (string)$p->codigo);
-                return !empty($cNum) && str_starts_with($cNum, $numeric);
-            });
-            if ($matchCodigo) {
-                return $matchCodigo;
-            }
-
-            // 5. Primer candidato
-            return $candidatos->first();
+            return null;
         }
 
         // Si no es numérico (ej. pasaporte extranjero con caracteres alfanuméricos)
-        if (strlen($cleaned) < 4 || strlen($cleaned) > 8) {
+        if (strlen($cleaned) < 4 || strlen($cleaned) > 20) {
             return null;
         }
         return $query->where('documento', $cleaned)->first();
@@ -212,18 +202,36 @@ class PastorRegistroPublicoController extends Controller
             return response()->json(['existe' => false]);
         }
 
-        $nombreConyuge = $pastor->nombre_conyuge;
-        if (empty($nombreConyuge) && $pastor->conyuge) {
-            $nombreConyuge = $pastor->conyuge->nombre_completo;
+        // Buscar el cónyuge en ambas direcciones (conyuge_id o que el otro pastor tenga conyuge_id hacia este pastor)
+        $conyuge = $pastor->conyuge;
+        if (!$conyuge && $pastor->conyuge_id) {
+            $conyuge = Pastor::withoutTenant()->find($pastor->conyuge_id);
+        }
+        if (!$conyuge) {
+            $conyuge = Pastor::withoutTenant()->where('conyuge_id', $pastor->id)->first();
         }
 
-        $cedulaConyuge = $pastor->conyuge ? $pastor->conyuge->documento : null;
+        $nombreConyuge = $pastor->nombre_conyuge;
+        if (empty($nombreConyuge) && $conyuge) {
+            $nombreConyuge = $conyuge->nombre_completo;
+        }
+
+        $cedulaConyuge = $conyuge ? $conyuge->documento : null;
+        $conyugeId = $conyuge ? $conyuge->id : ($pastor->conyuge_id ?: null);
 
         // Buscar la extensión cargada por el pastor o por su cónyuge
         $extension = null;
         $iglesia = $pastor->iglesias->first();
-        if (!$iglesia && $pastor->conyuge) {
-            $iglesia = $pastor->conyuge->iglesias->first();
+        if (!$iglesia && $pastor->id) {
+            $iglesia = Iglesia::withoutTenant()->where('pastor_id', $pastor->id)->first();
+        }
+        if (!$iglesia && $conyuge) {
+            $iglesia = $conyuge->iglesias->first() ?: Iglesia::withoutTenant()->where('pastor_id', $conyuge->id)->first();
+        }
+        if (!$iglesia && $conyuge) {
+            $iglesia = Iglesia::withoutTenant()->whereHas('pastores', function ($q) use ($conyuge) {
+                $q->where('pastores.id', $conyuge->id);
+            })->first();
         }
 
         if ($iglesia) {
@@ -257,6 +265,20 @@ class PastorRegistroPublicoController extends Controller
             ];
         }
 
+        // Normalización de género para los selects del frontend
+        $generoRaw = (string)$pastor->genero;
+        $generoFormateado = ($generoRaw === 'F' || str_starts_with(strtolower($generoRaw), 'f')) ? 'Femenino' : 'Masculino';
+
+        // Normalización de estado civil para los selects del frontend
+        $ecRaw = strtolower((string)$pastor->estado_civil);
+        $estadoCivilFormateado = str_starts_with($ecRaw, 'casad')
+            ? 'Casado(a)'
+            : (str_starts_with($ecRaw, 'solter')
+                ? 'Soltero(a)'
+                : (str_starts_with($ecRaw, 'viud')
+                    ? 'Viudo(a)'
+                    : (str_starts_with($ecRaw, 'divorc') ? 'Divorciado(a)' : ($pastor->estado_civil ?: 'Casado(a)'))));
+
         return response()->json([
             'existe' => true,
             'pastor_id' => $pastor->id,
@@ -268,14 +290,14 @@ class PastorRegistroPublicoController extends Controller
                 'nombres' => $pastor->nombres,
                 'apellidos' => $pastor->apellidos,
                 'documento' => $pastor->documento,
-                'genero' => $pastor->genero ?: 'Masculino',
+                'genero' => $generoFormateado,
                 'fe_nacimiento' => $pastor->fe_nacimiento ? $pastor->fe_nacimiento->format('Y-m-d') : '',
                 'edad' => $pastor->edad ? (string)$pastor->edad : '',
-                'estado_civil' => $pastor->estado_civil ?: 'Casado(a)',
+                'estado_civil' => $estadoCivilFormateado,
                 'nombre_conyuge' => $nombreConyuge ?: '',
                 'cedula_conyuge' => $cedulaConyuge ?: '',
-                'conyuge_pastorea' => (bool)$pastor->conyuge_id,
-                'conyuge_id' => $pastor->conyuge_id ? (string)$pastor->conyuge_id : '',
+                'conyuge_pastorea' => (bool)$conyugeId,
+                'conyuge_id' => $conyugeId ? (string)$conyugeId : '',
                 'telefono_tlf' => $pastor->telefono_tlf ?: '',
                 'telefono_hab' => $pastor->telefono_hab ?: '',
                 'telefono_otro' => $pastor->telefono_otro ?: '',
@@ -694,39 +716,25 @@ class PastorRegistroPublicoController extends Controller
             $conyugePastorea = $request->boolean('conyuge_pastorea');
             $pastorConyuge = null;
 
-            if ($esCasado) {
+            if ($esCasado && $conyugePastorea) {
                 // 1. Si se seleccionó o envió un conyuge_id existente
-                if ($conyugeId) {
-                    $pastorConyuge = Pastor::withoutTenant()->find($conyugeId);
+                if ($conyugeId && $conyugeId !== $pastor->id) {
+                    $pastorConyuge = Pastor::withoutTenant()->where('id', '!=', $pastor->id)->find($conyugeId);
                 }
 
                 // 2. Si el pastor ya tenía registrado un conyuge_id previamente en BD
-                if (!$pastorConyuge && $pastor->conyuge_id) {
-                    $pastorConyuge = Pastor::withoutTenant()->find($pastor->conyuge_id);
+                if (!$pastorConyuge && $pastor->conyuge_id && $pastor->conyuge_id !== $pastor->id) {
+                    $pastorConyuge = Pastor::withoutTenant()->where('id', '!=', $pastor->id)->find($pastor->conyuge_id);
                 }
 
                 // 3. Si otro pastor tiene a este pastor como su conyuge_id
                 if (!$pastorConyuge && $pastor->id) {
-                    $pastorConyuge = Pastor::withoutTenant()->where('conyuge_id', $pastor->id)->first();
+                    $pastorConyuge = Pastor::withoutTenant()->where('conyuge_id', $pastor->id)->where('id', '!=', $pastor->id)->first();
                 }
 
                 // 4. Si se ingresó la cédula del cónyuge, buscar si ya existe
                 if (!$pastorConyuge && !empty($cedulaConyuge)) {
                     $pastorConyuge = $this->buscarPastorPorCedula($cedulaConyuge, $pastor->id);
-                }
-
-                // 5. Si no se encontró por cédula pero se indicó nombre del cónyuge, buscar por nombre
-                if (!$pastorConyuge && !empty($validated['nombre_conyuge'])) {
-                    $nombreTrim = trim($validated['nombre_conyuge']);
-                    if (strlen($nombreTrim) >= 5) {
-                        $pastorConyuge = Pastor::withoutTenant()
-                            ->where('id', '!=', $pastor->id)
-                            ->where(function ($q) use ($nombreTrim) {
-                                $q->whereRaw("CONCAT(TRIM(nombres), ' ', TRIM(apellidos)) = ?", [$nombreTrim])
-                                  ->orWhereRaw("CONCAT(TRIM(nombres), ' ', TRIM(apellidos)) LIKE ?", ["%{$nombreTrim}%"]);
-                            })
-                            ->first();
-                    }
                 }
 
                 // Si se encontró el pastor cónyuge existente: VINCULAR SIN CREAR DUPLICADO
@@ -740,8 +748,8 @@ class PastorRegistroPublicoController extends Controller
                         'nombre_conyuge' => $pastorConyuge->nombre_completo,
                     ]);
                 }
-                // Si definitivamente NO existe y se indicó nombre y cédula (o pastorea), crearlo como cónyuge
-                elseif (!empty($validated['nombre_conyuge']) && (!empty($cedulaConyuge) || $conyugePastorea)) {
+                // Si definitivamente NO existe y se indicó nombre del cónyuge, crearlo como cónyuge ministerial
+                elseif (!empty($validated['nombre_conyuge'])) {
                     $nombreCompleto = trim($validated['nombre_conyuge']);
                     $partesNombre = array_values(array_filter(explode(' ', $nombreCompleto)));
                     $nombresConyuge = count($partesNombre) > 1 ? array_shift($partesNombre) : ($partesNombre[0] ?? 'Cónyuge');
@@ -779,7 +787,7 @@ class PastorRegistroPublicoController extends Controller
                             'apellidos' => $apellidosConyuge,
                             'documento' => $docConyuge,
                             'genero' => $generoConyuge,
-                            'estado_civil' => 'Casado',
+                            'estado_civil' => 'Casado(a)',
                             'nombre_conyuge' => $pastor->nombre_completo,
                             'conyuge_id' => $pastor->id,
                             'nivel_ministerial' => ($validated['nivel_ministerial'] ?? '') === 'Colaborador' ? 'Pastor Asociado' : ($validated['nivel_ministerial'] ?? 'Pastor Asociado'),
@@ -792,10 +800,17 @@ class PastorRegistroPublicoController extends Controller
 
                         $pastor->update([
                             'conyuge_id' => $nuevoConyuge->id,
+                            'nombre_conyuge' => $nuevoConyuge->nombre_completo,
                         ]);
                         $pastorConyuge = $nuevoConyuge;
                     }
                 }
+            } elseif ($esCasado && !$conyugePastorea) {
+                // El cónyuge NO es pastor/pastora: sólo guardar el nombre civil del cónyuge sin vincular a ficha pastoral
+                $pastor->update([
+                    'nombre_conyuge' => $validated['nombre_conyuge'] ?? null,
+                    'conyuge_id' => null,
+                ]);
             }
 
             // 5. Creación / Actualización / Vinculación de la Iglesia / Extensión (Paso 6)
@@ -1162,7 +1177,8 @@ class PastorRegistroPublicoController extends Controller
             }
         }
 
-        $idsToSync = array_values(array_unique(array_filter($idsToSync)));
+        $existingIds = $iglesia->pastores()->pluck('pastores.id')->toArray();
+        $idsToSync = array_values(array_unique(array_filter(array_merge($existingIds, $idsToSync))));
 
         // Sincronizar en la tabla pivot iglesia_pastor
         $iglesia->pastores()->sync($idsToSync);
