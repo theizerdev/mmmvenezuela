@@ -989,8 +989,8 @@ export default function RegistroPastor({
                             tiempo_de_estudio_teologico: p.tiempo_de_estudio_teologico || prev.tiempo_de_estudio_teologico,
                             instituto_teologico: p.instituto_teologico || prev.instituto_teologico,
                             nivel_ministerial: p.nivel_ministerial || prev.nivel_ministerial,
-                            zona: p.zona || prev.zona,
-                            distrito: p.distrito || prev.distrito,
+                            zona: (result.extension?.zona || p.zona || prev.zona),
+                            distrito: (result.extension?.distrito || p.distrito || prev.distrito),
                             ano_promocion: p.ano_promocion || prev.ano_promocion,
                             tiempo_colaborando: p.tiempo_colaborando || prev.tiempo_colaborando,
                             batizado_espiritu_santo: p.batizado_espiritu_santo !== undefined ? Boolean(p.batizado_espiritu_santo) : prev.batizado_espiritu_santo,
@@ -1014,6 +1014,8 @@ export default function RegistroPastor({
 
                         if (result.extension) {
                             const ext = result.extension;
+                            const syncedZona = ext.zona || p.zona || prev.zona;
+                            const syncedDistrito = ext.distrito || p.distrito || prev.distrito;
                             let parsedMeds: MediaItem[] = [];
                             if (ext.medio_comunicacion) {
                                 try {
@@ -1038,8 +1040,10 @@ export default function RegistroPastor({
                                 extension_avenida: ext.avenida || prev.extension_avenida,
                                 extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
                                 extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
-                                extension_zona: ext.zona || p.zona || prev.extension_zona,
-                                extension_distrito: ext.distrito || p.distrito || prev.extension_distrito,
+                                zona: syncedZona,
+                                distrito: syncedDistrito,
+                                extension_zona: syncedZona,
+                                extension_distrito: syncedDistrito,
                                 extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
                                 extension_anios_activa: ext.anios_activa ? String(ext.anios_activa) : prev.extension_anios_activa,
                                 extension_tiempo_trabajo: ext.tiempo_trabajo || prev.extension_tiempo_trabajo,
@@ -1143,6 +1147,8 @@ export default function RegistroPastor({
                                 extension_avenida: ext.avenida || prev.extension_avenida,
                                 extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
                                 extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
+                                zona: ext.zona || prev.zona,
+                                distrito: ext.distrito || prev.distrito,
                                 extension_zona: ext.zona || prev.extension_zona,
                                 extension_distrito: ext.distrito || prev.extension_distrito,
                                 extension_fecha_fundacion: ext.fecha_fundacion || prev.extension_fecha_fundacion,
@@ -3162,7 +3168,7 @@ export default function RegistroPastor({
                                                         setData((prev) => ({
                                                             ...prev,
                                                             zona: clean,
-                                                            extension_zona: prev.extension_zona || clean,
+                                                            extension_zona: clean,
                                                         }));
                                                     }}
                                                     placeholder="Ej. 1"
@@ -3189,7 +3195,7 @@ export default function RegistroPastor({
                                                         setData((prev) => ({
                                                             ...prev,
                                                             distrito: val,
-                                                            extension_distrito: prev.extension_distrito || val,
+                                                            extension_distrito: val,
                                                         }));
                                                     }}
                                                     placeholder="Seleccione Distrito (1 al 5)"
@@ -4126,6 +4132,21 @@ export default function RegistroPastor({
                                         {/* CASO 3: PASTOR PRINCIPAL (FORMULARIO COMPLETO) */}
                                         {data.extension_rol_pastor === 'principal' && (
                                             <>
+                                                <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-blue-950">
+                                                    <div className="flex items-center gap-2">
+                                                        <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                                                        <span className="font-bold">Zona y Distrito de la Iglesia / Extensión sincronizados con su Ficha Pastoral:</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 font-black">
+                                                        <span className="bg-blue-100 text-blue-900 px-3 py-1 rounded-lg border border-blue-200 shadow-2xs">
+                                                            {data.zona ? `Zona ${data.zona}` : 'Zona sin asignar (Paso 3)'}
+                                                        </span>
+                                                        <span className="bg-blue-100 text-blue-900 px-3 py-1 rounded-lg border border-blue-200 shadow-2xs">
+                                                            {data.distrito ? `Distrito ${data.distrito}` : 'Distrito sin asignar (Paso 3)'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <Label htmlFor="extension_nombre" className="text-xs font-bold uppercase text-slate-700">
