@@ -267,15 +267,12 @@ export function ExtensionesMapView({
                 }
             }
         } else if (!useMapbox && leafletMapRef.current) {
-            if (pinsInState.length > 0) {
             const LInstance = leafletLibRef.current;
             if (LInstance && pinsInState.length > 0) {
                 const markersGroup = pinsInState
                     .filter((p) => p.lat !== null && p.lng !== null)
-                    .map((p) => L.marker([p.lat!, p.lng!]));
                     .map((p) => LInstance.marker([p.lat!, p.lng!]));
                 if (markersGroup.length > 0) {
-                    const group = L.featureGroup(markersGroup);
                     const group = LInstance.featureGroup(markersGroup);
                     leafletMapRef.current.fitBounds(group.getBounds().pad(0.2));
                 }
@@ -358,12 +355,6 @@ export function ExtensionesMapView({
             });
         } else if (!useMapbox && leafletMapRef.current && leafletLayerRef.current) {
             leafletLayerRef.current.clearLayers();
-            pinesFiltrados.forEach((pin) => {
-                if (pin.lat === null || pin.lng === null) return;
-                const marker = L.marker([pin.lat, pin.lng]);
-                marker.bindPopup(`<b>${pin.nombre}</b><br>${pin.ubicacion}<br>Pastor: ${pin.pastor}`);
-                leafletLayerRef.current?.addLayer(marker);
-            });
             const LInstance = leafletLibRef.current;
             if (LInstance) {
                 pinesFiltrados.forEach((pin) => {

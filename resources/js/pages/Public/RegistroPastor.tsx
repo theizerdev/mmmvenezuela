@@ -989,6 +989,8 @@ export default function RegistroPastor({
                             tiempo_de_estudio_teologico: p.tiempo_de_estudio_teologico || prev.tiempo_de_estudio_teologico,
                             instituto_teologico: p.instituto_teologico || prev.instituto_teologico,
                             nivel_ministerial: p.nivel_ministerial || prev.nivel_ministerial,
+                            zona: p.zona || prev.zona,
+                            distrito: p.distrito || prev.distrito,
                             zona: (result.extension?.zona || p.zona || prev.zona),
                             distrito: (result.extension?.distrito || p.distrito || prev.distrito),
                             ano_promocion: p.ano_promocion || prev.ano_promocion,
@@ -1040,6 +1042,8 @@ export default function RegistroPastor({
                                 extension_avenida: ext.avenida || prev.extension_avenida,
                                 extension_latitud: ext.latitud ? String(ext.latitud) : prev.extension_latitud,
                                 extension_longitud: ext.longitud ? String(ext.longitud) : prev.extension_longitud,
+                                extension_zona: ext.zona || p.zona || prev.extension_zona,
+                                extension_distrito: ext.distrito || p.distrito || prev.extension_distrito,
                                 zona: syncedZona,
                                 distrito: syncedDistrito,
                                 extension_zona: syncedZona,
@@ -3168,6 +3172,7 @@ export default function RegistroPastor({
                                                         setData((prev) => ({
                                                             ...prev,
                                                             zona: clean,
+                                                            extension_zona: prev.extension_zona || clean,
                                                             extension_zona: clean,
                                                         }));
                                                     }}
@@ -3195,6 +3200,7 @@ export default function RegistroPastor({
                                                         setData((prev) => ({
                                                             ...prev,
                                                             distrito: val,
+                                                            extension_distrito: prev.extension_distrito || val,
                                                             extension_distrito: val,
                                                         }));
                                                     }}

@@ -246,6 +246,8 @@ class PastorRegistroPublicoController extends Controller
                 'avenida' => $iglesia->avenida ?: '',
                 'latitud' => $iglesia->latitud !== null ? (string)$iglesia->latitud : '',
                 'longitud' => $iglesia->longitud !== null ? (string)$iglesia->longitud : '',
+                'zona' => $iglesia->zona ?: '',
+                'distrito' => $iglesia->distrito ?: '',
                 'zona' => $syncedZona,
                 'distrito' => $syncedDistrito,
                 'fecha_fundacion' => $iglesia->fecha_fundacion ? $iglesia->fecha_fundacion->format('Y-m-d') : '',
@@ -601,6 +603,9 @@ class PastorRegistroPublicoController extends Controller
             $generoInput = $validated['genero'] ?? '';
             $genero = (str_starts_with(strtolower($generoInput), 'm')) ? 'M' : 'F';
 
+            // Normalización de Zona y Distrito
+            $zonaLimpiada = !empty($validated['zona']) ? preg_replace('/\D/', '', $validated['zona']) : null;
+            $distritoLimpiado = !empty($validated['distrito']) ? preg_replace('/\D/', '', $validated['distrito']) : null;
             // Normalización de Zona y Distrito: Sincronizados de forma estricta entre Pastor y Extensión
             $zonaLimpiada = !empty($validated['zona'])
                 ? preg_replace('/\D/', '', (string)$validated['zona'])
@@ -874,6 +879,8 @@ class PastorRegistroPublicoController extends Controller
                         'avenida' => $validated['extension_avenida'] ?? null,
                         'latitud' => !empty($validated['extension_latitud']) ? (float)$validated['extension_latitud'] : null,
                         'longitud' => !empty($validated['extension_longitud']) ? (float)$validated['extension_longitud'] : null,
+                        'zona' => !empty($validated['extension_zona']) ? preg_replace('/\D/', '', $validated['extension_zona']) : ($pastor->zona ?? null),
+                        'distrito' => !empty($validated['extension_distrito']) ? preg_replace('/\D/', '', $validated['extension_distrito']) : ($pastor->distrito ?? null),
                         'zona' => $zonaLimpiada,
                         'distrito' => $distritoLimpiado,
                         'fecha_fundacion' => !empty($validated['extension_fecha_fundacion'])

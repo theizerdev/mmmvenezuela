@@ -408,7 +408,7 @@
     "src": "_space-grotesk-700-normal-RjhwGPKo.woff2"
   },
   "node_modules/@mediapipe/tasks-vision/vision_bundle.mjs": {
-    "file": "assets/vision_bundle-OGqUj2__.js",
+    "file": "assets/vision_bundle-Coq_gva5.js",
     "name": "vision_bundle",
     "src": "node_modules/@mediapipe/tasks-vision/vision_bundle.mjs",
     "isDynamicEntry": true,
@@ -451,7 +451,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-Dl3w2LaH.js",
+    "file": "assets/app-DLLJSeJC.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -472,7 +472,7 @@
     ]
   },
   "resources/js/pages/admin/Empresas/Partials/MapComponent.tsx": {
-    "file": "assets/MapComponent-MZzS-Tzx.js",
+    "file": "assets/MapComponent-VkfdF4WP.js",
     "name": "MapComponent",
     "src": "resources/js/pages/admin/Empresas/Partials/MapComponent.tsx",
     "isDynamicEntry": true,
@@ -482,7 +482,7 @@
     ]
   },
   "resources/js/pages/admin/Estados/Partials/EstadosMap.tsx": {
-    "file": "assets/EstadosMap-BvLF4m10.js",
+    "file": "assets/EstadosMap-DiRUAiMq.js",
     "name": "EstadosMap",
     "src": "resources/js/pages/admin/Estados/Partials/EstadosMap.tsx",
     "isDynamicEntry": true,
@@ -492,7 +492,7 @@
     ]
   },
   "resources/js/pages/admin/Municipios/Partials/MunicipiosMap.tsx": {
-    "file": "assets/MunicipiosMap-Bkhi8f0g.js",
+    "file": "assets/MunicipiosMap-BR9iaeiy.js",
     "name": "MunicipiosMap",
     "src": "resources/js/pages/admin/Municipios/Partials/MunicipiosMap.tsx",
     "isDynamicEntry": true,
@@ -502,7 +502,7 @@
     ]
   },
   "resources/js/pages/admin/Paises/Partials/MapComponent.tsx": {
-    "file": "assets/MapComponent-Cpz9buY9.js",
+    "file": "assets/MapComponent-CZ0fuqVN.js",
     "name": "MapComponent",
     "src": "resources/js/pages/admin/Paises/Partials/MapComponent.tsx",
     "isDynamicEntry": true,
@@ -512,7 +512,7 @@
     ]
   },
   "resources/js/pages/admin/Parroquias/Partials/ParroquiasMap.tsx": {
-    "file": "assets/ParroquiasMap-DpfnpnjW.js",
+    "file": "assets/ParroquiasMap-CuStDSa8.js",
     "name": "ParroquiasMap",
     "src": "resources/js/pages/admin/Parroquias/Partials/ParroquiasMap.tsx",
     "isDynamicEntry": true,
