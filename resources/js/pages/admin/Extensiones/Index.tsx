@@ -26,6 +26,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
 import { ExtensionDocumentoWizardModal } from './Partials/ExtensionDocumentoWizardModal';
+import Pagination from '@/components/pagination';
+import { cleanParams } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
 
@@ -82,6 +84,9 @@ interface PageProps {
         total: number;
         current_page: number;
         last_page: number;
+        from?: number | null;
+        to?: number | null;
+        per_page?: number;
     };
     stats: {
         total: number;
@@ -92,11 +97,13 @@ interface PageProps {
     filters: {
         search?: string;
         zona?: string;
+        distrito?: string;
         estado_id?: string;
         activa?: string;
     };
     estados: Estado[];
     zonas: string[];
+    distritos?: string[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -104,12 +111,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Extensiones', href: '/admin/extensiones' },
 ];
 
-export default function ExtensionesIndexPage({ extensiones, stats, filters, estados = [], zonas = [] }: PageProps) {
+export default function ExtensionesIndexPage({ extensiones, stats, filters, estados = [], zonas = [], distritos = [] }: PageProps) {
     const { __ } = useTranslate();
     const { auth } = usePage().props as any;
 
     const [search, setSearch] = useState(filters.search || '');
-    const [zona, setZona] = useState(filters.zona || '');
+    const [zona, setZona] = useState(filters.zona ? (filters.zona.replace(/\D/g, '') || filters.zona) : '');
+    const [distrito, setDistrito] = useState(filters.distrito ? (filters.distrito.replace(/\D/g, '') || filters.distrito) : '');
     const [estadoId, setEstadoId] = useState(filters.estado_id || '');
     const [activa, setActiva] = useState(filters.activa || '');
 
@@ -119,13 +127,37 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [selectedDocExtension, setSelectedDocExtension] = useState<Extension | null>(null);
 
-    const zonaOptions: Select2Option[] = useMemo(() => [
-        { value: '', label: __('Todas las Zonas') },
-        ...zonas.map((z) => ({
-            value: z,
-            label: `Zona ${z}`,
-        })),
-    ], [zonas, __]);
+    const zonaOptions: Select2Option[] = useMemo(() => {
+        const standard = Array.from({ length: 43 }, (_, i) => String(i + 1));
+        const extra = zonas.filter(z => z && !standard.includes(String(z).replace(/\D/g, '')));
+        return [
+            { value: '', label: __('Todas las Zonas') },
+            ...standard.map((num) => ({
+                value: num,
+                label: `Zona ${num}`,
+            })),
+            ...extra.map((z) => ({
+                value: z,
+                label: z.toLowerCase().startsWith('zona') ? z : `Zona ${z}`,
+            })),
+        ];
+    }, [zonas, __]);
+
+    const distritoOptions: Select2Option[] = useMemo(() => {
+        const standard = Array.from({ length: 5 }, (_, i) => String(i + 1));
+        const extra = (distritos || []).filter(d => d && !standard.includes(String(d).replace(/\D/g, '')));
+        return [
+            { value: '', label: __('Todos los Distritos') },
+            ...standard.map((num) => ({
+                value: num,
+                label: `Distrito ${num}`,
+            })),
+            ...extra.map((d) => ({
+                value: d,
+                label: d.toLowerCase().startsWith('distrito') ? d : `Distrito ${d}`,
+            })),
+        ];
+    }, [distritos, __]);
 
     const estadoOptions: Select2Option[] = useMemo(() => [
         { value: '', label: __('Todos los Estados') },
@@ -135,10 +167,18 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
         })),
     ], [estados, __]);
 
-    const handleFilter = () => {
+    const handleFilter = (customParams?: Record<string, any>) => {
+        const params = {
+            search,
+            zona,
+            distrito,
+            estado_id: estadoId,
+            activa,
+            ...customParams,
+        };
         router.get(
             '/admin/extensiones',
-            { search, zona, estado_id: estadoId, activa },
+            cleanParams(params),
             { preserveState: true, replace: true }
         );
     };
@@ -146,6 +186,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
     const handleReset = () => {
         setSearch('');
         setZona('');
+        setDistrito('');
         setEstadoId('');
         setActiva('');
         router.get('/admin/extensiones', {}, { preserveState: true, replace: true });
@@ -216,7 +257,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                 </div>
 
                 {/* Filtros de Búsqueda con Select2 */}
-                <div className="bg-card border rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center gap-3">
+                <div className="bg-card border rounded-xl p-4 shadow-xs flex flex-col xl:flex-row items-center gap-3">
                     <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input
@@ -228,34 +269,56 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-                        <div className="w-full md:w-44">
+                    <div className="flex items-center gap-2 w-full xl:w-auto flex-wrap sm:flex-nowrap">
+                        <div className="w-full sm:w-36">
                             <Select2
                                 options={zonaOptions}
                                 value={zona}
-                                onChange={(val) => setZona(val)}
+                                onChange={(val) => {
+                                    const newZona = String(val);
+                                    setZona(newZona);
+                                    handleFilter({ zona: newZona });
+                                }}
                                 placeholder={__('Todas las Zonas')}
                                 className="h-10 text-xs"
                             />
                         </div>
 
-                        <div className="w-full md:w-48">
+                        <div className="w-full sm:w-36">
+                            <Select2
+                                options={distritoOptions}
+                                value={distrito}
+                                onChange={(val) => {
+                                    const newDistrito = String(val);
+                                    setDistrito(newDistrito);
+                                    handleFilter({ distrito: newDistrito });
+                                }}
+                                placeholder={__('Todos los Distritos')}
+                                className="h-10 text-xs"
+                            />
+                        </div>
+
+                        <div className="w-full sm:w-44">
                             <Select2
                                 options={estadoOptions}
                                 value={estadoId}
-                                onChange={(val) => setEstadoId(val)}
+                                onChange={(val) => {
+                                    const newEstado = String(val);
+                                    setEstadoId(newEstado);
+                                    handleFilter({ estado_id: newEstado });
+                                }}
                                 placeholder={__('Todos los Estados')}
                                 className="h-10 text-xs"
                             />
                         </div>
 
-                        <Button size="sm" onClick={handleFilter} className="gap-1 h-10 px-4 text-xs font-semibold">
+                        <Button size="sm" onClick={() => handleFilter()} className="gap-1 h-10 px-4 text-xs font-semibold shrink-0">
                             <Filter className="size-3.5" />
                             {__('Filtrar')}
                         </Button>
 
-                        {(search || zona || estadoId || activa) && (
-                            <Button size="sm" variant="ghost" onClick={handleReset} className="h-10 text-xs text-muted-foreground">
+                        {(search || zona || distrito || estadoId || activa) && (
+                            <Button size="sm" variant="ghost" onClick={handleReset} className="h-10 text-xs text-muted-foreground shrink-0">
                                 {__('Limpiar')}
                             </Button>
                         )}
@@ -517,6 +580,20 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                         </table>
                     </div>
                 </div>
+
+                {/* Paginación */}
+                {extensiones && extensiones.links && (
+                    <Pagination
+                        paginatedData={extensiones as any}
+                        filters={cleanParams({
+                            search,
+                            zona,
+                            distrito,
+                            estado_id: estadoId,
+                            activa,
+                        })}
+                    />
+                )}
             </div>
 
             {/* Modal de Confirmación de Eliminación */}

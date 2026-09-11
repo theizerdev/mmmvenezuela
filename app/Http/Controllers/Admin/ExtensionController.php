@@ -181,6 +181,31 @@ class ExtensionController extends Controller
         // Filtro por Zona
         if ($zona = $request->input('zona')) {
             $query->where('zona', $zona);
+        // Filtro por Zona (1 al 43)
+        if ($request->filled('zona')) {
+            $zonaVal = trim((string) $request->input('zona'));
+            $numZona = preg_replace('/\D/', '', $zonaVal);
+            $query->where(function ($q) use ($zonaVal, $numZona) {
+                $q->where('zona', $zonaVal);
+                if (!empty($numZona)) {
+                    $q->orWhere('zona', $numZona)
+                      ->orWhere('zona', "Zona {$numZona}");
+                }
+            });
+        }
+
+        // Filtro por Distrito (1 al 5)
+        if ($request->filled('distrito')) {
+            $distVal = trim((string) $request->input('distrito'));
+            $numDist = preg_replace('/\D/', '', $distVal);
+            $query->where(function ($q) use ($distVal, $numDist) {
+                $q->where('distrito', $distVal);
+                if (!empty($numDist)) {
+                    $q->orWhere('distrito', $numDist)
+                      ->orWhere('distrito', "Distrito {$numDist}")
+                      ->orWhere('distrito', "D-{$numDist}");
+                }
+            });
         }
 
         // Filtro por Estado
@@ -206,13 +231,16 @@ class ExtensionController extends Controller
 
         $estados = Estado::select('id', 'nombre')->orderBy('nombre')->get();
         $zonas = Iglesia::select('zona')->whereNotNull('zona')->distinct()->orderBy('zona')->pluck('zona');
+        $distritos = Iglesia::select('distrito')->whereNotNull('distrito')->distinct()->orderBy('distrito')->pluck('distrito');
 
         return inertia('admin/Extensiones/Index', [
             'extensiones' => $extensiones,
             'stats' => $stats,
             'filters' => $request->only(['search', 'zona', 'estado_id', 'activa', 'per_page']),
+            'filters' => $request->only(['search', 'zona', 'distrito', 'estado_id', 'activa', 'per_page']),
             'estados' => $estados,
             'zonas' => $zonas,
+            'distritos' => $distritos,
         ]);
     }
 
