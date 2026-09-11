@@ -4,18 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslate } from '@/hooks/use-translate';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Corregir íconos por defecto de Leaflet en React/Webpack/Vite (Solo en navegador)
-if (typeof window !== 'undefined') {
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-    });
-}
+import type * as L from 'leaflet';
 
 export interface GeocodedAddressDetails {
     direccion?: string;
@@ -127,45 +116,64 @@ export function LocationMapPicker({
         }
     };
 
-    // Inicialización del mapa Leaflet
+    // Inicialización del mapa Leaflet (solo en cliente)
     useEffect(() => {
-        if (!mapContainerRef.current) return;
+        if (typeof window === 'undefined' || !mapContainerRef.current) return;
+        let isMounted = true;
 
-        if (!mapRef.current) {
-            const map = L.map(mapContainerRef.current, {
-                center: [currentLat, currentLng],
-                zoom: hasCoordinates ? 14 : 6,
-                zoomControl: true,
+        const initMap = async () => {
+            const leafletModule = await import('leaflet');
+            await import('leaflet/dist/leaflet.css');
+            const L = (leafletModule as any).default || leafletModule;
+
+            if (!isMounted || !mapContainerRef.current) return;
+
+            delete (L.Icon.Default.prototype as any)._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
             });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
-                maxZoom: 19,
-            }).addTo(map);
+            if (!mapRef.current && mapContainerRef.current) {
+                const map = L.map(mapContainerRef.current, {
+                    center: [currentLat, currentLng],
+                    zoom: hasCoordinates ? 14 : 6,
+                    zoomControl: true,
+                });
 
-            const marker = L.marker([currentLat, currentLng], {
-                draggable: true,
-            }).addTo(map);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19,
+                }).addTo(map);
 
-            // Al arrastrar el marcador
-            marker.on('dragend', async () => {
-                const position = marker.getLatLng();
-                await reverseGeocode(position.lat, position.lng);
-            });
+                const marker = L.marker([currentLat, currentLng], {
+                    draggable: true,
+                }).addTo(map);
 
-            // Al hacer clic en cualquier punto del mapa
-            map.on('click', async (e: L.LeafletMouseEvent) => {
-                const { lat: clickedLat, lng: clickedLng } = e.latlng;
-                marker.setLatLng([clickedLat, clickedLng]);
-                map.panTo([clickedLat, clickedLng]);
-                await reverseGeocode(clickedLat, clickedLng);
-            });
+                // Al arrastrar el marcador
+                marker.on('dragend', async () => {
+                    const position = marker.getLatLng();
+                    await reverseGeocode(position.lat, position.lng);
+                });
 
-            mapRef.current = map;
-            markerRef.current = marker;
-        }
+                // Al hacer clic en cualquier punto del mapa
+                map.on('click', async (e: any) => {
+                    const { lat: clickedLat, lng: clickedLng } = e.latlng;
+                    marker.setLatLng([clickedLat, clickedLng]);
+                    map.panTo([clickedLat, clickedLng]);
+                    await reverseGeocode(clickedLat, clickedLng);
+                });
+
+                mapRef.current = map;
+                markerRef.current = marker;
+            }
+        };
+
+        initMap();
 
         return () => {
+            isMounted = false;
             if (mapRef.current) {
                 mapRef.current.remove();
                 mapRef.current = null;

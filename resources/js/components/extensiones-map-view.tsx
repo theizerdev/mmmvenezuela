@@ -6,8 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslate } from '@/hooks/use-translate';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import type * as L from 'leaflet';
 
 export interface PinExtension {
     id: number;
@@ -88,6 +87,7 @@ export function ExtensionesMapView({
 
     const leafletMapRef = useRef<L.Map | null>(null);
     const leafletLayerRef = useRef<L.LayerGroup | null>(null);
+    const leafletLibRef = useRef<any>(null);
 
     const [selectedEstadoFilter, setSelectedEstadoFilter] = useState<string>('todos');
     const [useMapbox, setUseMapbox] = useState<boolean>(true);
@@ -180,20 +180,28 @@ export function ExtensionesMapView({
         } else {
             // Fallback Leaflet / OpenStreetMap
             setUseMapbox(false);
-            const map = L.map(mapContainerRef.current, {
-                center: [9.0820, -69.8371],
-                zoom: 6,
-                zoomControl: true,
+            import('leaflet').then((leafletModule) => {
+                const LInstance = (leafletModule as any).default || leafletModule;
+                import('leaflet/dist/leaflet.css');
+                leafletLibRef.current = LInstance;
+
+                if (!mapContainerRef.current) return;
+
+                const map = LInstance.map(mapContainerRef.current, {
+                    center: [9.0820, -69.8371],
+                    zoom: 6,
+                    zoomControl: true,
+                });
+
+                LInstance.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19,
+                }).addTo(map);
+
+                const layerGroup = LInstance.layerGroup().addTo(map);
+                leafletLayerRef.current = layerGroup;
+                leafletMapRef.current = map;
             });
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
-                maxZoom: 19,
-            }).addTo(map);
-
-            const layerGroup = L.layerGroup().addTo(map);
-            leafletLayerRef.current = layerGroup;
-            leafletMapRef.current = map;
         }
 
         return () => {
@@ -259,12 +267,13 @@ export function ExtensionesMapView({
                 }
             }
         } else if (!useMapbox && leafletMapRef.current) {
-            if (pinsInState.length > 0) {
+            const LInstance = leafletLibRef.current;
+            if (LInstance && pinsInState.length > 0) {
                 const markersGroup = pinsInState
                     .filter((p) => p.lat !== null && p.lng !== null)
-                    .map((p) => L.marker([p.lat!, p.lng!]));
+                    .map((p) => LInstance.marker([p.lat!, p.lng!]));
                 if (markersGroup.length > 0) {
-                    const group = L.featureGroup(markersGroup);
+                    const group = LInstance.featureGroup(markersGroup);
                     leafletMapRef.current.fitBounds(group.getBounds().pad(0.2));
                 }
             }
@@ -346,12 +355,15 @@ export function ExtensionesMapView({
             });
         } else if (!useMapbox && leafletMapRef.current && leafletLayerRef.current) {
             leafletLayerRef.current.clearLayers();
-            pinesFiltrados.forEach((pin) => {
-                if (pin.lat === null || pin.lng === null) return;
-                const marker = L.marker([pin.lat, pin.lng]);
-                marker.bindPopup(`<b>${pin.nombre}</b><br>${pin.ubicacion}<br>Pastor: ${pin.pastor}`);
-                leafletLayerRef.current?.addLayer(marker);
-            });
+            const LInstance = leafletLibRef.current;
+            if (LInstance) {
+                pinesFiltrados.forEach((pin) => {
+                    if (pin.lat === null || pin.lng === null) return;
+                    const marker = LInstance.marker([pin.lat, pin.lng]);
+                    marker.bindPopup(`<b>${pin.nombre}</b><br>${pin.ubicacion}<br>Pastor: ${pin.pastor}`);
+                    leafletLayerRef.current?.addLayer(marker);
+                });
+            }
         }
     }, [useMapbox, pinesConCoordenadas, selectedEstadoFilter]);
 

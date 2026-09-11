@@ -1,4 +1,3 @@
-import './ssr-shim';
 import { createInertiaApp } from '@inertiajs/react';
 import createServer from '@inertiajs/react/server';
 import React from 'react';
