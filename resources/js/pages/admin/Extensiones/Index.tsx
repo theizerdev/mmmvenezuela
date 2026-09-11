@@ -111,11 +111,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Extensiones', href: '/admin/extensiones' },
 ];
 
+export default function ExtensionesIndexPage({ extensiones, stats, filters, estados = [], zonas = [] }: PageProps) {
 export default function ExtensionesIndexPage({ extensiones, stats, filters, estados = [], zonas = [], distritos = [] }: PageProps) {
     const { __ } = useTranslate();
     const { auth } = usePage().props as any;
 
     const [search, setSearch] = useState(filters.search || '');
+    const [zona, setZona] = useState(filters.zona || '');
     const [zona, setZona] = useState(filters.zona ? (filters.zona.replace(/\D/g, '') || filters.zona) : '');
     const [distrito, setDistrito] = useState(filters.distrito ? (filters.distrito.replace(/\D/g, '') || filters.distrito) : '');
     const [estadoId, setEstadoId] = useState(filters.estado_id || '');
@@ -127,6 +129,13 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [selectedDocExtension, setSelectedDocExtension] = useState<Extension | null>(null);
 
+    const zonaOptions: Select2Option[] = useMemo(() => [
+        { value: '', label: __('Todas las Zonas') },
+        ...zonas.map((z) => ({
+            value: z,
+            label: `Zona ${z}`,
+        })),
+    ], [zonas, __]);
     const zonaOptions: Select2Option[] = useMemo(() => {
         const standard = Array.from({ length: 43 }, (_, i) => String(i + 1));
         const extra = zonas.filter(z => z && !standard.includes(String(z).replace(/\D/g, '')));
@@ -167,6 +176,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
         })),
     ], [estados, __]);
 
+    const handleFilter = () => {
     const handleFilter = (customParams?: Record<string, any>) => {
         const params = {
             search,
@@ -178,6 +188,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
         };
         router.get(
             '/admin/extensiones',
+            { search, zona, estado_id: estadoId, activa },
             cleanParams(params),
             { preserveState: true, replace: true }
         );
@@ -257,6 +268,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                 </div>
 
                 {/* Filtros de Búsqueda con Select2 */}
+                <div className="bg-card border rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center gap-3">
                 <div className="bg-card border rounded-xl p-4 shadow-xs flex flex-col xl:flex-row items-center gap-3">
                     <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -269,11 +281,14 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                         />
                     </div>
 
+                    <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
+                        <div className="w-full md:w-44">
                     <div className="flex items-center gap-2 w-full xl:w-auto flex-wrap sm:flex-nowrap">
                         <div className="w-full sm:w-36">
                             <Select2
                                 options={zonaOptions}
                                 value={zona}
+                                onChange={(val) => setZona(val)}
                                 onChange={(val) => {
                                     const newZona = String(val);
                                     setZona(newZona);
@@ -284,6 +299,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                             />
                         </div>
 
+                        <div className="w-full md:w-48">
                         <div className="w-full sm:w-36">
                             <Select2
                                 options={distritoOptions}
@@ -302,6 +318,7 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                             <Select2
                                 options={estadoOptions}
                                 value={estadoId}
+                                onChange={(val) => setEstadoId(val)}
                                 onChange={(val) => {
                                     const newEstado = String(val);
                                     setEstadoId(newEstado);
@@ -312,11 +329,14 @@ export default function ExtensionesIndexPage({ extensiones, stats, filters, esta
                             />
                         </div>
 
+                        <Button size="sm" onClick={handleFilter} className="gap-1 h-10 px-4 text-xs font-semibold">
                         <Button size="sm" onClick={() => handleFilter()} className="gap-1 h-10 px-4 text-xs font-semibold shrink-0">
                             <Filter className="size-3.5" />
                             {__('Filtrar')}
                         </Button>
 
+                        {(search || zona || estadoId || activa) && (
+                            <Button size="sm" variant="ghost" onClick={handleReset} className="h-10 text-xs text-muted-foreground">
                         {(search || zona || distrito || estadoId || activa) && (
                             <Button size="sm" variant="ghost" onClick={handleReset} className="h-10 text-xs text-muted-foreground shrink-0">
                                 {__('Limpiar')}
