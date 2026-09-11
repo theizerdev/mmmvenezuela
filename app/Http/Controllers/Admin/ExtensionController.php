@@ -178,9 +178,6 @@ class ExtensionController extends Controller
             });
         }
 
-        // Filtro por Zona
-        if ($zona = $request->input('zona')) {
-            $query->where('zona', $zona);
         // Filtro por Zona (1 al 43)
         if ($request->filled('zona')) {
             $zonaVal = trim((string) $request->input('zona'));
@@ -236,7 +233,6 @@ class ExtensionController extends Controller
         return inertia('admin/Extensiones/Index', [
             'extensiones' => $extensiones,
             'stats' => $stats,
-            'filters' => $request->only(['search', 'zona', 'estado_id', 'activa', 'per_page']),
             'filters' => $request->only(['search', 'zona', 'distrito', 'estado_id', 'activa', 'per_page']),
             'estados' => $estados,
             'zonas' => $zonas,
