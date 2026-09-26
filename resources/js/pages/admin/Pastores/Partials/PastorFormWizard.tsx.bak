@@ -9,13 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import Select2 from '@/components/ui/select2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from '@/components/ui/dialog';
 import { 
     User, 
     GraduationCap, 
@@ -45,9 +38,7 @@ import {
     SwitchCamera,
     HelpCircle,
     Lightbulb,
-    UserCheck,
-    Sparkles,
-    Wand2
+    UserCheck
 } from 'lucide-react';
 import pastoresRoutes from '@/routes/admin/pastores';
 
@@ -275,11 +266,6 @@ export default function PastorFormWizard({
         setData('medicamentos_recetados', updated);
     };
 
-    const canvDesignIframeRef = React.useRef<HTMLIFrameElement>(null);
-    const [isStudioOpen, setIsStudioOpen] = useState(false);
-    const [isAutoRemoveRequested, setIsAutoRemoveRequested] = useState(false);
-    const canvDesignUrl = (import.meta as any).env?.VITE_CANVDESIGN_URL || 'https://canvdesign.test';
-
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const videoRef = React.useRef<HTMLVideoElement>(null);
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -471,90 +457,6 @@ export default function PastorFormWizard({
         }
         return `/pastores/${trimmed}`;
     }, [data.foto]);
-
-    const getPhotoAsDataUrl = async (url: string): Promise<string> => {
-        if (!url) return '';
-        if (url.startsWith('data:')) return url;
-        try {
-            const targetUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
-            const response = await fetch(targetUrl);
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve((reader.result as string) || targetUrl);
-                reader.onerror = () => resolve(targetUrl);
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) {
-            console.warn('No se pudo convertir a Data URL, usando url directa:', e);
-            return url.startsWith('http') ? url : `${window.location.origin}${url}`;
-        }
-    };
-
-    React.useEffect(() => {
-        if (!isStudioOpen) return;
-
-        let isPhotoLoadedConfirmed = false;
-
-        const sendCurrentPhoto = async () => {
-            if (isPhotoLoadedConfirmed) return;
-            const iframeWin = canvDesignIframeRef.current?.contentWindow;
-            if (!iframeWin) return;
-
-            if (photoPreviewUrl) {
-                const dataUrl = await getPhotoAsDataUrl(photoPreviewUrl);
-                iframeWin.postMessage({
-                    type: 'LOAD_PHOTO',
-                    photo: dataUrl,
-                    autoRemoveBg: isAutoRemoveRequested,
-                }, '*');
-            }
-        };
-
-        // Repeated send attempts until CanvDesign confirms with PHOTO_LOADED
-        const intervalId = setInterval(() => {
-            if (!isPhotoLoadedConfirmed) {
-                sendCurrentPhoto();
-            }
-        }, 350);
-
-        const handleStudioMessage = async (event: MessageEvent) => {
-            const eventData = event.data;
-            if (!eventData || typeof eventData !== 'object') return;
-
-            // 1. CanvDesign iframe listo o handshake
-            if (eventData.type === 'CANVDESIGN_READY') {
-                sendCurrentPhoto();
-            }
-
-            // Confirmed receipt of photo
-            if (eventData.type === 'PHOTO_LOADED') {
-                isPhotoLoadedConfirmed = true;
-                clearInterval(intervalId);
-            }
-
-            // 2. Aplicar foto retornada por CanvDesign
-            if (eventData.type === 'CANVDESIGN_APPLY_PHOTO') {
-                if (eventData.dataUrl) {
-                    setData('foto', eventData.dataUrl);
-                }
-                setIsStudioOpen(false);
-                setIsAutoRemoveRequested(false);
-            }
-
-            // 3. Cancelar
-            if (eventData.type === 'CANVDESIGN_CANCEL') {
-                setIsStudioOpen(false);
-                setIsAutoRemoveRequested(false);
-            }
-        };
-
-        window.addEventListener('message', handleStudioMessage);
-        return () => {
-            clearInterval(intervalId);
-            window.removeEventListener('message', handleStudioMessage);
-        };
-    }, [isStudioOpen, photoPreviewUrl, isAutoRemoveRequested]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -1740,21 +1642,6 @@ export default function PastorFormWizard({
                                 {__('Buscar Archivo')}
                             </Button>
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    setIsAutoRemoveRequested(false);
-                                    setIsStudioOpen(true);
-                                }}
-                                className="gap-1.5 text-xs bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-blue-600/10 hover:from-violet-600/20 hover:via-indigo-600/20 hover:to-blue-600/20 border-violet-500/40 text-violet-700 dark:text-violet-300 font-semibold shadow-2xs"
-                                title={__('Abrir CanvDesign Studio para encuadrar, quitar fondo o retocar foto')}
-                            >
-                                <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
-                                {__('Retocar en CanvDesign')}
-                            </Button>
-
                             {data.foto && (
                                 <Button
                                     type="button"
@@ -1808,44 +1695,15 @@ export default function PastorFormWizard({
                                     </Button>
                                 </div>
                             ) : photoPreviewUrl ? (
-                                <div className="relative group w-[175px] h-[210px] rounded-lg overflow-hidden border-2 border-primary/40 shadow-sm">
+                                <div className="relative group w-[175px] h-[210px]">
                                     <img
                                         src={photoPreviewUrl}
                                         alt="Foto Pastor Carnet"
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover rounded-lg border-2 border-primary/40 shadow-sm"
                                     />
-                                    <Badge variant="secondary" className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] py-0 px-1.5 bg-background/90 backdrop-blur shadow-sm whitespace-nowrap">
+                                    <Badge variant="secondary" className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] py-0 px-1.5 bg-background/90 backdrop-blur shadow-sm">
                                         {__('Formato Carnet (OK)')}
                                     </Badge>
-
-                                    {/* Overlay con acciones rápidas al pasar el cursor */}
-                                    <div className="absolute inset-0 bg-neutral-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 p-2.5 backdrop-blur-[2px]">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsAutoRemoveRequested(true);
-                                                setIsStudioOpen(true);
-                                            }}
-                                            className="w-full py-1.5 px-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer"
-                                            title={__('Quitar el fondo automáticamente con Inteligencia Artificial')}
-                                        >
-                                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                                            <span>Quitar Fondo IA</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsAutoRemoveRequested(false);
-                                                setIsStudioOpen(true);
-                                            }}
-                                            className="w-full py-1.5 px-2 rounded-lg bg-white/95 hover:bg-white text-neutral-900 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer"
-                                            title={__('Abrir en CanvDesign Studio para recortar, alinear y retocar')}
-                                        >
-                                            <Wand2 className="w-3.5 h-3.5 text-indigo-600" />
-                                            <span>Retocar en Studio</span>
-                                        </button>
-                                    </div>
                                 </div>
                             ) : (
                                 <div
@@ -1908,34 +1766,6 @@ export default function PastorFormWizard({
                     </Button>
                 )}
             </div>
-
-            {/* Modal CanvDesign Studio Integrado */}
-            <Dialog open={isStudioOpen} onOpenChange={setIsStudioOpen}>
-                <DialogContent className="sm:max-w-[96vw] max-w-[96vw] w-[96vw] h-[94vh] max-h-[96vh] p-0 overflow-hidden flex flex-col bg-background border-border shadow-2xl">
-                    <DialogHeader className="px-5 py-3 border-b shrink-0 flex flex-row items-center justify-between">
-                        <div>
-                            <DialogTitle className="text-base font-bold flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-violet-500" />
-                                <span>CanvDesign Studio - Editor de Foto Ministerial</span>
-                            </DialogTitle>
-                            <DialogDescription className="text-xs text-muted-foreground">
-                                Ajuste la foto carnet, remueva el fondo con IA o aplique filtros. Al finalizar, haga clic en &quot;Aplicar al Carnet&quot;.
-                            </DialogDescription>
-                        </div>
-                    </DialogHeader>
-
-                    <div className="flex-1 w-full h-full relative bg-neutral-950">
-                        {isStudioOpen && (
-                            <iframe
-                                ref={canvDesignIframeRef}
-                                src={`${canvDesignUrl}/editor/embed?width=350&height=420&title=Foto+Pastor`}
-                                className="w-full h-full border-0"
-                                allow="camera; clipboard-read; clipboard-write"
-                            />
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
         </form>
     );
 }
