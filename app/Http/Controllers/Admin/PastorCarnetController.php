@@ -20,10 +20,32 @@ class PastorCarnetController extends Controller
     }
 
     /**
+     * Valida que el usuario tenga rol de Super Administrador o Secretaría para descargar PDFs de credenciales.
+     */
+    protected function autorizarDescargaPdf(): void
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $tienePermiso = $user->isSuperAdmin() || $user->roles()->where(function ($q) {
+            $q->where('name', 'like', '%super%')
+              ->orWhere('name', 'like', '%secretaria%');
+        })->exists();
+
+        if (!$tienePermiso) {
+            abort(403, 'Solo el rol de Super Administrador o Secretaría puede descargar credenciales en PDF.');
+        }
+    }
+
+    /**
      * Descargar / Previsualizar el PDF del carnet de un pastor (Frontal + Trasero)
      */
     public function carnetPdf(int $id)
     {
+        $this->autorizarDescargaPdf();
+
         $pastor = Pastor::findOrFail($id);
 
         $fpdf = new CarnetFpdf('L', 'mm', [CarnetService::ANCHO_MM, CarnetService::ALTO_MM]);
@@ -41,6 +63,8 @@ class PastorCarnetController extends Controller
      */
     public function bulkCarnetPdf(Request $request)
     {
+        $this->autorizarDescargaPdf();
+
         $request->validate([
             'ids' => 'required|array|min:1',
             'ids.*' => 'integer|exists:pastores,id',

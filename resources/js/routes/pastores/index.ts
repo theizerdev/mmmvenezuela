@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::validarCredencial
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:64
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:88
  * @route '/validar-credencial/{codigo}'
  */
 export const validarCredencial = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ validarCredencial.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::validarCredencial
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:64
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:88
  * @route '/validar-credencial/{codigo}'
  */
 validarCredencial.url = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ validarCredencial.url = (args: { codigo: string | number } | [codigo: string | n
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::validarCredencial
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:64
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:88
  * @route '/validar-credencial/{codigo}'
  */
 validarCredencial.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -53,7 +53,7 @@ validarCredencial.get = (args: { codigo: string | number } | [codigo: string | n
 })
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::validarCredencial
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:64
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:88
  * @route '/validar-credencial/{codigo}'
  */
 validarCredencial.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -63,7 +63,7 @@ validarCredencial.head = (args: { codigo: string | number } | [codigo: string | 
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::validarCredencial
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:64
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:88
  * @route '/validar-credencial/{codigo}'
  */
     const validarCredencialForm = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -73,7 +73,7 @@ validarCredencial.head = (args: { codigo: string | number } | [codigo: string | 
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::validarCredencial
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:64
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:88
  * @route '/validar-credencial/{codigo}'
  */
         validarCredencialForm.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ validarCredencial.head = (args: { codigo: string | number } | [codigo: string | 
         })
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::validarCredencial
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:64
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:88
  * @route '/validar-credencial/{codigo}'
  */
         validarCredencialForm.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

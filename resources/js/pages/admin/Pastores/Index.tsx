@@ -108,6 +108,15 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
     const userPermissions = (auth as any)?.user?.permissions || [];
     const hasPermission = (perm: string) => userPermissions.includes(perm);
 
+    const userRoles = (auth as any)?.user?.roles || [];
+    const canDownloadCarnet = Boolean(
+        (auth as any)?.user?.is_super_admin ||
+        (Array.isArray(userRoles) && userRoles.some((r: any) => {
+            const name = (typeof r === 'string' ? r : r?.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return name.includes('super') || name.includes('secretaria');
+        }))
+    );
+
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [nivelFilter, setNivelFilter] = useState(filters.nivel_ministerial || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
@@ -571,15 +580,17 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
 
                         {selectedIds.length > 0 && (
                             <div className="flex items-center gap-2">
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={handleBulkCarnetPdf}
-                                    className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 font-semibold shadow-xs"
-                                >
-                                    <IdCard className="size-4 text-indigo-600 dark:text-indigo-400" />
-                                    {__('Carnets PDF')} ({selectedIds.length})
-                                </Button>
+                                {canDownloadCarnet && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={handleBulkCarnetPdf}
+                                        className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 font-semibold shadow-xs"
+                                    >
+                                        <IdCard className="size-4 text-indigo-600 dark:text-indigo-400" />
+                                        {__('Carnets PDF')} ({selectedIds.length})
+                                    </Button>
+                                )}
                                 {hasPermission('pastores.delete') && (
                                     <Button
                                         variant="destructive"

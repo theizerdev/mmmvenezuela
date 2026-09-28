@@ -51,6 +51,8 @@ class HandleInertiaRequests extends Middleware
                         'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,
                         'google_maps_active' => (bool) $request->user()->empresa->google_maps_active,
                     ] : null,
+                    'roles' => $request->user()->getRoleNames()->toArray(),
+                    'is_super_admin' => $request->user()->isSuperAdmin(),
                     'permissions' => $request->user()->getAllPermissions()->pluck('name')->toArray(),
                 ]) : null,
             ],

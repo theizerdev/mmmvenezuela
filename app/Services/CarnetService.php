@@ -97,178 +97,161 @@ class CarnetService
     }
 
     /**
-     * Dibuja la cara frontal en FPDF en coordenadas específicas (x, y) - Réplica 1:1 Imagen 1
+     * Dibuja la cara frontal en FPDF en coordenadas específicas (x, y) con plantilla oficial 300 DPI
      */
     public function dibujarCaraFrontalEnPosicion(CarnetFpdf $pdf, Pastor $pastor, float $x, float $y): void
     {
-        // 1. Fondo Azul Corporativo (#0f3563 / RGB 15, 53, 99)
-        $pdf->SetFillColor(15, 53, 99);
-        $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
+        $frenteImg = public_path('image/Credencial-frente.png');
 
-        // 2. Franja Diagonal Crema/Marfil (#ded7c5 / RGB 222, 215, 197)
-        $pdf->SetFillColor(222, 215, 197);
-        $pdf->Polygon([
-            $x + 0, $y + self::ALTO_MM,
-            $x + 18, $y + self::ALTO_MM,
-            $x + 46, $y + 0,
-            $x + 32, $y + 0,
-        ], 'F');
+        if (file_exists($frenteImg)) {
+            // 1. Fondo Oficial en Alta Resolución (300 DPI - 85.6mm x 53.9mm)
+            $pdf->Image($frenteImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-        // 3. Logo MMM en esquina superior derecha
-        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
-        if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, $x + 43.5, $y + 5.2, 7.5, 5.5);
-        }
+            // 2. Foto del Pastor Tipo Carnet Calibrada
+            $fotoPath = $this->obtenerRutaFotoPastor($pastor);
+            $fotoX = $x + 5.5;
+            $fotoY = $y + 15.5;
+            $fotoW = 21.8;
+            $fotoH = 27.8;
 
-        // Encabezado Texto Derecho (MMM + Registro Legal Centrado como la imagen)
-        $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetFont('Helvetica', 'B', 5.2);
-        $pdf->SetXY($x + 48, $y + 2.2);
-        $pdf->Cell(36, 2.5, mb_convert_encoding('MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+            // Borde / marco blanco fino protector
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->Rect($fotoX - 0.4, $fotoY - 0.4, $fotoW + 0.8, $fotoH + 0.8, 'F');
 
-        $pdf->SetFont('Helvetica', '', 3.6);
-        $pdf->SetXY($x + 48, $y + 4.8);
-        $pdf->Cell(36, 2, mb_convert_encoding('Inscrita en la Dirección de Justicia y Culto', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-        $pdf->SetXY($x + 48, $y + 6.7);
-        $pdf->Cell(36, 2, mb_convert_encoding('bajo el N° DG/520 DF/620-100.361', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-        $pdf->SetXY($x + 48, $y + 8.6);
-        $pdf->SetFont('Helvetica', 'B', 4.0);
-        $pdf->Cell(36, 2, 'J - 3 0 1 8 7 4 4 6 - 3', 0, 1, 'C');
+            if ($fotoPath && file_exists($fotoPath)) {
+                $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
+            } else {
+                $pdf->SetFillColor(15, 30, 60);
+                $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH, 'F');
+                $pdf->SetTextColor(255, 255, 255);
+                $pdf->SetFont('Helvetica', 'B', 13);
+                $pdf->SetXY($fotoX, $fotoY + 11);
+                $iniciales = mb_strtoupper(mb_substr($pastor->nombres ?? '', 0, 1) . mb_substr($pastor->apellidos ?? '', 0, 1), 'UTF-8') ?: 'P';
+                $pdf->Cell($fotoW, 6, $iniciales, 0, 0, 'C');
+            }
 
-        // 4. Foto del Pastor Rectangular/Cuadrada Tipo Carnet (Planilla)
-        $fotoPath = $this->obtenerRutaFotoPastor($pastor);
-        $fotoX = $x + 5.5;
-        $fotoY = $y + 9;
-        $fotoW = 28;
-        $fotoH = 34;
+            // 3. Nombres y Apellidos del Pastor (Vectorial Nítido)
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetFont('Helvetica', 'B', 9.0);
 
-        // Borde/Fondo Crema (#ded7c5)
-        $pdf->SetFillColor(222, 215, 197);
-        $pdf->Rect($fotoX - 0.8, $fotoY - 0.8, $fotoW + 1.6, $fotoH + 1.6, 'F');
+            $nombreCompleto = mb_strtoupper($pastor->nombres . ' ' . $pastor->apellidos, 'UTF-8');
+            $pdf->SetXY($x + 30.5, $y + 16.8);
+            $pdf->MultiCell(52, 3.8, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'L');
 
-        if ($fotoPath && file_exists($fotoPath)) {
-            $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
+            // 4. Cédula de Identidad
+            $pdf->SetFont('Helvetica', 'B', 7.5);
+            $pdf->SetTextColor(165, 243, 252);
+            $docFormatted = $this->formatearDocumento($pastor->documento);
+            $pdf->SetXY($x + 30.5, $pdf->GetY() + 0.6);
+            $pdf->Cell(52, 3.2, mb_convert_encoding($docFormatted, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+
+            // 5. Acreditación Ministerial & Grado
+            $pdf->SetXY($x + 30.5, $pdf->GetY() + 1.8);
+            $pdf->SetFont('Helvetica', '', 5.8);
+            $pdf->SetTextColor(220, 235, 255);
+            $pdf->Cell(52, 2.5, mb_convert_encoding('ACREDITACIÓN MINISTERIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+
+            $pdf->SetFont('Helvetica', 'B', 8.2);
+            $pdf->SetTextColor(255, 255, 255);
+            $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
+            $pdf->SetXY($x + 30.5, $pdf->GetY());
+            $pdf->Cell(52, 3.4, mb_convert_encoding($nivel, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+
+            // 6. Información adicional (Zona y Código)
+            $detalles = [];
+            if ($pastor->zona) $detalles[] = 'Zona: ' . $pastor->zona;
+            if ($pastor->codigo) $detalles[] = 'Cód: ' . $pastor->codigo;
+            if (!empty($detalles)) {
+                $pdf->SetXY($x + 30.5, $pdf->GetY() + 1.2);
+                $pdf->SetFont('Helvetica', 'B', 5.8);
+                $pdf->SetTextColor(186, 230, 253);
+                $pdf->Cell(52, 2.8, mb_convert_encoding(implode('  |  ', $detalles), 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            }
         } else {
-            // Fondo azul si no hay foto
+            // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(15, 53, 99);
-            $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH, 'F');
+            $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
+
+            $pdf->SetFillColor(222, 215, 197);
+            $pdf->Polygon([
+                $x + 0, $y + self::ALTO_MM,
+                $x + 18, $y + self::ALTO_MM,
+                $x + 46, $y + 0,
+                $x + 32, $y + 0,
+            ], 'F');
+
+            $fotoPath = $this->obtenerRutaFotoPastor($pastor);
+            $fotoX = $x + 5.5;
+            $fotoY = $y + 9;
+            $fotoW = 28;
+            $fotoH = 34;
+
+            if ($fotoPath && file_exists($fotoPath)) {
+                $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
+            }
+
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $nombreCompleto = mb_strtoupper($pastor->nombres . ' ' . $pastor->apellidos, 'UTF-8');
+            $pdf->SetXY($x + 40, $y + 15);
+            $pdf->MultiCell(44, 3.8, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'L');
         }
-
-        // Borde marco fino blanco protector
-        $pdf->SetDrawColor(255, 255, 255);
-        $pdf->SetLineWidth(0.4);
-        $pdf->Rect($fotoX - 0.8, $fotoY - 0.8, $fotoW + 1.6, $fotoH + 1.6, 'D');
-
-        // 5. Nombres y Apellidos del Pastor
-        $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetFont('Helvetica', 'B', 8.5);
-
-        $nombreCompleto = mb_strtoupper($pastor->nombres . ' ' . $pastor->apellidos, 'UTF-8');
-        $pdf->SetXY($x + 40, $y + 15);
-        $pdf->MultiCell(44, 3.8, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'L');
-
-        // 6. Cédula de Identidad
-        $pdf->SetFont('Helvetica', 'B', 7.5);
-        $docFormatted = $this->formatearDocumento($pastor->documento);
-        $pdf->SetXY($x + 40, $pdf->GetY() + 0.5);
-        $pdf->Cell(44, 3.5, mb_convert_encoding($docFormatted, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-
-        // 7. Acreditación Ministerial & Grado
-        $pdf->SetXY($x + 40, $pdf->GetY() + 1.8);
-        $pdf->SetFont('Helvetica', '', 6.2);
-        $pdf->SetTextColor(220, 235, 255);
-        $pdf->Cell(44, 3, mb_convert_encoding('Acreditación Ministerial', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-
-        $pdf->SetFont('Helvetica', 'B', 8.5);
-        $pdf->SetTextColor(165, 243, 252);
-        $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
-        $pdf->SetXY($x + 40, $pdf->GetY());
-        $pdf->Cell(44, 3.5, mb_convert_encoding($nivel, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-
-        // 8. Lema Inferior en 2 Líneas Centradas (Idéntico a la Imagen de Referencia)
-        $pdf->SetFont('Helvetica', 'B', 4.3);
-        $pdf->SetTextColor(255, 255, 255);
-
-        $linea1 = '...UN ESFUERZO DE FE Y DE SACRIFICIO EN BIEN DE LA OBRA';
-        $linea2 = 'MISIONERA Y DE LA EVANGELIZACIÓN DEL MUNDO.';
-
-        $pdf->SetXY($x + 18, $y + 46.2);
-        $pdf->Cell(48, 2.2, mb_convert_encoding($linea1, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-        $pdf->SetXY($x + 18, $y + 48.4);
-        $pdf->Cell(48, 2.2, mb_convert_encoding($linea2, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-
-        // 9. Expiración (Esquina inferior derecha)
-        $pdf->SetFont('Helvetica', 'B', 4.8);
-        $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetXY($x + 67, $y + 47.5);
-        $vencimiento = 'VENCE 12-' . (date('Y') + 1);
-        $pdf->Cell(15, 2.5, $vencimiento, 0, 0, 'R');
     }
 
     /**
-     * Dibuja la cara trasera en FPDF exacta a la Imagen 2
+     * Dibuja la cara trasera en FPDF exacta a la Imagen 2 con plantilla oficial 300 DPI
      */
     public function dibujarCaraTraseraEnPosicion(CarnetFpdf $pdf, Pastor $pastor, float $x, float $y): void
     {
-        // 1. Fondo Blanco
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
+        $atrasImg = public_path('image/Credencial-atras.png');
 
-        // 2. Esquinas Decorativas Azules (#0f3563 / RGB 15, 53, 99) compactas
-        $pdf->SetFillColor(15, 53, 99);
+        if (file_exists($atrasImg)) {
+            // 1. Fondo Oficial Trasero (300 DPI - 85.6mm x 53.9mm)
+            $pdf->Image($atrasImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-        // Esquina superior izquierda (Triángulo compacto)
-        $pdf->Polygon([
-            $x + 0, $y + 0,
-            $x + 15, $y + 0,
-            $x + 0, $y + 15,
-        ], 'F');
+            // 2. Nombre Titular + Cédula (Zona inferior izquierda en fondo blanco)
+            $pdf->SetFont('Times', 'I', 7.5);
+            $pdf->SetTextColor(15, 53, 99);
+            $titular = $pastor->nombres . ' ' . $pastor->apellidos;
+            $pdf->SetXY($x + 7.5, $y + 36.5);
+            $pdf->Cell(54, 3.5, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-        // Esquina inferior derecha (Triángulo compacto)
-        $pdf->Polygon([
-            $x + self::ANCHO_MM, $y + self::ALTO_MM,
-            $x + self::ANCHO_MM - 12, $y + self::ALTO_MM,
-            $x + self::ANCHO_MM, $y + self::ALTO_MM - 12,
-        ], 'F');
+            $pdf->SetFont('Helvetica', '', 5.8);
+            $pdf->SetTextColor(71, 85, 105);
+            $pdf->SetXY($x + 7.5, $y + 40.0);
+            $docTexto = 'C.I. ' . $this->formatearDocumento($pastor->documento) . ($pastor->codigo ? ' | Cód: ' . $pastor->codigo : '');
+            $pdf->Cell(54, 3.0, mb_convert_encoding($docTexto, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-        // 3. Logo Superior Horizontal MMM
-        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
-        if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, $x + 16, $y + 3, 7.5, 5.5);
+            // Línea para firma o sello acreditado
+            $pdf->SetDrawColor(203, 213, 225);
+            $pdf->SetLineWidth(0.2);
+            $pdf->Line($x + 7.5, $y + 47.0, $x + 48.0, $y + 47.0);
+
+            $pdf->SetFont('Helvetica', '', 4.2);
+            $pdf->SetTextColor(148, 163, 184);
+            $pdf->SetXY($x + 7.5, $y + 47.5);
+            $pdf->Cell(40, 2.2, mb_convert_encoding('FIRMA / SELLO ACREDITADO', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+
+            // 3. Código QR Real de Verificación (Zona inferior derecha en fondo blanco)
+            $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
+            $this->dibujarCodigoQR($pdf, $x + 64.5, $y + 33.0, 14.5, $qrUrl);
+
+            $pdf->SetFont('Helvetica', 'B', 4.5);
+            $pdf->SetTextColor(71, 85, 105);
+            $pdf->SetXY($x + 64.5, $y + 48.2);
+            $pdf->Cell(14.5, 2.2, 'VALIDAR QR', 0, 0, 'C');
+        } else {
+            // Fallback en caso de no encontrarse la imagen en disco
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
+            $pdf->SetFont('Times', 'I', 7.5);
+            $pdf->SetTextColor(15, 53, 99);
+            $titular = $pastor->nombres . ' ' . $pastor->apellidos;
+            $pdf->SetXY($x + 8, $y + 44);
+            $pdf->Cell(52, 4, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
+            $this->dibujarCodigoQR($pdf, $x + 63.5, $y + 33.5, 15, $qrUrl);
         }
-
-        $pdf->SetTextColor(15, 53, 99);
-        $pdf->SetFont('Helvetica', 'B', 8.5);
-        $pdf->SetXY($x + 26, $y + 4.8);
-        $pdf->Cell(55, 4, mb_convert_encoding('MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-
-        // 4. Párrafos Legales e Institucionales (100% en fondo blanco)
-        $pdf->SetTextColor(30, 41, 59);
-        $pdf->SetFont('Helvetica', '', 3.8);
-
-        $texto1 = "ORGANIZACION CRISTIANA, SIN FINES DE LUCRO, DEBIDAMENTE REGISTRADA ANTE LAS AUTORIDADES GUBERNAMENTALES DE LA REPÚBLICA BOLIVARIANA DE VENEZUELA, INSCRITA EN LA DIRECCIÓN DE JUSTICIA Y CULTO BAJO EL N° DG/520 DF/620-100.361.";
-        $pdf->SetXY($x + 9.5, $y + 12.5);
-        $pdf->MultiCell(66.5, 1.9, mb_convert_encoding($texto1, 'ISO-8859-1', 'UTF-8'), 0, 'J');
-
-        $texto2 = "ESTE CARNET ES PERSONAL E INTRANSFERIBLE Y ACREDITA AL USUARIO COMO MIEMBRO DE LA IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA DEL MOVIMIENTO MISIONERO MUNDIAL.";
-        $pdf->SetXY($x + 9.5, $pdf->GetY() + 1.2);
-        $pdf->MultiCell(66.5, 1.9, mb_convert_encoding($texto2, 'ISO-8859-1', 'UTF-8'), 0, 'J');
-
-        $texto3 = "SE LE AGRADECE A LAS AUTORIDADES CIVILES Y MILITARES TODA LA COLABORACIÓN PRESTADA AL PORTADOR DE ESTA CREDENCIAL.";
-        $pdf->SetXY($x + 9.5, $pdf->GetY() + 1.2);
-        $pdf->SetFont('Helvetica', 'B', 3.8);
-        $pdf->MultiCell(66.5, 1.9, mb_convert_encoding($texto3, 'ISO-8859-1', 'UTF-8'), 0, 'J');
-
-        // 5. Nombre Titular + Cédula (Ubicado más abajo a la izquierda)
-        $pdf->SetFont('Times', 'I', 7.5);
-        $pdf->SetTextColor(15, 53, 99);
-        $titular = $pastor->nombres . ' ' . $pastor->apellidos . ' (' . (preg_replace('/[^0-9]/', '', $pastor->documento) ?: $pastor->codigo) . ')';
-        $pdf->SetXY($x + 8, $y + 44);
-        $pdf->Cell(52, 4, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-
-        // 6. Código QR Real de Verificación (100% en fondo blanco)
-        $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-        $this->dibujarCodigoQR($pdf, $x + 63.5, $y + 33.5, 15, $qrUrl);
     }
 
     /**
