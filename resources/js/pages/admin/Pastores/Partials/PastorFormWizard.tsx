@@ -16,18 +16,18 @@ import {
     DialogTitle,
     DialogDescription,
 } from '@/components/ui/dialog';
-import { 
-    User, 
-    GraduationCap, 
-    Cross, 
-    ArrowLeft, 
-    ArrowRight, 
-    Save, 
-    Check, 
-    Building2, 
-    Phone, 
-    Heart, 
-    Award, 
+import {
+    User,
+    GraduationCap,
+    Cross,
+    ArrowLeft,
+    ArrowRight,
+    Save,
+    Check,
+    Building2,
+    Phone,
+    Heart,
+    Award,
     MapPin,
     FileText,
     Camera,
@@ -250,7 +250,7 @@ export default function PastorFormWizard({
             try {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed)) return parsed;
-            } catch (e) {}
+            } catch (e) { }
             return raw.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean).map((nombre) => ({ nombre, dosis: '' }));
         }
         return [];
@@ -278,7 +278,7 @@ export default function PastorFormWizard({
     const canvDesignIframeRef = React.useRef<HTMLIFrameElement>(null);
     const [isStudioOpen, setIsStudioOpen] = useState(false);
     const [isAutoRemoveRequested, setIsAutoRemoveRequested] = useState(false);
-    const canvDesignUrl = (import.meta as any).env?.VITE_CANVDESIGN_URL || 'https://canvdesign.test';
+    const canvDesignUrl = (import.meta as any).env?.VITE_CANVDESIGN_URL || 'https://candesign.theizerdev.com';
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const videoRef = React.useRef<HTMLVideoElement>(null);
@@ -645,22 +645,20 @@ export default function PastorFormWizard({
                                 key={step.id}
                                 type="button"
                                 onClick={() => setActiveTab(step.id)}
-                                className={`flex items-center gap-2.5 p-3 sm:p-4 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${
-                                    isActive
+                                className={`flex items-center gap-2.5 p-3 sm:p-4 rounded-xl border transition-all text-left min-w-[170px] sm:min-w-0 shrink-0 sm:shrink ${isActive
                                         ? 'bg-primary/5 border-primary ring-2 ring-primary/20 shadow-xs'
                                         : isCompleted
-                                        ? 'bg-card border-emerald-500/30 hover:border-emerald-500/50'
-                                        : 'bg-card border-border hover:bg-accent/50'
-                                }`}
+                                            ? 'bg-card border-emerald-500/30 hover:border-emerald-500/50'
+                                            : 'bg-card border-border hover:bg-accent/50'
+                                    }`}
                             >
                                 <div
-                                    className={`flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-lg shrink-0 font-semibold text-xs sm:text-sm transition-colors ${
-                                        isActive
+                                    className={`flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-lg shrink-0 font-semibold text-xs sm:text-sm transition-colors ${isActive
                                             ? 'bg-primary text-primary-foreground shadow-xs'
                                             : isCompleted
-                                            ? 'bg-emerald-500 text-white'
-                                            : 'bg-muted text-muted-foreground'
-                                    }`}
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-muted text-muted-foreground'
+                                        }`}
                                 >
                                     {isCompleted ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : <Icon className="h-4 w-4 sm:h-5 sm:w-5" />}
                                 </div>
@@ -1853,11 +1851,10 @@ export default function PastorFormWizard({
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                     onClick={() => fileInputRef.current?.click()}
-                                    className={`w-[175px] h-[210px] border-2 border-dashed rounded-lg cursor-pointer transition-all flex flex-col items-center justify-center p-3 text-center ${
-                                        isDragOver
+                                    className={`w-[175px] h-[210px] border-2 border-dashed rounded-lg cursor-pointer transition-all flex flex-col items-center justify-center p-3 text-center ${isDragOver
                                             ? 'border-primary bg-primary/10 scale-[1.02]'
                                             : 'border-border hover:border-primary/60 hover:bg-accent/40 bg-card'
-                                    }`}
+                                        }`}
                                 >
                                     <Upload className="h-7 w-7 text-muted-foreground/60 mb-2" />
                                     <span className="text-xs font-semibold text-foreground leading-tight">
