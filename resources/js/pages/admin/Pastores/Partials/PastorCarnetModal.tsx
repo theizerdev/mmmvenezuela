@@ -214,7 +214,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                         C.I. {formatDocumento(pastor.documento)} {pastor.codigo ? ` | Cód: ${pastor.codigo}` : ''}
                                     </span>
                                     <div className="mt-2.5 w-44 border-t border-slate-400/80 pt-1 text-[8.5px] uppercase font-bold text-slate-500 tracking-wider">
-                                        {__('Firma / Sello Acreditado')}
+
                                     </div>
                                 </div>
 
