@@ -230,7 +230,7 @@ class CarnetService
             $pdf->SetFont('Helvetica', '', 4.2);
             $pdf->SetTextColor(148, 163, 184);
             $pdf->SetXY($x + 7.5, $y + 47.5);
-            $pdf->Cell(40, 2.2, mb_convert_encoding('FIRMA / SELLO ACREDITADO', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            //$pdf->Cell(40, 2.2, mb_convert_encoding('ACREDITADO POR: MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
             // 3. Código QR Real de Verificación (Zona inferior derecha en fondo blanco)
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
