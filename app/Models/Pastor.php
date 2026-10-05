@@ -114,8 +114,8 @@ class Pastor extends Model
             $numericDoc = '00000000';
         }
 
-        $numericZona = preg_replace('/\D/', '', (string)$zona) ?: '0';
-        $numericDist = preg_replace('/\D/', '', (string)$distrito) ?: '0';
+        $numericZona = ltrim(preg_replace('/\D/', '', (string)$zona) ?: '0', '0') ?: '0';
+        $numericDist = ltrim(preg_replace('/\D/', '', (string)$distrito) ?: '0', '0') ?: '0';
 
         if (!$id) {
             $id = (int) self::max('id') + 1;
@@ -124,6 +124,19 @@ class Pastor extends Model
         $idFormatted = sprintf('%04d', $id);
 
         return $numericDoc . $numericZona . $numericDist . $idFormatted;
+    }
+
+    /**
+     * Mutador para asegurar que la zona se almacene como entero sin ceros a la izquierda (ej. 01 -> 1).
+     */
+    public function setZonaAttribute($value): void
+    {
+        if ($value === null || trim((string) $value) === '') {
+            $this->attributes['zona'] = null;
+        } else {
+            $clean = preg_replace('/\D/', '', (string) $value);
+            $this->attributes['zona'] = $clean !== '' ? (string) (int) $clean : trim((string) $value);
+        }
     }
 
     /**

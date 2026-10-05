@@ -97,6 +97,19 @@ class Iglesia extends Model
     ];
 
     /**
+     * Mutador para asegurar que la zona de la extensión se guarde como número entero sin ceros a la izquierda.
+     */
+    public function setZonaAttribute($value): void
+    {
+        if ($value === null || trim((string) $value) === '') {
+            $this->attributes['zona'] = null;
+        } else {
+            $clean = preg_replace('/\D/', '', (string) $value);
+            $this->attributes['zona'] = $clean !== '' ? (string) (int) $clean : trim((string) $value);
+        }
+    }
+
+    /**
      * Pastor Principal de la Iglesia / Extensión
      */
     public function pastor(): BelongsTo
