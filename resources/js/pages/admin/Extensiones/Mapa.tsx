@@ -237,8 +237,8 @@ export default function ExtensionesMapaPage({
             // Filtro por Medios de Comunicación
             if (soloMedios && !pin.posee_medio) return false;
 
-            // Filtro por Búsqueda de texto
-            if (searchQuery.trim().length > 1) {
+            // Filtro por Búsqueda de texto (solo en vista nacional)
+            if (selectedEstado === 'todos' && searchQuery.trim().length > 1) {
                 const q = cleanText(searchQuery);
                 const matchNombre = cleanText(pin.nombre).includes(q);
                 const matchPastor = cleanText(pin.pastor).includes(q);
@@ -254,11 +254,27 @@ export default function ExtensionesMapaPage({
         });
     }, [validPines, selectedEstado, selectedZona, selectedDistrito, selectedEstatus, soloCamposBlancos, soloMedios, searchQuery]);
 
-    // Iglesias del estado actualmente seleccionado (para el panel de estado)
+    // Iglesias del estado actualmente seleccionado (para el panel de estado y para el renderizado del mapa)
     const activeStateChurches = useMemo(() => {
         if (selectedEstado === 'todos') return [];
         const targetEst = cleanText(selectedEstado);
         let list = validPines.filter((p) => cleanText(p.estado_nombre).includes(targetEst));
+
+        if (selectedZona !== 'todas') {
+            const targetZona = selectedZona.replace(/\D/g, '') || selectedZona;
+            list = list.filter((p) => (p.zona?.replace(/\D/g, '') || p.zona) === targetZona);
+        }
+
+        if (selectedDistrito !== 'todos') {
+            const targetDist = selectedDistrito.replace(/\D/g, '') || selectedDistrito;
+            list = list.filter((p) => (p.distrito?.replace(/\D/g, '') || p.distrito) === targetDist);
+        }
+
+        if (selectedEstatus === 'activa') list = list.filter((p) => p.activa);
+        if (selectedEstatus === 'inactiva') list = list.filter((p) => !p.activa);
+        if (soloCamposBlancos) list = list.filter((p) => p.campos_blancos > 0);
+        if (soloMedios) list = list.filter((p) => p.posee_medio);
+
         if (stateSearchQuery.trim()) {
             const q = cleanText(stateSearchQuery);
             list = list.filter(
@@ -270,7 +286,7 @@ export default function ExtensionesMapaPage({
             );
         }
         return list;
-    }, [validPines, selectedEstado, stateSearchQuery]);
+    }, [validPines, selectedEstado, selectedZona, selectedDistrito, selectedEstatus, soloCamposBlancos, soloMedios, stateSearchQuery]);
 
     // Datos del estado activo
     const activeStateInfo = useMemo(() => {
@@ -482,17 +498,59 @@ export default function ExtensionesMapaPage({
         setSelectedEstado(est.estado_nombre);
         setSelectedPin(null);
         setStateSearchQuery('');
+        setSearchQuery(''); // Limpiar cualquier búsqueda global previa que pueda filtrar los pines
 
-        if (useMapbox && mapboxMapRef.current && est.longitud && est.latitud) {
-            mapboxMapRef.current.flyTo({
-                center: [est.longitud, est.latitud],
-                zoom: 9.2,
-                pitch: is3DMode ? 45 : 25,
-                duration: 1500,
-                essential: true,
+        const stateChurches = validPines.filter(
+            (p) => cleanText(p.estado_nombre) === cleanText(est.estado_nombre) && p.lat !== null && p.lng !== null
+        );
+
+        if (stateChurches.length > 0) {
+            let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+            stateChurches.forEach((c) => {
+                if (c.lat! < minLat) minLat = c.lat!;
+                if (c.lat! > maxLat) maxLat = c.lat!;
+                if (c.lng! < minLng) minLng = c.lng!;
+                if (c.lng! > maxLng) maxLng = c.lng!;
             });
-        } else if (!useMapbox && leafletMapRef.current && est.latitud && est.longitud) {
-            leafletMapRef.current.setView([est.latitud, est.longitud], 9, { animate: true });
+
+            if (useMapbox && mapboxMapRef.current) {
+                if (minLng < maxLng && minLat < maxLat) {
+                    mapboxMapRef.current.fitBounds(
+                        [[minLng, minLat], [maxLng, maxLat]],
+                        {
+                            padding: { top: 90, bottom: 60, left: 420, right: 90 },
+                            maxZoom: 11,
+                            duration: 1500,
+                            essential: true,
+                        }
+                    );
+                } else if (est.longitud && est.latitud) {
+                    mapboxMapRef.current.flyTo({
+                        center: [est.longitud, est.latitud],
+                        zoom: 9.5,
+                        pitch: is3DMode ? 45 : 20,
+                        duration: 1500,
+                        essential: true,
+                    });
+                }
+            } else if (!useMapbox && leafletMapRef.current) {
+                leafletMapRef.current.fitBounds(
+                    [[minLat, minLng], [maxLat, maxLng]],
+                    { padding: [50, 50], maxZoom: 11 }
+                );
+            }
+        } else if (est.longitud && est.latitud) {
+            if (useMapbox && mapboxMapRef.current) {
+                mapboxMapRef.current.flyTo({
+                    center: [est.longitud, est.latitud],
+                    zoom: 9.2,
+                    pitch: is3DMode ? 45 : 20,
+                    duration: 1500,
+                    essential: true,
+                });
+            } else if (leafletMapRef.current) {
+                leafletMapRef.current.setView([est.latitud, est.longitud], 9, { animate: true });
+            }
         }
     };
 
@@ -660,7 +718,7 @@ export default function ExtensionesMapaPage({
                 // RENDERIZAR LAS IGLESIAS INDIVIDUALES (Del estado seleccionado o de todas si viewMode === 'sedes')
                 const pinesToRender =
                     selectedEstado !== 'todos'
-                        ? filteredPines.filter((p) => cleanText(p.estado_nombre).includes(cleanText(selectedEstado)))
+                        ? activeStateChurches
                         : filteredPines;
 
                 pinesToRender.forEach((pin) => {
@@ -789,7 +847,7 @@ export default function ExtensionesMapaPage({
                 } else {
                     const pinesToRender =
                         selectedEstado !== 'todos'
-                            ? filteredPines.filter((p) => cleanText(p.estado_nombre).includes(cleanText(selectedEstado)))
+                            ? activeStateChurches
                             : filteredPines;
 
                     pinesToRender.forEach((pin) => {
@@ -809,7 +867,7 @@ export default function ExtensionesMapaPage({
                 }
             }
         }
-    }, [useMapbox, viewMode, selectedEstado, enrichedEstados, filteredPines, selectedPin]);
+    }, [useMapbox, viewMode, selectedEstado, enrichedEstados, filteredPines, activeStateChurches, selectedPin]);
 
     // Restablecer vista general de Venezuela
     const resetVenezuelaView = () => {
@@ -936,7 +994,9 @@ export default function ExtensionesMapaPage({
                         </span>
                         <span className="text-xs text-slate-500">·</span>
                         <span className="text-xs font-semibold text-indigo-300">
-                            {viewMode === 'estados' && selectedEstado === 'todos'
+                            {selectedEstado !== 'todos'
+                                ? `${activeStateChurches.length} Sedes (${selectedEstado})`
+                                : viewMode === 'estados'
                                 ? `${enrichedEstados.length} Estados`
                                 : `${filteredPines.length} Sedes`}
                         </span>
