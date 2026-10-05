@@ -127,22 +127,38 @@ trait Multitenantable
                         : array_values(array_filter([$user->zona ?? null, $user->zona_2 ?? null], fn ($val) => $val !== null && $val !== ''));
 
                     if (Schema::hasColumn($table, 'zona') && ! empty($zonas)) {
-                        if (count($zonas) === 1) {
-                            $builder->where("{$table}.zona", $zonas[0]);
-                        } else {
-                            $builder->whereIn("{$table}.zona", $zonas);
+                        // Expandir zonas para admitir tanto formato entero "9" como con ceros "09" o "Zona 9"
+                        $zonasExpanded = [];
+                        foreach ($zonas as $z) {
+                            $clean = preg_replace('/\D/', '', (string) $z);
+                            if ($clean !== '') {
+                                $intVal = (int) $clean;
+                                $zonasExpanded[] = (string) $intVal;
+                                $zonasExpanded[] = sprintf('%02d', $intVal);
+                                $zonasExpanded[] = "Zona {$intVal}";
+                            } else {
+                                $zonasExpanded[] = (string) $z;
+                            }
                         }
-                    }
+                        $zonasExpanded = array_values(array_unique($zonasExpanded));
 
-                    $distritos = method_exists($user, 'getDistritosList')
-                        ? $user->getDistritosList()
-                        : array_values(array_filter([$user->distrito ?? null, $user->distrito_2 ?? null], fn ($val) => $val !== null && $val !== ''));
-
-                    if (Schema::hasColumn($table, 'distrito') && ! empty($distritos)) {
-                        if (count($distritos) === 1) {
-                            $builder->where("{$table}.distrito", $distritos[0]);
+                        if (count($zonasExpanded) === 1) {
+                            $builder->where("{$table}.zona", $zonasExpanded[0]);
                         } else {
-                            $builder->whereIn("{$table}.distrito", $distritos);
+                            $builder->whereIn("{$table}.zona", $zonasExpanded);
+                        }
+                    } elseif (Schema::hasColumn($table, 'distrito')) {
+                        // Si el usuario no tiene zonas específicas asignadas, pero sí distritos
+                        $distritos = method_exists($user, 'getDistritosList')
+                            ? $user->getDistritosList()
+                            : array_values(array_filter([$user->distrito ?? null, $user->distrito_2 ?? null], fn ($val) => $val !== null && $val !== ''));
+
+                        if (! empty($distritos)) {
+                            if (count($distritos) === 1) {
+                                $builder->where("{$table}.distrito", $distritos[0]);
+                            } else {
+                                $builder->whereIn("{$table}.distrito", $distritos);
+                            }
                         }
                     }
                 }

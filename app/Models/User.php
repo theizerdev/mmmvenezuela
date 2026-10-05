@@ -104,13 +104,43 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * Obtener array de zonas asignadas al usuario (sin valores nulos/vacíos).
+     * Mutador para asegurar que la zona se guarde como número entero sin ceros a la izquierda.
+     */
+    public function setZonaAttribute($value): void
+    {
+        if ($value === null || trim((string) $value) === '') {
+            $this->attributes['zona'] = null;
+        } else {
+            $clean = preg_replace('/\D/', '', (string) $value);
+            $this->attributes['zona'] = $clean !== '' ? (string) (int) $clean : trim((string) $value);
+        }
+    }
+
+    /**
+     * Mutador para asegurar que la zona_2 se guarde como número entero sin ceros a la izquierda.
+     */
+    public function setZona2Attribute($value): void
+    {
+        if ($value === null || trim((string) $value) === '') {
+            $this->attributes['zona_2'] = null;
+        } else {
+            $clean = preg_replace('/\D/', '', (string) $value);
+            $this->attributes['zona_2'] = $clean !== '' ? (string) (int) $clean : trim((string) $value);
+        }
+    }
+
+    /**
+     * Obtener array de zonas asignadas al usuario (sin valores nulos/vacíos y normalizadas).
      *
      * @return array<string>
      */
     public function getZonasList(): array
     {
-        return array_values(array_filter([$this->zona, $this->zona_2], fn ($val) => $val !== null && $val !== ''));
+        $zonas = array_filter([$this->zona, $this->zona_2], fn ($val) => $val !== null && $val !== '');
+        return array_values(array_map(function ($z) {
+            $clean = preg_replace('/\D/', '', (string) $z);
+            return $clean !== '' ? (string) (int) $clean : trim((string) $z);
+        }, $zonas));
     }
 
     /**
