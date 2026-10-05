@@ -173,9 +173,9 @@ class ExtensionController extends Controller
      */
     public function mapa(Request $request)
     {
-        $extensionesPorEstado = Iglesia::leftJoin('estados', 'iglesias.estado_id', '=', 'estados.id')
-            ->selectRaw("estados.id as estado_id, COALESCE(estados.nombre, 'Sin Estado') as estado_nombre, COUNT(iglesias.id) as cantidad")
-            ->groupBy('estados.id', 'estados.nombre')
+        $extensionesPorEstado = Iglesia::join('estados', 'iglesias.estado_id', '=', 'estados.id')
+            ->selectRaw("estados.id as estado_id, estados.nombre as estado_nombre, estados.latitud, estados.longitud, COUNT(iglesias.id) as cantidad")
+            ->groupBy('estados.id', 'estados.nombre', 'estados.latitud', 'estados.longitud')
             ->orderBy('estado_nombre')
             ->get();
 
@@ -259,10 +259,16 @@ class ExtensionController extends Controller
                 ];
             });
 
+        $empresa = Auth::user()?->empresa ?? \App\Models\Empresa::first();
+
         return inertia('admin/Extensiones/Mapa', [
             'pines' => $pinesMapa,
             'estados' => $extensionesPorEstado,
             'zonas' => $zonas,
+            'mapboxApiKey' => $empresa?->mapbox_api_key,
+            'mapboxActive' => (bool) ($empresa?->mapbox_active && $empresa?->mapbox_api_key),
+            'googleMapsApiKey' => $empresa?->google_maps_api_key,
+            'googleMapsActive' => (bool) ($empresa?->google_maps_active && $empresa?->google_maps_api_key),
         ]);
     }
 

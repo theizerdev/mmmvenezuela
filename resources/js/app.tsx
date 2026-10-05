@@ -44,6 +44,9 @@ createInertiaApp({
             case name.toLowerCase().endsWith('/garitacontrol'):
             case name.toLowerCase().endsWith('/kiosko'):
             case name.toLowerCase().endsWith('/carnet'):
+            case name === 'admin/Extensiones/Mapa':
+            case name.toLowerCase() === 'admin/extensiones/mapa':
+            case name.toLowerCase().endsWith('/mapa'):
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
