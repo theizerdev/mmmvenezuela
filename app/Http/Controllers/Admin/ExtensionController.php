@@ -27,8 +27,21 @@ class ExtensionController extends Controller
         $totalExtensiones = Iglesia::count();
         $extensionesActivas = Iglesia::where('activa', true)->count();
         $extensionesInactivas = $totalExtensiones - $extensionesActivas;
-        $totalMiembros = (int) Iglesia::sum('miembros_activos');
+
+        // Membresía General: Activos y Probantes
+        $totalMiembrosActivos = (int) Iglesia::sum('miembros_activos');
+        $totalMiembrosProbantes = (int) Iglesia::sum('miembro_probante');
+        $totalMiembrosGeneral = $totalMiembrosActivos + $totalMiembrosProbantes;
+
+        $porcentajeActivos = $totalMiembrosGeneral > 0 ? round(($totalMiembrosActivos / $totalMiembrosGeneral) * 100, 1) : 0;
+        $porcentajeProbantes = $totalMiembrosGeneral > 0 ? round(($totalMiembrosProbantes / $totalMiembrosGeneral) * 100, 1) : 0;
+
+        // Estructura Congregacional: Iglesias / Extensiones vs Campos Blancos
         $totalCamposBlancos = (int) Iglesia::sum('cantidad_campos_blancos');
+        $totalCongregaciones = $totalExtensiones + $totalCamposBlancos;
+        $porcentajeIglesias = $totalCongregaciones > 0 ? round(($totalExtensiones / $totalCongregaciones) * 100, 1) : 0;
+        $porcentajeCamposBlancos = $totalCongregaciones > 0 ? round(($totalCamposBlancos / $totalCongregaciones) * 100, 1) : 0;
+
         $totalFundadas = (int) Iglesia::sum('iglesias_fundadas');
         $totalMedios = Iglesia::where('posee_medio_comunicacion', true)->count();
 
@@ -116,47 +129,140 @@ class ExtensionController extends Controller
                 'activa' => (bool) $e->activa,
             ]);
 
-        // 5. Datos para Mapa de Venezuela y Marcadores
-        $extensionesPorEstado = Iglesia::leftJoin('estados', 'iglesias.estado_id', '=', 'estados.id')
-            ->selectRaw("estados.id as estado_id, COALESCE(estados.nombre, 'Sin Estado') as estado_nombre, COUNT(iglesias.id) as cantidad")
-            ->groupBy('estados.id', 'estados.nombre')
-            ->get();
-
-        $pinesMapa = Iglesia::with(['pastor', 'estado', 'municipio', 'tipoLocal'])
-            ->select('id', 'nombre', 'pastor_id', 'estado_id', 'municipio_id', 'tipo_local_id', 'latitud', 'longitud', 'activa', 'miembros_activos', 'direccion')
-            ->get()
-            ->map(fn($e) => [
-                'id' => $e->id,
-                'nombre' => $e->nombre,
-                'pastor' => $e->pastor ? "{$e->pastor->nombres} {$e->pastor->apellidos}" : 'Sin pastor',
-                'estado_id' => $e->estado_id,
-                'estado_nombre' => $e->estado?->nombre ?: '',
-                'municipio_nombre' => $e->municipio?->nombre ?: '',
-                'ubicacion' => implode(', ', array_filter([$e->municipio?->nombre, $e->estado?->nombre])),
-                'tipo_local' => $e->tipoLocal?->nombre ?: 'N/A',
-                'lat' => $e->latitud ? (float) $e->latitud : null,
-                'lng' => $e->longitud ? (float) $e->longitud : null,
-                'activa' => (bool) $e->activa,
-                'miembros' => (int) $e->miembros_activos,
-                'direccion' => $e->direccion ?: '',
-            ]);
-
         return inertia('admin/Extensiones/Dashboard', [
             'range' => $range,
             'stats' => [
                 'total_extensiones' => $totalExtensiones,
                 'extensiones_activas' => $extensionesActivas,
                 'extensiones_inactivas' => $extensionesInactivas,
-                'total_miembros' => $totalMiembros,
+                'total_miembros' => $totalMiembrosGeneral,
+                'total_miembros_general' => $totalMiembrosGeneral,
+                'miembros_activos' => $totalMiembrosActivos,
+                'miembros_probantes' => $totalMiembrosProbantes,
+                'porcentaje_activos' => $porcentajeActivos,
+                'porcentaje_probantes' => $porcentajeProbantes,
                 'total_campos_blancos' => $totalCamposBlancos,
+                'total_congregaciones' => $totalCongregaciones,
+                'porcentaje_iglesias' => $porcentajeIglesias,
+                'porcentaje_campos_blancos' => $porcentajeCamposBlancos,
                 'total_fundadas' => $totalFundadas,
                 'total_medios' => $totalMedios,
+            ],
+            'membresiaChart' => [
+                'activos' => $totalMiembrosActivos,
+                'probantes' => $totalMiembrosProbantes,
+                'porcentaje_activos' => $porcentajeActivos,
+                'porcentaje_probantes' => $porcentajeProbantes,
+                'total' => $totalMiembrosGeneral,
+            ],
+            'congregacionesChart' => [
+                'iglesias' => $totalExtensiones,
+                'campos_blancos' => $totalCamposBlancos,
+                'porcentaje_iglesias' => $porcentajeIglesias,
+                'porcentaje_campos_blancos' => $porcentajeCamposBlancos,
+                'total' => $totalCongregaciones,
             ],
             'registrosChart' => $registrosChart,
             'donutData' => $donutData,
             'extensionesRecientes' => $extensionesRecientes,
-            'extensionesPorEstado' => $extensionesPorEstado,
-            'pinesMapa' => $pinesMapa,
+        ]);
+    }
+
+    /**
+     * Explorador Geográfico Nacional a Pantalla Completa
+     */
+    public function mapa(Request $request)
+    {
+        $extensionesPorEstado = Iglesia::leftJoin('estados', 'iglesias.estado_id', '=', 'estados.id')
+            ->selectRaw("estados.id as estado_id, COALESCE(estados.nombre, 'Sin Estado') as estado_nombre, COUNT(iglesias.id) as cantidad")
+            ->groupBy('estados.id', 'estados.nombre')
+            ->orderBy('estado_nombre')
+            ->get();
+
+        $zonas = Iglesia::select('zona')
+            ->whereNotNull('zona')
+            ->distinct()
+            ->orderBy('zona')
+            ->pluck('zona')
+            ->filter()
+            ->values();
+
+        $pinesMapa = Iglesia::with([
+            'pastor:id,nombres,apellidos,telefono_tlf,telefono_hab,foto',
+            'estado:id,nombre',
+            'municipio:id,nombre',
+            'parroquia:id,nombre',
+            'tipoLocal:id,nombre'
+        ])
+            ->select(
+                'id',
+                'nombre',
+                'pastor_id',
+                'estado_id',
+                'municipio_id',
+                'parroquia_id',
+                'tipo_local_id',
+                'zona',
+                'distrito',
+                'latitud',
+                'longitud',
+                'activa',
+                'miembros_activos',
+                'miembro_probante',
+                'cantidad_campos_blancos',
+                'direccion',
+                'sector',
+                'telefono',
+                'posee_medio_comunicacion'
+            )
+            ->get()
+            ->map(function ($e) {
+                $pastorFoto = null;
+                if ($e->pastor?->foto) {
+                    $trimmed = trim($e->pastor->foto);
+                    if (str_starts_with($trimmed, 'data:') || str_starts_with($trimmed, 'http') || str_starts_with($trimmed, '/')) {
+                        $pastorFoto = $trimmed;
+                    } else {
+                        $pastorFoto = "/pastores/{$trimmed}";
+                    }
+                }
+
+                $activos = (int) $e->miembros_activos;
+                $probantes = (int) $e->miembro_probante;
+                $pastorTlf = $e->pastor?->telefono_tlf ?: ($e->pastor?->telefono_hab ?: '');
+
+                return [
+                    'id' => $e->id,
+                    'nombre' => $e->nombre,
+                    'pastor' => $e->pastor ? "{$e->pastor->nombres} {$e->pastor->apellidos}" : 'Sin pastor asignado',
+                    'pastor_foto' => $pastorFoto,
+                    'pastor_telefono' => $pastorTlf,
+                    'telefono' => $e->telefono ?: '',
+                    'zona' => $e->zona ?: '',
+                    'distrito' => $e->distrito ?: '',
+                    'estado_id' => $e->estado_id,
+                    'estado_nombre' => $e->estado?->nombre ?: '',
+                    'municipio_nombre' => $e->municipio?->nombre ?: '',
+                    'parroquia_nombre' => $e->parroquia?->nombre ?: '',
+                    'sector' => $e->sector ?: '',
+                    'ubicacion' => implode(', ', array_filter([$e->municipio?->nombre, $e->estado?->nombre])),
+                    'tipo_local' => $e->tipoLocal?->nombre ?: 'N/A',
+                    'lat' => $e->latitud ? (float) $e->latitud : null,
+                    'lng' => $e->longitud ? (float) $e->longitud : null,
+                    'activa' => (bool) $e->activa,
+                    'miembros_activos' => $activos,
+                    'miembros_probantes' => $probantes,
+                    'total_miembros' => $activos + $probantes,
+                    'campos_blancos' => (int) $e->cantidad_campos_blancos,
+                    'posee_medio' => (bool) $e->posee_medio_comunicacion,
+                    'direccion' => $e->direccion ?: '',
+                ];
+            });
+
+        return inertia('admin/Extensiones/Mapa', [
+            'pines' => $pinesMapa,
+            'estados' => $extensionesPorEstado,
+            'zonas' => $zonas,
         ]);
     }
 
@@ -218,11 +324,16 @@ class ExtensionController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         $extensiones = $query->orderBy('id', 'desc')->paginate($perPage)->withQueryString();
 
+        $activosSum = (int) Iglesia::sum('miembros_activos');
+        $probantesSum = (int) Iglesia::sum('miembro_probante');
+
         // Estadísticas generales
         $stats = [
             'total' => Iglesia::count(),
             'activas' => Iglesia::where('activa', true)->count(),
-            'miembros_totales' => (int) Iglesia::sum('miembros_activos'),
+            'miembros_totales' => $activosSum + $probantesSum,
+            'miembros_activos' => $activosSum,
+            'miembros_probantes' => $probantesSum,
             'campos_blancos' => (int) Iglesia::sum('cantidad_campos_blancos'),
         ];
 

@@ -76,7 +76,7 @@ class PastorController extends Controller
         }
 
         // Ordenamiento
-        $perPage = (int) $request->input('perPage', 15);
+        $perPage = (int) $request->input('perPage', 100);
         $sortBy = $request->input('sortBy', 'created_at');
         $sortDir = strtolower($request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
 

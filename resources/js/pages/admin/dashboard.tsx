@@ -61,6 +61,19 @@ interface CumpleaneroPastor {
     edad_cumplida?: number;
 }
 
+interface ExtensionesStats {
+    total_extensiones: number;
+    total_campos_blancos: number;
+    total_congregaciones: number;
+    porcentaje_iglesias: number;
+    porcentaje_campos_blancos: number;
+    total_miembros_general: number;
+    miembros_activos: number;
+    miembros_probantes: number;
+    porcentaje_activos: number;
+    porcentaje_probantes: number;
+}
+
 interface DashboardProps {
     totalPastores: number;
     activosCount: number;
@@ -103,6 +116,7 @@ interface DashboardProps {
     };
     cumpleanerosMes: CumpleaneroPastor[];
     recentPastores: RecentPastor[];
+    extensionesStats?: ExtensionesStats;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -146,8 +160,69 @@ export default function AdminDashboard({
     estadosChart = { labels: [], series: [] },
     cumpleanerosMes = [],
     recentPastores = [],
+    extensionesStats,
 }: DashboardProps) {
     const { __ } = useTranslate();
+
+    // Donut Membresía General: Activos vs Probantes (Hna Rebeca)
+    const membresiaChartOptions: ApexCharts.ApexOptions = {
+        chart: { type: 'donut', fontFamily: 'inherit' },
+        labels: [
+            `${__('Activos')} (${extensionesStats?.porcentaje_activos || 0}%)`,
+            `${__('Probantes')} (${extensionesStats?.porcentaje_probantes || 0}%)`,
+        ],
+        colors: ['#10B981', '#F59E0B'],
+        legend: { position: 'bottom', labels: { colors: '#64748B' } },
+        dataLabels: { enabled: true, formatter: (val: number) => `${Number(val).toFixed(1)}%` },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '70%',
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: __('Total'),
+                            fontSize: '12px',
+                            color: '#64748B',
+                            formatter: () => (extensionesStats?.total_miembros_general || 0).toLocaleString(),
+                        },
+                    },
+                },
+            },
+        },
+        tooltip: { theme: 'dark', y: { formatter: (val) => `${Number(val).toLocaleString()} miembros` } },
+    };
+
+    // Donut Iglesias vs Campos Blancos (Hna Rebeca)
+    const congregacionesChartOptions: ApexCharts.ApexOptions = {
+        chart: { type: 'donut', fontFamily: 'inherit' },
+        labels: [
+            `${__('Iglesias')} (${extensionesStats?.porcentaje_iglesias || 0}%)`,
+            `${__('Campos Blancos')} (${extensionesStats?.porcentaje_campos_blancos || 0}%)`,
+        ],
+        colors: ['#4F46E5', '#8B5CF6'],
+        legend: { position: 'bottom', labels: { colors: '#64748B' } },
+        dataLabels: { enabled: true, formatter: (val: number) => `${Number(val).toFixed(1)}%` },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '70%',
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: __('Total'),
+                            fontSize: '12px',
+                            color: '#64748B',
+                            formatter: () => (extensionesStats?.total_congregaciones || 0).toLocaleString(),
+                        },
+                    },
+                },
+            },
+        },
+        tooltip: { theme: 'dark', y: { formatter: (val) => `${Number(val).toLocaleString()} congregaciones` } },
+    };
 
     // Pastores por Zona
     const zonasChartOptions: ApexCharts.ApexOptions = {
@@ -342,6 +417,124 @@ export default function AdminDashboard({
                         colorClassName="bg-cyan-100 text-cyan-600 dark:bg-cyan-950/50 dark:text-cyan-400"
                     />
                 </div>
+
+                {/* SECCIÓN EJECUTIVA: MEMBRESÍA GENERAL Y ESTRUCTURA CONGREGACIONAL (SOLICITUD HNA REBECA) */}
+                {extensionesStats && (
+                    <SectionCard
+                        title={__('Membresía General y Extensión Nacional')}
+                        description={__('Métricas globales de miembros (activos y probantes) e infraestructura congregacional en Venezuela.')}
+                        headerAction={
+                            <Link href="/admin/extensiones/dashboard">
+                                <Button variant="outline" size="sm" className="gap-1.5 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <Building2 className="size-3.5" />
+                                    {__('Panel de Extensiones')}
+                                    <ChevronRight className="size-3.5" />
+                                </Button>
+                            </Link>
+                        }
+                    >
+                        <div className="space-y-6">
+                            {/* Tarjetas de Estadísticas de Membresía */}
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <StatCard
+                                    title={__('TOTAL MIEMBROS EN GENERAL')}
+                                    value={(extensionesStats.total_miembros_general || 0).toLocaleString()}
+                                    subtitle={`${extensionesStats.porcentaje_activos || 0}% ${__('Activos')} · ${extensionesStats.porcentaje_probantes || 0}% ${__('Probantes')}`}
+                                    icon={<Users className="size-5" />}
+                                    colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                                />
+                                <StatCard
+                                    title={__('MIEMBROS ACTIVOS')}
+                                    value={(extensionesStats.miembros_activos || 0).toLocaleString()}
+                                    subtitle={`${extensionesStats.porcentaje_activos || 0}% ${__('del censo nacional')}`}
+                                    icon={<UserCheck className="size-5" />}
+                                    colorClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                                />
+                                <StatCard
+                                    title={__('MIEMBROS PROBANTES')}
+                                    value={(extensionesStats.miembros_probantes || 0).toLocaleString()}
+                                    subtitle={`${extensionesStats.porcentaje_probantes || 0}% ${__('del censo nacional')}`}
+                                    icon={<Clock className="size-5" />}
+                                    colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+                                />
+                                <StatCard
+                                    title={__('TOTAL OBRAS / CONGREGACIONES')}
+                                    value={(extensionesStats.total_congregaciones || 0).toLocaleString()}
+                                    subtitle={`${extensionesStats.total_extensiones} ${__('Iglesias')} · ${extensionesStats.total_campos_blancos} ${__('Campos Blancos')}`}
+                                    icon={<Building2 className="size-5" />}
+                                    colorClassName="bg-purple-100 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
+                                />
+                            </div>
+
+                            {/* 2 Gráficos Donut Comparativos */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t">
+                                <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                            <span className="size-2 rounded-full bg-emerald-500" />
+                                            {__('Distribución de Membresía (Activos vs Probantes)')}
+                                        </h4>
+                                        <span className="text-xs font-semibold text-muted-foreground">
+                                            {(extensionesStats.total_miembros_general || 0).toLocaleString()} {__('miembros')}
+                                        </span>
+                                    </div>
+                                    <ClientChart
+                                        options={membresiaChartOptions}
+                                        series={[extensionesStats.miembros_activos || 0, extensionesStats.miembros_probantes || 0]}
+                                        type="donut"
+                                        height={260}
+                                    />
+                                    <div className="grid grid-cols-2 gap-3 mt-3 text-center text-xs">
+                                        <div className="p-2 rounded-lg bg-emerald-100/60 dark:bg-emerald-950/50">
+                                            <div className="text-muted-foreground font-medium">{__('Activos')}</div>
+                                            <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                                                {(extensionesStats.miembros_activos || 0).toLocaleString()} ({extensionesStats.porcentaje_activos || 0}%)
+                                            </div>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-amber-100/60 dark:bg-amber-950/50">
+                                            <div className="text-muted-foreground font-medium">{__('Probantes')}</div>
+                                            <div className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                                                {(extensionesStats.miembros_probantes || 0).toLocaleString()} ({extensionesStats.porcentaje_probantes || 0}%)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                            <span className="size-2 rounded-full bg-indigo-500" />
+                                            {__('Estructura de Obras (Iglesias vs Campos Blancos)')}
+                                        </h4>
+                                        <span className="text-xs font-semibold text-muted-foreground">
+                                            {(extensionesStats.total_congregaciones || 0).toLocaleString()} {__('lugares')}
+                                        </span>
+                                    </div>
+                                    <ClientChart
+                                        options={congregacionesChartOptions}
+                                        series={[extensionesStats.total_extensiones || 0, extensionesStats.total_campos_blancos || 0]}
+                                        type="donut"
+                                        height={260}
+                                    />
+                                    <div className="grid grid-cols-2 gap-3 mt-3 text-center text-xs">
+                                        <div className="p-2 rounded-lg bg-indigo-100/60 dark:bg-indigo-950/50">
+                                            <div className="text-muted-foreground font-medium">{__('Iglesias / Sedes')}</div>
+                                            <div className="text-sm font-bold text-indigo-700 dark:text-indigo-300">
+                                                {(extensionesStats.total_extensiones || 0).toLocaleString()} ({extensionesStats.porcentaje_iglesias || 0}%)
+                                            </div>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-purple-100/60 dark:bg-purple-950/50">
+                                            <div className="text-muted-foreground font-medium">{__('Campos Blancos')}</div>
+                                            <div className="text-sm font-bold text-purple-700 dark:text-purple-300">
+                                                {(extensionesStats.total_campos_blancos || 0).toLocaleString()} ({extensionesStats.porcentaje_campos_blancos || 0}%)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </SectionCard>
+                )}
 
                 {/* Gráficas Principales: Distribución por Zonas y Estados */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

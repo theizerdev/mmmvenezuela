@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/extensiones/dashboard', [ExtensionController::class, 'dashboard'])->name('extensiones.dashboard');
+    Route::get('/extensiones/mapa', [ExtensionController::class, 'mapa'])->name('extensiones.mapa');
     Route::get('/extensiones', [ExtensionController::class, 'index'])->name('extensiones.index');
     Route::get('/extensiones/create', [ExtensionController::class, 'create'])->name('extensiones.create');
     Route::post('/extensiones', [ExtensionController::class, 'store'])->name('extensiones.store');

@@ -17,6 +17,7 @@ interface StatCardProps {
     value: string | number;
     colorClassName: string;
     className?: string;
+    subtitle?: React.ReactNode;
 }
 
 /**
@@ -26,7 +27,7 @@ interface StatCardProps {
  * @param {StatCardProps} props - Las propiedades para renderizar la tarjeta de estadística.
  * @returns {JSX.Element} El componente de la tarjeta de estadística renderizado.
  */
-export function StatCard({ icon, title, value, colorClassName, className }: StatCardProps) {
+export function StatCard({ icon, title, value, colorClassName, className, subtitle }: StatCardProps) {
     return (
         // Contenedor principal de la tarjeta
         <Card className={cn('p-3.5 sm:p-4 transition-all hover:shadow-md', className)}>
@@ -43,6 +44,11 @@ export function StatCard({ icon, title, value, colorClassName, className }: Stat
                     <span className='text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate'>
                         {value}
                     </span>
+                    {subtitle && (
+                        <span className='text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5'>
+                            {subtitle}
+                        </span>
+                    )}
                 </div>
             </div>
         </Card>

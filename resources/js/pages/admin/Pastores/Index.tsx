@@ -122,7 +122,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [zonaFilter, setZonaFilter] = useState(filters.zona ? (filters.zona.replace(/\D/g, '') || filters.zona) : '');
     const [distritoFilter, setDistritoFilter] = useState(filters.distrito ? (filters.distrito.replace(/\D/g, '') || filters.distrito) : '');
-    const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '15');
+    const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '100');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isTableLoading, setIsTableLoading] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

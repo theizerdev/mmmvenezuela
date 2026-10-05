@@ -457,6 +457,11 @@ export default function AdminSaasLayout({
                                     permission: 'extensiones.view',
                                 },
                                 {
+                                    title: 'National Map',
+                                    href: '/admin/extensiones/mapa',
+                                    permission: 'extensiones.view',
+                                },
+                                {
                                     title: 'General List',
                                     href: '/admin/extensiones',
                                     permission: 'extensiones.view',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Pastor;
 use App\Models\Estado;
+use App\Models\Iglesia;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -141,6 +142,20 @@ class DashboardController extends Controller
                 ];
             });
 
+        // 11. Estadísticas de Extensiones y Membresía General
+        $totalExtensiones = Iglesia::count();
+        $totalCamposBlancos = (int) Iglesia::sum('cantidad_campos_blancos');
+        $totalCongregaciones = $totalExtensiones + $totalCamposBlancos;
+
+        $totalMiembrosActivos = (int) Iglesia::sum('miembros_activos');
+        $totalMiembrosProbantes = (int) Iglesia::sum('miembro_probante');
+        $totalMiembrosGeneral = $totalMiembrosActivos + $totalMiembrosProbantes;
+
+        $porcentajeActivos = $totalMiembrosGeneral > 0 ? round(($totalMiembrosActivos / $totalMiembrosGeneral) * 100, 1) : 0;
+        $porcentajeProbantes = $totalMiembrosGeneral > 0 ? round(($totalMiembrosProbantes / $totalMiembrosGeneral) * 100, 1) : 0;
+        $porcentajeIglesias = $totalCongregaciones > 0 ? round(($totalExtensiones / $totalCongregaciones) * 100, 1) : 0;
+        $porcentajeCamposBlancos = $totalCongregaciones > 0 ? round(($totalCamposBlancos / $totalCongregaciones) * 100, 1) : 0;
+
         return inertia('admin/dashboard', [
             'totalPastores' => $totalPastores,
             'activosCount' => $activosCount,
@@ -170,6 +185,18 @@ class DashboardController extends Controller
             ],
             'cumpleanerosMes' => $cumpleanerosMes,
             'recentPastores' => $recentPastores,
+            'extensionesStats' => [
+                'total_extensiones' => $totalExtensiones,
+                'total_campos_blancos' => $totalCamposBlancos,
+                'total_congregaciones' => $totalCongregaciones,
+                'porcentaje_iglesias' => $porcentajeIglesias,
+                'porcentaje_campos_blancos' => $porcentajeCamposBlancos,
+                'total_miembros_general' => $totalMiembrosGeneral,
+                'miembros_activos' => $totalMiembrosActivos,
+                'miembros_probantes' => $totalMiembrosProbantes,
+                'porcentaje_activos' => $porcentajeActivos,
+                'porcentaje_probantes' => $porcentajeProbantes,
+            ],
         ]);
     }
 }
