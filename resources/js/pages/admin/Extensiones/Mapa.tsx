@@ -30,7 +30,10 @@ import {
     Copy,
     Check,
     Box,
-    Mountain
+    Mountain,
+    Grid,
+    ChevronRight,
+    Map as MapIcon
 } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -71,6 +74,8 @@ export interface PinExtension {
 export interface EstadoOption {
     estado_id: number | null;
     estado_nombre: string;
+    latitud?: number | null;
+    longitud?: number | null;
     cantidad: number;
 }
 
@@ -85,6 +90,7 @@ interface MapaPageProps {
 }
 
 export type MapLayerStyle = 'satellite' | 'dark' | 'standard3d' | 'outdoors' | 'streets';
+export type ViewMode = 'estados' | 'sedes'; // 'estados' = 1 icono por estado, 'sedes' = todas las sedes individuales
 
 const cleanText = (str?: string) => {
     if (!str) return '';
@@ -123,24 +129,30 @@ export default function ExtensionesMapaPage({
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapboxMapRef = useRef<mapboxgl.Map | null>(null);
     const mapboxMarkersRef = useRef<mapboxgl.Marker[]>([]);
-    const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
+    const mapboxStateMarkersRef = useRef<mapboxgl.Marker[]>([]);
 
     const leafletMapRef = useRef<L.Map | null>(null);
     const leafletMarkersLayerRef = useRef<L.LayerGroup | null>(null);
     const leafletTileLayerRef = useRef<L.TileLayer | null>(null);
     const leafletLibRef = useRef<any>(null);
 
-    // Estados de filtros y búsqueda
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
+    // Modo de vista: 'estados' (por defecto: 1 icono por estado) o 'sedes' (todas las 458 sedes)
+    const [viewMode, setViewMode] = useState<ViewMode>('estados');
+
+    // Estado seleccionado actualmente (si se presiona un estado)
     const [selectedEstado, setSelectedEstado] = useState<string>('todos');
     const [selectedZona, setSelectedZona] = useState<string>('todas');
     const [selectedDistrito, setSelectedDistrito] = useState<string>('todos');
-    const [selectedEstatus, setSelectedEstatus] = useState<string>('todos'); // 'todos', 'activa', 'inactiva'
+    const [selectedEstatus, setSelectedEstatus] = useState<string>('todos');
     const [soloCamposBlancos, setSoloCamposBlancos] = useState<boolean>(false);
     const [soloMedios, setSoloMedios] = useState<boolean>(false);
 
-    // Capa visual del mapa y vista (por defecto: satélite para máximo impacto visual)
+    // Búsqueda
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [stateSearchQuery, setStateSearchQuery] = useState('');
+
+    // Capa visual del mapa y vista
     const [activeStyle, setActiveStyle] = useState<MapLayerStyle>('satellite');
     const [selectedPin, setSelectedPin] = useState<PinExtension | null>(null);
     const [isDrawerCollapsed, setIsDrawerCollapsed] = useState<boolean>(false);
@@ -156,6 +168,40 @@ export default function ExtensionesMapaPage({
             (p) => p.lat !== null && p.lng !== null && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng))
         );
     }, [pines]);
+
+    // Estados enriquecidos con coordenadas (centroid de las iglesias si el estado no tiene lat/lng)
+    const enrichedEstados = useMemo(() => {
+        return estados
+            .map((est) => {
+                let lat = est.latitud ? Number(est.latitud) : null;
+                let lng = est.longitud ? Number(est.longitud) : null;
+
+                const churchesInState = validPines.filter(
+                    (p) => cleanText(p.estado_nombre) === cleanText(est.estado_nombre)
+                );
+
+                if ((lat === null || lng === null || isNaN(lat) || isNaN(lng)) && churchesInState.length > 0) {
+                    const avgLat = churchesInState.reduce((acc, c) => acc + (c.lat || 0), 0) / churchesInState.length;
+                    const avgLng = churchesInState.reduce((acc, c) => acc + (c.lng || 0), 0) / churchesInState.length;
+                    lat = avgLat;
+                    lng = avgLng;
+                }
+
+                const totalMiembros = churchesInState.reduce((acc, c) => acc + c.total_miembros, 0);
+                const camposBlancos = churchesInState.reduce((acc, c) => acc + c.campos_blancos, 0);
+
+                return {
+                    ...est,
+                    latitud: lat,
+                    longitud: lng,
+                    cantidad: churchesInState.length || est.cantidad,
+                    totalMiembros,
+                    camposBlancos,
+                };
+            })
+            .filter((est) => est.latitud !== null && est.longitud !== null && est.cantidad > 0)
+            .sort((a, b) => b.cantidad - a.cantidad);
+    }, [estados, validPines]);
 
     // Filtrado en vivo de los pines según los criterios
     const filteredPines = useMemo(() => {
@@ -191,7 +237,7 @@ export default function ExtensionesMapaPage({
             // Filtro por Medios de Comunicación
             if (soloMedios && !pin.posee_medio) return false;
 
-            // Filtro por Búsqueda de texto (si se aplica directamente)
+            // Filtro por Búsqueda de texto
             if (searchQuery.trim().length > 1) {
                 const q = cleanText(searchQuery);
                 const matchNombre = cleanText(pin.nombre).includes(q);
@@ -207,6 +253,30 @@ export default function ExtensionesMapaPage({
             return true;
         });
     }, [validPines, selectedEstado, selectedZona, selectedDistrito, selectedEstatus, soloCamposBlancos, soloMedios, searchQuery]);
+
+    // Iglesias del estado actualmente seleccionado (para el panel de estado)
+    const activeStateChurches = useMemo(() => {
+        if (selectedEstado === 'todos') return [];
+        const targetEst = cleanText(selectedEstado);
+        let list = validPines.filter((p) => cleanText(p.estado_nombre).includes(targetEst));
+        if (stateSearchQuery.trim()) {
+            const q = cleanText(stateSearchQuery);
+            list = list.filter(
+                (p) =>
+                    cleanText(p.nombre).includes(q) ||
+                    cleanText(p.pastor).includes(q) ||
+                    cleanText(p.municipio_nombre).includes(q) ||
+                    cleanText(p.zona).includes(q)
+            );
+        }
+        return list;
+    }, [validPines, selectedEstado, stateSearchQuery]);
+
+    // Datos del estado activo
+    const activeStateInfo = useMemo(() => {
+        if (selectedEstado === 'todos') return null;
+        return enrichedEstados.find((e) => cleanText(e.estado_nombre) === cleanText(selectedEstado));
+    }, [enrichedEstados, selectedEstado]);
 
     // Resultados de búsqueda autocompletada
     const searchResults = useMemo(() => {
@@ -227,7 +297,7 @@ export default function ExtensionesMapaPage({
             .slice(0, 8);
     }, [validPines, searchQuery]);
 
-    // Obtener URL de estilo de Mapbox
+    // URL de estilo de Mapbox
     const getMapboxStyleUrl = useCallback((style: MapLayerStyle) => {
         switch (style) {
             case 'satellite':
@@ -277,7 +347,7 @@ export default function ExtensionesMapaPage({
                 labelLayerId
             );
         } catch (e) {
-            // Silently ignore if source composite building is not available in current style
+            // Ignore
         }
     }, []);
 
@@ -301,14 +371,13 @@ export default function ExtensionesMapaPage({
             const map = new mapboxgl.Map({
                 container: mapContainerRef.current,
                 style: getMapboxStyleUrl(activeStyle),
-                center: [-66.5897, 8.2], // Centro geográfico equilibrado de Venezuela
+                center: [-66.5897, 8.2],
                 zoom: 6.2,
                 pitch: is3DMode ? 55 : 0,
                 bearing: is3DMode ? -15 : 0,
                 antialias: true,
             });
 
-            // Controles nativos Mapbox
             map.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
             map.addControl(new mapboxgl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
@@ -318,7 +387,7 @@ export default function ExtensionesMapaPage({
 
             mapboxMapRef.current = map;
         } else {
-            // Fallback Leaflet con azulejos modernos de alta definición (CartoDB / Esri)
+            // Fallback Leaflet
             setUseMapbox(false);
             import('leaflet').then((leafletModule) => {
                 const LInstance = (leafletModule as any).default || leafletModule;
@@ -335,9 +404,8 @@ export default function ExtensionesMapaPage({
 
                 LInstance.control.zoom({ position: 'bottomright' }).addTo(map);
 
-                // CartoDB Voyager de alta calidad en vez de OSM básico
                 const tileLayer = LInstance.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; CartoDB &copy; OpenStreetMap contributors',
+                    attribution: '&copy; CartoDB &copy; OpenStreetMap',
                     maxZoom: 19,
                 }).addTo(map);
 
@@ -409,142 +477,53 @@ export default function ExtensionesMapaPage({
         }
     };
 
-    // Renderizar Pines y Marcadores Interactivos
-    useEffect(() => {
-        if (useMapbox && mapboxMapRef.current) {
-            // Limpiar marcadores anteriores
-            mapboxMarkersRef.current.forEach((m) => m.remove());
-            mapboxMarkersRef.current = [];
+    // Seleccionar un Estado (vuelo hacia el estado y revelación de sus iglesias)
+    const handleSelectEstado = (est: typeof enrichedEstados[0]) => {
+        setSelectedEstado(est.estado_nombre);
+        setSelectedPin(null);
+        setStateSearchQuery('');
 
-            filteredPines.forEach((pin) => {
-                if (pin.lat === null || pin.lng === null) return;
-
-                const isSelected = selectedPin?.id === pin.id;
-                const el = document.createElement('div');
-                el.className = 'church-marker-container group relative cursor-pointer';
-
-                const colorBg = pin.activa ? '#10b981' : '#f43f5e';
-                const pulseColor = pin.activa ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)';
-                const sizePx = isSelected ? 38 : 28;
-
-                el.innerHTML = `
-                    <div style="
-                        position: relative;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: ${sizePx}px;
-                        height: ${sizePx}px;
-                        border-radius: 50%;
-                        background-color: ${colorBg};
-                        border: ${isSelected ? '3px solid #ffffff' : '2px solid rgba(255,255,255,0.9)'};
-                        box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 16px ${pulseColor};
-                        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-                        transform: ${isSelected ? 'scale(1.25)' : 'scale(1)'};
-                    " class="marker-bubble">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="${isSelected ? '18' : '13'}" height="${isSelected ? '18' : '13'}" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
-                            <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
-                            <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
-                        </svg>
-
-                        ${pin.campos_blancos > 0 ? `
-                            <span style="
-                                position: absolute;
-                                top: -5px;
-                                right: -5px;
-                                background-color: #8b5cf6;
-                                color: #ffffff;
-                                font-size: 9px;
-                                font-weight: 800;
-                                min-width: 15px;
-                                height: 15px;
-                                padding: 0 3px;
-                                border-radius: 8px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                border: 1.5px solid #ffffff;
-                                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-                            ">+${pin.campos_blancos}</span>
-                        ` : ''}
-                    </div>
-
-                    <!-- Tooltip al pasar el cursor -->
-                    <div style="
-                        position: absolute;
-                        bottom: 100%;
-                        left: 50%;
-                        transform: translateX(-50%) translateY(-6px);
-                        background: rgba(15, 23, 42, 0.95);
-                        color: #ffffff;
-                        padding: 4px 8px;
-                        border-radius: 6px;
-                        font-size: 11px;
-                        font-weight: 600;
-                        white-space: nowrap;
-                        pointer-events: none;
-                        opacity: 0;
-                        transition: opacity 0.2s ease, transform 0.2s ease;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                        border: 1px solid rgba(255,255,255,0.15);
-                        z-index: 60;
-                    " class="marker-hover-card">
-                        ${pin.nombre}
-                    </div>
-                `;
-
-                // Hover effects
-                const bubble = el.querySelector('.marker-bubble') as HTMLElement;
-                const hoverCard = el.querySelector('.marker-hover-card') as HTMLElement;
-
-                el.addEventListener('mouseenter', () => {
-                    if (bubble) bubble.style.transform = 'scale(1.35)';
-                    if (hoverCard) hoverCard.style.opacity = '1';
-                });
-
-                el.addEventListener('mouseleave', () => {
-                    if (bubble) bubble.style.transform = isSelected ? 'scale(1.25)' : 'scale(1)';
-                    if (hoverCard) hoverCard.style.opacity = '0';
-                });
-
-                el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleSelectPin(pin);
-                });
-
-                const marker = new mapboxgl.Marker({ element: el })
-                    .setLngLat([pin.lng, pin.lat])
-                    .addTo(mapboxMapRef.current!);
-
-                mapboxMarkersRef.current.push(marker);
+        if (useMapbox && mapboxMapRef.current && est.longitud && est.latitud) {
+            mapboxMapRef.current.flyTo({
+                center: [est.longitud, est.latitud],
+                zoom: 9.2,
+                pitch: is3DMode ? 45 : 25,
+                duration: 1500,
+                essential: true,
             });
-        } else if (!useMapbox && leafletMapRef.current && leafletMarkersLayerRef.current) {
-            leafletMarkersLayerRef.current.clearLayers();
-            const LInstance = leafletLibRef.current;
-            if (LInstance) {
-                filteredPines.forEach((pin) => {
-                    if (pin.lat === null || pin.lng === null) return;
-                    const marker = LInstance.circleMarker([pin.lat, pin.lng], {
-                        radius: selectedPin?.id === pin.id ? 10 : 7,
-                        fillColor: pin.activa ? '#10b981' : '#f43f5e',
-                        color: '#ffffff',
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.9,
-                    });
-                    marker.bindTooltip(pin.nombre, { direction: 'top', offset: [0, -6] });
-                    marker.on('click', () => handleSelectPin(pin));
-                    leafletMarkersLayerRef.current?.addLayer(marker);
-                });
-            }
+        } else if (!useMapbox && leafletMapRef.current && est.latitud && est.longitud) {
+            leafletMapRef.current.setView([est.latitud, est.longitud], 9, { animate: true });
         }
-    }, [useMapbox, filteredPines, selectedPin]);
+    };
+
+    // Regresar a la vista general de Venezuela (por estados)
+    const handleBackToVenezuela = () => {
+        setSelectedEstado('todos');
+        setSelectedPin(null);
+        setStateSearchQuery('');
+
+        if (useMapbox && mapboxMapRef.current) {
+            mapboxMapRef.current.flyTo({
+                center: [-66.5897, 8.2],
+                zoom: 6.2,
+                pitch: is3DMode ? 35 : 0,
+                bearing: 0,
+                duration: 1500,
+            });
+        } else if (leafletMapRef.current) {
+            leafletMapRef.current.setView([8.2, -66.5897], 6.5);
+        }
+    };
 
     // Seleccionar iglesia y volar suavemente a ella
     const handleSelectPin = (pin: PinExtension) => {
         setSelectedPin(pin);
         setIsDrawerCollapsed(false);
+
+        // Si la iglesia pertenece a un estado diferente al seleccionado, asegurar que se muestre
+        if (pin.estado_nombre && selectedEstado === 'todos') {
+            setSelectedEstado(pin.estado_nombre);
+        }
 
         if (useMapbox && mapboxMapRef.current && pin.lng !== null && pin.lat !== null) {
             mapboxMapRef.current.flyTo({
@@ -559,16 +538,285 @@ export default function ExtensionesMapaPage({
         }
     };
 
+    // RENDERIZADO DE MARCADORES (ESTADOS VS IGLESIAS)
+    useEffect(() => {
+        // MODO 1: VISTA POR ESTADOS (Cuando viewMode === 'estados' Y no hay un estado activo seleccionado)
+        const isShowingStateBadges = viewMode === 'estados' && selectedEstado === 'todos';
+
+        if (useMapbox && mapboxMapRef.current) {
+            // Limpiar marcadores de iglesias anteriores
+            mapboxMarkersRef.current.forEach((m) => m.remove());
+            mapboxMarkersRef.current = [];
+
+            // Limpiar marcadores de estados anteriores
+            mapboxStateMarkersRef.current.forEach((m) => m.remove());
+            mapboxStateMarkersRef.current = [];
+
+            if (isShowingStateBadges) {
+                // RENDERIZAR ÚNICAMENTE LOS 24 ICONOS DE ESTADOS
+                enrichedEstados.forEach((est) => {
+                    if (!est.latitud || !est.longitud) return;
+
+                    const el = document.createElement('div');
+                    el.className = 'state-badge-container group cursor-pointer relative';
+
+                    el.innerHTML = `
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            background: rgba(15, 23, 42, 0.90);
+                            border: 2px solid rgba(99, 102, 241, 0.85);
+                            padding: 6px 14px;
+                            border-radius: 9999px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.65), 0 0 20px rgba(99, 102, 241, 0.45);
+                            backdrop-filter: blur(10px);
+                            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                            transform: scale(1);
+                        " class="state-pill">
+                            <span style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                width: 26px;
+                                height: 26px;
+                                border-radius: 50%;
+                                background: linear-gradient(135deg, #6366f1, #a855f7);
+                                color: #ffffff;
+                                font-weight: 800;
+                                font-size: 11px;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                                border: 1.5px solid rgba(255,255,255,0.7);
+                            ">
+                                ${est.cantidad}
+                            </span>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="
+                                    color: #ffffff;
+                                    font-weight: 800;
+                                    font-size: 12px;
+                                    letter-spacing: 0.02em;
+                                    white-space: nowrap;
+                                ">
+                                    ${est.estado_nombre}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Tooltip al pasar el cursor -->
+                        <div style="
+                            position: absolute;
+                            bottom: 100%;
+                            left: 50%;
+                            transform: translateX(-50%) translateY(-8px);
+                            background: rgba(15, 23, 42, 0.96);
+                            color: #ffffff;
+                            padding: 6px 10px;
+                            border-radius: 8px;
+                            font-size: 11px;
+                            font-weight: 600;
+                            white-space: nowrap;
+                            pointer-events: none;
+                            opacity: 0;
+                            transition: opacity 0.2s ease;
+                            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+                            border: 1px solid rgba(255,255,255,0.15);
+                            z-index: 70;
+                        " class="state-tooltip">
+                            🏛️ ${est.cantidad} Sedes · Clic para explorar
+                        </div>
+                    `;
+
+                    const pill = el.querySelector('.state-pill') as HTMLElement;
+                    const tooltip = el.querySelector('.state-tooltip') as HTMLElement;
+
+                    el.addEventListener('mouseenter', () => {
+                        if (pill) pill.style.transform = 'scale(1.15)';
+                        if (tooltip) tooltip.style.opacity = '1';
+                    });
+
+                    el.addEventListener('mouseleave', () => {
+                        if (pill) pill.style.transform = 'scale(1)';
+                        if (tooltip) tooltip.style.opacity = '0';
+                    });
+
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleSelectEstado(est);
+                    });
+
+                    const marker = new mapboxgl.Marker({ element: el })
+                        .setLngLat([est.longitud, est.latitud])
+                        .addTo(mapboxMapRef.current!);
+
+                    mapboxStateMarkersRef.current.push(marker);
+                });
+            } else {
+                // RENDERIZAR LAS IGLESIAS INDIVIDUALES (Del estado seleccionado o de todas si viewMode === 'sedes')
+                const pinesToRender =
+                    selectedEstado !== 'todos'
+                        ? filteredPines.filter((p) => cleanText(p.estado_nombre).includes(cleanText(selectedEstado)))
+                        : filteredPines;
+
+                pinesToRender.forEach((pin) => {
+                    if (pin.lat === null || pin.lng === null) return;
+
+                    const isSelected = selectedPin?.id === pin.id;
+                    const el = document.createElement('div');
+                    el.className = 'church-marker-container group relative cursor-pointer';
+
+                    const colorBg = pin.activa ? '#10b981' : '#f43f5e';
+                    const pulseColor = pin.activa ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)';
+                    const sizePx = isSelected ? 38 : 28;
+
+                    el.innerHTML = `
+                        <div style="
+                            position: relative;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            width: ${sizePx}px;
+                            height: ${sizePx}px;
+                            border-radius: 50%;
+                            background-color: ${colorBg};
+                            border: ${isSelected ? '3px solid #ffffff' : '2px solid rgba(255,255,255,0.9)'};
+                            box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 16px ${pulseColor};
+                            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+                            transform: ${isSelected ? 'scale(1.25)' : 'scale(1)'};
+                        " class="marker-bubble">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="${isSelected ? '18' : '13'}" height="${isSelected ? '18' : '13'}" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                                <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                                <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                            </svg>
+
+                            ${pin.campos_blancos > 0 ? `
+                                <span style="
+                                    position: absolute;
+                                    top: -5px;
+                                    right: -5px;
+                                    background-color: #8b5cf6;
+                                    color: #ffffff;
+                                    font-size: 9px;
+                                    font-weight: 800;
+                                    min-width: 15px;
+                                    height: 15px;
+                                    padding: 0 3px;
+                                    border-radius: 8px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    border: 1.5px solid #ffffff;
+                                    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                                ">+${pin.campos_blancos}</span>
+                            ` : ''}
+                        </div>
+
+                        <!-- Tooltip al pasar el cursor -->
+                        <div style="
+                            position: absolute;
+                            bottom: 100%;
+                            left: 50%;
+                            transform: translateX(-50%) translateY(-6px);
+                            background: rgba(15, 23, 42, 0.95);
+                            color: #ffffff;
+                            padding: 4px 8px;
+                            border-radius: 6px;
+                            font-size: 11px;
+                            font-weight: 600;
+                            white-space: nowrap;
+                            pointer-events: none;
+                            opacity: 0;
+                            transition: opacity 0.2s ease;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                            border: 1px solid rgba(255,255,255,0.15);
+                            z-index: 60;
+                        " class="marker-hover-card">
+                            ${pin.nombre}
+                        </div>
+                    `;
+
+                    const bubble = el.querySelector('.marker-bubble') as HTMLElement;
+                    const hoverCard = el.querySelector('.marker-hover-card') as HTMLElement;
+
+                    el.addEventListener('mouseenter', () => {
+                        if (bubble) bubble.style.transform = 'scale(1.35)';
+                        if (hoverCard) hoverCard.style.opacity = '1';
+                    });
+
+                    el.addEventListener('mouseleave', () => {
+                        if (bubble) bubble.style.transform = isSelected ? 'scale(1.25)' : 'scale(1)';
+                        if (hoverCard) hoverCard.style.opacity = '0';
+                    });
+
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleSelectPin(pin);
+                    });
+
+                    const marker = new mapboxgl.Marker({ element: el })
+                        .setLngLat([pin.lng, pin.lat])
+                        .addTo(mapboxMapRef.current!);
+
+                    mapboxMarkersRef.current.push(marker);
+                });
+            }
+        } else if (!useMapbox && leafletMapRef.current && leafletMarkersLayerRef.current) {
+            // Fallback Leaflet
+            leafletMarkersLayerRef.current.clearLayers();
+            const LInstance = leafletLibRef.current;
+            if (LInstance) {
+                if (isShowingStateBadges) {
+                    enrichedEstados.forEach((est) => {
+                        if (!est.latitud || !est.longitud) return;
+                        const marker = LInstance.circleMarker([est.latitud, est.longitud], {
+                            radius: 14,
+                            fillColor: '#6366f1',
+                            color: '#ffffff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.9,
+                        });
+                        marker.bindTooltip(`🏛️ ${est.estado_nombre} (${est.cantidad})`, { direction: 'top' });
+                        marker.on('click', () => handleSelectEstado(est));
+                        leafletMarkersLayerRef.current?.addLayer(marker);
+                    });
+                } else {
+                    const pinesToRender =
+                        selectedEstado !== 'todos'
+                            ? filteredPines.filter((p) => cleanText(p.estado_nombre).includes(cleanText(selectedEstado)))
+                            : filteredPines;
+
+                    pinesToRender.forEach((pin) => {
+                        if (pin.lat === null || pin.lng === null) return;
+                        const marker = LInstance.circleMarker([pin.lat, pin.lng], {
+                            radius: selectedPin?.id === pin.id ? 10 : 7,
+                            fillColor: pin.activa ? '#10b981' : '#f43f5e',
+                            color: '#ffffff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.9,
+                        });
+                        marker.bindTooltip(pin.nombre, { direction: 'top', offset: [0, -6] });
+                        marker.on('click', () => handleSelectPin(pin));
+                        leafletMarkersLayerRef.current?.addLayer(marker);
+                    });
+                }
+            }
+        }
+    }, [useMapbox, viewMode, selectedEstado, enrichedEstados, filteredPines, selectedPin]);
+
     // Restablecer vista general de Venezuela
     const resetVenezuelaView = () => {
-        setSelectedPin(null);
         setSelectedEstado('todos');
+        setSelectedPin(null);
         setSelectedZona('todas');
         setSelectedDistrito('todos');
         setSelectedEstatus('todos');
         setSoloCamposBlancos(false);
         setSoloMedios(false);
         setSearchQuery('');
+        setStateSearchQuery('');
 
         if (useMapbox && mapboxMapRef.current) {
             mapboxMapRef.current.flyTo({
@@ -620,7 +868,7 @@ export default function ExtensionesMapaPage({
 
             {/* BARRA SUPERIOR FLOTANTE DE COMANDO (GLASSMORPHISM) */}
             <header className="absolute top-4 left-4 right-4 z-40 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none">
-                {/* Lado Izquierdo: Volver y Branding */}
+                {/* Lado Izquierdo: Volver, Modo de Agrupación y Branding */}
                 <div className="flex items-center gap-2 pointer-events-auto w-full md:w-auto">
                     <Link href="/admin/extensiones/dashboard">
                         <Button
@@ -633,14 +881,55 @@ export default function ExtensionesMapaPage({
                         </Button>
                     </Link>
 
-                    <div className="flex items-center gap-2 px-3.5 h-10 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-2xl">
+                    {/* Selector de Modo de Visualización: Por Estados vs Todas las Sedes */}
+                    <div className="flex items-center p-1 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-2xl">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewMode('estados');
+                                setSelectedEstado('todos');
+                                setSelectedPin(null);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                viewMode === 'estados'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                            }`}
+                            title={__('Agrupar por Estados (1 icono limpio por estado)')}
+                        >
+                            <MapIcon className="size-3.5" />
+                            <span>{__('Por Estados')}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewMode('sedes');
+                                setSelectedEstado('todos');
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                viewMode === 'sedes'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                            }`}
+                            title={__('Mostrar todas las 458 sedes simultáneamente')}
+                        >
+                            <Grid className="size-3.5" />
+                            <span>{__('Todas las Sedes')}</span>
+                        </button>
+                    </div>
+
+                    {/* Badge con contador */}
+                    <div className="hidden xl:flex items-center gap-2 px-3.5 h-10 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-2xl">
                         <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-xs font-bold text-white tracking-wide">
                             {__('MMM Venezuela')}
                         </span>
                         <span className="text-xs text-slate-500">·</span>
                         <span className="text-xs font-semibold text-indigo-300">
-                            {filteredPines.length} {__('Sedes')}
+                            {viewMode === 'estados' && selectedEstado === 'todos'
+                                ? `${enrichedEstados.length} Estados`
+                                : `${filteredPines.length} Sedes`}
                         </span>
                     </div>
                 </div>
@@ -695,7 +984,7 @@ export default function ExtensionesMapaPage({
                                     </div>
                                     <div className="text-right shrink-0">
                                         <span className="text-[10px] font-bold text-indigo-300 bg-indigo-900/50 px-1.5 py-0.5 rounded border border-indigo-700/50">
-                                            Zona {item.zona || '—'}
+                                            {item.estado_nombre} · Z{item.zona || '—'}
                                         </span>
                                     </div>
                                 </button>
@@ -706,7 +995,7 @@ export default function ExtensionesMapaPage({
 
                 {/* Lado Derecho: Capas visuales, 3D, Filtros y Pantalla Completa */}
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    {/* Selector de Capas Visuales Modernas */}
+                    {/* Selector de Capas Visuales */}
                     <div className="flex items-center p-1 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-2xl">
                         <Button
                             type="button"
@@ -718,7 +1007,7 @@ export default function ExtensionesMapaPage({
                                     ? 'bg-indigo-600 text-white shadow'
                                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                             }`}
-                            title={__('Satélite HD con etiquetas viales')}
+                            title={__('Satélite HD con relieve')}
                         >
                             <Satellite className="size-3.5 mr-1" />
                             <span className="hidden sm:inline">{__('Satélite')}</span>
@@ -734,7 +1023,7 @@ export default function ExtensionesMapaPage({
                                     ? 'bg-indigo-600 text-white shadow'
                                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                             }`}
-                            title={__('Modo Oscuro GIS de Alta Gama')}
+                            title={__('Modo Oscuro Cyber GIS')}
                         >
                             <Moon className="size-3.5 mr-1" />
                             <span className="hidden sm:inline">{__('Oscuro')}</span>
@@ -766,7 +1055,7 @@ export default function ExtensionesMapaPage({
                                     ? 'bg-indigo-600 text-white shadow'
                                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                             }`}
-                            title={__('Topografía y Relieve')}
+                            title={__('Relieve Topográfico')}
                         >
                             <Mountain className="size-3.5 mr-1" />
                             <span className="hidden sm:inline">{__('Relieve')}</span>
@@ -790,7 +1079,7 @@ export default function ExtensionesMapaPage({
                         <span>{is3DMode ? '3D' : '2D'}</span>
                     </Button>
 
-                    {/* Botón Filtros Territoriales */}
+                    {/* Botón Filtros */}
                     <Button
                         type="button"
                         variant="secondary"
@@ -798,7 +1087,6 @@ export default function ExtensionesMapaPage({
                         onClick={() => setShowFiltersPanel(!showFiltersPanel)}
                         className={`h-10 px-3 text-xs font-semibold rounded-xl border backdrop-blur-md shadow-2xl transition-all ${
                             showFiltersPanel ||
-                            selectedEstado !== 'todos' ||
                             selectedZona !== 'todas' ||
                             selectedDistrito !== 'todos' ||
                             selectedEstatus !== 'todos' ||
@@ -810,17 +1098,9 @@ export default function ExtensionesMapaPage({
                     >
                         <Filter className="size-3.5 text-indigo-300 mr-1.5" />
                         <span className="hidden sm:inline">{__('Filtros')}</span>
-                        {(selectedEstado !== 'todos' ||
-                            selectedZona !== 'todas' ||
-                            selectedDistrito !== 'todos' ||
-                            selectedEstatus !== 'todos' ||
-                            soloCamposBlancos ||
-                            soloMedios) && (
-                            <span className="size-2 rounded-full bg-amber-400 animate-pulse ml-1" />
-                        )}
                     </Button>
 
-                    {/* Botón Reestablecer Vista de Venezuela */}
+                    {/* Botón Reestablecer Vista */}
                     <Button
                         type="button"
                         variant="secondary"
@@ -832,14 +1112,14 @@ export default function ExtensionesMapaPage({
                         <RotateCcw className="size-4 text-slate-300" />
                     </Button>
 
-                    {/* Botón Pantalla Completa Nativa */}
+                    {/* Botón Pantalla Completa */}
                     <Button
                         type="button"
                         variant="secondary"
                         size="sm"
                         onClick={toggleFullscreen}
                         className="size-10 p-0 bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 rounded-xl backdrop-blur-md shadow-2xl"
-                        title={__('Pantalla Completa Nativa')}
+                        title={__('Pantalla Completa')}
                     >
                         {isNativeFullscreen ? (
                             <Minimize2 className="size-4 text-indigo-400" />
@@ -849,6 +1129,30 @@ export default function ExtensionesMapaPage({
                     </Button>
                 </div>
             </header>
+
+            {/* BARRA DE ESTADO ACTIVO (Si se ha presionado un estado para ver sus extensiones) */}
+            {selectedEstado !== 'todos' && (
+                <div className="absolute top-18 left-4 z-40 flex items-center gap-2 pointer-events-auto">
+                    <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleBackToVenezuela}
+                        className="bg-indigo-600/95 hover:bg-indigo-500 text-white font-bold text-xs h-9 px-3 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-1.5 border border-indigo-400/40 transition-all transform hover:scale-105"
+                    >
+                        <ArrowLeft className="size-3.5" />
+                        <span>{__('Ver Todo el País')}</span>
+                    </Button>
+
+                    <div className="bg-slate-900/90 border border-indigo-500/40 rounded-xl px-3 h-9 flex items-center gap-2 shadow-2xl backdrop-blur-md text-xs">
+                        <span className="size-2 rounded-full bg-indigo-400 animate-ping" />
+                        <span className="font-extrabold text-white">Estado {selectedEstado}</span>
+                        <span className="text-slate-400">·</span>
+                        <span className="text-indigo-300 font-semibold">
+                            {activeStateChurches.length} {__('Extensiones')}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* PANEL FLOTANTE DE FILTROS AVANZADOS */}
             {showFiltersPanel && (
@@ -869,16 +1173,25 @@ export default function ExtensionesMapaPage({
 
                     {/* Selector de Estado */}
                     <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-400">{__('Estado')}</label>
+                        <label className="text-[11px] font-semibold text-slate-400">{__('Filtrar por Estado')}</label>
                         <select
                             value={selectedEstado}
-                            onChange={(e) => setSelectedEstado(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === 'todos') {
+                                    handleBackToVenezuela();
+                                } else {
+                                    const match = enrichedEstados.find((es) => es.estado_nombre === val);
+                                    if (match) handleSelectEstado(match);
+                                    else setSelectedEstado(val);
+                                }
+                            }}
                             className="w-full h-9 text-xs bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 text-white focus:outline-none focus:border-indigo-500"
                         >
-                            <option value="todos">{__('Todos los Estados')} ({validPines.length})</option>
-                            {estados.map((est) => (
+                            <option value="todos">{__('Todos los Estados')} ({enrichedEstados.length})</option>
+                            {enrichedEstados.map((est) => (
                                 <option key={est.estado_nombre} value={est.estado_nombre}>
-                                    {est.estado_nombre} ({est.cantidad})
+                                    {est.estado_nombre} ({est.cantidad} sedes)
                                 </option>
                             ))}
                         </select>
@@ -921,7 +1234,7 @@ export default function ExtensionesMapaPage({
 
                     {/* Selector de Estatus */}
                     <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-400">{__('Estatus de la Iglesia')}</label>
+                        <label className="text-[11px] font-semibold text-slate-400">{__('Estatus')}</label>
                         <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
                             {[
                                 { key: 'todos', label: __('Todas') },
@@ -953,7 +1266,7 @@ export default function ExtensionesMapaPage({
                                 onChange={(e) => setSoloCamposBlancos(e.target.checked)}
                                 className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500"
                             />
-                            <span>{__('Solo sedes con Campos Blancos')}</span>
+                            <span>{__('Solo con Campos Blancos')}</span>
                         </label>
 
                         <label className="flex items-center gap-2 cursor-pointer text-slate-300">
@@ -990,7 +1303,11 @@ export default function ExtensionesMapaPage({
                 <div className="absolute bottom-5 left-5 z-30 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-2.5 shadow-2xl flex items-center gap-3.5 text-xs text-white">
                     <div className="flex items-center gap-1.5 font-bold">
                         <MapPin className="size-4 text-indigo-400" />
-                        <span>{filteredPines.length} {__('Mostradas')}</span>
+                        <span>
+                            {viewMode === 'estados' && selectedEstado === 'todos'
+                                ? `${enrichedEstados.length} Estados`
+                                : `${filteredPines.length} Sedes`}
+                        </span>
                     </div>
 
                     <div className="h-3.5 w-px bg-slate-700" />
@@ -998,17 +1315,93 @@ export default function ExtensionesMapaPage({
                     <div className="flex items-center gap-3 text-[11px] font-medium">
                         <div className="flex items-center gap-1 text-emerald-400">
                             <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>{filteredPines.filter((p) => p.activa).length} {__('Activas')}</span>
+                            <span>{validPines.filter((p) => p.activa).length} {__('Activas')}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-rose-400">
-                            <span className="size-2 rounded-full bg-rose-500" />
-                            <span>{filteredPines.filter((p) => !p.activa).length} {__('Inactivas')}</span>
+                        <div className="flex items-center gap-1 text-purple-400">
+                            <span>{validPines.reduce((a, b) => a + b.campos_blancos, 0)} {__('Campos Blancos')}</span>
                         </div>
                     </div>
                 </div>
             </main>
 
-            {/* PANEL LATERAL / DRAWER FLOTANTE DE LA IGLESIA SELECCIONADA */}
+            {/* PANEL LATERAL IZQUIERDO: LISTADO DE IGLESIAS DEL ESTADO ACTIVO */}
+            {selectedEstado !== 'todos' && !selectedPin && (
+                <aside className="absolute top-28 left-4 bottom-5 z-40 w-80 sm:w-96 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden text-slate-100">
+                    <div className="p-3.5 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between gap-2">
+                        <div>
+                            <h3 className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                                <Building2 className="size-4 text-indigo-400" />
+                                <span>{selectedEstado}</span>
+                            </h3>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                                {activeStateChurches.length} {__('sedes en este estado')}
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleBackToVenezuela}
+                            className="h-8 text-xs text-slate-400 hover:text-white"
+                        >
+                            <X className="size-4" />
+                        </Button>
+                    </div>
+
+                    {/* Buscador dentro del estado */}
+                    <div className="p-2.5 border-b border-slate-800">
+                        <Input
+                            type="search"
+                            value={stateSearchQuery}
+                            onChange={(e) => setStateSearchQuery(e.target.value)}
+                            placeholder={`${__('Filtrar iglesias en')} ${selectedEstado}...`}
+                            className="h-8 text-xs bg-slate-950 border-slate-700 rounded-lg text-white"
+                        />
+                    </div>
+
+                    {/* Lista scrollable de iglesias */}
+                    <div className="flex-1 overflow-y-auto divide-y divide-slate-800/80 p-1">
+                        {activeStateChurches.map((pin) => (
+                            <button
+                                key={pin.id}
+                                type="button"
+                                onClick={() => handleSelectPin(pin)}
+                                className="w-full text-left p-2.5 rounded-xl hover:bg-indigo-950/50 transition-all flex items-center justify-between gap-2.5 group"
+                            >
+                                <div className="min-w-0 flex-1">
+                                    <div className="font-bold text-xs text-white group-hover:text-indigo-300 truncate">
+                                        {pin.nombre}
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                                        👤 {pin.pastor}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500 truncate">
+                                        📍 {pin.municipio_nombre || pin.ubicacion}
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                    <span className="text-[10px] font-bold text-indigo-300 bg-indigo-900/50 px-1.5 py-0.5 rounded border border-indigo-700/50">
+                                        Z{pin.zona || '—'}
+                                    </span>
+                                    {pin.campos_blancos > 0 && (
+                                        <span className="text-[9px] font-bold text-purple-300 bg-purple-900/50 px-1 py-0.2 rounded">
+                                            +{pin.campos_blancos} cb
+                                        </span>
+                                    )}
+                                </div>
+                            </button>
+                        ))}
+
+                        {activeStateChurches.length === 0 && (
+                            <div className="p-6 text-center text-xs text-slate-400">
+                                {__('No se encontraron extensiones con ese criterio.')}
+                            </div>
+                        )}
+                    </div>
+                </aside>
+            )}
+
+            {/* PANEL LATERAL DERECHO / DRAWER FLOTANTE DE LA IGLESIA SELECCIONADA */}
             {selectedPin && (
                 <aside
                     className={`absolute top-0 right-0 bottom-0 z-50 w-full sm:w-[420px] bg-slate-900/95 border-l border-slate-700/80 shadow-2xl backdrop-blur-2xl flex flex-col transform transition-transform duration-300 ease-out text-slate-100 ${
