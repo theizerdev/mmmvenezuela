@@ -101,6 +101,30 @@ const cleanText = (str?: string) => {
         .trim();
 };
 
+const createGeoJSONCircle = (center: [number, number], radiusInMeters: number = 100, points: number = 64) => {
+    const [lng, lat] = center;
+    const coords: [number, number][] = [];
+    const distanceX = radiusInMeters / (111320 * Math.cos((lat * Math.PI) / 180));
+    const distanceY = radiusInMeters / 110540;
+
+    for (let i = 0; i < points; i++) {
+        const theta = (i / points) * (2 * Math.PI);
+        const x = distanceX * Math.cos(theta);
+        const y = distanceY * Math.sin(theta);
+        coords.push([lng + x, lat + y]);
+    }
+    coords.push(coords[0]);
+
+    return {
+        type: 'Feature' as const,
+        geometry: {
+            type: 'Polygon' as const,
+            coordinates: [coords],
+        },
+        properties: {},
+    };
+};
+
 export default function ExtensionesMapaPage({
     pines = [],
     estados = [],
@@ -160,6 +184,7 @@ export default function ExtensionesMapaPage({
     const [isNativeFullscreen, setIsNativeFullscreen] = useState<boolean>(false);
     const [is3DMode, setIs3DMode] = useState<boolean>(false);
     const [useMapbox, setUseMapbox] = useState<boolean>(true);
+    const [showRadius100m, setShowRadius100m] = useState<boolean>(true);
     const [copiedCoords, setCopiedCoords] = useState<boolean>(false);
 
     // Pines con coordenadas numéricas válidas
@@ -367,6 +392,147 @@ export default function ExtensionesMapaPage({
         }
     }, []);
 
+    // Función para dibujar y actualizar el radio de 100 metros en Mapbox
+    const updateRadiusLayers = useCallback(
+        (map: mapboxgl.Map, pins: PinExtension[], selected: PinExtension | null, showRadius: boolean) => {
+            try {
+                if (!map.isStyleLoaded()) return;
+
+                const allSourceId = 'all-churches-radius-source';
+                const allFillId = 'all-churches-radius-fill';
+                const allLineId = 'all-churches-radius-line';
+
+                const allFeatures =
+                    showRadius
+                        ? pins
+                              .filter((p) => p.lat !== null && p.lng !== null)
+                              .map((p) => createGeoJSONCircle([p.lng!, p.lat!], 100))
+                        : [];
+
+                const allSourceData: GeoJSON.FeatureCollection = {
+                    type: 'FeatureCollection',
+                    features: allFeatures as any,
+                };
+
+                let allSource = map.getSource(allSourceId) as mapboxgl.GeoJSONSource | undefined;
+                if (!allSource) {
+                    map.addSource(allSourceId, {
+                        type: 'geojson',
+                        data: allSourceData,
+                    });
+                } else {
+                    allSource.setData(allSourceData);
+                }
+
+                if (!map.getLayer(allFillId)) {
+                    map.addLayer({
+                        id: allFillId,
+                        type: 'fill',
+                        source: allSourceId,
+                        minzoom: 13,
+                        paint: {
+                            'fill-color': '#10b981',
+                            'fill-opacity': 0.15,
+                        },
+                    });
+                }
+
+                if (!map.getLayer(allLineId)) {
+                    map.addLayer({
+                        id: allLineId,
+                        type: 'line',
+                        source: allSourceId,
+                        minzoom: 13,
+                        paint: {
+                            'line-color': '#10b981',
+                            'line-width': 1.5,
+                            'line-dasharray': [3, 2],
+                            'line-opacity': 0.75,
+                        },
+                    });
+                }
+
+                // Capa destacada para la iglesia seleccionada
+                const selectedSourceId = 'selected-church-radius-source';
+                const selectedFillId = 'selected-church-radius-fill';
+                const selectedLineId = 'selected-church-radius-line';
+
+                const selectedFeatures =
+                    showRadius && selected && selected.lat !== null && selected.lng !== null
+                        ? [createGeoJSONCircle([selected.lng, selected.lat], 100)]
+                        : [];
+
+                const selectedSourceData: GeoJSON.FeatureCollection = {
+                    type: 'FeatureCollection',
+                    features: selectedFeatures as any,
+                };
+
+                let selectedSource = map.getSource(selectedSourceId) as mapboxgl.GeoJSONSource | undefined;
+                if (!selectedSource) {
+                    map.addSource(selectedSourceId, {
+                        type: 'geojson',
+                        data: selectedSourceData,
+                    });
+                } else {
+                    selectedSource.setData(selectedSourceData);
+                }
+
+                const selColor = selected?.activa ? '#10b981' : '#f43f5e';
+
+                if (!map.getLayer(selectedFillId)) {
+                    map.addLayer({
+                        id: selectedFillId,
+                        type: 'fill',
+                        source: selectedSourceId,
+                        paint: {
+                            'fill-color': selColor,
+                            'fill-opacity': 0.25,
+                        },
+                    });
+                } else {
+                    map.setPaintProperty(selectedFillId, 'fill-color', selColor);
+                }
+
+                if (!map.getLayer(selectedLineId)) {
+                    map.addLayer({
+                        id: selectedLineId,
+                        type: 'line',
+                        source: selectedSourceId,
+                        paint: {
+                            'line-color': selColor,
+                            'line-width': 2.5,
+                            'line-dasharray': [2, 2],
+                            'line-opacity': 0.95,
+                        },
+                    });
+                } else {
+                    map.setPaintProperty(selectedLineId, 'line-color', selColor);
+                }
+            } catch (e) {
+                // Silently ignore
+            }
+        },
+        []
+    );
+
+    // Efecto para mantener sincronizadas las capas de radio 100m ante cambios de filtros, selección o estado
+    useEffect(() => {
+        if (!useMapbox || !mapboxMapRef.current) return;
+        const map = mapboxMapRef.current;
+        const isShowingStateBadges = viewMode === 'estados' && selectedEstado === 'todos';
+        const currentPines = isShowingStateBadges
+            ? []
+            : (selectedEstado !== 'todos' ? activeStateChurches : filteredPines);
+
+        if (map.isStyleLoaded()) {
+            updateRadiusLayers(map, currentPines, selectedPin, showRadius100m);
+        } else {
+            map.once('style.load', () => {
+                updateRadiusLayers(map, currentPines, selectedPin, showRadius100m);
+            });
+        }
+    }, [useMapbox, viewMode, selectedEstado, activeStateChurches, filteredPines, selectedPin, showRadius100m, updateRadiusLayers]);
+
     // Inicialización del Mapa
     useEffect(() => {
         if (!mapContainerRef.current) return;
@@ -399,6 +565,8 @@ export default function ExtensionesMapaPage({
 
             map.on('style.load', () => {
                 add3dBuildingsLayer(map);
+                const currentPines = selectedEstado !== 'todos' ? activeStateChurches : filteredPines;
+                updateRadiusLayers(map, currentPines, selectedPin, showRadius100m);
             });
 
             mapboxMapRef.current = map;
@@ -453,6 +621,8 @@ export default function ExtensionesMapaPage({
             mapboxMapRef.current.once('style.load', () => {
                 if (mapboxMapRef.current) {
                     add3dBuildingsLayer(mapboxMapRef.current);
+                    const currentPines = selectedEstado !== 'todos' ? activeStateChurches : filteredPines;
+                    updateRadiusLayers(mapboxMapRef.current, currentPines, selectedPin, showRadius100m);
                 }
             });
         } else if (!useMapbox && leafletMapRef.current && leafletLibRef.current) {
@@ -586,13 +756,13 @@ export default function ExtensionesMapaPage({
         if (useMapbox && mapboxMapRef.current && pin.lng !== null && pin.lat !== null) {
             mapboxMapRef.current.flyTo({
                 center: [pin.lng, pin.lat],
-                zoom: 15,
+                zoom: 16.5,
                 pitch: is3DMode ? 55 : 40,
                 duration: 1400,
                 essential: true,
             });
         } else if (!useMapbox && leafletMapRef.current && pin.lat !== null && pin.lng !== null) {
-            leafletMapRef.current.setView([pin.lat, pin.lng], 15, { animate: true });
+            leafletMapRef.current.setView([pin.lat, pin.lng], 16.5, { animate: true });
         }
     };
 
@@ -852,8 +1022,23 @@ export default function ExtensionesMapaPage({
 
                     pinesToRender.forEach((pin) => {
                         if (pin.lat === null || pin.lng === null) return;
+                        const isSelected = selectedPin?.id === pin.id;
+
+                        // Radio visual de 100 metros a la redonda
+                        if (showRadius100m) {
+                            const radiusCircle = LInstance.circle([pin.lat, pin.lng], {
+                                radius: 100,
+                                color: pin.activa ? '#10b981' : '#f43f5e',
+                                weight: isSelected ? 2.5 : 1.5,
+                                dashArray: isSelected ? '4, 4' : '3, 3',
+                                fillColor: pin.activa ? '#10b981' : '#f43f5e',
+                                fillOpacity: isSelected ? 0.25 : 0.12,
+                            });
+                            leafletMarkersLayerRef.current?.addLayer(radiusCircle);
+                        }
+
                         const marker = LInstance.circleMarker([pin.lat, pin.lng], {
-                            radius: selectedPin?.id === pin.id ? 10 : 7,
+                            radius: isSelected ? 10 : 7,
                             fillColor: pin.activa ? '#10b981' : '#f43f5e',
                             color: '#ffffff',
                             weight: 2,
@@ -867,7 +1052,7 @@ export default function ExtensionesMapaPage({
                 }
             }
         }
-    }, [useMapbox, viewMode, selectedEstado, enrichedEstados, filteredPines, activeStateChurches, selectedPin]);
+    }, [useMapbox, viewMode, selectedEstado, enrichedEstados, filteredPines, activeStateChurches, selectedPin, showRadius100m]);
 
     // Restablecer vista general de Venezuela
     const resetVenezuelaView = () => {
@@ -1148,6 +1333,23 @@ export default function ExtensionesMapaPage({
                         <span>{is3DMode ? '3D' : '2D'}</span>
                     </Button>
 
+                    {/* Botón Radio 100m */}
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowRadius100m(!showRadius100m)}
+                        className={`h-10 px-3 rounded-xl border backdrop-blur-md shadow-2xl text-xs font-bold transition-all ${
+                            showRadius100m
+                                ? 'bg-emerald-600/90 hover:bg-emerald-600 text-white border-emerald-500/80 shadow-emerald-900/30'
+                                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-400 border-slate-700/80'
+                        }`}
+                        title={__('Alternar radio visual de 100 metros a la redonda')}
+                    >
+                        <Radio className={`size-3.5 mr-1.5 ${showRadius100m ? 'text-white animate-pulse' : 'text-slate-400'}`} />
+                        <span>{__('Radio 100m')}</span>
+                    </Button>
+
                     {/* Botón Filtros */}
                     <Button
                         type="button"
@@ -1389,6 +1591,15 @@ export default function ExtensionesMapaPage({
                         <div className="flex items-center gap-1 text-purple-400">
                             <span>{validPines.reduce((a, b) => a + b.campos_blancos, 0)} {__('Campos Blancos')}</span>
                         </div>
+                        {showRadius100m && (
+                            <>
+                                <div className="h-3.5 w-px bg-slate-700" />
+                                <div className="flex items-center gap-1 text-emerald-300">
+                                    <Radio className="size-3 text-emerald-400 animate-pulse" />
+                                    <span>{__('Radio 100m')}</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </main>
@@ -1641,18 +1852,25 @@ export default function ExtensionesMapaPage({
                                     </div>
                                 )}
                                 {selectedPin.lat !== null && selectedPin.lng !== null && (
-                                    <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                                        <span>GPS: {selectedPin.lat.toFixed(5)}, {selectedPin.lng.toFixed(5)}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => copyCoordinates(selectedPin.lat!, selectedPin.lng!)}
-                                            className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 text-[10px]"
-                                            title={__('Copiar coordenadas')}
-                                        >
-                                            {copiedCoords ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
-                                            <span>{copiedCoords ? __('Copiado') : __('Copiar')}</span>
-                                        </button>
-                                    </div>
+                                    <>
+                                        <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono bg-slate-950/60 p-2 rounded-lg border border-slate-800">
+                                            <span>GPS: {selectedPin.lat.toFixed(5)}, {selectedPin.lng.toFixed(5)}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => copyCoordinates(selectedPin.lat!, selectedPin.lng!)}
+                                                className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 text-[10px]"
+                                                title={__('Copiar coordenadas')}
+                                            >
+                                                {copiedCoords ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                                                <span>{copiedCoords ? __('Copiado') : __('Copiar')}</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-[11px] font-medium">
+                                            <span className="size-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                            <span>{__('Radio de precisión: 100 metros a la redonda')}</span>
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         </div>
