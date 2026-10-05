@@ -565,7 +565,7 @@ export default function ExtensionesMapaPage({
                             display: flex;
                             align-items: center;
                             gap: 8px;
-                            background: rgba(15, 23, 42, 0.90);
+                            background: rgba(15, 23, 42, 0.92);
                             border: 2px solid rgba(99, 102, 241, 0.85);
                             padding: 6px 14px;
                             border-radius: 9999px;
@@ -574,6 +574,11 @@ export default function ExtensionesMapaPage({
                             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
                             transform: scale(1);
                         " class="state-pill">
+                            <img
+                                src="/icons/logo_mmm-a-color-sin-fondo.png"
+                                alt="MMM"
+                                style="width: 22px; height: 22px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"
+                            />
                             <span style="
                                 display: flex;
                                 align-items: center;
@@ -919,10 +924,14 @@ export default function ExtensionesMapaPage({
                         </button>
                     </div>
 
-                    {/* Badge con contador */}
-                    <div className="hidden xl:flex items-center gap-2 px-3.5 h-10 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-2xl">
-                        <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs font-bold text-white tracking-wide">
+                    {/* Badge con logo MMM Venezuela y contador */}
+                    <div className="flex items-center gap-2.5 px-3.5 h-10 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-2xl">
+                        <img
+                            src="/icons/logo_mmm-a-color-sin-fondo.png"
+                            alt="MMM Venezuela"
+                            className="h-7 w-auto object-contain"
+                        />
+                        <span className="hidden sm:inline text-xs font-bold text-white tracking-wide">
                             {__('MMM Venezuela')}
                         </span>
                         <span className="text-xs text-slate-500">·</span>
@@ -1328,14 +1337,20 @@ export default function ExtensionesMapaPage({
             {selectedEstado !== 'todos' && !selectedPin && (
                 <aside className="absolute top-28 left-4 bottom-5 z-40 w-80 sm:w-96 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden text-slate-100">
                     <div className="p-3.5 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between gap-2">
-                        <div>
-                            <h3 className="font-extrabold text-sm text-white flex items-center gap-1.5">
-                                <Building2 className="size-4 text-indigo-400" />
-                                <span>{selectedEstado}</span>
-                            </h3>
-                            <p className="text-[11px] text-slate-400 mt-0.5">
-                                {activeStateChurches.length} {__('sedes en este estado')}
-                            </p>
+                        <div className="flex items-center gap-2.5">
+                            <img
+                                src="/icons/logo_mmm-a-color-sin-fondo.png"
+                                alt="MMM"
+                                className="size-8 object-contain shrink-0"
+                            />
+                            <div>
+                                <h3 className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                                    <span>Estado {selectedEstado}</span>
+                                </h3>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                    {activeStateChurches.length} {__('sedes en este estado')}
+                                </p>
+                            </div>
                         </div>
                         <Button
                             type="button"
@@ -1420,6 +1435,11 @@ export default function ExtensionesMapaPage({
 
                     {/* Cabecera del Panel */}
                     <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-3 bg-slate-950/70">
+                        <img
+                            src="/icons/logo_mmm-a-color-sin-fondo.png"
+                            alt="MMM"
+                            className="size-9 object-contain shrink-0"
+                        />
                         <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-1">
                                 <Badge
