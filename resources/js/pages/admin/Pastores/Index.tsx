@@ -21,8 +21,10 @@ import {
     CreditCard,
     Search,
     SlidersHorizontal,
-    X
+    X,
+    FileSpreadsheet,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { PastorCarnetModal } from './Partials/PastorCarnetModal';
 import { PastorCedulaModal } from './Partials/PastorCedulaModal';
 
@@ -206,6 +208,25 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
         document.body.appendChild(form);
         form.submit();
         document.body.removeChild(form);
+    };
+
+    const handleExportExcel = () => {
+        const params = new URLSearchParams();
+        if (zonaFilter) params.append('zona', zonaFilter);
+        if (distritoFilter) params.append('distrito', distritoFilter);
+        if (nivelFilter) params.append('nivel_ministerial', nivelFilter);
+        if (statusFilter) params.append('status', statusFilter);
+        if (searchTerm) params.append('search', searchTerm);
+
+        const filterDesc = zonaFilter
+            ? `${__('Zona')} ${zonaFilter}`
+            : __('todas las zonas (Nacional)');
+
+        toast.info(__('Generando exportación en Excel...'), {
+            description: `${__('Generando reporte con pestañas de Pastores, Extensiones y Campos Blancos para')} ${filterDesc}.`,
+        });
+
+        window.location.href = `/admin/pastores/export?${params.toString()}`;
     };
 
 
@@ -506,14 +527,31 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     description={__('Management of pastors, ministerial grades and ecclesiastical records')}
                     colorClassName="bg-indigo-600"
                 >
-                    {hasPermission('pastores.create') && (
-                        <Link href="/admin/pastores/create">
-                            <Button variant="secondary" className="gap-2 bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shadow-sm">
-                                <Plus className="size-4" />
-                                {__('New Pastor')}
-                            </Button>
-                        </Link>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleExportExcel}
+                            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs cursor-pointer transition-all hover:scale-[1.02]"
+                            title={zonaFilter ? `${__('Exportar')} Zona ${zonaFilter} a Excel` : __('Exportar todo a Excel')}
+                        >
+                            <FileSpreadsheet className="size-4" />
+                            <span>
+                                {zonaFilter 
+                                    ? `${__('Exportar Excel')} (${__('Zona')} ${zonaFilter})` 
+                                    : __('Exportar Excel')}
+                            </span>
+                        </Button>
+
+                        {hasPermission('pastores.create') && (
+                            <Link href="/admin/pastores/create">
+                                <Button variant="secondary" className="gap-2 bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shadow-sm">
+                                    <Plus className="size-4" />
+                                    {__('New Pastor')}
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -578,32 +616,48 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             </div>
                         </div>
 
-                        {selectedIds.length > 0 && (
-                            <div className="flex items-center gap-2">
-                                {canDownloadCarnet && (
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={handleBulkCarnetPdf}
-                                        className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 font-semibold shadow-xs"
-                                    >
-                                        <IdCard className="size-4 text-indigo-600 dark:text-indigo-400" />
-                                        {__('Carnets PDF')} ({selectedIds.length})
-                                    </Button>
-                                )}
-                                {hasPermission('pastores.delete') && (
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => setIsDeleteDialogOpen(true)}
-                                        className="gap-2"
-                                    >
-                                        <Trash2 className="size-4" />
-                                        {__('Delete selected')} ({selectedIds.length})
-                                    </Button>
-                                )}
-                            </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExportExcel}
+                                className="h-8 gap-1.5 text-xs font-semibold text-emerald-700 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 shadow-2xs transition-all cursor-pointer"
+                                title={zonaFilter ? `${__('Exportar')} Zona ${zonaFilter} a Excel` : __('Exportar todo a Excel')}
+                            >
+                                <FileSpreadsheet className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>
+                                    {zonaFilter ? `${__('Exportar')} (${__('Zona')} ${zonaFilter})` : __('Exportar Excel')}
+                                </span>
+                            </Button>
+
+                            {selectedIds.length > 0 && (
+                                <>
+                                    {canDownloadCarnet && (
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={handleBulkCarnetPdf}
+                                            className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 font-semibold shadow-xs"
+                                        >
+                                            <IdCard className="size-4 text-indigo-600 dark:text-indigo-400" />
+                                            {__('Carnets PDF')} ({selectedIds.length})
+                                        </Button>
+                                    )}
+                                    {hasPermission('pastores.delete') && (
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => setIsDeleteDialogOpen(true)}
+                                            className="gap-2"
+                                        >
+                                            <Trash2 className="size-4" />
+                                            {__('Delete selected')} ({selectedIds.length})
+                                        </Button>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     <Card className="p-5 md:p-6 shadow-xs border border-border/80 bg-card rounded-xl">

@@ -78,6 +78,84 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     index.form = indexForm
 /**
+* @see \App\Http\Controllers\Admin\PastorExportController::exportMethod
+ * @see app/Http/Controllers/Admin/PastorExportController.php:23
+ * @route '/admin/pastores/export'
+ */
+export const exportMethod = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportMethod.url(options),
+    method: 'get',
+})
+
+exportMethod.definition = {
+    methods: ["get","head"],
+    url: '/admin/pastores/export',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\PastorExportController::exportMethod
+ * @see app/Http/Controllers/Admin/PastorExportController.php:23
+ * @route '/admin/pastores/export'
+ */
+exportMethod.url = (options?: RouteQueryOptions) => {
+    return exportMethod.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\PastorExportController::exportMethod
+ * @see app/Http/Controllers/Admin/PastorExportController.php:23
+ * @route '/admin/pastores/export'
+ */
+exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportMethod.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Admin\PastorExportController::exportMethod
+ * @see app/Http/Controllers/Admin/PastorExportController.php:23
+ * @route '/admin/pastores/export'
+ */
+exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: exportMethod.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\PastorExportController::exportMethod
+ * @see app/Http/Controllers/Admin/PastorExportController.php:23
+ * @route '/admin/pastores/export'
+ */
+    const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportMethod.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PastorExportController::exportMethod
+ * @see app/Http/Controllers/Admin/PastorExportController.php:23
+ * @route '/admin/pastores/export'
+ */
+        exportMethodForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportMethod.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\PastorExportController::exportMethod
+ * @see app/Http/Controllers/Admin/PastorExportController.php:23
+ * @route '/admin/pastores/export'
+ */
+        exportMethodForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportMethod.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportMethod.form = exportMethodForm
+/**
 * @see \App\Http\Controllers\Admin\PastorController::create
  * @see app/Http/Controllers/Admin/PastorController.php:109
  * @route '/admin/pastores/create'
@@ -883,6 +961,7 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     bulkDestroy.form = bulkDestroyForm
 const pastores = {
     index: Object.assign(index, index),
+export: Object.assign(exportMethod, exportMethod),
 create: Object.assign(create, create),
 store: Object.assign(store, store),
 edit: Object.assign(edit, edit),

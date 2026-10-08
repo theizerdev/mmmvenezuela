@@ -11,6 +11,7 @@ import MunicipioController from './MunicipioController'
 import PaisController from './PaisController'
 import ParroquiaController from './ParroquiaController'
 import PastorController from './PastorController'
+import PastorExportController from './PastorExportController'
 import PastorPlanillaController from './PastorPlanillaController'
 import QueueMonitoringController from './QueueMonitoringController'
 import RoleController from './RoleController'
@@ -33,6 +34,7 @@ MunicipioController: Object.assign(MunicipioController, MunicipioController),
 PaisController: Object.assign(PaisController, PaisController),
 ParroquiaController: Object.assign(ParroquiaController, ParroquiaController),
 PastorController: Object.assign(PastorController, PastorController),
+PastorExportController: Object.assign(PastorExportController, PastorExportController),
 PastorPlanillaController: Object.assign(PastorPlanillaController, PastorPlanillaController),
 QueueMonitoringController: Object.assign(QueueMonitoringController, QueueMonitoringController),
 RoleController: Object.assign(RoleController, RoleController),
