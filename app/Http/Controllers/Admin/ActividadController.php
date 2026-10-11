@@ -294,8 +294,6 @@ class ActividadController extends Controller
         $porcentajeAsistencia = $totalPastoresPadrón > 0 ? round(($totalPresentes / $totalPastoresPadrón) * 100, 1) : 0;
 
         $totalConConyuge = $asistencias->where('asistio_con_conyuge', true)->unique('pastor_id')->count();
-        $totalKitsEntregados = $asistencias->where('kit_entregado', true)->unique('pastor_id')->count();
-        $totalComidasEntregadas = $asistencias->where('comida_entregada', true)->count();
 
         // Desglose por Niveles Ministeriales
         $nivelesConvocados = Pastor::where('status', true)
@@ -339,8 +337,6 @@ class ActividadController extends Controller
                 'total_presentes' => $totalPresentes,
                 'porcentaje' => $porcentajeAsistencia,
                 'con_conyuge' => $totalConConyuge,
-                'kits_entregados' => $totalKitsEntregados,
-                'comidas_entregadas' => $totalComidasEntregadas,
             ],
             'niveles' => [
                 'convocados' => $nivelesConvocados,
@@ -363,8 +359,6 @@ class ActividadController extends Controller
                 'metodo' => $as->metodo,
                 'fecha_registro' => $as->fecha_registro->format('d/m/Y h:i A'),
                 'asistio_con_conyuge' => $as->asistio_con_conyuge,
-                'kit_entregado' => $as->kit_entregado,
-                'comida_entregada' => $as->comida_entregada,
             ]),
             'ausentes' => $pastoresAusentes,
         ]);

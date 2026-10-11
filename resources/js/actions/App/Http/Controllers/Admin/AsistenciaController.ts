@@ -988,7 +988,7 @@ exportPdf.head = (args: { actividad: string | number } | [actividad: string | nu
     exportPdf.form = exportPdfForm
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::exportMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:553
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:549
  * @route '/admin/actividades/{actividad}/exportar-asistencia'
  */
 export const exportMethod = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1003,7 +1003,7 @@ exportMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::exportMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:553
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:549
  * @route '/admin/actividades/{actividad}/exportar-asistencia'
  */
 exportMethod.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -1031,7 +1031,7 @@ exportMethod.url = (args: { actividad: string | number } | [actividad: string | 
 
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::exportMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:553
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:549
  * @route '/admin/actividades/{actividad}/exportar-asistencia'
  */
 exportMethod.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1040,7 +1040,7 @@ exportMethod.get = (args: { actividad: string | number } | [actividad: string | 
 })
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::exportMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:553
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:549
  * @route '/admin/actividades/{actividad}/exportar-asistencia'
  */
 exportMethod.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1050,7 +1050,7 @@ exportMethod.head = (args: { actividad: string | number } | [actividad: string |
 
     /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::exportMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:553
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:549
  * @route '/admin/actividades/{actividad}/exportar-asistencia'
  */
     const exportMethodForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1060,7 +1060,7 @@ exportMethod.head = (args: { actividad: string | number } | [actividad: string |
 
             /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::exportMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:553
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:549
  * @route '/admin/actividades/{actividad}/exportar-asistencia'
  */
         exportMethodForm.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1069,7 +1069,7 @@ exportMethod.head = (args: { actividad: string | number } | [actividad: string |
         })
             /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::exportMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:553
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:549
  * @route '/admin/actividades/{actividad}/exportar-asistencia'
  */
         exportMethodForm.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

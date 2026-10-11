@@ -15,7 +15,6 @@ import {
     Calendar,
     Activity,
     Layers,
-    Utensils,
     Heart,
     RotateCcw,
 } from 'lucide-react';
@@ -37,7 +36,7 @@ interface Sesion {
     fecha_hora_inicio: string;
     fecha_hora_fin: string;
     es_obligatoria: boolean;
-    tipo_comida: string;
+    tipo_comida?: string;
 }
 
 interface ActividadItem extends ActividadData {
@@ -422,11 +421,7 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                                 <Heart className="size-3" /> Con Cónyuge
                                             </span>
                                         )}
-                                        {actividad.controla_comida && (
-                                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
-                                                <Utensils className="size-3" /> Control Comedor
-                                            </span>
-                                        )}
+
                                         {actividad.zona && (
                                             <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300">
                                                 Zona {actividad.zona}

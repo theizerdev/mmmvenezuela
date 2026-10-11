@@ -236,14 +236,6 @@
                 <span class="kpi-value">{{ $totalConConyuge }}</span>
             </td>
             <td class="kpi-cell">
-                <span class="kpi-label">Kits Entregados</span>
-                <span class="kpi-value">{{ $totalKits }}</span>
-            </td>
-            <td class="kpi-cell">
-                <span class="kpi-label">Comidas Servidas</span>
-                <span class="kpi-value">{{ $totalComidas }}</span>
-            </td>
-            <td class="kpi-cell">
                 <span class="kpi-label">Pastores Pendientes</span>
                 <span class="kpi-value" style="color: #dc2626;">{{ $totalAusentes }}</span>
             </td>
@@ -258,14 +250,13 @@
                 <th class="center" style="width: 50px;">Código</th>
                 <th class="center" style="width: 60px;">Cédula</th>
                 <th>Pastor (Apellidos y Nombres)</th>
-                <th style="width: 85px;">Grado Ministerial</th>
+                <th style="width: 95px;">Grado Ministerial</th>
                 <th class="center" style="width: 45px;">Zona</th>
                 <th class="center" style="width: 45px;">Distrito</th>
-                <th style="width: 95px;">Sesión / Bloque</th>
+                <th style="width: 105px;">Sesión / Bloque</th>
                 <th class="center" style="width: 65px;">Hora</th>
                 <th class="center" style="width: 60px;">Método</th>
-                <th class="center" style="width: 45px;">Cónyuge</th>
-                <th class="center" style="width: 40px;">Kit</th>
+                <th class="center" style="width: 50px;">Cónyuge</th>
             </tr>
         </thead>
         <tbody>
@@ -303,17 +294,10 @@
                             <span class="badge-no">NO</span>
                         @endif
                     </td>
-                    <td class="center">
-                        @if($as->kit_entregado)
-                            <span class="badge-si">SÍ</span>
-                        @else
-                            <span class="badge-no">—</span>
-                        @endif
-                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="12" class="center" style="padding: 16px; color: #94a3b8;">
+                    <td colspan="11" class="center" style="padding: 16px; color: #94a3b8;">
                         No se han registrado asistencias para esta actividad.
                     </td>
                 </tr>

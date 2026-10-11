@@ -49,8 +49,6 @@ class AsistenciaExcelExportService
         $porcentajeQuorum = $totalPadron > 0 ? round(($totalPresentes / $totalPadron) * 100, 1) : 0;
 
         $totalConConyuge = $asistencias->where('asistio_con_conyuge', true)->unique('pastor_id')->count();
-        $totalKits = $asistencias->where('kit_entregado', true)->unique('pastor_id')->count();
-        $totalComidas = $asistencias->where('comida_entregada', true)->count();
         $totalAusentes = max(0, $totalPadron - $totalPresentes);
 
         // 3. Pastores ausentes / pendientes
@@ -83,8 +81,6 @@ class AsistenciaExcelExportService
             $totalPresentes,
             $porcentajeQuorum,
             $totalConConyuge,
-            $totalKits,
-            $totalComidas,
             $totalAusentes,
             $gradosConvocados,
             $gradosPresentes,
@@ -132,8 +128,6 @@ class AsistenciaExcelExportService
         int $totalPresentes,
         float $porcentajeQuorum,
         int $totalConConyuge,
-        int $totalKits,
-        int $totalComidas,
         int $totalAusentes,
         $gradosConvocados,
         $gradosPresentes,
@@ -212,8 +206,6 @@ class AsistenciaExcelExportService
             ['ASISTENTES PRESENTES', $totalPresentes, 'Pastores acreditados en sala'],
             ['% QUÓRUM ALCANZADO', "{$porcentajeQuorum}%", 'Porcentaje de participación legal'],
             ['CÓNYUGES PRESENTES', $totalConConyuge, 'Acompañantes en sala'],
-            ['KITS ENTREGADOS', $totalKits, 'Material ministerial acreditado'],
-            ['COMIDAS SERVIDAS', $totalComidas, 'Raciones de comedor registradas'],
             ['PASTORES PENDIENTES', $totalAusentes, 'Pastores ausentes por registrar'],
         ];
 
@@ -311,8 +303,6 @@ class AsistenciaExcelExportService
             'MÉTODO MARCAJE',
             '¿CON CÓNYUGE?',
             'NOMBRE CÓNYUGE / ACOMPAÑANTE',
-            '¿KIT ENTREGADO?',
-            '¿COMIDA SERVIDA?',
             'OBSERVACIONES',
             'REGISTRADO POR',
         ];
@@ -383,10 +373,8 @@ class AsistenciaExcelExportService
             $sheet->setCellValue("N{$currentRow}", $metodoTexto);
             $sheet->setCellValue("O{$currentRow}", $as->asistio_con_conyuge ? 'SÍ' : 'NO');
             $sheet->setCellValue("P{$currentRow}", $as->nombre_acompanante ?: ($as->asistio_con_conyuge ? ($as->pastor?->nombre_conyuge ?: 'Cónyuge') : 'N/A'));
-            $sheet->setCellValue("Q{$currentRow}", $as->kit_entregado ? 'SÍ' : 'NO');
-            $sheet->setCellValue("R{$currentRow}", $as->comida_entregada ? 'SÍ' : 'NO');
-            $sheet->setCellValue("S{$currentRow}", $as->observaciones ?: '');
-            $sheet->setCellValue("T{$currentRow}", $as->registradoPor?->name ?: 'Sistema Terminal');
+            $sheet->setCellValue("Q{$currentRow}", $as->observaciones ?: '');
+            $sheet->setCellValue("R{$currentRow}", $as->registradoPor?->name ?: 'Sistema Terminal');
 
             $sheet->getStyle("A{$currentRow}:{$lastColLetter}{$currentRow}")->applyFromArray([
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowBg]],
@@ -398,7 +386,6 @@ class AsistenciaExcelExportService
             $sheet->getStyle("A{$currentRow}:C{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("H{$currentRow}:I{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("L{$currentRow}:O{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("Q{$currentRow}:R{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             $sheet->getRowDimension($currentRow)->setRowHeight(20);
             $currentRow++;

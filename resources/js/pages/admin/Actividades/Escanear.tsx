@@ -13,8 +13,6 @@ import {
     Minimize2,
     ArrowLeft,
     Users,
-    Utensils,
-    Package,
     Heart,
     Search,
     RotateCcw,
@@ -98,8 +96,6 @@ interface EscaneoHistorial {
     sesion: string;
     hora: string;
     asistio_con_conyuge: boolean;
-    kit_entregado: boolean;
-    comida_entregada: boolean;
 }
 
 interface PastorData {
@@ -146,8 +142,6 @@ export default function ActividadesEscanear({
         sesionActivaProp?.id ?? actividad.sesiones[0]?.id ?? null
     );
     const [asistioConConyuge, setAsistioConConyuge] = useState<boolean>(false);
-    const [kitEntregado, setKitEntregado] = useState<boolean>(false);
-    const [comidaEntregada, setComidaEntregada] = useState<boolean>(false);
 
     // Hardware y Entrada
     const [codigoManualInput, setCodigoManualInput] = useState<string>('');
@@ -357,8 +351,6 @@ export default function ActividadesEscanear({
                         actividad_sesion_id: sesionSeleccionada,
                         codigo_qr: codigoLimpio,
                         asistio_con_conyuge: asistioConConyuge,
-                        kit_entregado: kitEntregado,
-                        comida_entregada: comidaEntregada,
                         metodo: metodo,
                     }),
                 });
@@ -404,8 +396,6 @@ export default function ActividadesEscanear({
             actividad.id,
             sesionSeleccionada,
             asistioConConyuge,
-            kitEntregado,
-            comidaEntregada,
             isLoading,
             playSound,
             autoFocusGun,
@@ -786,8 +776,6 @@ export default function ActividadesEscanear({
                     actividad_id: actividad.id,
                     actividad_sesion_id: sesionSeleccionada,
                     asistio_con_conyuge: asistioConConyuge,
-                    kit_entregado: kitEntregado,
-                    comida_entregada: comidaEntregada,
                 }),
             });
 
@@ -865,8 +853,6 @@ export default function ActividadesEscanear({
                 return;
             }
             if (e.key === 'c' || e.key === 'C') setAsistioConConyuge((prev) => !prev);
-            else if (e.key === 'k' || e.key === 'K') setKitEntregado((prev) => !prev);
-            else if (e.key === 'm' || e.key === 'M') setComidaEntregada((prev) => !prev);
             else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
             else if (e.key === 'b' || e.key === 'B') setIsManualModalOpen(true);
             else if (e.key === 'e' || e.key === 'E') handleAbrirEnrolamiento();
@@ -1098,7 +1084,7 @@ export default function ActividadesEscanear({
                     {/* SWITCHES DE LOGÍSTICA RÁPIDA */}
                     <div className="flex items-center gap-3 sm:gap-6 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
                         <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] sm:text-[11px] flex items-center gap-1.5 shrink-0">
-                            <Package className="size-3.5 text-indigo-400" />
+                            <ShieldCheck className="size-3.5 text-indigo-400" />
                             <span className="hidden sm:inline">Opciones de Acreditación:</span>
                             <span className="sm:hidden">Opciones:</span>
                         </span>
@@ -1118,33 +1104,6 @@ export default function ActividadesEscanear({
                             </label>
                         )}
 
-                        <label className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group shrink-0">
-                            <Switch
-                                checked={kitEntregado}
-                                onCheckedChange={setKitEntregado}
-                                className="data-[state=checked]:bg-purple-600 scale-90 sm:scale-100"
-                            />
-                            <span className={cn('text-[11px] sm:text-xs font-bold transition-colors flex items-center gap-1', kitEntregado ? 'text-purple-300' : 'text-slate-300 group-hover:text-white')}>
-                                <Package className="size-3 sm:size-3.5" />
-                                Entregar Kit
-                            </span>
-                            <Badge variant="outline" className="hidden sm:inline-flex px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">K</Badge>
-                        </label>
-
-                        {actividad.controla_comida && (
-                            <label className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group shrink-0">
-                                <Switch
-                                    checked={comidaEntregada}
-                                    onCheckedChange={setComidaEntregada}
-                                    className="data-[state=checked]:bg-amber-600 scale-90 sm:scale-100"
-                                />
-                                <span className={cn('text-[11px] sm:text-xs font-bold transition-colors flex items-center gap-1', comidaEntregada ? 'text-amber-300' : 'text-slate-300 group-hover:text-white')}>
-                                    <Utensils className="size-3 sm:size-3.5" />
-                                    Comedor
-                                </span>
-                                <Badge variant="outline" className="hidden sm:inline-flex px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">M</Badge>
-                            </label>
-                        )}
                     </div>
 
                     {/* DERECHA: STATUS DE IA + ACCIONES RÁPIDAS */}
@@ -1583,22 +1542,11 @@ export default function ActividadesEscanear({
                                 {/* CHIPS DE SERVICIOS ENTREGADOS */}
                                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
                                     <span className="text-[11px] text-slate-400 font-semibold mr-1">Logística de Entrega:</span>
-                                    {asistioConConyuge && (
+                                    {asistioConConyuge ? (
                                         <Badge className="bg-pink-500/20 text-pink-300 border-pink-500/30 text-xs py-1">
                                             ✓ Con Cónyuge
                                         </Badge>
-                                    )}
-                                    {kitEntregado && (
-                                        <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs py-1">
-                                            ✓ Kit Entregado
-                                        </Badge>
-                                    )}
-                                    {comidaEntregada && (
-                                        <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs py-1">
-                                            ✓ Comedor Autorizado
-                                        </Badge>
-                                    )}
-                                    {!asistioConConyuge && !kitEntregado && !comidaEntregada && (
+                                    ) : (
                                         <span className="text-xs text-slate-500">Solo registro de entrada</span>
                                     )}
                                 </div>
@@ -1611,7 +1559,7 @@ export default function ActividadesEscanear({
                                 <span className="size-2 rounded-full bg-emerald-500" />
                                 Sistema de Acreditación Oficial MMM Venezuela
                             </span>
-                            <span className="font-mono">Atajos: C, K, M, F, B, E</span>
+                            <span className="font-mono">Atajos: C, F, B, E</span>
                         </CardFooter>
                     </Card>
                 </div>

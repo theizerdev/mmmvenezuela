@@ -5,8 +5,6 @@ import {
     ArrowLeft,
     Users,
     Heart,
-    Package,
-    Utensils,
     QrCode,
     FileSpreadsheet,
     FileText,
@@ -52,8 +50,6 @@ interface Metricas {
     total_presentes: number;
     porcentaje: number;
     con_conyuge: number;
-    kits_entregados: number;
-    comidas_entregadas: number;
 }
 
 interface UltimaAsistencia {
@@ -69,8 +65,6 @@ interface UltimaAsistencia {
     metodo: string;
     fecha_registro: string;
     asistio_con_conyuge: boolean;
-    kit_entregado: boolean;
-    comida_entregada: boolean;
 }
 
 interface PastorAusente {
@@ -288,11 +282,18 @@ export default function ActividadesMonitor({
                 {/* Grid de 4 StatCards Estandarizadas al Layout */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
+                        title="ASISTENTES PRESENTES"
+                        value={metricas.total_presentes}
+                        icon={<UserCheck className="size-5" />}
+                        colorClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                        subtitle={`De ${metricas.total_padron} convocados`}
+                    />
+                    <StatCard
                         title="QUÓRUM ALCANZADO"
                         value={`${metricas.porcentaje}%`}
                         icon={<Users className="size-5" />}
                         colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
-                        subtitle={`${metricas.total_presentes} de ${metricas.total_padron} convocados`}
+                        subtitle={`${metricas.total_presentes} ministros registrados`}
                     />
                     <StatCard
                         title="CÓNYUGES PRESENTES"
@@ -302,18 +303,11 @@ export default function ActividadesMonitor({
                         subtitle="Acompañantes en sala"
                     />
                     <StatCard
-                        title="KITS ENTREGADOS"
-                        value={metricas.kits_entregados}
-                        icon={<Package className="size-5" />}
-                        colorClassName="bg-purple-100 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
-                        subtitle="Material acreditado"
-                    />
-                    <StatCard
-                        title="COMIDAS SERVIDAS"
-                        value={metricas.comidas_entregadas}
-                        icon={<Utensils className="size-5" />}
+                        title="PASTORES PENDIENTES"
+                        value={Math.max(0, metricas.total_padron - metricas.total_presentes)}
+                        icon={<Clock className="size-5" />}
                         colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
-                        subtitle="Raciones registradas"
+                        subtitle="Por ingresar al recinto"
                     />
                 </div>
 
@@ -569,13 +563,12 @@ export default function ActividadesMonitor({
                                             <th className="py-2.5 px-3">Sesión</th>
                                             <th className="py-2.5 px-3">Hora</th>
                                             <th className="py-2.5 px-3">Cónyuge</th>
-                                            <th className="py-2.5 px-3">Kit</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900/30">
                                         {filteredAsistencias.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="py-8 text-center text-slate-400">
+                                                <td colSpan={6} className="py-8 text-center text-slate-400">
                                                     No se encontraron registros de asistencia.
                                                 </td>
                                             </tr>
@@ -621,15 +614,6 @@ export default function ActividadesMonitor({
                                                             </span>
                                                         ) : (
                                                             <span className="text-slate-400 text-[11px]">No</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-2.5 px-3">
-                                                        {as.kit_entregado ? (
-                                                            <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 font-bold text-[11px]">
-                                                                <Package className="size-3" /> Entregado
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-slate-400 text-[11px]">—</span>
                                                         )}
                                                     </td>
                                                 </tr>

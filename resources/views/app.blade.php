@@ -31,12 +31,15 @@
             }
         </style>
 
-        @php
-            $favicon = '/icons/logo_mmm-a-color-sin-fondo.png';
-           
-        @endphp
-        <link rel="icon" href="{{ $favicon }}" type="image/png">
-        <link rel="apple-touch-icon" href="{{ $favicon }}">
+        {{-- Favicons y Apple Touch Icon generados a partir del logo oficial a color sin fondo --}}
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/pwa-192.png">
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/pwa-512.png">
+        <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon.png">
+        <link rel="icon" href="/icons/logo_mmm-a-color-sin-fondo.png" type="image/png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/pwa-192.png">
+        <link rel="apple-touch-icon" sizes="512x512" href="/icons/pwa-512.png">
+        <link rel="apple-touch-icon" href="/icons/logo_mmm-a-color-sin-fondo.png">
 
         {{-- PWA Manifest & Soporte Móvil / Tablet / Kiosko --}}
         <link rel="manifest" href="/pwa/manifest.json">

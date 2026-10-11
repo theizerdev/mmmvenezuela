@@ -1,0 +1,60 @@
+{
+    "id": "/",
+    "name": "SAPRCOE - MMM Venezuela",
+    "short_name": "SAPRCOE",
+    "description": "Terminal móvil y quiosco de acreditación de asistencia y reconocimiento facial - Movimiento Misionero Mundial Venezuela",
+    "start_url": "/admin/actividades/1/escanear",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#020617",
+    "theme_color": "#4f46e5",
+    "lang": "es-VE",
+    "categories": [
+        "business",
+        "productivity",
+        "utilities"
+    ],
+    "icons": [
+        {
+            "src": "/icons/pwa-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/pwa-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/pwa-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/logo_mmm-a-color-sin-fondo.png",
+            "sizes": "1210x774",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Terminal de Escaneo",
+            "short_name": "Escanear",
+            "description": "Abrir terminal de escaneo y biometría",
+            "url": "/admin/actividades/1/escanear",
+            "icons": [
+                {
+                    "src": "/icons/pwa-192.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                }
+            ]
+        }
+    ],
+    "prefer_related_applications": false
+}

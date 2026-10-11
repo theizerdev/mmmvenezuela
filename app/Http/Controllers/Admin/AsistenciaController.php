@@ -513,8 +513,6 @@ class AsistenciaController extends Controller
         $porcentajeQuorum = $totalPadron > 0 ? round(($totalPresentes / $totalPadron) * 100, 1) : 0;
 
         $totalConConyuge = $asistencias->where('asistio_con_conyuge', true)->unique('pastor_id')->count();
-        $totalKits = $asistencias->where('kit_entregado', true)->unique('pastor_id')->count();
-        $totalComidas = $asistencias->where('comida_entregada', true)->count();
         $totalAusentes = max(0, $totalPadron - $totalPresentes);
 
         // Cargar logo en base64 para DomPDF
@@ -531,8 +529,6 @@ class AsistenciaController extends Controller
             'totalPresentes' => $totalPresentes,
             'porcentajeQuorum' => $porcentajeQuorum,
             'totalConConyuge' => $totalConConyuge,
-            'totalKits' => $totalKits,
-            'totalComidas' => $totalComidas,
             'totalAusentes' => $totalAusentes,
             'logoBase64' => $logoBase64,
             'fechaEmision' => Carbon::now()->format('d/m/Y h:i A'),

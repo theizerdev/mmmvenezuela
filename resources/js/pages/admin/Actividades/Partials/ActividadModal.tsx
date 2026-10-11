@@ -6,7 +6,6 @@ import {
     Clock,
     MapPin,
     Layers,
-    Utensils,
     Heart,
     Plus,
     Trash2,
@@ -33,7 +32,7 @@ export interface SesionData {
     fecha_hora_inicio: string;
     fecha_hora_fin: string;
     es_obligatoria: boolean;
-    tipo_comida: string;
+    tipo_comida?: string;
 }
 
 export interface ActividadData {
@@ -48,7 +47,7 @@ export interface ActividadData {
     distrito: string | null;
     estado: 'planificada' | 'en_curso' | 'finalizada' | 'cancelada';
     permite_conyuge: boolean;
-    controla_comida: boolean;
+    controla_comida?: boolean;
     capacidad_maxima: number | null;
     sesiones?: SesionData[];
 }
@@ -465,21 +464,7 @@ export function ActividadModal({ isOpen, onClose, actividad, tiposDisponibles }:
                                                 />
                                             </div>
 
-                                            <div className="space-y-1">
-                                                <Label className="text-[11px] font-medium">Comida Asociada</Label>
-                                                <select
-                                                    value={sesion.tipo_comida}
-                                                    onChange={(e) => updateSesion(index, 'tipo_comida', e.target.value)}
-                                                    className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-[11px] font-medium"
-                                                >
-                                                    <option value="ninguna">Ninguna</option>
-                                                    <option value="desayuno">Desayuno</option>
-                                                    <option value="almuerzo">Almuerzo</option>
-                                                    <option value="cena">Cena</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 pt-4">
+                                            <div className="flex items-center gap-2 pt-2 sm:col-span-2">
                                                 <input
                                                     type="checkbox"
                                                     id={`modal_obl_${index}`}
@@ -513,22 +498,6 @@ export function ActividadModal({ isOpen, onClose, actividad, tiposDisponibles }:
                                     <Switch
                                         checked={data.permite_conyuge}
                                         onCheckedChange={(val) => setData('permite_conyuge', val)}
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                                    <div className="space-y-0.5">
-                                        <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-200">
-                                            <Utensils className="size-4 text-amber-500" />
-                                            Control de Comedor / Alimentación
-                                        </div>
-                                        <p className="text-[11px] text-slate-500">
-                                            Habilita el registro de entrega de comidas por el escáner
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        checked={data.controla_comida}
-                                        onCheckedChange={(val) => setData('controla_comida', val)}
                                     />
                                 </div>
                             </div>
