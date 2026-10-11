@@ -208,11 +208,11 @@ export function ActividadModal({ isOpen, onClose, actividad, tiposDisponibles }:
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-slate-100">
-                        <div className="size-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <CalendarCheck className="size-5" />
+                    <DialogTitle className="flex items-center gap-2.5 text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
+                        <div className="size-8 sm:size-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                            <CalendarCheck className="size-4 sm:size-5" />
                         </div>
                         {actividad ? 'Editar Actividad' : 'Nueva Actividad'}
                     </DialogTitle>
@@ -225,18 +225,18 @@ export function ActividadModal({ isOpen, onClose, actividad, tiposDisponibles }:
 
                 <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                     <Tabs defaultValue="general" className="w-full">
-                        <TabsList className="grid grid-cols-3 w-full bg-slate-100 dark:bg-slate-800/80 p-1">
-                            <TabsTrigger value="general" className="text-xs font-semibold gap-1.5">
-                                <Calendar className="size-3.5" />
-                                Datos Generales
+                        <TabsList className="grid grid-cols-3 w-full bg-slate-100 dark:bg-slate-800/80 p-1 h-auto">
+                            <TabsTrigger value="general" className="text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 py-1.5 px-1 sm:px-3 truncate">
+                                <Calendar className="size-3.5 shrink-0" />
+                                <span className="truncate">General</span>
                             </TabsTrigger>
-                            <TabsTrigger value="sesiones" className="text-xs font-semibold gap-1.5">
-                                <Layers className="size-3.5" />
-                                Sesiones ({data.sesiones.length})
+                            <TabsTrigger value="sesiones" className="text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 py-1.5 px-1 sm:px-3 truncate">
+                                <Layers className="size-3.5 shrink-0" />
+                                <span className="truncate">Sesiones ({data.sesiones.length})</span>
                             </TabsTrigger>
-                            <TabsTrigger value="logistica" className="text-xs font-semibold gap-1.5">
-                                <Settings className="size-3.5" />
-                                Logística
+                            <TabsTrigger value="logistica" className="text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 py-1.5 px-1 sm:px-3 truncate">
+                                <Settings className="size-3.5 shrink-0" />
+                                <span className="truncate">Logística</span>
                             </TabsTrigger>
                         </TabsList>
 
@@ -535,11 +535,11 @@ export function ActividadModal({ isOpen, onClose, actividad, tiposDisponibles }:
                         </TabsContent>
                     </Tabs>
 
-                    <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <Button type="button" variant="outline" onClick={onClose} disabled={processing}>
+                    <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+                        <Button type="button" variant="outline" onClick={onClose} disabled={processing} className="w-full sm:w-auto">
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={processing} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+                        <Button type="submit" disabled={processing} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
                             {processing ? 'Guardando...' : actividad ? 'Guardar Cambios' : 'Crear Actividad'}
                         </Button>
                     </DialogFooter>

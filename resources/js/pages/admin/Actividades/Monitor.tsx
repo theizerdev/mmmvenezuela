@@ -225,12 +225,12 @@ export default function ActividadesMonitor({
                     description="Métricas de asistencia en tiempo real, quórum ministerial y control de acceso por zonas"
                     colorClassName="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900"
                 >
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <Link href="/admin/actividades">
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                className="gap-1.5 bg-white/10 hover:bg-white/20 text-white font-medium border-0 cursor-pointer transition-colors"
+                                className="h-8 text-xs gap-1.5 bg-white/10 hover:bg-white/20 text-white font-medium border-0 cursor-pointer transition-colors"
                             >
                                 <ArrowLeft className="size-3.5" />
                                 <span>Actividades</span>
@@ -242,7 +242,7 @@ export default function ActividadesMonitor({
                             size="sm"
                             onClick={handleRefresh}
                             disabled={isRefreshing}
-                            className="gap-1.5 bg-white/10 hover:bg-white/20 text-white font-medium border-0 cursor-pointer transition-colors"
+                            className="h-8 text-xs gap-1.5 bg-white/10 hover:bg-white/20 text-white font-medium border-0 cursor-pointer transition-colors"
                         >
                             <RotateCcw className={cn('size-3.5', isRefreshing && 'animate-spin')} />
                             <span>Refrescar</span>
@@ -252,20 +252,20 @@ export default function ActividadesMonitor({
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold border-0 shadow-sm cursor-pointer transition-transform hover:scale-[1.02]"
+                                className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold border-0 shadow-sm cursor-pointer transition-transform hover:scale-[1.02]"
                             >
                                 <FileSpreadsheet className="size-3.5" />
-                                <span>Exportar CSV</span>
+                                <span>CSV</span>
                             </Button>
                         </a>
 
                         <Link href={`/admin/actividades/${actividad.id}/escanear`}>
                             <Button
                                 size="sm"
-                                className="gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-md cursor-pointer transition-transform hover:scale-105"
+                                className="h-8 text-xs gap-1.5 sm:gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-md cursor-pointer transition-transform hover:scale-105"
                             >
-                                <QrCode className="size-4" />
-                                <span>Terminal de Escaneo</span>
+                                <QrCode className="size-3.5 sm:size-4" />
+                                <span>Terminal</span>
                             </Button>
                         </Link>
                     </div>
@@ -545,8 +545,8 @@ export default function ActividadesMonitor({
                                 </span>
                             </div>
 
-                            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-                                <table className="w-full text-left text-xs">
+                            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 -mx-1 sm:mx-0">
+                                <table className="w-full text-left text-xs min-w-[620px]">
                                     <thead>
                                         <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                                             <th className="py-2.5 px-3">Pastor</th>
@@ -644,8 +644,8 @@ export default function ActividadesMonitor({
                                 </span>
                             </div>
 
-                            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-                                <table className="w-full text-left text-xs">
+                            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 -mx-1 sm:mx-0">
+                                <table className="w-full text-left text-xs min-w-[620px]">
                                     <thead>
                                         <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                                             <th className="py-2.5 px-3">Pastor Pendiente</th>

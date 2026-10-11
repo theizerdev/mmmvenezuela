@@ -589,7 +589,7 @@ export default function ActividadesEscanear({
         const tagX = Math.max(10, Math.min(x + (w - tagW) / 2, canvas.width - tagW - 10));
         const tagY = Math.max(tagH + 10, y - 10);
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.strokeStyle = themeColor;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -878,9 +878,9 @@ export default function ActividadesEscanear({
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+            document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => { });
         } else {
-            document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+            document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => { });
         }
     };
 
@@ -939,57 +939,57 @@ export default function ActividadesEscanear({
     };
 
     return (
-        <div className="w-screen min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white font-sans antialiased overflow-x-hidden">
+        <div className="w-full min-h-svh bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white font-sans antialiased overflow-x-hidden">
             <Head title={`Terminal de Acreditación — ${actividad.nombre}`} />
 
             {/* TOP HEADER: BARRA DE CONTROL KIOSK */}
-            <header className="p-3 sm:px-6 sm:py-3.5 bg-slate-900/90 backdrop-blur-xl border-b border-slate-800/80 shrink-0 shadow-lg z-20">
-                <div className="max-w-[1780px] mx-auto flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+            <header className="p-2.5 sm:px-6 sm:py-3.5 bg-slate-900/90 backdrop-blur-xl border-b border-slate-800/80 shrink-0 shadow-lg z-20">
+                <div className="max-w-[1780px] mx-auto flex flex-wrap items-center justify-between gap-2.5 sm:gap-4">
                     {/* IZQUIERDA: REGRESAR / LOGO + INFO ACTIVIDAD */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                         {isAuth ? (
                             <Link href="/admin/actividades">
                                 <Button
                                     variant="outline"
                                     size="icon"
-                                    className="size-9 rounded-xl border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+                                    className="size-8 sm:size-9 rounded-xl border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
                                     title="Volver al Panel de Actividades"
                                 >
-                                    <ArrowLeft className="size-4.5" />
+                                    <ArrowLeft className="size-4 sm:size-4.5" />
                                 </Button>
                             </Link>
                         ) : (
-                            <div className="size-9 rounded-xl border border-indigo-500/40 bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
-                                <QrCode className="size-5" />
+                            <div className="size-8 sm:size-9 rounded-xl border border-indigo-500/40 bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                                <QrCode className="size-4.5 sm:size-5" />
                             </div>
                         )}
 
                         <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className="relative flex size-2.5">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="relative flex size-2 shrink-0">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                    <span className="relative inline-flex rounded-full size-2.5 bg-emerald-500" />
+                                    <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
                                 </span>
-                                <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight truncate max-w-xs sm:max-w-md lg:max-w-lg">
+                                <h1 className="text-xs sm:text-base font-extrabold text-white tracking-tight truncate max-w-[140px] sm:max-w-md lg:max-w-lg">
                                     {actividad.nombre}
                                 </h1>
-                                <Badge variant="secondary" className="hidden md:inline-flex bg-indigo-500/10 text-indigo-300 border-indigo-500/20 text-[11px] font-semibold">
+                                <Badge variant="secondary" className="hidden sm:inline-flex bg-indigo-500/10 text-indigo-300 border-indigo-500/20 text-[10px] sm:text-[11px] font-semibold">
                                     {actividad.tipo}
                                 </Badge>
                                 {!isAuth && (
-                                    <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px] font-bold">
-                                        Acceso Público
+                                    <Badge className="hidden sm:inline-flex bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px] font-bold">
+                                        Público
                                     </Badge>
                                 )}
                             </div>
-                            <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5 font-medium">
-                                <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-                                    <Radio className="size-3 animate-pulse" /> Terminal Kiosk Activo
+                            <div className="text-[10px] sm:text-[11px] text-slate-400 flex items-center gap-1.5 sm:gap-2 mt-0.5 font-medium">
+                                <span className="text-emerald-400 flex items-center gap-1 font-semibold truncate">
+                                    <Radio className="size-2.5 sm:size-3 animate-pulse" /> Terminal Activo
                                 </span>
                                 {actividad.lugar && (
                                     <>
-                                        <span>•</span>
-                                        <span className="truncate max-w-[200px] flex items-center gap-1 text-slate-300">
+                                        <span className="hidden sm:inline">•</span>
+                                        <span className="truncate max-w-[150px] sm:max-w-[200px] hidden sm:flex items-center gap-1 text-slate-300">
                                             <MapPin className="size-3 text-slate-400" /> {actividad.lugar}
                                         </span>
                                     </>
@@ -999,19 +999,19 @@ export default function ActividadesEscanear({
                     </div>
 
                     {/* CENTRO: SELECTOR DE MODO VIA TABS (SHADCN/UI) */}
-                    <div className="flex items-center order-3 sm:order-2">
-                        <Tabs value={modo} onValueChange={(val) => setModo(val as ModoEscaneo)} className="w-auto">
-                            <TabsList className="bg-slate-950 border border-slate-800 p-1 rounded-xl h-10">
+                    <div className="flex items-center order-3 sm:order-2 w-full sm:w-auto justify-center">
+                        <Tabs value={modo} onValueChange={(val) => setModo(val as ModoEscaneo)} className="w-full sm:w-auto">
+                            <TabsList className="bg-slate-950 border border-slate-800 p-1 rounded-xl h-9 sm:h-10 w-full sm:w-auto grid grid-cols-2 sm:flex">
                                 <TabsTrigger
                                     value="qr"
-                                    className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-slate-400 rounded-lg px-3 sm:px-4 text-xs font-bold gap-2 transition-all"
+                                    className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-slate-400 rounded-lg px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold gap-1.5 sm:gap-2 transition-all"
                                 >
                                     <QrCode className="size-3.5" />
                                     <span>Carnet QR</span>
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="facial"
-                                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400 rounded-lg px-3 sm:px-4 text-xs font-bold gap-2 transition-all"
+                                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400 rounded-lg px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold gap-1.5 sm:gap-2 transition-all"
                                 >
                                     <ScanFace className="size-3.5" />
                                     <span>Biometría Facial</span>
@@ -1021,14 +1021,14 @@ export default function ActividadesEscanear({
                     </div>
 
                     {/* DERECHA: SESIÓN + TOTAL ASISTENTES + CONTROLES */}
-                    <div className="flex items-center gap-2.5 order-2 sm:order-3">
+                    <div className="flex items-center gap-1.5 sm:gap-2.5 order-2 sm:order-3">
                         {/* Botón de Instalar App PWA Móvil */}
                         {!isPwaInstalled && (
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleInstallPwa}
-                                className="h-9 px-3 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 border-indigo-500/50 hover:bg-indigo-600/50 text-white rounded-xl text-xs font-bold gap-1.5 shadow-sm transition-all cursor-pointer"
+                                className="h-8 sm:h-9 px-2 sm:px-3 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 border-indigo-500/50 hover:bg-indigo-600/50 text-white rounded-xl text-[11px] sm:text-xs font-bold gap-1 sm:gap-1.5 shadow-sm transition-all cursor-pointer"
                                 title="Instalar como aplicación en este dispositivo móvil"
                             >
                                 <Smartphone className="size-3.5 text-indigo-300" />
@@ -1059,11 +1059,11 @@ export default function ActividadesEscanear({
                         )}
 
                         {/* KPI En Vivo de Asistentes */}
-                        <div className="flex items-center gap-2 bg-emerald-950/70 border border-emerald-500/40 px-3.5 py-1.5 rounded-xl text-emerald-300 shadow-sm shadow-emerald-950">
-                            <Users className="size-4 text-emerald-400" />
-                            <div className="leading-none">
-                                <span className="text-base font-black tracking-tight">{contadorPresentes}</span>
-                                <span className="text-[10px] uppercase font-bold text-emerald-400/80 ml-1.5">Presentes</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-950/70 border border-emerald-500/40 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-emerald-300 shadow-sm shadow-emerald-950">
+                            <Users className="size-3.5 sm:size-4 text-emerald-400" />
+                            <div className="leading-none flex items-baseline gap-1">
+                                <span className="text-sm sm:text-base font-black tracking-tight">{contadorPresentes}</span>
+                                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-emerald-400/80">Presentes</span>
                             </div>
                         </div>
 
@@ -1072,10 +1072,10 @@ export default function ActividadesEscanear({
                             variant="outline"
                             size="icon"
                             onClick={() => setIsMuted((m) => !m)}
-                            className="size-9 rounded-xl border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white"
+                            className="size-8 sm:size-9 rounded-xl border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white"
                             title={isMuted ? 'Activar sonido' : 'Silenciar sonido'}
                         >
-                            {isMuted ? <VolumeX className="size-4 text-rose-400" /> : <Volume2 className="size-4 text-emerald-400" />}
+                            {isMuted ? <VolumeX className="size-3.5 sm:size-4 text-rose-400" /> : <Volume2 className="size-3.5 sm:size-4 text-emerald-400" />}
                         </Button>
 
                         {/* Pantalla Completa */}
@@ -1083,104 +1083,110 @@ export default function ActividadesEscanear({
                             variant="outline"
                             size="icon"
                             onClick={toggleFullscreen}
-                            className="size-9 rounded-xl border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white"
+                            className="size-8 sm:size-9 rounded-xl border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white"
                             title="Pantalla Completa (F)"
                         >
-                            {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                            {isFullscreen ? <Minimize2 className="size-3.5 sm:size-4" /> : <Maximize2 className="size-3.5 sm:size-4" />}
                         </Button>
                     </div>
                 </div>
             </header>
 
-            {/* BARRA LOGÍSTICA: SWITCHES DE SERVICIO + STATUS BIOMÉTRICO */}
-            <div className="px-3 sm:px-6 py-2.5 bg-slate-900/60 border-b border-slate-800/60">
-                <div className="max-w-[1780px] mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+            {/* BARRA LOGÍSTICA: SWITCHES DE SERVICIO + STATUS BIOMÉTRICO (Scroll horizontal suave en móviles) */}
+            <div className="px-2.5 sm:px-6 py-2 bg-slate-900/60 border-b border-slate-800/60 shrink-0">
+                <div className="max-w-[1780px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
                     {/* SWITCHES DE LOGÍSTICA RÁPIDA */}
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-                        <span className="text-slate-400 font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                            <Package className="size-3.5 text-indigo-400" /> Opciones de Acreditación:
+                    <div className="flex items-center gap-3 sm:gap-6 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+                        <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] sm:text-[11px] flex items-center gap-1.5 shrink-0">
+                            <Package className="size-3.5 text-indigo-400" />
+                            <span className="hidden sm:inline">Opciones de Acreditación:</span>
+                            <span className="sm:hidden">Opciones:</span>
                         </span>
 
                         {actividad.permite_conyuge && (
-                            <label className="flex items-center gap-2 cursor-pointer select-none group">
+                            <label className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group shrink-0">
                                 <Switch
                                     checked={asistioConConyuge}
                                     onCheckedChange={setAsistioConConyuge}
-                                    className="data-[state=checked]:bg-pink-600"
+                                    className="data-[state=checked]:bg-pink-600 scale-90 sm:scale-100"
                                 />
-                                <span className={cn('font-bold transition-colors flex items-center gap-1', asistioConConyuge ? 'text-pink-300' : 'text-slate-300 group-hover:text-white')}>
-                                    <Heart className={cn('size-3.5', asistioConConyuge && 'fill-pink-400 text-pink-400')} />
-                                    + Cónyuge Presente
+                                <span className={cn('text-[11px] sm:text-xs font-bold transition-colors flex items-center gap-1', asistioConConyuge ? 'text-pink-300' : 'text-slate-300 group-hover:text-white')}>
+                                    <Heart className={cn('size-3 sm:size-3.5', asistioConConyuge && 'fill-pink-400 text-pink-400')} />
+                                    + Cónyuge
                                 </span>
-                                <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">C</Badge>
+                                <Badge variant="outline" className="hidden sm:inline-flex px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">C</Badge>
                             </label>
                         )}
 
-                        <label className="flex items-center gap-2 cursor-pointer select-none group">
+                        <label className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group shrink-0">
                             <Switch
                                 checked={kitEntregado}
                                 onCheckedChange={setKitEntregado}
-                                className="data-[state=checked]:bg-purple-600"
+                                className="data-[state=checked]:bg-purple-600 scale-90 sm:scale-100"
                             />
-                            <span className={cn('font-bold transition-colors flex items-center gap-1', kitEntregado ? 'text-purple-300' : 'text-slate-300 group-hover:text-white')}>
-                                <Package className="size-3.5" />
-                                Entregar Kit / Material
+                            <span className={cn('text-[11px] sm:text-xs font-bold transition-colors flex items-center gap-1', kitEntregado ? 'text-purple-300' : 'text-slate-300 group-hover:text-white')}>
+                                <Package className="size-3 sm:size-3.5" />
+                                Entregar Kit
                             </span>
-                            <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">K</Badge>
+                            <Badge variant="outline" className="hidden sm:inline-flex px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">K</Badge>
                         </label>
 
                         {actividad.controla_comida && (
-                            <label className="flex items-center gap-2 cursor-pointer select-none group">
+                            <label className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group shrink-0">
                                 <Switch
                                     checked={comidaEntregada}
                                     onCheckedChange={setComidaEntregada}
-                                    className="data-[state=checked]:bg-amber-600"
+                                    className="data-[state=checked]:bg-amber-600 scale-90 sm:scale-100"
                                 />
-                                <span className={cn('font-bold transition-colors flex items-center gap-1', comidaEntregada ? 'text-amber-300' : 'text-slate-300 group-hover:text-white')}>
-                                    <Utensils className="size-3.5" />
-                                    Comedor / Desayuno-Almuerzo
+                                <span className={cn('text-[11px] sm:text-xs font-bold transition-colors flex items-center gap-1', comidaEntregada ? 'text-amber-300' : 'text-slate-300 group-hover:text-white')}>
+                                    <Utensils className="size-3 sm:size-3.5" />
+                                    Comedor
                                 </span>
-                                <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">M</Badge>
+                                <Badge variant="outline" className="hidden sm:inline-flex px-1.5 py-0 text-[10px] font-mono border-slate-700 text-slate-400">M</Badge>
                             </label>
                         )}
                     </div>
 
                     {/* DERECHA: STATUS DE IA + ACCIONES RÁPIDAS */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between md:justify-end gap-2 shrink-0">
                         {modo === 'facial' && (
-                            <div className="flex items-center gap-2.5 bg-purple-950/60 border border-purple-500/30 px-3 py-1 rounded-xl text-purple-200">
+                            <div className="flex items-center gap-1.5 sm:gap-2.5 bg-purple-950/60 border border-purple-500/30 px-2.5 sm:px-3 py-1 rounded-xl text-purple-200">
                                 {cargandoModelos ? (
-                                    <RefreshCw className="size-3.5 animate-spin text-purple-400" />
+                                    <RefreshCw className="size-3 sm:size-3.5 animate-spin text-purple-400" />
                                 ) : (
-                                    <Sparkles className="size-3.5 text-purple-400" />
+                                    <Sparkles className="size-3 sm:size-3.5 text-purple-400" />
                                 )}
-                                <span className="font-semibold text-[11px] truncate max-w-xs">{progresoEntrenamiento || 'Reconocimiento facial activo'}</span>
-                                {cargandoModelos && <Progress value={progresoPorcentaje} className="w-16 h-1.5 bg-purple-950" />}
+                                <span className="font-semibold text-[10px] sm:text-[11px] truncate max-w-[120px] sm:max-w-xs">{progresoEntrenamiento || 'IA activa'}</span>
+                                {cargandoModelos && <Progress value={progresoPorcentaje} className="w-12 sm:w-16 h-1.5 bg-purple-950" />}
                             </div>
                         )}
 
-                        {modo === 'facial' && (
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                            {modo === 'facial' && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleAbrirEnrolamiento}
+                                    className="h-7 sm:h-8 px-2 sm:px-3 rounded-xl border-purple-500/40 text-purple-300 bg-purple-950/40 hover:bg-purple-900/60 hover:text-white font-bold text-[11px] sm:text-xs gap-1 sm:gap-1.5 shadow-sm"
+                                    title="Capturar foto de la cámara para vincular a un pastor (E)"
+                                >
+                                    <UserPlus className="size-3 sm:size-3.5" />
+                                    <span className="hidden sm:inline">Vincular Rostro (E)</span>
+                                    <span className="sm:hidden">Rostro</span>
+                                </Button>
+                            )}
+
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={handleAbrirEnrolamiento}
-                                className="h-8 rounded-xl border-purple-500/40 text-purple-300 bg-purple-950/40 hover:bg-purple-900/60 hover:text-white font-bold text-xs gap-1.5 shadow-sm"
-                                title="Capturar foto de la cámara para vincular a un pastor (E)"
+                                onClick={() => setIsManualModalOpen(true)}
+                                className="h-7 sm:h-8 px-2 sm:px-3 rounded-xl border-indigo-500/40 text-indigo-300 bg-indigo-950/30 hover:bg-indigo-900/50 hover:text-white font-bold text-[11px] sm:text-xs gap-1 sm:gap-1.5 shadow-sm"
                             >
-                                <UserPlus className="size-3.5" />
-                                <span>Vincular Rostro (E)</span>
+                                <Search className="size-3 sm:size-3.5" />
+                                <span className="hidden sm:inline">Búsqueda Manual (B)</span>
+                                <span className="sm:hidden">Buscar</span>
                             </Button>
-                        )}
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsManualModalOpen(true)}
-                            className="h-8 rounded-xl border-indigo-500/40 text-indigo-300 bg-indigo-950/30 hover:bg-indigo-900/50 hover:text-white font-bold text-xs gap-1.5 shadow-sm"
-                        >
-                            <Search className="size-3.5" />
-                            <span>Búsqueda Manual (B)</span>
-                        </Button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1249,16 +1255,47 @@ export default function ActividadesEscanear({
                                     {/* RETÍCULA QR CON LÁSER */}
                                     {modo === 'qr' && (
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="size-60 sm:size-72 relative border-2 border-dashed border-cyan-400/50 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(34,211,238,0.15)]">
-                                                <div className="absolute top-0 left-0 size-7 border-t-4 border-l-4 border-cyan-400 rounded-tl-xl" />
-                                                <div className="absolute top-0 right-0 size-7 border-t-4 border-r-4 border-cyan-400 rounded-tr-xl" />
-                                                <div className="absolute bottom-0 left-0 size-7 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl" />
-                                                <div className="absolute bottom-0 right-0 size-7 border-b-4 border-r-4 border-cyan-400 rounded-br-xl" />
+                                            <div className="size-44 sm:size-60 md:size-72 relative border-2 border-dashed border-cyan-400/50 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(34,211,238,0.15)]">
+                                                <div className="absolute top-0 left-0 size-5 sm:size-7 border-t-4 border-l-4 border-cyan-400 rounded-tl-xl" />
+                                                <div className="absolute top-0 right-0 size-5 sm:size-7 border-t-4 border-r-4 border-cyan-400 rounded-tr-xl" />
+                                                <div className="absolute bottom-0 left-0 size-5 sm:size-7 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl" />
+                                                <div className="absolute bottom-0 right-0 size-5 sm:size-7 border-b-4 border-r-4 border-cyan-400 rounded-br-xl" />
 
                                                 <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-pulse" />
 
-                                                <Badge className="bg-black/80 text-cyan-300 border-cyan-500/40 text-[10px] font-bold uppercase tracking-widest absolute bottom-4 px-3 py-1 backdrop-blur-md">
+                                                <Badge className="bg-black/80 text-cyan-300 border-cyan-500/40 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest absolute bottom-3 sm:bottom-4 px-2.5 sm:px-3 py-1 backdrop-blur-md">
                                                     Muestre el Carnet Ministerial
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* BANNER DINÁMICO DE CONFIRMACIÓN EN MÓVIL (PWA Mobile Live Feedback) */}
+                                    {ultimoPastor && (estadoEscaneo === 'success' || estadoEscaneo === 'duplicate' || estadoEscaneo === 'error') && (
+                                        <div className="absolute top-3 left-3 right-3 z-30 lg:hidden animate-in slide-in-from-top-3 duration-300">
+                                            <div className={cn(
+                                                'p-2.5 sm:p-3 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xl border backdrop-blur-md',
+                                                estadoEscaneo === 'success' && 'bg-emerald-950/95 border-emerald-500/80 text-white shadow-emerald-950/50',
+                                                estadoEscaneo === 'duplicate' && 'bg-amber-950/95 border-amber-500/80 text-amber-200 shadow-amber-950/50',
+                                                estadoEscaneo === 'error' && 'bg-rose-950/95 border-rose-500/80 text-rose-200 shadow-rose-950/50'
+                                            )}>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    {ultimoPastor.foto ? (
+                                                        <img src={ultimoPastor.foto} alt="" className="size-9 rounded-xl object-cover shrink-0 border border-white/20" />
+                                                    ) : (
+                                                        <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-xs text-white shrink-0">
+                                                            {getInitials(ultimoPastor.nombre_completo)}
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-black truncate">{ultimoPastor.nombre_completo}</p>
+                                                        <p className="text-[10px] opacity-90 truncate font-semibold">
+                                                            {mensajeFeedback} • {ultimoPastor.nivel_ministerial || 'Pastor'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Badge className={cn('text-[10px] shrink-0 font-bold', estadoEscaneo === 'success' ? 'bg-emerald-500 text-slate-950' : estadoEscaneo === 'duplicate' ? 'bg-amber-500 text-slate-950' : 'bg-rose-500 text-white')}>
+                                                    {estadoEscaneo === 'success' ? 'Acreditado' : estadoEscaneo === 'duplicate' ? 'Repetido' : 'Error'}
                                                 </Badge>
                                             </div>
                                         </div>
@@ -1464,9 +1501,9 @@ export default function ActividadesEscanear({
                                 </div>
 
                                 {/* TARJETA DE CREDENCIAL DEL PASTOR */}
-                                <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                                <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-950 border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                                     {/* FOTO CON AVATAR SHADCN */}
-                                    <Avatar className="size-36 sm:size-44 rounded-2xl border-2 border-indigo-500/40 shrink-0 shadow-xl overflow-hidden">
+                                    <Avatar className="size-24 sm:size-36 md:size-44 rounded-2xl border-2 border-indigo-500/40 shrink-0 shadow-xl overflow-hidden">
                                         {ultimoPastor.foto && (
                                             <AvatarImage
                                                 src={ultimoPastor.foto}
@@ -1474,38 +1511,38 @@ export default function ActividadesEscanear({
                                                 className="object-cover object-top size-full"
                                             />
                                         )}
-                                        <AvatarFallback className="rounded-2xl bg-indigo-950 text-indigo-200 font-extrabold text-3xl">
+                                        <AvatarFallback className="rounded-2xl bg-indigo-950 text-indigo-200 font-extrabold text-2xl sm:text-3xl">
                                             {getInitials(ultimoPastor.nombre_completo)}
                                         </AvatarFallback>
                                     </Avatar>
 
                                     {/* DATOS MINISTERIALES */}
-                                    <div className="space-y-3.5 flex-1 text-center sm:text-left min-w-0">
-                                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                                            <Badge className="bg-indigo-600 hover:bg-indigo-600 text-white font-bold px-3 py-1 text-xs rounded-lg">
-                                                <BadgeCheck className="size-3.5 mr-1" />
+                                    <div className="space-y-2.5 sm:space-y-3.5 flex-1 text-center sm:text-left min-w-0 w-full sm:w-auto">
+                                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2">
+                                            <Badge className="bg-indigo-600 hover:bg-indigo-600 text-white font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs rounded-lg">
+                                                <BadgeCheck className="size-3 sm:size-3.5 mr-1" />
                                                 {ultimoPastor.nivel_ministerial || 'Pastor'}
                                             </Badge>
 
                                             {ultimoPastor.codigo && (
-                                                <Badge variant="outline" className="border-slate-700 bg-slate-900 text-slate-300 font-mono font-bold px-2.5 py-1 text-xs rounded-lg">
+                                                <Badge variant="outline" className="border-slate-700 bg-slate-900 text-slate-300 font-mono font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs rounded-lg">
                                                     CÓD: {ultimoPastor.codigo}
                                                 </Badge>
                                             )}
 
                                             {ultimoPastor.zona && (
-                                                <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-bold px-2.5 py-1 text-xs rounded-lg">
+                                                <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs rounded-lg">
                                                     Zona {ultimoPastor.zona}
                                                 </Badge>
                                             )}
                                         </div>
 
                                         <div>
-                                            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
+                                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
                                                 {ultimoPastor.nombre_completo}
                                             </h2>
-                                            <p className="text-sm text-slate-400 font-medium mt-1">
-                                                Cédula de Identidad: <span className="font-bold text-white tracking-wide">{ultimoPastor.documento}</span>
+                                            <p className="text-xs sm:text-sm text-slate-400 font-medium mt-1">
+                                                Cédula: <span className="font-bold text-white tracking-wide">{ultimoPastor.documento}</span>
                                             </p>
                                         </div>
 
@@ -1580,24 +1617,24 @@ export default function ActividadesEscanear({
                 </div>
             </main>
 
-            {/* CINTA INFERIOR: HISTORIAL DE ÚLTIMOS ASISTENTES CON ACCIÓN DE REVERTIR */}
-            <footer className="p-3 sm:px-6 bg-slate-900/90 border-t border-slate-800 shrink-0 backdrop-blur-md">
+            {/* CINTA INFERIOR: HISTORIAL DE ÚLTIMOS ASISTENTES (Scroll horizontal suave en móviles) */}
+            <footer className="p-2.5 sm:px-6 sm:py-3.5 bg-slate-900/90 border-t border-slate-800 shrink-0 backdrop-blur-md pb-safe">
                 <div className="max-w-[1780px] mx-auto">
                     <div className="flex items-center justify-between gap-2 mb-2 text-xs">
-                        <span className="font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                        <span className="font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 text-[10px] sm:text-[11px]">
                             <Clock className="size-3.5 text-indigo-400" />
                             Últimos Pastores Acreditados ({historial.length})
                         </span>
-                        <span className="text-[11px] text-slate-500 hidden sm:inline">
+                        <span className="text-[11px] text-slate-500 hidden md:inline">
                             Presione el botón de revertir si registró a un asistente por equivocación
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                    <div className="flex sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
                         {historial.slice(0, 5).map((as) => (
                             <div
                                 key={as.id}
-                                className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2.5 hover:border-slate-700 transition-colors shadow-sm"
+                                className="min-w-[220px] sm:min-w-0 p-2 sm:p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2 hover:border-slate-700 transition-colors shadow-sm shrink-0 sm:shrink"
                             >
                                 <Avatar className="size-8 rounded-lg shrink-0">
                                     {as.foto && <AvatarImage src={as.foto} alt={as.nombre_completo} />}
@@ -1621,7 +1658,7 @@ export default function ActividadesEscanear({
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleRevertir(as.id)}
-                                    className="size-7 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+                                    className="size-7 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors shrink-0"
                                     title="Revertir este registro"
                                 >
                                     <RotateCcw className="size-3.5" />

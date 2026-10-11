@@ -256,23 +256,23 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                 </div>
 
                 {/* Barra de Filtros */}
-                <Card className="p-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm border-slate-200 dark:border-slate-800">
-                    <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+                <Card className="p-3 sm:p-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+                    <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
                         <div className="relative w-full md:w-80">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                             <Input
                                 placeholder="Buscar actividad, lugar o descripción..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 bg-white dark:bg-slate-950"
+                                className="pl-9 bg-white dark:bg-slate-950 w-full"
                             />
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto">
                             <select
                                 value={tipoFilter}
                                 onChange={(e) => setTipoFilter(e.target.value)}
-                                className="h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs sm:text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
                             >
                                 <option value="">Todos los tipos</option>
                                 {tiposDisponibles.map((t) => (
@@ -285,7 +285,7 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                             <select
                                 value={estadoFilter}
                                 onChange={(e) => setEstadoFilter(e.target.value)}
-                                className="h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs sm:text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
                             >
                                 <option value="">Todos los estados</option>
                                 <option value="en_curso">En Curso</option>
@@ -299,7 +299,7 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                     variant="ghost"
                                     size="sm"
                                     onClick={handleClearFilters}
-                                    className="gap-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                    className="gap-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 justify-center"
                                 >
                                     <RotateCcw className="size-3.5" />
                                     Limpiar
@@ -436,8 +436,8 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                 </div>
 
                                 {/* Acciones en la base de la tarjeta */}
-                                <div className="p-4 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
-                                    <Link href={`/admin/actividades/${actividad.id}/escanear`} className="flex-1">
+                                <div className="p-3 sm:p-4 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                                    <Link href={`/admin/actividades/${actividad.id}/escanear`} className="flex-1 min-w-[140px]">
                                         <Button
                                             size="sm"
                                             className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs cursor-pointer transition-all hover:scale-[1.02]"
@@ -447,7 +447,7 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                         </Button>
                                     </Link>
 
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1 shrink-0">
                                         <Link href={`/admin/actividades/${actividad.id}/monitor`} title="Monitor en Vivo">
                                             <Button variant="outline" size="icon" className="size-8 cursor-pointer text-slate-600 hover:text-indigo-600">
                                                 <BarChart3 className="size-4" />

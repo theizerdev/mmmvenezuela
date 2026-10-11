@@ -83,16 +83,23 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-// We removed settingsNavItems as they are now defined inline in the CollapsibleNavItem component.
+// Context to automatically close mobile menu drawer upon clicking any navigation link
+const MobileMenuContext = React.createContext<{
+    closeMobileMenu: () => void;
+}>({
+    closeMobileMenu: () => {},
+});
 
 function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
     const { url } = usePage();
     const active = url.startsWith(item.href as string);
     const { __ } = useTranslate();
+    const { closeMobileMenu } = React.useContext(MobileMenuContext);
 
     const linkContent = (
         <Link
             href={item.href}
+            onClick={closeMobileMenu}
             className={cn(
                 'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                 active
@@ -135,6 +142,7 @@ function CollapsibleNavItem({
 }) {
     const { url } = usePage();
     const { __ } = useTranslate();
+    const { closeMobileMenu } = React.useContext(MobileMenuContext);
 
     // Determine if any of the sub-items are active
     const isAnyActive = items.some((item) => url.startsWith(item.href));
@@ -175,6 +183,7 @@ function CollapsibleNavItem({
                             <Link
                                 key={idx}
                                 href={item.href}
+                                onClick={closeMobileMenu}
                                 className={cn(
                                     'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
                                     url.startsWith(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
@@ -218,6 +227,7 @@ function CollapsibleNavItem({
                             <Link
                                 key={idx}
                                 href={item.href}
+                                onClick={closeMobileMenu}
                                 className={cn(
                                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all block',
                                     active
@@ -254,6 +264,11 @@ export default function AdminSaasLayout({
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const { __ } = useTranslate();
 
+    // Automatically close mobile menu on page navigation / route change
+    React.useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [page.url]);
+
     const userPermissions = (auth as any)?.user?.permissions || [];
     const hasPermission = (permission: string) => {
         return userPermissions.includes(permission);
@@ -286,14 +301,15 @@ export default function AdminSaasLayout({
 
     return (
         <TooltipProvider delayDuration={0}>
-            <div className="flex min-h-svh bg-background">
-                {/* Mobile sidebar backdrop overlay */}
-                {mobileMenuOpen && (
-                    <div
-                        className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden transition-opacity"
-                        onClick={() => setMobileMenuOpen(false)}
-                    />
-                )}
+            <MobileMenuContext.Provider value={{ closeMobileMenu: () => setMobileMenuOpen(false) }}>
+                <div className="flex min-h-svh bg-background">
+                    {/* Mobile sidebar backdrop overlay */}
+                    {mobileMenuOpen && (
+                        <div
+                            className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden transition-opacity"
+                            onClick={() => setMobileMenuOpen(false)}
+                        />
+                    )}
 
                 {/* Sidebar */}
                 <aside
@@ -763,53 +779,57 @@ export default function AdminSaasLayout({
                     {/* Top bar */}
                     <header
                         className={cn(
-                            'h-16 items-center justify-between border-b px-6 transition-all flex',
+                            'h-16 items-center justify-between border-b px-3 sm:px-6 transition-all flex',
                             settings.navbarType === 'sticky' && 'sticky top-0 z-30 bg-background/80 backdrop-blur-xl',
                             settings.navbarType === 'static' && 'relative bg-background',
                             settings.navbarType === 'hidden' && 'hidden'
                         )}
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="lg:hidden text-muted-foreground hover:bg-accent -ml-2"
+                                className="lg:hidden text-muted-foreground hover:bg-accent shrink-0 -ml-1 sm:-ml-2"
                                 onClick={() => setMobileMenuOpen(true)}
                             >
                                 <Menu className="size-5" />
                             </Button>
 
-                            <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <nav className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground min-w-0 overflow-hidden">
                                 <Link
                                     href={home()}
                                     className="flex items-center gap-1 transition-colors hover:text-foreground shrink-0"
                                 >
                                     <Home className="size-3.5" />
-                                    <span className="hidden sm:inline">{__('Home')}</span>
+                                    <span className="hidden md:inline">{__('Home')}</span>
                                 </Link>
-                                {breadcrumbs.map((crumb, index) => (
-                                    <React.Fragment
-                                        key={`${toUrl(crumb.href)}-${index}`}
-                                    >
-                                        <span className="text-border shrink-0">/</span>
-                                        {index === breadcrumbs.length - 1 ? (
-                                            <span className="font-medium text-foreground truncate max-w-[120px] sm:max-w-none">
-                                                {__(crumb.title)}
-                                            </span>
-                                        ) : (
-                                            <Link
-                                                href={crumb.href}
-                                                className="hover:text-foreground shrink-0 truncate max-w-[120px] sm:max-w-none"
-                                            >
-                                                {__(crumb.title)}
-                                            </Link>
-                                        )}
-                                    </React.Fragment>
-                                ))}
+                                {breadcrumbs.map((crumb, index) => {
+                                    const isLast = index === breadcrumbs.length - 1;
+                                    const isHiddenOnMobile = breadcrumbs.length > 1 && !isLast;
+                                    return (
+                                        <React.Fragment
+                                            key={`${toUrl(crumb.href)}-${index}`}
+                                        >
+                                            <span className={cn("text-border shrink-0", isHiddenOnMobile && "hidden sm:inline")}>/</span>
+                                            {isLast ? (
+                                                <span className="font-semibold text-foreground truncate max-w-[130px] sm:max-w-none">
+                                                    {__(crumb.title)}
+                                                </span>
+                                            ) : (
+                                                <Link
+                                                    href={crumb.href}
+                                                    className={cn("hover:text-foreground shrink-0 truncate max-w-[100px] sm:max-w-none", isHiddenOnMobile && "hidden sm:inline")}
+                                                >
+                                                    {__(crumb.title)}
+                                                </Link>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
                             </nav>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                             {/* Language toggle */}
                             <LanguageToggle />
 
@@ -960,7 +980,7 @@ export default function AdminSaasLayout({
                     {/* Page content */}
                     <main
                         className={cn(
-                            'flex-1 p-6 lg:p-8',
+                            'flex-1 p-3 sm:p-4 md:p-6 lg:p-8 min-w-0 overflow-x-hidden',
                             settings.contentWidth === 'compact' ? 'mx-auto max-w-[1200px] w-full' : 'w-full'
                         )}
                     >
@@ -969,6 +989,7 @@ export default function AdminSaasLayout({
                 </div>
                 <TemplateCustomizer />
             </div>
+            </MobileMenuContext.Provider>
         </TooltipProvider>
     );
 }

@@ -54,7 +54,7 @@ export function ModuleHeader({
 
                 {/* Sección derecha: Botones de acción (adaptable a móvil) */}
                 {children && (
-                    <div className='shrink-0 flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end border-t border-white/10 sm:border-t-0 pt-3 sm:pt-0'>
+                    <div className='shrink-0 flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end border-t border-white/10 sm:border-t-0 pt-3 sm:pt-0'>
                         {children}
                     </div>
                 )}

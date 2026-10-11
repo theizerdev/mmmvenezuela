@@ -54,10 +54,10 @@ export default function TemplateCustomizer() {
 
     return (
         <>
-            {/* Floating Settings Button with Spinning Hover animation */}
+            {/* Floating Settings Button with Spinning Hover animation (hidden on mobile to prevent blocking touches) */}
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex h-10 w-10 items-center justify-center rounded-l-md bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg border-l border-t border-b border-indigo-400/20 focus:outline-none cursor-pointer transition-all hover:pr-1 group"
+                className="fixed right-0 top-1/2 -translate-y-1/2 z-40 hidden sm:flex h-10 w-10 items-center justify-center rounded-l-md bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg border-l border-t border-b border-indigo-400/20 focus:outline-none cursor-pointer transition-all hover:pr-1 group"
                 title={__('Customize Template')}
             >
                 <Settings className="size-5 animate-[spin_8s_linear_infinite] group-hover:scale-110 transition-transform" />
@@ -65,7 +65,7 @@ export default function TemplateCustomizer() {
 
             {/* Template Customizer Side Panel */}
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetContent side="right" className="w-[380px] sm:w-[400px] overflow-y-auto p-6 scrollbar-thin">
+                <SheetContent side="right" className="w-full sm:max-w-[400px] overflow-y-auto p-4 sm:p-6 scrollbar-thin">
                     <SheetHeader className="pb-4 border-b">
                         <div className="flex items-center justify-between">
                             <div>

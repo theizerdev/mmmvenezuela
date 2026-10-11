@@ -88,11 +88,11 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-[820px] max-w-[95vw] w-full p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
-                <DialogHeader className="p-5 pb-3.5 border-b bg-gradient-to-r from-indigo-950 via-blue-950 to-indigo-950 text-white flex flex-row items-center justify-between">
+                <DialogHeader className="p-4 sm:p-5 pb-3.5 border-b bg-gradient-to-r from-indigo-950 via-blue-950 to-indigo-950 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="size-6 text-indigo-300" />
-                            <DialogTitle className="text-xl font-bold text-white tracking-tight">
+                            <DialogTitle className="text-lg sm:text-xl font-bold text-white tracking-tight">
                                 {__('Ministerial Credential / ID')}
                             </DialogTitle>
                         </div>
@@ -102,7 +102,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                     </div>
 
                     {/* Selector de Pestaña (Frontal / Reverso) */}
-                    <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-xl border border-white/10 shrink-0 self-end sm:self-auto">
                         <Button
                             type="button"
                             variant={activeTab === 'front' ? 'secondary' : 'ghost'}
@@ -130,12 +130,13 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                     </div>
                 </DialogHeader>
 
-                <div className="p-8 sm:p-10 bg-slate-950/20 flex flex-col items-center justify-center min-h-[520px] select-none">
+                <div className="p-3 sm:p-8 bg-slate-950/20 flex flex-col items-center justify-center min-h-[360px] sm:min-h-[520px] select-none overflow-x-auto w-full no-scrollbar">
                     {/* Contenedor del Carnet CR80 Grande (700px x 442px) */}
-                    <div
-                        className="w-[700px] h-[442px] relative shadow-2xl rounded-2xl overflow-hidden border border-slate-700/60 cursor-pointer transition-all duration-300 hover:shadow-indigo-500/25 bg-slate-950"
-                        onClick={() => setActiveTab(activeTab === 'front' ? 'back' : 'front')}
-                    >
+                    <div className="w-full overflow-x-auto flex justify-start sm:justify-center py-2 no-scrollbar">
+                        <div
+                            className="w-[700px] min-w-[700px] h-[442px] relative shadow-2xl rounded-2xl overflow-hidden border border-slate-700/60 cursor-pointer transition-all duration-300 hover:shadow-indigo-500/25 bg-slate-950 shrink-0"
+                            onClick={() => setActiveTab(activeTab === 'front' ? 'back' : 'front')}
+                        >
                         {activeTab === 'front' ? (
                             /* --- CARA FRONTAL (FRONT) con plantilla oficial --- */
                             <div
@@ -233,33 +234,34 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                 </div>
                             </div>
                         )}
+                        </div>
                     </div>
 
-                    <p className="text-[13px] text-muted-foreground mt-4 flex items-center gap-1.5 font-medium">
-                        <QrCode className="size-4 text-blue-600" />
-                        {__('Click on the card or use buttons to flip between Front and Back')}
+                    <p className="text-[13px] text-muted-foreground mt-4 flex items-center gap-1.5 font-medium text-center">
+                        <QrCode className="size-4 text-blue-600 shrink-0" />
+                        <span>{__('Click on the card or use buttons to flip between Front and Back')}</span>
                     </p>
                 </div>
 
-                <DialogFooter className="p-4 border-t bg-muted/40 flex flex-wrap items-center justify-between gap-2">
+                <DialogFooter className="p-4 border-t bg-muted/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setActiveTab(activeTab === 'front' ? 'back' : 'front')}
-                        className="gap-2 text-xs font-semibold h-9 px-4"
+                        className="gap-2 text-xs font-semibold h-9 px-4 w-full sm:w-auto"
                     >
                         <RotateCw className="size-3.5 text-indigo-600" />
                         {activeTab === 'front' ? __('View Back') : __('View Front')}
                     </Button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <Button
                             type="button"
                             variant="secondary"
                             size="sm"
                             onClick={onClose}
-                            className="text-xs h-9 px-4"
+                            className="text-xs h-9 px-4 flex-1 sm:flex-initial"
                         >
                             {__('Close')}
                         </Button>
@@ -268,7 +270,7 @@ export function PastorCarnetModal({ pastor, isOpen, onClose }: PastorCarnetModal
                                 type="button"
                                 size="sm"
                                 onClick={handleDownloadPdf}
-                                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 px-4 shadow-sm"
+                                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 px-4 shadow-sm flex-1 sm:flex-initial"
                             >
                                 <Download className="size-3.5" />
                                 {__('Download PDF (Print)')}
