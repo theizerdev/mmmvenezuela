@@ -7,6 +7,8 @@ use App\Models\Actividad;
 use App\Models\ActividadSesion;
 use App\Models\Asistencia;
 use App\Models\Pastor;
+use App\Services\AsistenciaExcelExportService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -479,81 +481,78 @@ class AsistenciaController extends Controller
     }
 
     /**
-     * Exportar reporte de asistencia a archivo CSV / Excel
+     * Exportar reporte detallado de asistencia a formato Excel (.xlsx) con pestañas
      */
-    public function export(int $actividadId): StreamedResponse
+    public function exportExcel(int $actividadId, AsistenciaExcelExportService $excelService): StreamedResponse
     {
-        $actividad = Actividad::findOrFail($actividadId);
+        return $excelService->export($actividadId);
+    }
 
+    /**
+     * Exportar reporte oficial de asistencia en formato PDF
+     */
+    public function exportPdf(int $actividadId)
+    {
+        $actividad = Actividad::with(['sesiones'])->findOrFail($actividadId);
+
+        // Padrón de pastores convocados
+        $pastoresConvocadosQuery = Pastor::where('status', true);
+        if ($actividad->zona) {
+            $pastoresConvocadosQuery->where('zona', $actividad->zona);
+        }
+        $totalPadron = $pastoresConvocadosQuery->count();
+
+        // Asistencias registradas
         $asistencias = Asistencia::with(['pastor.estado', 'sesion', 'registradoPor'])
             ->where('actividad_id', $actividad->id)
             ->orderBy('fecha_registro', 'asc')
             ->get();
 
-        $fileName = 'asistencia_' . str_replace(' ', '_', $actividad->nombre) . '_' . now()->format('Ymd_His') . '.csv';
+        $pastorIdsPresentes = $asistencias->pluck('pastor_id')->unique()->filter()->values();
+        $totalPresentes = $pastorIdsPresentes->count();
+        $porcentajeQuorum = $totalPadron > 0 ? round(($totalPresentes / $totalPadron) * 100, 1) : 0;
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
-        ];
+        $totalConConyuge = $asistencias->where('asistio_con_conyuge', true)->unique('pastor_id')->count();
+        $totalKits = $asistencias->where('kit_entregado', true)->unique('pastor_id')->count();
+        $totalComidas = $asistencias->where('comida_entregada', true)->count();
+        $totalAusentes = max(0, $totalPadron - $totalPresentes);
 
-        return response()->stream(function () use ($asistencias) {
-            $handle = fopen('php://output', 'w');
-            // BOM UTF-8 para que Excel lo abra con tildes correctamente
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+        // Cargar logo en base64 para DomPDF
+        $logoBase64 = null;
+        $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
 
-            // Encabezados
-            fputcsv($handle, [
-                'N°',
-                'Código',
-                'Cédula / Documento',
-                'Nombres',
-                'Apellidos',
-                'Nivel Ministerial',
-                'Cargo Nacional',
-                'Zona',
-                'Distrito',
-                'Estado',
-                'Sesión / Bloque',
-                'Fecha y Hora Registro',
-                'Método',
-                'Asistió con Cónyuge',
-                'Nombre Acompañante',
-                'Kit Entregado',
-                'Comida Entregada',
-                'Observaciones',
-                'Registrado Por',
-            ], ';');
+        $pdf = Pdf::loadView('pdf.reporte_asistencia', [
+            'actividad' => $actividad,
+            'asistencias' => $asistencias,
+            'totalPadron' => $totalPadron,
+            'totalPresentes' => $totalPresentes,
+            'porcentajeQuorum' => $porcentajeQuorum,
+            'totalConConyuge' => $totalConConyuge,
+            'totalKits' => $totalKits,
+            'totalComidas' => $totalComidas,
+            'totalAusentes' => $totalAusentes,
+            'logoBase64' => $logoBase64,
+            'fechaEmision' => Carbon::now()->format('d/m/Y h:i A'),
+            'fechasActividad' => Carbon::parse($actividad->fecha_inicio)->format('d/m/Y') . ' al ' . Carbon::parse($actividad->fecha_fin)->format('d/m/Y'),
+        ]);
 
-            foreach ($asistencias as $idx => $as) {
-                fputcsv($handle, [
-                    $idx + 1,
-                    $as->pastor?->codigo ?? 'N/A',
-                    $as->pastor?->documento ?? 'N/A',
-                    $as->pastor?->nombres ?? '',
-                    $as->pastor?->apellidos ?? '',
-                    $as->pastor?->nivel_ministerial ?? '',
-                    $as->pastor?->cargo_nacional ?? '',
-                    $as->pastor?->zona ?? '',
-                    $as->pastor?->distrito ?? '',
-                    $as->pastor?->estado?->nombre ?? '',
-                    $as->sesion?->nombre ?? 'General',
-                    $as->fecha_registro->format('d/m/Y H:i:s'),
-                    $as->metodo,
-                    $as->asistio_con_conyuge ? 'SÍ' : 'NO',
-                    $as->nombre_acompanante ?? '',
-                    $as->kit_entregado ? 'SÍ' : 'NO',
-                    $as->comida_entregada ? 'SÍ' : 'NO',
-                    $as->observaciones ?? '',
-                    $as->registradoPor?->name ?? 'Sistema',
-                ], ';');
-            }
+        $pdf->setPaper('letter', 'landscape');
 
-            fclose($handle);
-        }, 200, $headers);
+        $slug = preg_replace('/[^A-Za-z0-9_]/', '_', $actividad->nombre);
+        $filename = "Asistencia_{$slug}_" . Carbon::now()->format('Ymd_His') . ".pdf";
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Alias retrocompatible: Exportar reporte de asistencia (redirige a Excel .xlsx)
+     */
+    public function export(int $actividadId, AsistenciaExcelExportService $excelService): StreamedResponse
+    {
+        return $this->exportExcel($actividadId, $excelService);
     }
 
     /**

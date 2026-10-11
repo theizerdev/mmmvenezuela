@@ -15,5 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Monitor y Estadísticas en Vivo
     Route::get('/actividades/{actividad}/monitor', [ActividadController::class, 'monitor'])->name('actividades.monitor');
+    Route::get('/actividades/{actividad}/exportar-excel', [AsistenciaController::class, 'exportExcel'])->name('asistencias.export-excel');
+    Route::get('/actividades/{actividad}/exportar-pdf', [AsistenciaController::class, 'exportPdf'])->name('asistencias.export-pdf');
     Route::get('/actividades/{actividad}/exportar-asistencia', [AsistenciaController::class, 'export'])->name('asistencias.export');
 });

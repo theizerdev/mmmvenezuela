@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::publicMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/actividades/{actividad}/escanear'
  */
 export const publicMethod = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ publicMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::publicMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/actividades/{actividad}/escanear'
  */
 publicMethod.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ publicMethod.url = (args: { actividad: string | number } | [actividad: string | 
 
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::publicMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/actividades/{actividad}/escanear'
  */
 publicMethod.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -53,7 +53,7 @@ publicMethod.get = (args: { actividad: string | number } | [actividad: string | 
 })
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::publicMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/actividades/{actividad}/escanear'
  */
 publicMethod.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -63,7 +63,7 @@ publicMethod.head = (args: { actividad: string | number } | [actividad: string |
 
     /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::publicMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/actividades/{actividad}/escanear'
  */
     const publicMethodForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -73,7 +73,7 @@ publicMethod.head = (args: { actividad: string | number } | [actividad: string |
 
             /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::publicMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/actividades/{actividad}/escanear'
  */
         publicMethodForm.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ publicMethod.head = (args: { actividad: string | number } | [actividad: string |
         })
             /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::publicMethod
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/actividades/{actividad}/escanear'
  */
         publicMethodForm.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

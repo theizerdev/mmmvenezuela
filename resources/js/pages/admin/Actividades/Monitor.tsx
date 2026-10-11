@@ -9,6 +9,7 @@ import {
     Utensils,
     QrCode,
     FileSpreadsheet,
+    FileText,
     Clock,
     Phone,
     MessageCircle,
@@ -248,14 +249,27 @@ export default function ActividadesMonitor({
                             <span>Refrescar</span>
                         </Button>
 
-                        <a href={`/admin/actividades/${actividad.id}/exportar-asistencia`}>
+                        <a href={`/admin/actividades/${actividad.id}/exportar-excel`} target="_blank" rel="noopener noreferrer">
                             <Button
                                 variant="secondary"
                                 size="sm"
                                 className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold border-0 shadow-sm cursor-pointer transition-transform hover:scale-[1.02]"
+                                title="Exportar informe detallado en Excel (.xlsx) con pestañas"
                             >
                                 <FileSpreadsheet className="size-3.5" />
-                                <span>CSV</span>
+                                <span>Excel (.xlsx)</span>
+                            </Button>
+                        </a>
+
+                        <a href={`/admin/actividades/${actividad.id}/exportar-pdf`} target="_blank" rel="noopener noreferrer">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 text-xs gap-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold border-0 shadow-sm cursor-pointer transition-transform hover:scale-[1.02]"
+                                title="Exportar reporte oficial de asistencia en formato PDF"
+                            >
+                                <FileText className="size-3.5" />
+                                <span>PDF</span>
                             </Button>
                         </a>
 

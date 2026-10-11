@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::escanear
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/admin/actividades/{actividad}/escanear'
  */
 export const escanear = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ escanear.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::escanear
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/admin/actividades/{actividad}/escanear'
  */
 escanear.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ escanear.url = (args: { actividad: string | number } | [actividad: string | numb
 
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::escanear
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/admin/actividades/{actividad}/escanear'
  */
 escanear.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -53,7 +53,7 @@ escanear.get = (args: { actividad: string | number } | [actividad: string | numb
 })
 /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::escanear
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/admin/actividades/{actividad}/escanear'
  */
 escanear.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -63,7 +63,7 @@ escanear.head = (args: { actividad: string | number } | [actividad: string | num
 
     /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::escanear
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/admin/actividades/{actividad}/escanear'
  */
     const escanearForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -73,7 +73,7 @@ escanear.head = (args: { actividad: string | number } | [actividad: string | num
 
             /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::escanear
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/admin/actividades/{actividad}/escanear'
  */
         escanearForm.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ escanear.head = (args: { actividad: string | number } | [actividad: string | num
         })
             /**
 * @see \App\Http\Controllers\Admin\AsistenciaController::escanear
- * @see app/Http/Controllers/Admin/AsistenciaController.php:21
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:23
  * @route '/admin/actividades/{actividad}/escanear'
  */
         escanearForm.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
