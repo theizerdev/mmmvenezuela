@@ -1,6 +1,8 @@
 import PastorCarnetController from './PastorCarnetController'
+import AsistenciaController from './AsistenciaController'
 import DashboardController from './DashboardController'
 import IntegrationController from './IntegrationController'
+import ActividadController from './ActividadController'
 import ActivityMonitoringController from './ActivityMonitoringController'
 import DbMonitoringController from './DbMonitoringController'
 import EmpresaController from './EmpresaController'
@@ -22,8 +24,10 @@ import TaskMonitoringController from './TaskMonitoringController'
 import UserController from './UserController'
 const Admin = {
     PastorCarnetController: Object.assign(PastorCarnetController, PastorCarnetController),
+AsistenciaController: Object.assign(AsistenciaController, AsistenciaController),
 DashboardController: Object.assign(DashboardController, DashboardController),
 IntegrationController: Object.assign(IntegrationController, IntegrationController),
+ActividadController: Object.assign(ActividadController, ActividadController),
 ActivityMonitoringController: Object.assign(ActivityMonitoringController, ActivityMonitoringController),
 DbMonitoringController: Object.assign(DbMonitoringController, DbMonitoringController),
 EmpresaController: Object.assign(EmpresaController, EmpresaController),

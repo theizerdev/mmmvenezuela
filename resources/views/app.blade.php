@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -37,15 +38,13 @@
         <link rel="icon" href="{{ $favicon }}" type="image/png">
         <link rel="apple-touch-icon" href="{{ $favicon }}">
 
-        @if(request()->is('admin/reloj-checador/kiosko*'))
-        {{-- PWA Kiosko --}}
+        {{-- PWA Manifest & Soporte Móvil / Tablet / Kiosko --}}
         <link rel="manifest" href="/pwa/manifest.json">
-        <meta name="theme-color" content="#1a5c38">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="apple-mobile-web-app-title" content="Kiosko Checador">
-        @endif
+        <meta name="apple-mobile-web-app-title" content="Asistencia MMM">
+        <meta name="theme-color" content="#4f46e5">
 
         @fonts
 

@@ -1,3 +1,5 @@
+import actividades from './actividades'
+import asistencias from './asistencias'
 import monitoring from './monitoring'
 import empresas from './empresas'
 import estados from './estados'
@@ -12,7 +14,9 @@ import roles from './roles'
 import sucursales from './sucursales'
 import usuarios from './usuarios'
 const admin = {
-    monitoring: Object.assign(monitoring, monitoring),
+    actividades: Object.assign(actividades, actividades),
+asistencias: Object.assign(asistencias, asistencias),
+monitoring: Object.assign(monitoring, monitoring),
 empresas: Object.assign(empresas, empresas),
 estados: Object.assign(estados, estados),
 extensiones: Object.assign(extensiones, extensiones),

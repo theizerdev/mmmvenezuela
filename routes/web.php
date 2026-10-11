@@ -31,6 +31,28 @@ Route::redirect('/registro-pastor', '/registro');
 Route::get('/registro/{pastor}/extension', [PastorRegistroPublicoController::class, 'extensionIndex'])->name('registro-extension.index');
 Route::post('/registro/{pastor}/extension', [PastorRegistroPublicoController::class, 'extensionStore'])->name('registro-extension.store');
 
+// Rutas Públicas del Terminal de Escaneo y Registro de Asistencia (Sin necesidad de login)
+use App\Http\Controllers\Admin\AsistenciaController;
+
+Route::middleware(['web'])->group(function () {
+    // Pantalla de terminal accesible públicamente tanto con prefijo /admin como directo
+    Route::get('/admin/actividades/{actividad}/escanear', [AsistenciaController::class, 'scanner'])->name('admin.actividades.escanear');
+    Route::get('/actividades/{actividad}/escanear', [AsistenciaController::class, 'scanner'])->name('actividades.escanear.public');
+
+    // Endpoints API para el terminal de escaneo y enrolamiento biométrico
+    Route::post('/admin/actividades/asistencias/registrar', [AsistenciaController::class, 'registrar'])->name('admin.asistencias.registrar');
+    Route::post('/actividades/asistencias/registrar', [AsistenciaController::class, 'registrar']);
+
+    Route::post('/admin/actividades/asistencias/enrolar-rostro', [AsistenciaController::class, 'enrolarRostro'])->name('admin.asistencias.enrolar-rostro');
+    Route::post('/actividades/asistencias/enrolar-rostro', [AsistenciaController::class, 'enrolarRostro']);
+
+    Route::get('/admin/actividades/asistencias/buscar-pastores', [AsistenciaController::class, 'buscarPastores'])->name('admin.asistencias.buscar-pastores');
+    Route::get('/actividades/asistencias/buscar-pastores', [AsistenciaController::class, 'buscarPastores']);
+
+    Route::delete('/admin/actividades/asistencias/{asistencia}/revertir', [AsistenciaController::class, 'revertir'])->name('admin.asistencias.revertir');
+    Route::delete('/actividades/asistencias/{asistencia}/revertir', [AsistenciaController::class, 'revertir']);
+});
+
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/forgot-password', [ForgotPasswordOtpController::class, 'show'])->name('password.request');

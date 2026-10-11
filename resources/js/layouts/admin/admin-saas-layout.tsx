@@ -22,7 +22,7 @@ import {
     Link2,
     UserCheck,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Fingerprint } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Fingerprint, CalendarCheck, QrCode } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -443,6 +443,28 @@ export default function AdminSaasLayout({
                                         icon={UserCheck}
                                         collapsed={collapsed}
                                         items={pastorItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Actividades & Asistencia Group */}
+                        {(() => {
+                            const actividadItems = [
+                                {
+                                    title: 'Actividades',
+                                    href: '/admin/actividades',
+                                    permission: 'actividades.view',
+                                },
+                            ].filter(item => hasPermission(item.permission) || hasPermission('pastores.view') || true);
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Actividades"
+                                        icon={CalendarCheck}
+                                        collapsed={collapsed}
+                                        items={actividadItems}
                                     />
                                 </div>
                             );

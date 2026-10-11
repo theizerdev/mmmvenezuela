@@ -1,32 +1,52 @@
 {
-    "name": "Reloj Checador",
-    "short_name": "Kiosko",
-    "description": "Sistema de control de asistencia reloj checador para empleados Driscoll's",
-    "start_url": "/admin/reloj-checador/kiosko",
+    "name": "Control de Asistencia - MMM Venezuela",
+    "short_name": "Asistencia MMM",
+    "description": "Terminal móvil y quiosco de acreditación de asistencia y reconocimiento facial - Movimiento Misionero Mundial Venezuela",
+    "start_url": "/admin/actividades/1/escanear",
     "scope": "/",
-    "display": "fullscreen",
-    "orientation": "portrait",
-    "background_color": "#ffffff",
-    "theme_color": "#1a5c38",
-    "lang": "es-MX",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#020617",
+    "theme_color": "#4f46e5",
+    "lang": "es-VE",
     "categories": [
         "business",
-        "productivity"
+        "productivity",
+        "utilities"
     ],
     "icons": [
         {
-            "src": "/icons/favicon.png",
+            "src": "/icons/kiosko-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
-            "src": "/icons/favicon.png",
+            "src": "/icons/kiosko-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/logo_mmm-a-color-sin-fondo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
-    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Terminal de Escaneo",
+            "short_name": "Escanear",
+            "description": "Abrir terminal de escaneo y biometría",
+            "url": "/admin/actividades/1/escanear",
+            "icons": [
+                {
+                    "src": "/icons/kiosko-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
     "prefer_related_applications": false
 }

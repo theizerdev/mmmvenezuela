@@ -43,6 +43,8 @@ createInertiaApp({
             case name === 'admin/VisitasAccesos/GaritaControl':
             case name.toLowerCase().endsWith('/garitacontrol'):
             case name.toLowerCase().endsWith('/kiosko'):
+            case name.toLowerCase().endsWith('/escanear'):
+            case name === 'admin/Actividades/Escanear':
             case name.toLowerCase().endsWith('/carnet'):
             case name === 'admin/Extensiones/Mapa':
             case name.toLowerCase() === 'admin/extensiones/mapa':
@@ -75,25 +77,18 @@ createInertiaApp({
 // This will set light / dark mode on load...
 initializeTheme();
 
-// Register PWA service worker only on Kiosko routes, unregister zombie service workers on other routes
+// Register PWA service worker on Scanner and Kiosko routes
 if ('serviceWorker' in navigator) {
-    if (window.location.pathname.startsWith('/admin/reloj-checador/kiosko')) {
+    const isPwaScanner =
+        window.location.pathname.includes('/escanear') ||
+        window.location.pathname.startsWith('/admin/reloj-checador/kiosko');
+
+    if (isPwaScanner) {
         window.addEventListener('load', () => {
             navigator.serviceWorker
-                .register('/build/sw.js', { scope: '/admin/reloj-checador/kiosko' })
-                .then((r) => console.info('[PWA] Service Worker registrado:', r.scope))
+                .register('/build/sw.js', { scope: '/' })
+                .then((r) => console.info('[PWA] Service Worker registrado exitosamente:', r.scope))
                 .catch((e) => console.warn('[PWA] SW no disponible:', e));
-        });
-    } else {
-        // En rutas públicas (como /registro) desregistrar service workers previos para evitar que sirvan JS obsoleto
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.getRegistrations().then((registrations) => {
-                for (const registration of registrations) {
-                    registration.unregister().then(() => {
-                        console.info('[PWA] Service worker desregistrado en ruta pública.');
-                    });
-                }
-            });
         });
     }
 }
