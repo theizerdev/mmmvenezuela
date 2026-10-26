@@ -44,6 +44,48 @@ export function getPastorCarnetFullName(pastor: Pastor, uppercase = false): stri
     return uppercase ? fullName.toUpperCase() : fullName;
 }
 
+/**
+ * Retorna la línea de ubicación inferior para el reverso del carnet (ej: CARACAS - ZONA 1- DISTRITO 1)
+ */
+export function getPastorCarnetReversoLocation(pastor: Pastor): string {
+    let lugar = '';
+    if (pastor.extension_nombre && pastor.extension_nombre.trim()) {
+        lugar = pastor.extension_nombre.trim();
+    } else if ((pastor as any).extension && typeof (pastor as any).extension === 'string') {
+        lugar = (pastor as any).extension.trim();
+    } else if (Array.isArray((pastor as any).iglesias) && (pastor as any).iglesias.length > 0) {
+        const ig = (pastor as any).iglesias[0];
+        if (ig?.nombre) lugar = ig.nombre.trim();
+    } else if ((pastor as any).municipio) {
+        lugar = (pastor as any).municipio;
+    }
+
+    if (/^iglesia\s+central\s+/i.test(lugar)) {
+        lugar = lugar.replace(/^iglesia\s+central\s+/i, '');
+    } else if (/^iglesia\s+extensi[oó]n\s+/i.test(lugar)) {
+        lugar = lugar.replace(/^iglesia\s+extensi[oó]n\s+/i, '');
+    } else if (/^iglesia\s+/i.test(lugar)) {
+        lugar = lugar.replace(/^iglesia\s+/i, '');
+    }
+
+    if (/catia/i.test(lugar) || (pastor as any).estado_id === 10) {
+        lugar = 'CARACAS';
+    }
+
+    if (!lugar || /^zona\s+/i.test(lugar)) {
+        lugar = (pastor as any).municipio || 'VENEZUELA';
+    }
+
+    let linea = lugar.trim().toUpperCase();
+    if (pastor.zona) {
+        linea += ` - ZONA ${pastor.zona}`;
+    }
+    if (pastor.distrito) {
+        linea += `- DISTRITO ${pastor.distrito}`;
+    }
+    return linea;
+}
+
 export function getPastorPhotoUrl(foto?: string | null): string | null {
     if (!foto) return null;
     const trimmed = foto.trim();
@@ -115,6 +157,8 @@ export function PastorCarnetCard({
         }
         return str.toUpperCase();
     }, [lugarTrabajo]);
+
+    const reversoLocation = React.useMemo(() => getPastorCarnetReversoLocation(pastor), [pastor]);
 
     const rawFullName = getPastorCarnetFullName(pastor, true);
     const nameFontSize = rawFullName.length > 28
@@ -269,45 +313,51 @@ export function PastorCarnetCard({
                             backgroundRepeat: 'no-repeat',
                         }}
                     >
-                        {/* Sección Inferior Izquierda: Nombre Titular y Cédula (zona libre bajo el texto legal) */}
-                        <div className="absolute left-[54px] top-[328px] w-[450px] text-left">
+                        {/* Sección Inferior Izquierda: Nombre en Cursiva y Ubicación (idéntico a ejemplo.png) */}
+                        <div
+                            className="absolute text-left pointer-events-none select-text"
+                            style={{
+                                left: '58px',
+                                top: '344px',
+                                width: '470px',
+                            }}
+                        >
                             <span
-                                className="font-cocogoose text-[16px] font-bold uppercase text-[#0f3563] tracking-wide block leading-[22px] truncate"
-                                style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
+                                className="text-[19px] italic font-normal tracking-tight text-black block leading-[24px] truncate"
+                                style={{
+                                    fontFamily: "'Instrument Sans', 'Aribau Grotesk', Arial, sans-serif",
+                                    fontStyle: 'italic',
+                                }}
                             >
                                 {getPastorCarnetFullName(pastor, false)}
                             </span>
                             <span
-                                className="font-aribau text-[11.5px] font-medium text-slate-600 block mt-0.5"
-                                style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
+                                className="text-[11.5px] font-bold uppercase text-black tracking-wider block mt-1 leading-none truncate"
+                                style={{
+                                    fontFamily: "'Aribau Grotesk', 'Instrument Sans', Arial, sans-serif",
+                                }}
                             >
-                                C.I. {formatDocumento(pastor.documento)}{pastor.codigo ? `  |  Cód: ${pastor.codigo}` : ''}
+                                {reversoLocation}
                             </span>
-                            <div
-                                className="font-aribau mt-[12px] w-[230px] border-t border-slate-400/80 pt-1 text-[8px] uppercase font-bold text-slate-500 tracking-wider"
-                                style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
-                            >
-                                Firma del Ministro Titular
-                            </div>
                         </div>
 
-                        {/* Sección Inferior Derecha: Código QR Oficial de Validación (alejado de la cinta decorativa) */}
-                        <div className="absolute left-[530px] top-[296px] w-[96px] flex flex-col items-center shrink-0" title={__('Escanear para verificar credencial')}>
-                            <div className="size-[96px] p-[6px] bg-white border border-[#e2d08a] rounded-lg shadow-sm flex items-center justify-center">
-                                <img
-                                    src={qrImageUrl}
-                                    alt={__('Verification QR Code')}
-                                    className="size-[84px] object-contain"
-                                    crossOrigin="anonymous"
-                                />
-                            </div>
-                            <span
-                                className="font-aribau text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wide mt-1 flex items-center gap-1 whitespace-nowrap"
-                                style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
-                            >
-                                <QrCode className="size-2.5 text-[#d9820b]" />
-                                {__('Validar QR')}
-                            </span>
+                        {/* Sección Inferior Derecha: Código QR Oficial de Validación (sin marco ni texto decorativo, idéntico a ejemplo.png) */}
+                        <div
+                            className="absolute flex items-center justify-center shrink-0"
+                            style={{
+                                left: '556px',
+                                top: '294px',
+                                width: '96px',
+                                height: '96px',
+                            }}
+                            title={__('Escanear para verificar credencial')}
+                        >
+                            <img
+                                src={qrImageUrl}
+                                alt={__('Verification QR Code')}
+                                className="w-full h-full object-contain"
+                                crossOrigin="anonymous"
+                            />
                         </div>
                     </div>
                 </div>

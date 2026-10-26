@@ -1,5 +1,5 @@
 import type { Pastor } from '../Index';
-import { formatDocumento, getPastorPhotoUrl, getPastorCarnetFullName } from './PastorCarnetCard';
+import { formatDocumento, getPastorPhotoUrl, getPastorCarnetFullName, getPastorCarnetReversoLocation } from './PastorCarnetCard';
 
 /**
  * Carga una imagen como HTMLImageElement de forma asíncrona
@@ -169,41 +169,25 @@ export async function exportPastorCarnetPng(
             ctx.fillRect(0, 0, width, height);
         }
 
-        // Nombre y Cédula inferior izquierdo (zona libre bajo el texto legal)
-        const textX = 54 * scale;
-        const textY = 345 * scale;
+        // Nombre y Ubicación inferior izquierdo (idéntico a ejemplo.png)
+        const textX = 85 * scale; // ~107px en 1063x650
+        const textY = 352 * scale; // ~512px en 1063x650
 
-        ctx.fillStyle = '#0f3563';
-        ctx.font = `bold ${16 * scale}px Cocogoose, sans-serif`;
+        ctx.fillStyle = '#000000';
+        ctx.font = `italic ${18 * scale}px "Aribau Grotesk", sans-serif`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
-        ctx.fillText(getPastorCarnetFullName(pastor, false), textX, textY, 450 * scale);
+        ctx.fillText(getPastorCarnetFullName(pastor, false), textX, textY, 470 * scale);
 
-        ctx.fillStyle = '#475569';
-        ctx.font = `normal ${11.5 * scale}px "Aribau Grotesk", sans-serif`;
-        const docText = `C.I. ${formatDocumento(pastor.documento)}${pastor.codigo ? `  |  Cód: ${pastor.codigo}` : ''}`;
-        ctx.fillText(docText, textX, textY + (18 * scale));
+        ctx.fillStyle = '#000000';
+        ctx.font = `bold ${11.5 * scale}px "Aribau Grotesk", sans-serif`;
+        const reversoLocation = getPastorCarnetReversoLocation(pastor);
+        ctx.fillText(reversoLocation, textX, textY + (22 * scale), 470 * scale);
 
-        // Línea de firma
-        ctx.strokeStyle = '#94a3b8';
-        ctx.lineWidth = 1 * scale;
-        ctx.beginPath();
-        ctx.moveTo(textX, textY + (38 * scale));
-        ctx.lineTo(textX + (230 * scale), textY + (38 * scale));
-        ctx.stroke();
-
-        ctx.fillStyle = '#64748b';
-        ctx.font = `bold ${8 * scale}px "Aribau Grotesk", sans-serif`;
-        ctx.fillText('FIRMA DEL MINISTRO TITULAR', textX, textY + (49 * scale));
-
-        // Código QR inferior derecho (alejado de la cinta decorativa)
-        const qrBox = 96 * scale;
-        const qrPad = 6 * scale;
-        const qrBoxX = 530 * scale;
-        const qrBoxY = 296 * scale;
-        const qrSize = qrBox - qrPad * 2;
-        const qrX = qrBoxX + qrPad;
-        const qrY = qrBoxY + qrPad;
+        // Código QR inferior derecho (sin recuadro ni adornos, idéntico a ejemplo.png)
+        const qrSize = 92 * scale; // ~135px en 1063x650
+        const qrX = 556 * scale; // ~806px en 1063x650
+        const qrY = 294 * scale; // ~435px en 1063x650
 
         const verificationUrl = typeof window !== 'undefined'
             ? `${window.location.origin}/validar-credencial/${encodeURIComponent(pastor.codigo || pastor.documento || pastor.id)}`
@@ -213,20 +197,7 @@ export async function exportPastorCarnetPng(
 
         try {
             const qrImg = await loadImage(qrImageUrl);
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.roundRect(qrBoxX, qrBoxY, qrBox, qrBox, 8 * scale);
-            ctx.fill();
-            ctx.strokeStyle = '#e2d08a';
-            ctx.lineWidth = 1 * scale;
-            ctx.stroke();
-
             ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-
-            ctx.fillStyle = '#475569';
-            ctx.font = `bold ${7.5 * scale}px "Aribau Grotesk", sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.fillText('VALIDAR QR', qrBoxX + qrBox / 2, qrBoxY + qrBox + (11 * scale));
         } catch {
             // Fallback si QR no carga
         }
