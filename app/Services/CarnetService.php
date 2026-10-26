@@ -748,9 +748,9 @@ class CarnetService
      * Obtiene el nombre del lugar de trabajo para la credencial (Extensión o Zona).
      */
     public function obtenerLugarTrabajo(Pastor $pastor): string
-    {
-        if (!empty($pastor->extension_nombre)) {
-            return trim($pastor->extension_nombre);
+    {   //dd();
+        if (!empty($pastor->estado->nombre)) {
+            return trim($pastor->estado->nombre);
         }
 
         $lugarParts = [];
