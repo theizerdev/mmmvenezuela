@@ -58,4 +58,77 @@ class CarnetFpdf extends Fpdf
         $this->_out(sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c', $cx + $lx_k, $cy - $ry_k, $cx + $rx_k, $cy - $ly_k, $cx + $rx_k, $cy));
         $this->_out($op);
     }
+
+    /**
+     * Dibuja un rectángulo con esquinas redondeadas en FPDF
+     */
+    public function RoundedRect(float $x, float $y, float $w, float $h, float $r, string $style = '', string $corners = '1234'): void
+    {
+        $k = $this->k;
+        $hp = $this->h;
+        $style = strtoupper($style);
+        if ($style === 'F') {
+            $op = 'f';
+        } elseif ($style === 'FD' || $style === 'DF' || $style === 'B') {
+            $op = 'B';
+        } else {
+            $op = 'S';
+        }
+
+        $myArc = 4 / 3 * (M_SQRT2 - 1);
+        $this->_out(sprintf('%.2F %.2F m', ($x + $r) * $k, ($hp - $y) * $k));
+
+        $xc = $x + $w - $r;
+        $yc = $y + $r;
+        $this->_out(sprintf('%.2F %.2F l', $xc * $k, ($hp - $y) * $k));
+        if (strpos($corners, '2') === false) {
+            $this->_out(sprintf('%.2F %.2F l', ($x + $w) * $k, ($hp - $y) * $k));
+        } else {
+            $this->_Arc($xc + $r * $myArc, $yc - $r, $xc + $r, $yc - $r * $myArc, $xc + $r, $yc);
+        }
+
+        $xc = $x + $w - $r;
+        $yc = $y + $h - $r;
+        $this->_out(sprintf('%.2F %.2F l', ($x + $w) * $k, ($hp - $yc) * $k));
+        if (strpos($corners, '3') === false) {
+            $this->_out(sprintf('%.2F %.2F l', ($x + $w) * $k, ($hp - ($y + $h)) * $k));
+        } else {
+            $this->_Arc($xc + $r, $yc + $r * $myArc, $xc + $r * $myArc, $yc + $r, $xc, $yc + $r);
+        }
+
+        $xc = $x + $r;
+        $yc = $y + $h - $r;
+        $this->_out(sprintf('%.2F %.2F l', $xc * $k, ($hp - ($y + $h)) * $k));
+        if (strpos($corners, '4') === false) {
+            $this->_out(sprintf('%.2F %.2F l', $x * $k, ($hp - ($y + $h)) * $k));
+        } else {
+            $this->_Arc($xc - $r * $myArc, $yc + $r, $xc - $r, $yc + $r * $myArc, $xc - $r, $yc);
+        }
+
+        $xc = $x + $r;
+        $yc = $y + $r;
+        $this->_out(sprintf('%.2F %.2F l', $x * $k, ($hp - $yc) * $k));
+        if (strpos($corners, '1') === false) {
+            $this->_out(sprintf('%.2F %.2F l', $x * $k, ($hp - $y) * $k));
+            $this->_out(sprintf('%.2F %.2F l', ($x + $r) * $k, ($hp - $y) * $k));
+        } else {
+            $this->_Arc($xc - $r, $yc - $r * $myArc, $xc - $r * $myArc, $yc - $r, $xc, $yc - $r);
+        }
+        $this->_out($op);
+    }
+
+    protected function _Arc(float $x1, float $y1, float $x2, float $y2, float $x3, float $y3): void
+    {
+        $h = $this->h;
+        $k = $this->k;
+        $this->_out(sprintf(
+            '%.2F %.2F %.2F %.2F %.2F %.2F c ',
+            $x1 * $k,
+            ($h - $y1) * $k,
+            $x2 * $k,
+            ($h - $y2) * $k,
+            $x3 * $k,
+            ($h - $y3) * $k
+        ));
+    }
 }

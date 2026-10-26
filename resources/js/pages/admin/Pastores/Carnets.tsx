@@ -131,6 +131,24 @@ export default function PastoresCarnetsPage({
     const [activeSide, setActiveSide] = useState<'front' | 'back'>('front');
     const [viewMode, setViewMode] = useState<'flip' | 'both'>('flip');
     const [isExportingPng, setIsExportingPng] = useState(false);
+    const viewerContainerRef = React.useRef<HTMLDivElement>(null);
+    const [viewerScale, setViewerScale] = useState<number>(0.85);
+
+    // Ajuste responsivo de la escala del carnet según el ancho del contenedor para evitar desbordes
+    useEffect(() => {
+        const el = viewerContainerRef.current;
+        if (!el) return;
+        const updateScale = () => {
+            if (!viewerContainerRef.current) return;
+            const w = viewerContainerRef.current.clientWidth;
+            const s = Math.min(0.92, Math.max(0.45, (w - 36) / 700));
+            setViewerScale(Number(s.toFixed(2)));
+        };
+        updateScale();
+        const ro = new ResizeObserver(updateScale);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
 
     // Selección masiva para impresión por lotes
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -510,16 +528,19 @@ export default function PastoresCarnetsPage({
                                 </div>
                             </CardHeader>
 
-                            <CardContent className="p-4 sm:p-6 bg-slate-950/15 flex flex-col items-center justify-center min-h-[380px] sm:min-h-[460px] overflow-hidden w-full select-none">
+                            <CardContent
+                                ref={viewerContainerRef}
+                                className="p-4 sm:p-6 bg-slate-950/15 flex flex-col items-center justify-center min-h-[380px] sm:min-h-[460px] overflow-visible w-full select-none"
+                            >
                                 {selectedPastor ? (
                                     viewMode === 'flip' ? (
-                                        <div className="w-full flex flex-col items-center justify-center py-2">
+                                        <div className="w-full flex flex-col items-center justify-center py-2 overflow-visible">
                                             <PastorCarnetCard
                                                 pastor={selectedPastor}
                                                 activeSide={activeSide}
                                                 onFlip={() => setActiveSide(activeSide === 'front' ? 'back' : 'front')}
                                                 interactive={true}
-                                                scale={0.92}
+                                                scale={viewerScale}
                                                 templateFrontUrl={frontTemplateUrl}
                                                 templateBackUrl={backTemplateUrl}
                                             />
@@ -538,7 +559,7 @@ export default function PastoresCarnetsPage({
                                                     pastor={selectedPastor}
                                                     activeSide="front"
                                                     interactive={false}
-                                                    scale={0.80}
+                                                    scale={Math.min(0.82, viewerScale)}
                                                     templateFrontUrl={frontTemplateUrl}
                                                     templateBackUrl={backTemplateUrl}
                                                 />
@@ -551,7 +572,7 @@ export default function PastoresCarnetsPage({
                                                     pastor={selectedPastor}
                                                     activeSide="back"
                                                     interactive={false}
-                                                    scale={0.80}
+                                                    scale={Math.min(0.82, viewerScale)}
                                                     templateFrontUrl={frontTemplateUrl}
                                                     templateBackUrl={backTemplateUrl}
                                                 />

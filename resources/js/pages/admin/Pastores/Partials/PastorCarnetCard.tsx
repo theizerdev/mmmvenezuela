@@ -95,22 +95,25 @@ export function PastorCarnetCard({
 
     return (
         <div
-            className={cn('relative select-none flex items-center justify-center shrink-0', className)}
+            className={cn('relative select-none flex items-center justify-center shrink-0 overflow-visible', className)}
             style={{
-                width: `${700 * scale}px`,
-                height: `${442 * scale}px`,
+                width: `${Math.round(700 * scale)}px`,
+                height: `${Math.round(442 * scale)}px`,
             }}
         >
-            {/* Contenedor con escala centrada y perspectiva 3D */}
+            {/* Contenedor anclado al centro absoluto con perspectiva 3D */}
             <div
                 style={{
                     width: '700px',
                     height: '442px',
-                    transform: `scale(${scale})`,
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: `translate(-50%, -50%) scale(${scale})`,
                     transformOrigin: 'center center',
                     perspective: '1400px',
                 }}
-                className="shrink-0 relative flex items-center justify-center"
+                className="shrink-0 flex items-center justify-center pointer-events-auto"
             >
                 {/* Elemento que rota 3D con pivot exacto en el CENTRO */}
                 <div
@@ -121,7 +124,7 @@ export function PastorCarnetCard({
                     )}
                     style={{
                         transformStyle: 'preserve-3d',
-                        transformOrigin: '50% 50%',
+                        transformOrigin: 'center center',
                         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
                     }}
                 >
@@ -137,17 +140,19 @@ export function PastorCarnetCard({
                         }}
                     >
                         {/* Foto Rectangular Tipo Carnet Calibrada (Izquierda - Encaja exactamente en el marco de la plantilla) */}
-                        <div className="absolute left-[38px] top-[117px] w-[201px] h-[285px] rounded-[14px] overflow-hidden bg-slate-100 flex items-center justify-center">
+                        <div className="absolute left-[38px] top-[117px] w-[201px] h-[285px] rounded-[14px] overflow-hidden bg-transparent flex items-center justify-center">
                             {photoUrl && !imgError ? (
                                 <img
                                     src={photoUrl}
                                     alt=""
-                                    className="w-full h-full object-cover object-top"
+                                    className="w-full h-full object-cover object-top bg-transparent"
                                     onError={() => setImgError(true)}
                                 />
                             ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-[#0c2340] to-[#1e3a8a] text-white font-black text-5xl flex items-center justify-center">
-                                    {initials}
+                                <div className="w-full h-full bg-transparent flex items-center justify-center">
+                                    <span className="font-black text-5xl tracking-widest select-none text-slate-500/40">
+                                        {initials}
+                                    </span>
                                 </div>
                             )}
                         </div>

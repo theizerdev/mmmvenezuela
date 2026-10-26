@@ -17,12 +17,15 @@ import {
     Save,
     RotateCcw,
     Sparkles,
+    Loader2,
+    Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Pastor } from '../Index';
 import { useTranslate } from '@/hooks/use-translate';
 import { getPastorPhotoUrl } from './PastorCarnetCard';
+import { removeBackgroundWithAi } from './ai-photo-segmenter';
 
 interface PastorPhotoAdjustModalProps {
     pastor: Pastor | null;
@@ -41,9 +44,13 @@ export function PastorPhotoAdjustModal({
     const [scale, setScale] = useState<number>(1);
     const [panX, setPanX] = useState<number>(0);
     const [panY, setPanY] = useState<number>(0);
-    const [removeBg, setRemoveBg] = useState<boolean>(false);
+
+    // Modos de fondo: 'none' | 'ai' | 'color'
+    const [bgMode, setBgMode] = useState<'none' | 'ai' | 'color'>('none');
     const [tolerance, setTolerance] = useState<number>(25);
     const [targetColor, setTargetColor] = useState<string>('#ffffff');
+    const [isProcessingAi, setIsProcessingAi] = useState<boolean>(false);
+    const [aiProcessedImage, setAiProcessedImage] = useState<HTMLCanvasElement | null>(null);
     const [isSaving, setIsSaving] = useState<boolean>(false);
 
     const [imageObj, setImageObj] = useState<HTMLImageElement | null>(null);
@@ -53,30 +60,41 @@ export function PastorPhotoAdjustModal({
 
     const photoUrl = pastor ? getPastorPhotoUrl(pastor.foto || (pastor as any).foto_url) : null;
 
+    // Dimensiones exactas del marco oficial de la credencial: 201 x 285 px (escalada x2 para 300 DPI: 402 x 570)
+    const FRAME_W = 201;
+    const FRAME_H = 285;
+    const CANVAS_W = 402;
+    const CANVAS_H = 570;
+
     useEffect(() => {
         if (!isOpen || !pastor) return;
 
         setScale(1);
         setPanX(0);
         setPanY(0);
-        setRemoveBg(false);
+        setBgMode('none');
         setTolerance(25);
+        setAiProcessedImage(null);
 
         if (photoUrl) {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => {
                 setImageObj(img);
-                // Detectar color de la esquina superior izquierda como color de fondo
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = img.width;
-                tempCanvas.height = img.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                if (tempCtx) {
-                    tempCtx.drawImage(img, 0, 0);
-                    const corner = tempCtx.getImageData(5, 5, 1, 1).data;
-                    const hex = '#' + ((1 << 24) + (corner[0] << 16) + (corner[1] << 8) + corner[2]).toString(16).slice(1);
-                    setTargetColor(hex);
+                // Detectar color de fondo preliminar en la esquina superior izquierda
+                try {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    if (tempCtx) {
+                        tempCtx.drawImage(img, 0, 0);
+                        const corner = tempCtx.getImageData(5, 5, 1, 1).data;
+                        const hex = '#' + ((1 << 24) + (corner[0] << 16) + (corner[1] << 8) + corner[2]).toString(16).slice(1);
+                        setTargetColor(hex);
+                    }
+                } catch {
+                    // Ignorar si hay restricciones CORS en imagen remota
                 }
             };
             img.src = photoUrl;
@@ -97,17 +115,50 @@ export function PastorPhotoAdjustModal({
             const img = new Image();
             img.onload = () => {
                 setImageObj(img);
+                setAiProcessedImage(null);
+                setBgMode('none');
                 setScale(1);
                 setPanX(0);
                 setPanY(0);
-                toast.info(__('Foto cargada. Ajusta el encuadre y elimina el fondo.'));
+                toast.info(__('Foto cargada. Puedes recortarla o eliminar su fondo con IA.'));
             };
             img.src = dataUrl;
         };
         reader.readAsDataURL(file);
     };
 
-    // Renderizado en canvas
+    // Procesamiento con Inteligencia Artificial (MediaPipe Selfie Segmentation)
+    const handleApplyAiSegmentation = async () => {
+        if (!imageObj) return;
+
+        try {
+            setIsProcessingAi(true);
+            toast.info(__('Procesando silueta con Inteligencia Artificial...'));
+
+            // Segmentar la imagen original
+            const segmentedImageData = await removeBackgroundWithAi(imageObj, imageObj.width, imageObj.height);
+
+            // Crear canvas con la imagen recortada
+            const cutCanvas = document.createElement('canvas');
+            cutCanvas.width = imageObj.width;
+            cutCanvas.height = imageObj.height;
+            const cutCtx = cutCanvas.getContext('2d');
+            if (cutCtx) {
+                cutCtx.putImageData(segmentedImageData, 0, 0);
+                setAiProcessedImage(cutCanvas);
+                setBgMode('ai');
+                toast.success(__('Fondo eliminado con IA exitosamente. El sujeto ha quedado intacto.'));
+            }
+        } catch (error) {
+            console.error('Error al segmentar con IA:', error);
+            toast.error(__('No se pudo procesar con IA. Puedes usar el modo de color manual.'));
+            setBgMode('color');
+        } finally {
+            setIsProcessingAi(false);
+        }
+    };
+
+    // Renderizado en canvas en tiempo real
     useEffect(() => {
         if (!isOpen || !canvasRef.current || !imageObj) return;
 
@@ -115,37 +166,38 @@ export function PastorPhotoAdjustModal({
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return;
 
-        // Proporción exacta carnet: 178 x 226 px (escalada x2 para nitidez: 356 x 452)
-        const W = 356;
-        const H = 452;
-        canvas.width = W;
-        canvas.height = H;
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
 
-        ctx.clearRect(0, 0, W, H);
+        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+        // Elegir fuente según el modo: si IA está activa y procesada, usar la silueta recortada
+        const sourceToDraw = bgMode === 'ai' && aiProcessedImage ? aiProcessedImage : imageObj;
 
         ctx.save();
-        ctx.translate(W / 2 + panX, H / 2 + panY);
+        ctx.translate(CANVAS_W / 2 + panX * 2, CANVAS_H / 2 + panY * 2);
         ctx.scale(scale, scale);
 
-        // Ajustar imagen para que cubra
-        const imgRatio = imageObj.width / imageObj.height;
-        const targetRatio = W / H;
-        let drawW = W;
-        let drawH = H;
+        // Ajustar imagen para que cubra la relación del marco oficial (object-cover)
+        const imgRatio = sourceToDraw.width / sourceToDraw.height;
+        const targetRatio = CANVAS_W / CANVAS_H;
+        let drawW = CANVAS_W;
+        let drawH = CANVAS_H;
 
         if (imgRatio > targetRatio) {
-            drawH = H;
-            drawW = H * imgRatio;
+            drawH = CANVAS_H;
+            drawW = CANVAS_H * imgRatio;
         } else {
-            drawW = W;
-            drawH = W / imgRatio;
+            drawW = CANVAS_W;
+            drawH = CANVAS_W / imgRatio;
         }
 
-        ctx.drawImage(imageObj, -drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.drawImage(sourceToDraw, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
 
-        if (removeBg) {
-            const imgData = ctx.getImageData(0, 0, W, H);
+        // Si se seleccionó eliminación por color (croma clásico)
+        if (bgMode === 'color') {
+            const imgData = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
             const data = imgData.data;
 
             const hex = targetColor.replace('#', '');
@@ -155,7 +207,7 @@ export function PastorPhotoAdjustModal({
 
             const maxDist = 441.67;
             const tolDist = (tolerance / 100) * (maxDist * 0.7);
-            const smoothRange = 12;
+            const smoothRange = 14;
 
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i];
@@ -181,7 +233,7 @@ export function PastorPhotoAdjustModal({
 
             ctx.putImageData(imgData, 0, 0);
         }
-    }, [isOpen, imageObj, scale, panX, panY, removeBg, tolerance, targetColor]);
+    }, [isOpen, imageObj, scale, panX, panY, bgMode, aiProcessedImage, tolerance, targetColor]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         isDraggingRef.current = true;
@@ -241,7 +293,7 @@ export function PastorPhotoAdjustModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[560px] max-w-[95vw] p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+            <DialogContent className="sm:max-w-[580px] max-w-[96vw] p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
                 <DialogHeader className="p-4 sm:p-5 pb-3 border-b bg-gradient-to-r from-slate-950 via-indigo-950 to-blue-950 text-white">
                     <div className="flex items-center gap-2">
                         <Scissors className="size-5 text-indigo-300" />
@@ -277,7 +329,8 @@ export function PastorPhotoAdjustModal({
                                 setScale(1);
                                 setPanX(0);
                                 setPanY(0);
-                                setRemoveBg(false);
+                                setBgMode('none');
+                                setAiProcessedImage(null);
                             }}
                             className="h-8 text-xs text-muted-foreground gap-1.5"
                         >
@@ -286,24 +339,26 @@ export function PastorPhotoAdjustModal({
                         </Button>
                     </div>
 
-                    {/* Canvas de recorte proporcional carnet 178x226 */}
+                    {/* Canvas de recorte con la proporción y forma exactas del marco oficial: 201 x 285 px */}
                     <div className="flex flex-col items-center justify-center p-3 bg-muted/40 rounded-xl border border-dashed">
                         <div
-                            className="relative rounded-xl overflow-hidden shadow-lg border-[3px] border-white dark:border-slate-800 cursor-grab active:cursor-grabbing"
+                            className="relative rounded-[14px] overflow-hidden shadow-xl border-[2.5px] border-indigo-500/70 cursor-grab active:cursor-grabbing"
                             style={{
-                                width: '178px',
-                                height: '226px',
-                                backgroundImage: `
-                                    linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
-                                    linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
-                                    linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
-                                    linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)
-                                `,
-                                backgroundSize: '12px 12px',
-                                backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px',
-                                backgroundColor: '#f8fafc',
+                                width: `${FRAME_W}px`,
+                                height: `${FRAME_H}px`,
+                                backgroundImage: bgMode === 'ai'
+                                    ? 'linear-gradient(180deg, #c3cad4 0%, #dee3e9 50%, #c8cfd8 100%)'
+                                    : `
+                                        linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+                                        linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+                                        linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
+                                        linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)
+                                    `,
+                                backgroundSize: bgMode === 'ai' ? 'cover' : '12px 12px',
+                                backgroundPosition: bgMode === 'ai' ? 'center' : '0 0, 0 6px, 6px -6px, -6px 0px',
+                                backgroundColor: '#c8cfd8',
                             }}
-                            title={__('Arrastra para centrar el rostro')}
+                            title={__('Arrastra la foto para encuadrar el rostro con precisión')}
                         >
                             <canvas
                                 ref={canvasRef}
@@ -315,17 +370,18 @@ export function PastorPhotoAdjustModal({
                             />
                         </div>
 
-                        <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
-                            <Move className="size-3 text-indigo-600" />
-                            <span>{__('Arrastra la foto para encuadrar el rostro')}</span>
+                        <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1 font-medium">
+                            <Move className="size-3 text-indigo-600 shrink-0" />
+                            <span>{__('Arrastra la foto para encuadrar el rostro')} ({FRAME_W} × {FRAME_H} px)</span>
                         </p>
                     </div>
 
-                    {/* Controles de Tamaño y Eliminación de Fondo */}
+                    {/* Controles de Tamaño y Modos de Eliminación de Fondo */}
                     <div className="space-y-3 bg-muted/30 p-3.5 rounded-xl border">
+                        {/* Control de Zoom */}
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between text-xs">
-                                <span className="font-semibold flex items-center gap-1">
+                                <span className="font-semibold flex items-center gap-1 text-slate-700 dark:text-slate-300">
                                     <ZoomIn className="size-3.5 text-indigo-600" />
                                     {__('Zoom de la Foto')}
                                 </span>
@@ -342,26 +398,116 @@ export function PastorPhotoAdjustModal({
                             />
                         </div>
 
-                        <div className="pt-2 border-t space-y-2">
+                        {/* Selector de Modos de Eliminación de Fondo */}
+                        <div className="pt-2.5 border-t space-y-2.5">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={removeBg}
-                                        onChange={(e) => setRemoveBg(e.target.checked)}
-                                        className="size-4 rounded text-emerald-600 accent-emerald-600 cursor-pointer"
-                                    />
-                                    <Scissors className="size-3.5 text-emerald-600" />
-                                    <span>{__('Eliminar Fondo de la Foto')}</span>
-                                </label>
-                                {removeBg && (
-                                    <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300">
-                                        {__('Activo')}
-                                    </Badge>
-                                )}
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                    <Scissors className="size-3.5 text-indigo-600" />
+                                    {__('Eliminación de Fondo')}
+                                </span>
+
+                                <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg text-[11px]">
+                                    <button
+                                        type="button"
+                                        onClick={() => setBgMode('none')}
+                                        className={cn(
+                                            'px-2 py-0.5 rounded-md font-medium transition-colors',
+                                            bgMode === 'none' ? 'bg-white dark:bg-slate-900 shadow-xs text-slate-900 dark:text-white font-bold' : 'text-slate-600 dark:text-slate-400'
+                                        )}
+                                    >
+                                        {__('Original')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (aiProcessedImage) {
+                                                setBgMode('ai');
+                                            } else {
+                                                handleApplyAiSegmentation();
+                                            }
+                                        }}
+                                        className={cn(
+                                            'px-2 py-0.5 rounded-md font-medium transition-colors flex items-center gap-1',
+                                            bgMode === 'ai' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'
+                                        )}
+                                    >
+                                        <Sparkles className="size-3 text-amber-300" />
+                                        {__('Con IA')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBgMode('color')}
+                                        className={cn(
+                                            'px-2 py-0.5 rounded-md font-medium transition-colors',
+                                            bgMode === 'color' ? 'bg-white dark:bg-slate-900 shadow-xs text-slate-900 dark:text-white font-bold' : 'text-slate-600 dark:text-slate-400'
+                                        )}
+                                    >
+                                        {__('Color')}
+                                    </button>
+                                </div>
                             </div>
 
-                            {removeBg && (
+                            {/* Panel Informativo / Acción para Modo IA */}
+                            {bgMode === 'ai' && (
+                                <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 text-xs text-indigo-900 dark:text-indigo-200">
+                                        <div className="size-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                                            {isProcessingAi ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-[11.5px] leading-tight">
+                                                {isProcessingAi ? __('IA analizando silueta...') : __('Recorte por IA Inteligente Activo')}
+                                            </p>
+                                            <p className="text-[10px] text-indigo-700/80 dark:text-indigo-300/80">
+                                                {__('Sujeto aislado con precisión sin alterar cabello ni vestimenta.')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={isProcessingAi}
+                                        onClick={handleApplyAiSegmentation}
+                                        className="h-7 text-[10.5px] border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+                                    >
+                                        {isProcessingAi ? __('Procesando...') : __('Volver a escanear')}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* Si aún no ha procesado IA y está en modo original, mostrar botón directo sugerido */}
+                            {bgMode === 'none' && !aiProcessedImage && (
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+                                    <span className="text-[11px] text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                        <Sparkles className="size-3.5 text-amber-600" />
+                                        {__('¿Quieres remover el fondo automáticamente?')}
+                                    </span>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        disabled={isProcessingAi}
+                                        onClick={handleApplyAiSegmentation}
+                                        className="h-7 text-[11px] gap-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                                    >
+                                        {isProcessingAi ? (
+                                            <>
+                                                <Loader2 className="size-3 animate-spin" />
+                                                <span>{__('Procesando...')}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="size-3 text-amber-300" />
+                                                <span>{__('Remover con IA')}</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* Panel de Ajustes para Modo Color */}
+                            {bgMode === 'color' && (
                                 <div className="space-y-2 pt-1 text-xs">
                                     <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground text-[11px]">{__('Tolerancia de corte:')}</span>
@@ -408,7 +554,7 @@ export function PastorPhotoAdjustModal({
                         variant="secondary"
                         size="sm"
                         onClick={onClose}
-                        disabled={isSaving}
+                        disabled={isSaving || isProcessingAi}
                         className="text-xs h-9 px-4"
                     >
                         {__('Cancelar')}
@@ -418,7 +564,7 @@ export function PastorPhotoAdjustModal({
                         type="button"
                         size="sm"
                         onClick={handleSavePhoto}
-                        disabled={isSaving}
+                        disabled={isSaving || isProcessingAi}
                         className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 px-5 shadow-sm"
                     >
                         <Save className="size-3.5" />
@@ -429,4 +575,3 @@ export function PastorPhotoAdjustModal({
         </Dialog>
     );
 }
-

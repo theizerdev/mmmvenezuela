@@ -85,10 +85,8 @@ export async function exportPastorCarnetPng(
         }
 
         if (!photoLoaded) {
-            ctx.fillStyle = '#0c2340';
-            ctx.fillRect(photoX, photoY, photoW, photoH);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = `bold ${52 * scale}px sans-serif`;
+            ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
+            ctx.font = `bold ${48 * scale}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const initials = `${pastor.nombres?.trim()?.[0] || ''}${pastor.apellidos?.trim()?.[0] || ''}`.toUpperCase() || 'P';

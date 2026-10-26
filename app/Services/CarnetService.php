@@ -245,7 +245,7 @@ class CarnetService
             $pdf->Image($frenteImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
             // 2. Foto del Pastor Tipo Carnet Calibrada (Alineada al marco plateado de la plantilla)
-            $fotoPath = $this->obtenerRutaFotoPastor($pastor);
+            $fotoPath = $this->prepararFotoParaCarnet($pastor) ?: $this->obtenerRutaFotoPastor($pastor);
             $fotoX = $x + 4.66;
             $fotoY = $y + 14.32;
             $fotoW = 24.55;
@@ -255,64 +255,86 @@ class CarnetService
             if ($fotoPath && file_exists($fotoPath)) {
                 $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
             } else {
-                $pdf->SetFillColor(12, 35, 64);
-                $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH, 'F');
-                $pdf->SetTextColor(255, 255, 255);
-                $pdf->SetFont('Helvetica', 'B', 14);
-                $pdf->SetXY($fotoX, $fotoY + 14);
+                // Dejar ver el fondo plateado nativo de la plantilla con iniciales sutiles
+                $pdf->SetTextColor(148, 163, 184); // Slate 400
+                $pdf->SetFont('Helvetica', 'B', 15);
+                $pdf->SetXY($fotoX, $fotoY + ($fotoH - 6) / 2);
                 $iniciales = mb_strtoupper(mb_substr($pastor->nombres ?? '', 0, 1) . mb_substr($pastor->apellidos ?? '', 0, 1), 'UTF-8') ?: 'P';
                 $pdf->Cell($fotoW, 6, $iniciales, 0, 0, 'C');
             }
 
             // Contenedor Derecho Calibrado con las Zonas de la Plantilla
-            $contX = $x + 31.0;
-            $contW = 51.5;
+            $contX = $x + 30.0;
+            $contW = 52.5;
 
             // 3. Zona 1: Nombres y Apellidos del Pastor (Centrado debajo de la franja PASTOR)
-            $pdf->SetTextColor(12, 35, 64); // Dark Navy #0c2340
-            $pdf->SetFont('Helvetica', 'B', 8.2);
-
             $nombreCompleto = mb_strtoupper($pastor->nombres . ' ' . $pastor->apellidos, 'UTF-8');
-            $pdf->SetXY($contX, $y + 24.0);
-            $pdf->MultiCell($contW, 3.4, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'C');
+            $nombreIso = $this->utf8ToPdf($nombreCompleto);
+            $pdf->SetTextColor(12, 35, 64); // Dark Navy #0c2340
+
+            $fontSize = 8.0;
+            $pdf->SetFont('Helvetica', 'B', $fontSize);
+            $textWidth = $pdf->GetStringWidth($nombreIso);
+
+            if ($textWidth > $contW - 1) {
+                $fontSize = max(6.4, round($fontSize * ($contW - 1) / $textWidth, 1));
+                $pdf->SetFont('Helvetica', 'B', $fontSize);
+                $textWidth = $pdf->GetStringWidth($nombreIso);
+            }
+
+            if ($textWidth <= $contW) {
+                $pdf->SetXY($contX, $y + 24.5);
+                $pdf->Cell($contW, 3.2, $nombreIso, 0, 1, 'C');
+            } else {
+                $pdf->SetXY($contX, $y + 23.4);
+                $pdf->MultiCell($contW, 2.8, $nombreIso, 0, 'C');
+            }
 
             // 4. Cédula de Identidad
-            $pdf->SetFont('Helvetica', 'B', 6.8);
+            $pdf->SetFont('Helvetica', 'B', 6.6);
             $pdf->SetTextColor(30, 58, 138); // Blue #1e3a8a
             $docFormatted = 'C.I. ' . $this->formatearDocumento($pastor->documento);
-            $pdf->SetXY($contX, $pdf->GetY() + 0.6);
-            $pdf->Cell($contW, 2.8, mb_convert_encoding($docFormatted, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 28.2);
+            $pdf->Cell($contW, 2.6, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
 
             // Código adicional si existe
             if (!empty($pastor->codigo)) {
-                $pdf->SetFont('Helvetica', 'B', 5.2);
+                $pdf->SetFont('Helvetica', 'B', 5.0);
                 $pdf->SetTextColor(100, 116, 139); // Slate 500
-                $pdf->SetXY($contX, $pdf->GetY() + 0.2);
-                $pdf->Cell($contW, 2.2, mb_convert_encoding('CÓD: ' . $pastor->codigo, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+                $pdf->SetXY($contX, $y + 31.0);
+                $pdf->Cell($contW, 2.0, $this->utf8ToPdf('CÓD: ' . $pastor->codigo), 0, 1, 'C');
             }
 
             // 5. Zona 2: Valor de GRADO MINISTERIAL (Centrado bajo el rótulo de la plantilla)
-            $pdf->SetFont('Helvetica', 'B', 7.5);
+            $pdf->SetFont('Helvetica', 'B', 7.2);
             $pdf->SetTextColor(12, 35, 64);
             $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
-            $pdf->SetXY($contX, $y + 39.8);
-            $pdf->Cell($contW, 3.5, mb_convert_encoding($nivel, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 40.8);
+            $pdf->Cell($contW, 3.2, $this->utf8ToPdf($nivel), 0, 1, 'C');
 
             // 6. Zona 3: Valor de LUGAR DE TRABAJO (Nombre de la extensión donde se encuentra)
             $lugar = $this->obtenerLugarTrabajo($pastor);
             $lugarUpper = mb_strtoupper($lugar, 'UTF-8');
+            $lugarIso = $this->utf8ToPdf($lugarUpper);
             $lugarLen = mb_strlen($lugarUpper, 'UTF-8');
 
-            $pdf->SetTextColor(30, 41, 59); // Slate 800
-            if ($lugarLen > 34) {
-                $pdf->SetFont('Helvetica', 'B', 5.6);
-                $pdf->SetXY($contX, $y + 46.5);
-                $pdf->MultiCell($contW, 2.5, mb_convert_encoding($lugarUpper, 'ISO-8859-1', 'UTF-8'), 0, 'C');
+            $pdf->SetTextColor(15, 23, 42); // Slate 900
+            $lugarFontSize = ($lugarLen > 36) ? 5.2 : 6.0;
+            $pdf->SetFont('Helvetica', 'B', $lugarFontSize);
+
+            if ($lugarLen > 36) {
+                $pdf->SetXY($contX, $y + 47.0);
+                $pdf->MultiCell($contW, 2.3, $lugarIso, 0, 'C');
             } else {
-                $pdf->SetFont('Helvetica', 'B', 6.6);
-                $pdf->SetXY($contX, $y + 47.1);
-                $pdf->Cell($contW, 3.5, mb_convert_encoding($lugarUpper, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+                $pdf->SetXY($contX, $y + 47.8);
+                $pdf->Cell($contW, 3.0, $lugarIso, 0, 1, 'C');
             }
+
+            // 7. Indicador de Norma Oficial CR80 (esquina inferior derecha)
+            $pdf->SetFont('Helvetica', '', 3.8);
+            $pdf->SetTextColor(148, 163, 184); // Slate 400
+            $pdf->SetXY($x + self::ANCHO_MM - 28.0, $y + self::ALTO_MM - 3.2);
+            $pdf->Cell(25.0, 2.0, 'CR80 ' . chr(183) . ' 85.6 x 53.9 MM', 0, 0, 'R');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(15, 53, 99);
@@ -360,13 +382,13 @@ class CarnetService
             $pdf->SetTextColor(15, 53, 99);
             $titular = $pastor->nombres . ' ' . $pastor->apellidos;
             $pdf->SetXY($x + 6.35, $y + 40.3);
-            $pdf->Cell(53.5, 2.7, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->Cell(53.5, 2.7, $this->utf8ToPdf($titular), 0, 1, 'L');
 
             $pdf->SetFont('Helvetica', '', 4.3);
             $pdf->SetTextColor(71, 85, 105);
             $pdf->SetXY($x + 6.35, $y + 43.2);
             $docTexto = 'C.I. ' . $this->formatearDocumento($pastor->documento) . ($pastor->codigo ? '  |  Cód: ' . $pastor->codigo : '');
-            $pdf->Cell(53.5, 1.9, mb_convert_encoding($docTexto, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->Cell(53.5, 1.9, $this->utf8ToPdf($docTexto), 0, 1, 'L');
 
             // Línea para firma del titular
             $pdf->SetDrawColor(148, 163, 184);
@@ -376,7 +398,7 @@ class CarnetService
             $pdf->SetFont('Helvetica', 'B', 3.0);
             $pdf->SetTextColor(148, 163, 184);
             $pdf->SetXY($x + 6.35, $y + 47.3);
-            $pdf->Cell(28, 1.4, mb_convert_encoding('FIRMA DEL MINISTRO TITULAR', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->Cell(28, 1.4, 'FIRMA DEL MINISTRO TITULAR', 0, 1, 'L');
             //$pdf->Cell(40, 2.2, mb_convert_encoding('ACREDITADO POR: MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
             // 3. Código QR Real de Verificación (alejado de la cinta decorativa de la esquina)
@@ -538,6 +560,161 @@ class CarnetService
     }
 
     /**
+     * Prepara, recorta automáticamente en proporción 201:285 y redondea las esquinas
+     * de la fotografía del pastor para el carnet oficial, almacenándola en caché.
+     */
+    public function prepararFotoParaCarnet(Pastor $pastor): ?string
+    {
+        $fotoPath = $this->obtenerRutaFotoPastor($pastor);
+        if (!$fotoPath || !file_exists($fotoPath)) {
+            return null;
+        }
+
+        try {
+            $cacheDir = storage_path('app/public/carnets_cache');
+            if (!file_exists($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
+
+            $cacheKey = 'foto_' . $pastor->id . '_' . md5_file($fotoPath) . '.png';
+            $cachedFile = $cacheDir . DIRECTORY_SEPARATOR . $cacheKey;
+
+            if (file_exists($cachedFile) && filesize($cachedFile) > 0) {
+                return $cachedFile;
+            }
+
+            $info = @getimagesize($fotoPath);
+            if (!$info) {
+                return $fotoPath;
+            }
+
+            $mime = $info['mime'] ?? '';
+            $src = null;
+            if ($mime === 'image/jpeg') {
+                $src = @imagecreatefromjpeg($fotoPath);
+            } elseif ($mime === 'image/png') {
+                $src = @imagecreatefrompng($fotoPath);
+            } elseif ($mime === 'image/webp') {
+                $src = @imagecreatefromwebp($fotoPath);
+            }
+
+            if (!$src) {
+                return $fotoPath;
+            }
+
+            $origW = imagesx($src);
+            $origH = imagesy($src);
+
+            // Si la foto ya fue ajustada o guardada exactamente a 402x570 PNG con transparencia, usarla directamente
+            if ($origW === 402 && $origH === 570 && $mime === 'image/png') {
+                imagedestroy($src);
+                return $fotoPath;
+            }
+
+            // Proporción oficial: 201 de ancho x 285 de alto (402 x 570 en alta resolución 2x)
+            $targetW = 402;
+            $targetH = 570;
+            $targetRatio = $targetW / $targetH;
+            $origRatio = $origW / $origH;
+
+            // Recorte inteligente centrado y ponderado al rostro (zona superior)
+            if ($origRatio > $targetRatio) {
+                // La imagen es más ancha: recortar laterales, centrado en X
+                $cropH = $origH;
+                $cropW = (int) round($origH * $targetRatio);
+                $cropX = (int) round(($origW - $cropW) / 2);
+                $cropY = 0;
+            } else {
+                // La imagen es más alta: recortar inferior, priorizando parte superior (rostro)
+                $cropW = $origW;
+                $cropH = (int) round($origW / $targetRatio);
+                $cropX = 0;
+                $cropY = (int) round(($origH - $cropH) * 0.12);
+            }
+
+            // Imagen redimensionada con soporte de transparencia
+            $resized = imagecreatetruecolor($targetW, $targetH);
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
+            $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+            imagefill($resized, 0, 0, $transparent);
+
+            // Copiar región recortada
+            imagealphablending($resized, true);
+            imagecopyresampled(
+                $resized, $src,
+                0, 0, $cropX, $cropY,
+                $targetW, $targetH, $cropW, $cropH
+            );
+
+            // Aplicar máscara de esquinas redondeadas (radio 28px en lienzo 402x570)
+            $radius = 28;
+            $final = imagecreatetruecolor($targetW, $targetH);
+            imagealphablending($final, false);
+            imagesavealpha($final, true);
+            imagefill($final, 0, 0, $transparent);
+
+            for ($x = 0; $x < $targetW; $x++) {
+                for ($y = 0; $y < $targetH; $y++) {
+                    $inCorner = false;
+                    $dx = 0;
+                    $dy = 0;
+
+                    if ($x < $radius && $y < $radius) {
+                        $inCorner = true;
+                        $dx = $radius - $x;
+                        $dy = $radius - $y;
+                    } elseif ($x >= $targetW - $radius && $y < $radius) {
+                        $inCorner = true;
+                        $dx = $x - ($targetW - $radius - 1);
+                        $dy = $radius - $y;
+                    } elseif ($x < $radius && $y >= $targetH - $radius) {
+                        $inCorner = true;
+                        $dx = $radius - $x;
+                        $dy = $y - ($targetH - $radius - 1);
+                    } elseif ($x >= $targetW - $radius && $y >= $targetH - $radius) {
+                        $inCorner = true;
+                        $dx = $x - ($targetW - $radius - 1);
+                        $dy = $y - ($targetH - $radius - 1);
+                    }
+
+                    if ($inCorner) {
+                        $dist = sqrt($dx * $dx + $dy * $dy);
+                        if ($dist <= $radius - 1) {
+                            $color = imagecolorat($resized, $x, $y);
+                            imagesetpixel($final, $x, $y, $color);
+                        } elseif ($dist <= $radius) {
+                            $alphaFactor = $radius - $dist;
+                            $color = imagecolorat($resized, $x, $y);
+                            $a = ($color >> 24) & 0x7F;
+                            $r = ($color >> 16) & 0xFF;
+                            $g = ($color >> 8) & 0xFF;
+                            $b = $color & 0xFF;
+                            $newA = (int) round(127 - (127 - $a) * $alphaFactor);
+                            $newColor = imagecolorallocatealpha($final, $r, $g, $b, $newA);
+                            imagesetpixel($final, $x, $y, $newColor);
+                        }
+                    } else {
+                        $color = imagecolorat($resized, $x, $y);
+                        imagesetpixel($final, $x, $y, $color);
+                    }
+                }
+            }
+
+            imagepng($final, $cachedFile, 8);
+
+            imagedestroy($src);
+            imagedestroy($resized);
+            imagedestroy($final);
+
+            return $cachedFile;
+        } catch (\Throwable $e) {
+            \Log::warning("Error preparando foto para carnet del pastor {$pastor->id}: " . $e->getMessage());
+            return $fotoPath;
+        }
+    }
+
+    /**
      * Obtener ruta local absoluta de la foto del pastor
      */
     protected function obtenerRutaFotoPastor(Pastor $pastor): ?string
@@ -597,7 +774,7 @@ class CarnetService
     }
 
     /**
-     * Formatea el documento de identidad (ej: E-82.083.660)
+     * Formatea el documento de identidad (ej: V-18.816.680) de forma idéntica a la vista web
      */
     protected function formatearDocumento(?string $doc): string
     {
@@ -606,12 +783,28 @@ class CarnetService
         }
 
         $clean = strtoupper(trim($doc));
-        if (preg_match('/^([VEJ])[- ]?([0-9]+)$/', $clean, $matches)) {
-            $prefijo = $matches[1];
+        if (str_contains($clean, '-')) {
+            return $clean;
+        }
+
+        if (preg_match('/^([VEJ])?([0-9]+)$/', $clean, $matches)) {
+            $prefijo = !empty($matches[1]) ? $matches[1] : 'V';
             $num = number_format((int)$matches[2], 0, '', '.');
             return "{$prefijo}-{$num}";
         }
 
         return $clean;
+    }
+
+    /**
+     * Convierte texto UTF-8 a codificación compatible con fuentes FPDF (Windows-1252 / ISO-8859-1)
+     */
+    protected function utf8ToPdf(string $str): string
+    {
+        $converted = @iconv('UTF-8', 'windows-1252//TRANSLIT', $str);
+        if ($converted !== false) {
+            return $converted;
+        }
+        return utf8_decode($str);
     }
 }
