@@ -339,15 +339,15 @@ export function PastorPhotoAdjustModal({
                         </Button>
                     </div>
 
-                    {/* Canvas de recorte con la proporción y forma exactas del marco oficial: 201 x 285 px */}
+                    {/* Canvas de recorte con la proporción y forma exactas del marco oficial: 208 x 288 px */}
                     <div className="flex flex-col items-center justify-center p-3 bg-muted/40 rounded-xl border border-dashed">
                         <div
-                            className="relative rounded-[14px] overflow-hidden shadow-xl border-[2.5px] border-indigo-500/70 cursor-grab active:cursor-grabbing"
+                            className="relative rounded-[16px] overflow-hidden shadow-xl border-[2.5px] border-indigo-500/70 cursor-grab active:cursor-grabbing"
                             style={{
                                 width: `${FRAME_W}px`,
                                 height: `${FRAME_H}px`,
                                 backgroundImage: bgMode === 'ai'
-                                    ? 'linear-gradient(180deg, #c3cad4 0%, #dee3e9 50%, #c8cfd8 100%)'
+                                    ? 'linear-gradient(180deg, #cfd7e1 0%, #dbe1e8 45%, #c2cbd5 100%)'
                                     : `
                                         linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
                                         linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
@@ -396,6 +396,45 @@ export function PastorPhotoAdjustModal({
                                 onChange={(e) => setScale(parseFloat(e.target.value))}
                                 className="w-full accent-indigo-600 cursor-pointer"
                             />
+                            <div className="flex items-center gap-1.5 pt-1">
+                                <span className="text-[10px] text-muted-foreground">{__('Preajustes:')}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setScale(1.0)}
+                                    className={cn(
+                                        'px-2 py-0.5 rounded text-[10.5px] border font-medium transition-colors',
+                                        Math.round(scale * 100) === 100
+                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold'
+                                            : 'hover:bg-accent text-muted-foreground'
+                                    )}
+                                >
+                                    100%
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setScale(1.25)}
+                                    className={cn(
+                                        'px-2 py-0.5 rounded text-[10.5px] border font-medium transition-colors',
+                                        Math.round(scale * 100) === 125
+                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold'
+                                            : 'hover:bg-accent text-muted-foreground'
+                                    )}
+                                >
+                                    125% ({__('Recomendado')})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setScale(1.40)}
+                                    className={cn(
+                                        'px-2 py-0.5 rounded text-[10.5px] border font-medium transition-colors',
+                                        Math.round(scale * 100) === 140
+                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold'
+                                            : 'hover:bg-accent text-muted-foreground'
+                                    )}
+                                >
+                                    140% ({__('Primer Plano')})
+                                </button>
+                            </div>
                         </div>
 
                         {/* Selector de Modos de Eliminación de Fondo */}

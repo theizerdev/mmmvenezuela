@@ -539,6 +539,7 @@ export default function PastoresCarnetsPage({
                                                 pastor={selectedPastor}
                                                 activeSide={activeSide}
                                                 onFlip={() => setActiveSide(activeSide === 'front' ? 'back' : 'front')}
+                                                onEditPhoto={() => setIsPhotoModalOpen(true)}
                                                 interactive={true}
                                                 scale={viewerScale}
                                                 templateFrontUrl={frontTemplateUrl}

@@ -2,12 +2,13 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import type { Pastor } from '../Index';
 import { useTranslate } from '@/hooks/use-translate';
-import { QrCode } from 'lucide-react';
+import { QrCode, Scissors } from 'lucide-react';
 
 export interface PastorCarnetCardProps {
     pastor: Pastor;
     activeSide?: 'front' | 'back';
     onFlip?: () => void;
+    onEditPhoto?: () => void;
     interactive?: boolean;
     scale?: number;
     templateFrontUrl?: string;
@@ -66,6 +67,7 @@ export function PastorCarnetCard({
     pastor,
     activeSide = 'front',
     onFlip,
+    onEditPhoto,
     interactive = true,
     scale = 1,
     templateFrontUrl = '/image/Credencial-frente.png',
@@ -105,6 +107,23 @@ export function PastorCarnetCard({
         : `/validar-credencial/${pastor.codigo || pastor.id}`;
 
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(verificationUrl)}`;
+
+    const cleanLugar = React.useMemo(() => {
+        let str = lugarTrabajo.trim();
+        if (str.length > 24 && /^iglesia\s+extensi[oó]n\s+/i.test(str)) {
+            str = str.replace(/^iglesia\s+/i, '');
+        }
+        return str.toUpperCase();
+    }, [lugarTrabajo]);
+
+    const rawFullName = getPastorCarnetFullName(pastor, true);
+    const nameFontSize = rawFullName.length > 28
+        ? 'text-[15px]'
+        : (rawFullName.length > 22 ? 'text-[17px]' : 'text-[19.5px]');
+
+    const lugarFontSize = cleanLugar.length > 28
+        ? 'text-[11px]'
+        : (cleanLugar.length > 20 ? 'text-[12.5px]' : 'text-[14px]');
 
     const isFlipped = activeSide === 'back';
 
@@ -155,50 +174,79 @@ export function PastorCarnetCard({
                         }}
                     >
                         {/* Foto Rectangular Tipo Carnet Calibrada (Izquierda - Encaja exactamente en el marco de la plantilla) */}
-                        <div className="absolute left-[39px] top-[117px] w-[208px] h-[288px] rounded-[14px] overflow-hidden bg-transparent flex items-center justify-center">
+                        <div
+                            onClick={interactive && onEditPhoto ? (e) => { e.stopPropagation(); onEditPhoto(); } : undefined}
+                            className={cn(
+                                'absolute left-[39px] top-[117px] w-[208px] h-[288px] rounded-[16px] overflow-hidden bg-transparent flex items-center justify-center group/photo',
+                                interactive && onEditPhoto && 'cursor-pointer'
+                            )}
+                            title={interactive && onEditPhoto ? __('Haz clic para ajustar la foto al marco oficial') : undefined}
+                        >
                             {photoUrl && !imgError ? (
                                 <img
                                     src={photoUrl}
                                     alt=""
-                                    className="w-full h-full object-cover object-top bg-transparent"
+                                    className="w-full h-full object-cover object-top bg-transparent transition-transform duration-300 group-hover/photo:scale-[1.02]"
                                     onError={() => setImgError(true)}
                                 />
                             ) : (
                                 <div className="w-full h-full bg-transparent flex items-center justify-center">
-                                    <span className="font-cocogoose font-black text-5xl tracking-widest select-none text-slate-500/40">
+                                    <span
+                                        className="font-cocogoose font-black text-5xl tracking-widest select-none text-slate-500/40"
+                                        style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 900 }}
+                                    >
                                         {initials}
                                     </span>
                                 </div>
                             )}
+
+                            {/* Botón interactivo superpuesto al pasar el mouse sobre la foto */}
+                            {interactive && onEditPhoto && (
+                                <div className="absolute inset-x-0 bottom-0 py-2 bg-gradient-to-t from-slate-950/85 via-slate-900/60 to-transparent opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-semibold pointer-events-none">
+                                    <Scissors className="size-3 text-emerald-400" />
+                                    <span>{__('Ajustar al Marco')}</span>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Bloque 1: Identificación Titular (Debajo del banner PASTOR, encima de GRADO MINISTERIAL) */}
-                        <div className="absolute left-[260px] right-[26px] top-[190px] h-[82px] flex flex-col items-center justify-center text-center px-2">
-                            <h2 className="font-cocogoose text-[19px] font-bold uppercase leading-tight tracking-tight text-black line-clamp-2">
-                                {getPastorCarnetFullName(pastor, true)}
+                        {/* Bloque 1: Identificación Titular (Debajo del banner PASTOR) */}
+                        <div className="absolute left-[255px] w-[430px] top-[206px] h-[34px] flex items-center justify-center text-center px-3 pointer-events-none">
+                            <h2
+                                className={cn('font-cocogoose font-bold uppercase tracking-tight text-black whitespace-nowrap select-text leading-none', nameFontSize)}
+                                style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
+                            >
+                                {rawFullName}
                             </h2>
-                            <p className="font-aribau text-[13.5px] font-normal text-slate-800 mt-1 tracking-wider">
+                        </div>
+
+                        {/* Bloque 2: Cédula de Identidad (Aribau Grotesk Regular) */}
+                        <div className="absolute left-[255px] w-[430px] top-[243px] h-[20px] flex items-center justify-center text-center px-3 pointer-events-none">
+                            <p
+                                className="font-aribau text-[13px] font-normal text-slate-900 tracking-wider whitespace-nowrap select-text leading-none"
+                                style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
+                            >
                                 C.I. {formatDocumento(pastor.documento)}
                             </p>
                         </div>
 
-                        {/* Bloque 2: Grado Ministerial (Valor oficial en Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta GRADO MINISTERIAL) */}
-                        <div className="absolute left-[260px] right-[26px] top-[276px] h-[30px] flex items-end justify-center px-2">
-                            <span className="font-cocogoose text-[15px] font-bold uppercase tracking-wide text-black text-center line-clamp-1">
+                        {/* Bloque 3: Grado Ministerial - Valor (Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta GRADO MINISTERIAL) */}
+                        <div className="absolute left-[255px] w-[430px] top-[270px] h-[26px] flex items-center justify-center text-center px-3 pointer-events-none">
+                            <span
+                                className="font-cocogoose text-[15px] font-bold uppercase tracking-wide text-black text-center whitespace-nowrap select-text leading-none"
+                                style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
+                            >
                                 {pastor.nivel_ministerial || 'MINISTRO ORDENADO'}
                             </span>
                         </div>
 
-                        {/* Bloque 3: Lugar de Trabajo (Valor oficial en Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta LUGAR DE TRABAJO) */}
-                        <div className="absolute left-[260px] right-[26px] top-[332px] h-[35px] flex items-end justify-center px-2">
-                            <span className="font-cocogoose text-[13px] font-bold uppercase tracking-wide text-black text-center line-clamp-2 leading-tight">
-                                {lugarTrabajo}
+                        {/* Bloque 4: Lugar de Trabajo - Valor (Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta LUGAR DE TRABAJO) */}
+                        <div className="absolute left-[255px] w-[430px] top-[334px] h-[26px] flex items-center justify-center text-center px-3 pointer-events-none">
+                            <span
+                                className={cn('font-cocogoose font-bold uppercase tracking-wide text-black text-center whitespace-nowrap select-text leading-none', lugarFontSize)}
+                                style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
+                            >
+                                {cleanLugar}
                             </span>
-                        </div>
-
-                        {/* Indicador de Identidad y Medida Oficial (9cm x 5.5cm) */}
-                        <div className="absolute right-4 bottom-2 text-[8px] uppercase font-aribau font-semibold text-slate-400/80 tracking-wider">
-                            90 × 55 mm • FORMATO OFICIAL
                         </div>
                     </div>
 
@@ -216,13 +264,22 @@ export function PastorCarnetCard({
                     >
                         {/* Sección Inferior Izquierda: Nombre Titular y Cédula (zona libre bajo el texto legal) */}
                         <div className="absolute left-[54px] top-[328px] w-[450px] text-left">
-                            <span className="font-cocogoose text-[16px] font-bold uppercase text-[#0f3563] tracking-wide block leading-[22px] truncate">
+                            <span
+                                className="font-cocogoose text-[16px] font-bold uppercase text-[#0f3563] tracking-wide block leading-[22px] truncate"
+                                style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
+                            >
                                 {getPastorCarnetFullName(pastor, false)}
                             </span>
-                            <span className="font-aribau text-[11.5px] font-medium text-slate-600 block mt-0.5">
+                            <span
+                                className="font-aribau text-[11.5px] font-medium text-slate-600 block mt-0.5"
+                                style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
+                            >
                                 C.I. {formatDocumento(pastor.documento)}{pastor.codigo ? `  |  Cód: ${pastor.codigo}` : ''}
                             </span>
-                            <div className="font-aribau mt-[12px] w-[230px] border-t border-slate-400/80 pt-1 text-[8px] uppercase font-bold text-slate-500 tracking-wider">
+                            <div
+                                className="font-aribau mt-[12px] w-[230px] border-t border-slate-400/80 pt-1 text-[8px] uppercase font-bold text-slate-500 tracking-wider"
+                                style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
+                            >
                                 Firma del Ministro Titular
                             </div>
                         </div>
@@ -237,7 +294,10 @@ export function PastorCarnetCard({
                                     crossOrigin="anonymous"
                                 />
                             </div>
-                            <span className="font-aribau text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wide mt-1 flex items-center gap-1 whitespace-nowrap">
+                            <span
+                                className="font-aribau text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wide mt-1 flex items-center gap-1 whitespace-nowrap"
+                                style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
+                            >
                                 <QrCode className="size-2.5 text-[#d9820b]" />
                                 {__('Validar QR')}
                             </span>

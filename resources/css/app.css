@@ -1,40 +1,14 @@
-@import url('https://fonts.cdnfonts.com/css/cocogoose');
 @import 'tailwindcss';
 
 @import 'tw-animate-css';
 
 @import './landing.css';
+@import './official-fonts.css';
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @custom-variant dark (&:is(.dark *));
-
-/* Tipografías Oficiales de Identidad Institucional */
-@font-face {
-    font-family: 'Cocogoose';
-    src: url('/fonts/cocogoose-regular.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Cocogoose';
-    src: url('/fonts/cocogoose-bold.ttf') format('truetype'),
-         url('/fonts/COCOGOOSE.otf') format('opentype');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Aribau Grotesk';
-    src: url('/fonts/AribauGroteskTRIAL-Md.otf') format('opentype');
-    font-weight: 400 500;
-    font-style: normal;
-    font-display: swap;
-}
 
 @theme {
     --font-cocogoose: 'Cocogoose', 'COCOGOOSE', sans-serif;

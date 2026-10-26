@@ -277,56 +277,42 @@ class CarnetService
             $textWidth = $pdf->GetStringWidth($nombreIso);
 
             if ($textWidth > $contW - 1) {
-                $fontSize = max(6.4, round($fontSize * ($contW - 1) / $textWidth, 1));
+                $fontSize = max(6.2, round($fontSize * ($contW - 1) / $textWidth, 1));
                 $pdf->SetFont('Helvetica', 'B', $fontSize);
-                $textWidth = $pdf->GetStringWidth($nombreIso);
             }
 
-            if ($textWidth <= $contW) {
-                $pdf->SetXY($contX, $y + 26.8);
-                $pdf->Cell($contW, 3.4, $nombreIso, 0, 1, 'C');
-            } else {
-                $pdf->SetXY($contX, $y + 25.4);
-                $pdf->MultiCell($contW, 3.0, $nombreIso, 0, 'C');
-            }
+            $pdf->SetXY($contX, $y + 26.2);
+            $pdf->Cell($contW, 3.4, $nombreIso, 0, 1, 'C');
 
             // 4. Documento de Identidad (Aribau Grotesk Regular, Negro Carbón)
             $pdf->SetFont('Helvetica', '', 6.6);
-            $pdf->SetTextColor(30, 41, 59); // Slate 800
+            $pdf->SetTextColor(15, 23, 42); // Slate 900
             $docFormatted = 'C.I. ' . $this->formatearDocumento($pastor->documento);
-            $pdf->SetXY($contX, $y + 30.6);
-            $pdf->Cell($contW, 2.6, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 30.2);
+            $pdf->Cell($contW, 2.4, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
 
             // 5. Bloque 2: Grado Ministerial (Valor ARRIBA de la etiqueta preimpresa GRADO MINISTERIAL)
             $pdf->SetFont('Helvetica', 'B', 7.2);
             $pdf->SetTextColor(0, 0, 0); // Pure Black
             $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
-            $pdf->SetXY($contX, $y + 35.8);
+            $pdf->SetXY($contX, $y + 34.0);
             $pdf->Cell($contW, 2.8, $this->utf8ToPdf($nivel), 0, 1, 'C');
 
             // 6. Bloque 3: Lugar de Trabajo (Valor ARRIBA de la etiqueta preimpresa LUGAR DE TRABAJO)
             $lugar = $this->obtenerLugarTrabajo($pastor);
+            if (mb_strlen($lugar, 'UTF-8') > 24 && preg_match('/^iglesia\s+extensi[oó]n\s+/i', $lugar)) {
+                $lugar = preg_replace('/^iglesia\s+/i', '', $lugar);
+            }
             $lugarUpper = mb_strtoupper($lugar, 'UTF-8');
             $lugarIso = $this->utf8ToPdf($lugarUpper);
             $lugarLen = mb_strlen($lugarUpper, 'UTF-8');
 
             $pdf->SetTextColor(0, 0, 0); // Pure Black
-            $lugarFontSize = ($lugarLen > 36) ? 5.2 : 6.0;
+            $lugarFontSize = ($lugarLen > 32) ? 4.8 : (($lugarLen > 24) ? 5.4 : 6.2);
             $pdf->SetFont('Helvetica', 'B', $lugarFontSize);
 
-            if ($lugarLen > 36) {
-                $pdf->SetXY($contX, $y + 42.2);
-                $pdf->MultiCell($contW, 2.4, $lugarIso, 0, 'C');
-            } else {
-                $pdf->SetXY($contX, $y + 43.0);
-                $pdf->Cell($contW, 2.8, $lugarIso, 0, 1, 'C');
-            }
-
-            // 7. Indicador de Medida Oficial 90 x 55 mm
-            $pdf->SetFont('Helvetica', '', 3.8);
-            $pdf->SetTextColor(148, 163, 184); // Slate 400
-            $pdf->SetXY($x + self::ANCHO_MM - 32.0, $y + self::ALTO_MM - 3.0);
-            $pdf->Cell(29.0, 2.0, '90 x 55 MM ' . chr(183) . ' FORMATO OFICIAL', 0, 0, 'R');
+            $pdf->SetXY($contX, $y + 42.0);
+            $pdf->Cell($contW, 2.8, $lugarIso, 0, 1, 'C');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(15, 53, 99);
@@ -596,15 +582,15 @@ class CarnetService
             $origW = imagesx($src);
             $origH = imagesy($src);
 
-            // Si la foto ya fue ajustada o guardada exactamente a 402x570 PNG con transparencia, usarla directamente
-            if ($origW === 402 && $origH === 570 && $mime === 'image/png') {
+            // Si la foto ya fue ajustada o guardada a proporción oficial PNG con transparencia, usarla directamente
+            if (($origW === 416 && $origH === 576) || ($origW === 402 && $origH === 570) && $mime === 'image/png') {
                 imagedestroy($src);
                 return $fotoPath;
             }
 
-            // Proporción oficial: 201 de ancho x 285 de alto (402 x 570 en alta resolución 2x)
-            $targetW = 402;
-            $targetH = 570;
+            // Proporción oficial: 208 de ancho x 288 de alto (416 x 576 en alta resolución 2x para 300 DPI)
+            $targetW = 416;
+            $targetH = 576;
             $targetRatio = $targetW / $targetH;
             $origRatio = $origW / $origH;
 
@@ -620,7 +606,7 @@ class CarnetService
                 $cropW = $origW;
                 $cropH = (int) round($origW / $targetRatio);
                 $cropX = 0;
-                $cropY = (int) round(($origH - $cropH) * 0.12);
+                $cropY = (int) round(($origH - $cropH) * 0.10);
             }
 
             // Imagen redimensionada con soporte de transparencia
@@ -638,8 +624,8 @@ class CarnetService
                 $targetW, $targetH, $cropW, $cropH
             );
 
-            // Aplicar máscara de esquinas redondeadas (radio 28px en lienzo 402x570)
-            $radius = 28;
+            // Aplicar máscara de esquinas redondeadas oficial (radio 32px en lienzo 416x576)
+            $radius = 32;
             $final = imagecreatetruecolor($targetW, $targetH);
             imagealphablending($final, false);
             imagesavealpha($final, true);

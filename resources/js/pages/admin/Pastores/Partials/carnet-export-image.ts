@@ -31,8 +31,10 @@ export async function exportPastorCarnetPng(
     if (typeof document !== 'undefined' && document.fonts) {
         try {
             await Promise.all([
-                document.fonts.load(`bold 24px Cocogoose`),
-                document.fonts.load(`normal 16px "Aribau Grotesk"`),
+                document.fonts.load('700 24px Cocogoose'),
+                document.fonts.load('bold 24px Cocogoose'),
+                document.fonts.load('400 16px "Aribau Grotesk"'),
+                document.fonts.load('normal 16px "Aribau Grotesk"'),
             ]);
         } catch {
             // Continuar con fuentes alternativas si la API falla
@@ -61,7 +63,7 @@ export async function exportPastorCarnetPng(
         const photoY = 117 * scale;
         const photoW = 208 * scale;
         const photoH = 288 * scale;
-        const photoRadius = 14 * scale;
+        const photoRadius = 16 * scale;
 
         ctx.save();
         ctx.beginPath();
@@ -106,7 +108,7 @@ export async function exportPastorCarnetPng(
         ctx.restore();
 
         // 3. Textos Frontales Oficiales (Identidad Visual: Cocogoose Titular + Aribau Grotesk Descripción)
-        const textCenterX = 480 * scale;
+        const textCenterX = 470 * scale;
         const textMaxWidth = 430 * scale;
 
         ctx.textAlign = 'center';
@@ -117,21 +119,21 @@ export async function exportPastorCarnetPng(
 
         // Bloque 1: Identificación Titular (Debajo de franja PASTOR)
         const nombreCompleto = getPastorCarnetFullName(pastor, true);
-        const nameFontSize = nombreCompleto.length > 28 ? 16.5 * scale : (nombreCompleto.length > 22 ? 18 * scale : 19.5 * scale);
+        const nameFontSize = nombreCompleto.length > 28 ? 15 * scale : (nombreCompleto.length > 22 ? 17 * scale : 19.5 * scale);
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${nameFontSize}px Cocogoose, sans-serif`;
-        ctx.fillText(nombreCompleto, textCenterX, 222 * scale, textMaxWidth);
+        ctx.fillText(nombreCompleto, textCenterX, 223 * scale, textMaxWidth);
 
         // Documento de Identidad (Aribau Grotesk Regular, Negro Carbón)
-        ctx.fillStyle = '#1e293b';
-        ctx.font = `normal ${13.5 * scale}px "Aribau Grotesk", sans-serif`;
-        ctx.fillText(`C.I. ${formatDocumento(pastor.documento)}`, textCenterX, 248 * scale);
+        ctx.fillStyle = '#0f172a';
+        ctx.font = `normal ${13 * scale}px "Aribau Grotesk", sans-serif`;
+        ctx.fillText(`C.I. ${formatDocumento(pastor.documento)}`, textCenterX, 253 * scale);
 
         // Bloque 2: Grado Ministerial (Valor ARRIBA de la etiqueta GRADO MINISTERIAL)
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${15 * scale}px Cocogoose, sans-serif`;
         const nivel = (pastor.nivel_ministerial || 'MINISTRO ORDENADO').toUpperCase();
-        ctx.fillText(nivel, textCenterX, 292 * scale, textMaxWidth);
+        ctx.fillText(nivel, textCenterX, 283 * scale, textMaxWidth);
 
         // Bloque 3: Lugar de Trabajo (Valor ARRIBA de la etiqueta LUGAR DE TRABAJO)
         let lugarTexto = pastor.extension_nombre?.trim() || '';
@@ -148,10 +150,14 @@ export async function exportPastorCarnetPng(
             lugarTexto = lugarParts.length > 0 ? lugarParts.join(' • ') : 'REPÚBLICA BOLIVARIANA DE VENEZUELA';
         }
 
-        const lugarFontSize = lugarTexto.length > 34 ? 11.5 * scale : 13 * scale;
+        if (lugarTexto.length > 24 && /^iglesia\s+extensi[oó]n\s+/i.test(lugarTexto)) {
+            lugarTexto = lugarTexto.replace(/^iglesia\s+/i, '');
+        }
+
+        const lugarFontSize = lugarTexto.length > 28 ? 11 * scale : (lugarTexto.length > 20 ? 12.5 * scale : 14 * scale);
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${lugarFontSize}px Cocogoose, sans-serif`;
-        ctx.fillText(lugarTexto.toUpperCase(), textCenterX, 350 * scale, textMaxWidth);
+        ctx.fillText(lugarTexto.toUpperCase(), textCenterX, 347 * scale, textMaxWidth);
     } else {
         // --- CARA TRASERA (BACK) ---
         const bgUrl = customTemplateUrl || '/image/Credencial-atras.png';
