@@ -112,15 +112,15 @@ export function PastorCarnetCard({
         <div
             className={cn('relative select-none flex items-center justify-center shrink-0 overflow-visible', className)}
             style={{
-                width: `${Math.round(700 * scale)}px`,
-                height: `${Math.round(442 * scale)}px`,
+                width: `${Math.round(720 * scale)}px`,
+                height: `${Math.round(440 * scale)}px`,
             }}
         >
-            {/* Contenedor anclado al centro absoluto con perspectiva 3D */}
+            {/* Contenedor anclado al centro absoluto con perspectiva 3D (Formato Oficial 9cm x 5.5cm) */}
             <div
                 style={{
-                    width: '700px',
-                    height: '442px',
+                    width: '720px',
+                    height: '440px',
                     position: 'absolute',
                     left: '50%',
                     top: '50%',
@@ -134,7 +134,7 @@ export function PastorCarnetCard({
                 <div
                     onClick={interactive ? onFlip : undefined}
                     className={cn(
-                        'relative w-[700px] h-[442px] rounded-2xl shadow-2xl transition-transform duration-700 ease-out',
+                        'relative w-[720px] h-[440px] rounded-2xl shadow-2xl transition-transform duration-700 ease-out',
                         interactive && 'cursor-pointer hover:shadow-indigo-500/25'
                     )}
                     style={{
@@ -155,7 +155,7 @@ export function PastorCarnetCard({
                         }}
                     >
                         {/* Foto Rectangular Tipo Carnet Calibrada (Izquierda - Encaja exactamente en el marco de la plantilla) */}
-                        <div className="absolute left-[38px] top-[117px] w-[201px] h-[285px] rounded-[14px] overflow-hidden bg-transparent flex items-center justify-center">
+                        <div className="absolute left-[39px] top-[117px] w-[208px] h-[288px] rounded-[14px] overflow-hidden bg-transparent flex items-center justify-center">
                             {photoUrl && !imgError ? (
                                 <img
                                     src={photoUrl}
@@ -165,45 +165,40 @@ export function PastorCarnetCard({
                                 />
                             ) : (
                                 <div className="w-full h-full bg-transparent flex items-center justify-center">
-                                    <span className="font-black text-5xl tracking-widest select-none text-slate-500/40">
+                                    <span className="font-cocogoose font-black text-5xl tracking-widest select-none text-slate-500/40">
                                         {initials}
                                     </span>
                                 </div>
                             )}
                         </div>
 
-                        {/* Zona 1: Nombres, Cédula y Código (Debajo del banner PASTOR, encima de GRADO MINISTERIAL) */}
-                        <div className="absolute left-[255px] right-[25px] top-[192px] h-[108px] flex flex-col items-center justify-center text-center px-2">
-                            <h2 className="text-[20px] font-black uppercase leading-tight tracking-tight text-[#0c2340] line-clamp-2">
+                        {/* Bloque 1: Identificación Titular (Debajo del banner PASTOR, encima de GRADO MINISTERIAL) */}
+                        <div className="absolute left-[260px] right-[26px] top-[190px] h-[82px] flex flex-col items-center justify-center text-center px-2">
+                            <h2 className="font-cocogoose text-[19px] font-bold uppercase leading-tight tracking-tight text-black line-clamp-2">
                                 {getPastorCarnetFullName(pastor, true)}
                             </h2>
-                            <p className="text-[14px] font-extrabold text-[#1e3a8a] mt-1 tracking-wider">
+                            <p className="font-aribau text-[13.5px] font-normal text-slate-800 mt-1 tracking-wider">
                                 C.I. {formatDocumento(pastor.documento)}
                             </p>
-                            {pastor.codigo && (
-                                <span className="text-[10px] font-bold text-slate-500 tracking-wider mt-0.5">
-                                    CÓD: {pastor.codigo}
-                                </span>
-                            )}
                         </div>
 
-                        {/* Zona 2: Valor de GRADO MINISTERIAL (Centrado exactamente en el área bajo la etiqueta de la plantilla) */}
-                        <div className="absolute left-[255px] right-[25px] top-[323px] h-[38px] flex items-center justify-center px-2">
-                            <span className="text-[16px] font-black uppercase tracking-wide text-[#0c2340] text-center line-clamp-1">
+                        {/* Bloque 2: Grado Ministerial (Valor oficial en Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta GRADO MINISTERIAL) */}
+                        <div className="absolute left-[260px] right-[26px] top-[276px] h-[30px] flex items-end justify-center px-2">
+                            <span className="font-cocogoose text-[15px] font-bold uppercase tracking-wide text-black text-center line-clamp-1">
                                 {pastor.nivel_ministerial || 'MINISTRO ORDENADO'}
                             </span>
                         </div>
 
-                        {/* Zona 3: Valor de LUGAR DE TRABAJO (Nombre de la extensión donde se encuentra) */}
-                        <div className="absolute left-[255px] right-[25px] top-[382px] h-[40px] flex items-center justify-center px-2">
-                            <span className="text-[13px] font-extrabold uppercase tracking-wide text-slate-800 text-center line-clamp-2 leading-tight">
+                        {/* Bloque 3: Lugar de Trabajo (Valor oficial en Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta LUGAR DE TRABAJO) */}
+                        <div className="absolute left-[260px] right-[26px] top-[332px] h-[35px] flex items-end justify-center px-2">
+                            <span className="font-cocogoose text-[13px] font-bold uppercase tracking-wide text-black text-center line-clamp-2 leading-tight">
                                 {lugarTrabajo}
                             </span>
                         </div>
 
-                        {/* Indicador de Norma Oficial CR80 */}
-                        <div className="absolute right-4 bottom-2 text-[8px] uppercase font-semibold text-slate-400/70 tracking-wider">
-                            CR80 • 85.6 × 53.9 mm
+                        {/* Indicador de Identidad y Medida Oficial (9cm x 5.5cm) */}
+                        <div className="absolute right-4 bottom-2 text-[8px] uppercase font-aribau font-semibold text-slate-400/80 tracking-wider">
+                            90 × 55 mm • FORMATO OFICIAL
                         </div>
                     </div>
 
@@ -220,20 +215,20 @@ export function PastorCarnetCard({
                         }}
                     >
                         {/* Sección Inferior Izquierda: Nombre Titular y Cédula (zona libre bajo el texto legal) */}
-                        <div className="absolute left-[52px] top-[330px] w-[440px] text-left">
-                            <span className="text-[17px] font-bold italic text-[#0f3563] font-serif tracking-wide block leading-[22px] truncate">
+                        <div className="absolute left-[54px] top-[328px] w-[450px] text-left">
+                            <span className="font-cocogoose text-[16px] font-bold uppercase text-[#0f3563] tracking-wide block leading-[22px] truncate">
                                 {getPastorCarnetFullName(pastor, false)}
                             </span>
-                            <span className="text-[11.5px] font-medium text-slate-600 block mt-0.5">
+                            <span className="font-aribau text-[11.5px] font-medium text-slate-600 block mt-0.5">
                                 C.I. {formatDocumento(pastor.documento)}{pastor.codigo ? `  |  Cód: ${pastor.codigo}` : ''}
                             </span>
-                            <div className="mt-[14px] w-[230px] border-t border-slate-400/80 pt-1 text-[8px] uppercase font-bold text-slate-400 tracking-wider">
+                            <div className="font-aribau mt-[12px] w-[230px] border-t border-slate-400/80 pt-1 text-[8px] uppercase font-bold text-slate-500 tracking-wider">
                                 Firma del Ministro Titular
                             </div>
                         </div>
 
                         {/* Sección Inferior Derecha: Código QR Oficial de Validación (alejado de la cinta decorativa) */}
-                        <div className="absolute left-[516px] top-[300px] w-[96px] flex flex-col items-center shrink-0" title={__('Escanear para verificar credencial')}>
+                        <div className="absolute left-[530px] top-[296px] w-[96px] flex flex-col items-center shrink-0" title={__('Escanear para verificar credencial')}>
                             <div className="size-[96px] p-[6px] bg-white border border-[#e2d08a] rounded-lg shadow-sm flex items-center justify-center">
                                 <img
                                     src={qrImageUrl}
@@ -242,7 +237,7 @@ export function PastorCarnetCard({
                                     crossOrigin="anonymous"
                                 />
                             </div>
-                            <span className="text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wide mt-1 flex items-center gap-1 whitespace-nowrap">
+                            <span className="font-aribau text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wide mt-1 flex items-center gap-1 whitespace-nowrap">
                                 <QrCode className="size-2.5 text-[#d9820b]" />
                                 {__('Validar QR')}
                             </span>

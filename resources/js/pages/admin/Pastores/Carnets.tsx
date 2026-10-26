@@ -141,7 +141,7 @@ export default function PastoresCarnetsPage({
         const updateScale = () => {
             if (!viewerContainerRef.current) return;
             const w = viewerContainerRef.current.clientWidth;
-            const s = Math.min(0.92, Math.max(0.45, (w - 36) / 700));
+            const s = Math.min(0.92, Math.max(0.45, (w - 36) / 720));
             setViewerScale(Number(s.toFixed(2)));
         };
         updateScale();
@@ -456,7 +456,7 @@ export default function PastoresCarnetsPage({
                                     <div className="flex items-center gap-2">
                                         <ShieldCheck className="size-5 text-indigo-600" />
                                         <CardTitle className="text-base sm:text-lg font-bold">
-                                            {__('Estudio de Visualización CR80')}
+                                            {__('Estudio de Tarjetas de Pastorado (9 × 5.5 cm)')}
                                         </CardTitle>
                                     </div>
                                     <CardDescription className="text-xs mt-0.5">
@@ -677,7 +677,7 @@ export default function PastoresCarnetsPage({
                                                 className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 px-4 shadow-sm"
                                             >
                                                 <Download className="size-3.5" />
-                                                {__('Descargar PDF (CR80)')}
+                                                {__('Descargar PDF (9 × 5.5 cm)')}
                                             </Button>
                                         )}
                                     </div>
@@ -748,7 +748,7 @@ export default function PastoresCarnetsPage({
                                         <div>
                                             <span className="font-bold">{__('Especificación de Imprenta:')}</span>
                                             {' '}
-                                            {__('Formato estándar internacional CR80 (85.6 × 53.9 mm) calibrado a 300 DPI. Apto para PVC térmico o pliegos tiro y retiro en hoja Carta con marcas de guillotina.')}
+                                            {__('Formato oficial de Tarjeta de Pastorado (9.0 × 5.5 cm) calibrado a 300 DPI. Tipografías Cocogoose y Aribau Grotesk. Apto para PVC o pliegos tiro y retiro en hoja Carta con marcas de corte.')}
                                         </div>
                                     </div>
                                 </CardContent>
@@ -1159,7 +1159,7 @@ export default function PastoresCarnetsPage({
                                         {__('Tarjetas PVC Individuales (Zebra / Evolis)')}
                                     </h4>
                                     <p className="text-[11.5px] text-muted-foreground mt-0.5">
-                                        {__('Formato continuo de páginas CR80 (85.6 × 53.9 mm). Diseñado para impresoras térmicas de tarjetas plásticas.')}
+                                        {__('Formato individual oficial (9.0 × 5.5 cm). Diseñado para tarjetas o credenciales individuales.')}
                                     </p>
                                 </div>
                             </div>

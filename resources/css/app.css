@@ -10,8 +10,35 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Tipografías Oficiales de Identidad Institucional */
+@font-face {
+    font-family: 'Cocogoose';
+    src: url('/fonts/cocogoose-regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cocogoose';
+    src: url('/fonts/cocogoose-bold.ttf') format('truetype'),
+         url('/fonts/COCOGOOSE.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Aribau Grotesk';
+    src: url('/fonts/AribauGroteskTRIAL-Md.otf') format('opentype');
+    font-weight: 400 500;
+    font-style: normal;
+    font-display: swap;
+}
+
 @theme {
-    --font-cocogoose: 'COCOGOOSE', 'Cocogoose', sans-serif;
+    --font-cocogoose: 'Cocogoose', 'COCOGOOSE', sans-serif;
+    --font-aribau: 'Aribau Grotesk', 'Instrument Sans', sans-serif;
 
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
@@ -139,7 +166,10 @@
 
 @layer utilities {
     .font-cocogoose {
-        font-family: 'COCOGOOSE', 'Cocogoose', sans-serif;
+        font-family: 'Cocogoose', 'COCOGOOSE', sans-serif;
+    }
+    .font-aribau {
+        font-family: 'Aribau Grotesk', sans-serif;
     }
 }
 

@@ -108,8 +108,8 @@ export function PastorCarnetTemplateModal({
             const img = new Image();
             img.onload = () => {
                 setImageObj(img);
-                // Auto ajuste inteligente a relación CR80 (700x442)
-                const targetRatio = 700 / 442;
+                // Auto ajuste inteligente a relación 9cm x 5.5cm (720x440)
+                const targetRatio = 720 / 440;
                 const imgRatio = img.width / img.height;
                 if (imgRatio < targetRatio) {
                     setScale(targetRatio / imgRatio);
@@ -131,8 +131,8 @@ export function PastorCarnetTemplateModal({
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return;
 
-        const W = 700;
-        const H = 442;
+        const W = 720;
+        const H = 440;
         canvas.width = W;
         canvas.height = H;
 
@@ -220,7 +220,7 @@ export function PastorCarnetTemplateModal({
         if (!imageObj) return;
         setPanX(0);
         setPanY(0);
-        const targetRatio = 700 / 442;
+        const targetRatio = 720 / 440;
         const imgRatio = imageObj.width / imageObj.height;
         if (imgRatio < targetRatio) {
             setScale(targetRatio / imgRatio);
@@ -229,22 +229,22 @@ export function PastorCarnetTemplateModal({
         }
     };
 
-    // Guardar plantilla en el servidor (generando resolución 1011x637 a 300 DPI)
+    // Guardar plantilla en el servidor (generando resolución 1063x650 a 300 DPI para 90x55 mm)
     const handleSaveTemplate = async () => {
         if (!canvasRef.current) return;
 
         try {
             setIsSaving(true);
 
-            // Generar canvas a 300 DPI (1011 x 637 px) para imprenta
+            // Generar canvas a 300 DPI (1063 x 650 px) para imprenta oficial
             const hiResCanvas = document.createElement('canvas');
-            hiResCanvas.width = 1011;
-            hiResCanvas.height = 637;
+            hiResCanvas.width = 1063;
+            hiResCanvas.height = 650;
             const hiResCtx = hiResCanvas.getContext('2d');
             if (!hiResCtx) return;
 
             // Dibujar el contenido del canvas visual escalado al tamaño de imprenta
-            hiResCtx.drawImage(canvasRef.current, 0, 0, 1011, 637);
+            hiResCtx.drawImage(canvasRef.current, 0, 0, 1063, 650);
             const dataUrl = hiResCanvas.toDataURL('image/png');
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -417,8 +417,8 @@ export function PastorCarnetTemplateModal({
                         <div
                             className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-700/60 cursor-grab active:cursor-grabbing shrink-0"
                             style={{
-                                width: '700px',
-                                height: '442px',
+                                width: '720px',
+                                height: '440px',
                                 // Patrón ajedrezado para transparencia
                                 backgroundImage: `
                                     linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
@@ -441,9 +441,9 @@ export function PastorCarnetTemplateModal({
                                 className="w-full h-full block"
                             />
 
-                            {/* Guía de esquinas CR80 */}
+                            {/* Guía de formato oficial 90x55 mm */}
                             <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/60 text-[10px] text-white font-mono pointer-events-none">
-                                {activeTab === 'frente' ? __('Frontal CR80') : __('Reverso CR80')} • 700×442 px
+                                {activeTab === 'frente' ? __('Frontal (90×55 mm)') : __('Reverso (90×55 mm)')} • 720×440 px
                             </div>
                         </div>
 

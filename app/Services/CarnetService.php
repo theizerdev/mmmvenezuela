@@ -9,10 +9,10 @@ use BaconQrCode\Encoder\Encoder;
 class CarnetService
 {
     /**
-     * Ancho y Alto del carnet estándar CR80 en milímetros
+     * Ancho y Alto de la tarjeta oficial de pastorado en milímetros (9 cm x 5.5 cm)
      */
-    public const ANCHO_MM = 85.6;
-    public const ALTO_MM = 53.9;
+    public const ANCHO_MM = 90.0;
+    public const ALTO_MM = 55.0;
 
     /**
      * Obtiene la ruta física en disco de la plantilla frontal (personalizada o por defecto)
@@ -143,13 +143,13 @@ class CarnetService
         $fpdf->SetMargins(0, 0, 0);
 
         // Geometría calibrada simétrica para Hoja Carta (215.9 x 279.4 mm)
-        // 2 columnas x 4 filas = 8 carnets por pliego
+        // 2 columnas x 4 filas = 8 tarjetas oficiales (90 x 55 mm) por pliego
         $posX = 15.0;
-        $posY = 15.0;
-        $ancho = self::ANCHO_MM; // 85.6 mm
-        $alto = self::ALTO_MM;   // 53.9 mm
-        $gapX = 14.7; // Margen lateral simétrico exacto de 15mm en ambos lados
-        $gapY = 11.2;
+        $posY = 21.0;
+        $ancho = self::ANCHO_MM; // 90.0 mm
+        $alto = self::ALTO_MM;   // 55.0 mm
+        $gapX = 5.9; // Margen lateral simétrico exacto de 15.0 mm: 15.0 + 90.0 + 5.9 + 90.0 + 15.0 = 215.9 mm
+        $gapY = 5.8; // Margen vertical simétrico exacto de 21.0 mm: 21.0 + 4*55.0 + 3*5.8 + 21.0 = 279.4 mm
 
         $grupos = array_chunk($coleccion, 8);
 
@@ -241,15 +241,15 @@ class CarnetService
         $frenteImg = self::getRutaPlantillaFrente();
 
         if (file_exists($frenteImg)) {
-            // 1. Fondo Oficial en Alta Resolución (300 DPI - 85.6mm x 53.9mm)
+            // 1. Fondo Oficial en Alta Resolución (300 DPI - 90.0mm x 55.0mm)
             $pdf->Image($frenteImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
             // 2. Foto del Pastor Tipo Carnet Calibrada (Alineada al marco plateado de la plantilla)
             $fotoPath = $this->prepararFotoParaCarnet($pastor) ?: $this->obtenerRutaFotoPastor($pastor);
-            $fotoX = $x + 4.66;
-            $fotoY = $y + 14.32;
-            $fotoW = 24.55;
-            $fotoH = 34.83;
+            $fotoX = $x + 4.88;
+            $fotoY = $y + 14.63;
+            $fotoW = 26.00;
+            $fotoH = 36.00;
 
             // Sin borde exterior artificial (el marco plateado de la plantilla ya lo contiene)
             if ($fotoPath && file_exists($fotoPath)) {
@@ -257,22 +257,22 @@ class CarnetService
             } else {
                 // Dejar ver el fondo plateado nativo de la plantilla con iniciales sutiles
                 $pdf->SetTextColor(148, 163, 184); // Slate 400
-                $pdf->SetFont('Helvetica', 'B', 15);
+                $pdf->SetFont('Helvetica', 'B', 16);
                 $pdf->SetXY($fotoX, $fotoY + ($fotoH - 6) / 2);
                 $iniciales = mb_strtoupper(mb_substr($pastor->nombres ?? '', 0, 1) . mb_substr($pastor->apellidos ?? '', 0, 1), 'UTF-8') ?: 'P';
                 $pdf->Cell($fotoW, 6, $iniciales, 0, 0, 'C');
             }
 
-            // Contenedor Derecho Calibrado con las Zonas de la Plantilla
-            $contX = $x + 30.0;
-            $contW = 52.5;
+            // Contenedor Derecho Calibrado con las Zonas de la Identidad Oficial
+            $contX = $x + 32.5;
+            $contW = 54.5;
 
-            // 3. Zona 1: Nombres y Apellidos del Pastor (Centrado debajo de la franja PASTOR)
+            // 3. Bloque 1: Identificación Titular (Debajo de la franja PASTOR)
             $nombreCompleto = $this->obtenerNombreCompletoConTitulo($pastor, true);
             $nombreIso = $this->utf8ToPdf($nombreCompleto);
-            $pdf->SetTextColor(12, 35, 64); // Dark Navy #0c2340
+            $pdf->SetTextColor(0, 0, 0); // Pure Black #000000
 
-            $fontSize = 8.0;
+            $fontSize = 8.2;
             $pdf->SetFont('Helvetica', 'B', $fontSize);
             $textWidth = $pdf->GetStringWidth($nombreIso);
 
@@ -283,58 +283,50 @@ class CarnetService
             }
 
             if ($textWidth <= $contW) {
-                $pdf->SetXY($contX, $y + 24.5);
-                $pdf->Cell($contW, 3.2, $nombreIso, 0, 1, 'C');
+                $pdf->SetXY($contX, $y + 26.8);
+                $pdf->Cell($contW, 3.4, $nombreIso, 0, 1, 'C');
             } else {
-                $pdf->SetXY($contX, $y + 23.4);
-                $pdf->MultiCell($contW, 2.8, $nombreIso, 0, 'C');
+                $pdf->SetXY($contX, $y + 25.4);
+                $pdf->MultiCell($contW, 3.0, $nombreIso, 0, 'C');
             }
 
-            // 4. Cédula de Identidad
-            $pdf->SetFont('Helvetica', 'B', 6.6);
-            $pdf->SetTextColor(30, 58, 138); // Blue #1e3a8a
+            // 4. Documento de Identidad (Aribau Grotesk Regular, Negro Carbón)
+            $pdf->SetFont('Helvetica', '', 6.6);
+            $pdf->SetTextColor(30, 41, 59); // Slate 800
             $docFormatted = 'C.I. ' . $this->formatearDocumento($pastor->documento);
-            $pdf->SetXY($contX, $y + 28.2);
+            $pdf->SetXY($contX, $y + 30.6);
             $pdf->Cell($contW, 2.6, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
 
-            // Código adicional si existe
-            if (!empty($pastor->codigo)) {
-                $pdf->SetFont('Helvetica', 'B', 5.0);
-                $pdf->SetTextColor(100, 116, 139); // Slate 500
-                $pdf->SetXY($contX, $y + 31.0);
-                $pdf->Cell($contW, 2.0, $this->utf8ToPdf('CÓD: ' . $pastor->codigo), 0, 1, 'C');
-            }
-
-            // 5. Zona 2: Valor de GRADO MINISTERIAL (Centrado bajo el rótulo de la plantilla)
+            // 5. Bloque 2: Grado Ministerial (Valor ARRIBA de la etiqueta preimpresa GRADO MINISTERIAL)
             $pdf->SetFont('Helvetica', 'B', 7.2);
-            $pdf->SetTextColor(12, 35, 64);
+            $pdf->SetTextColor(0, 0, 0); // Pure Black
             $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
-            $pdf->SetXY($contX, $y + 40.8);
-            $pdf->Cell($contW, 3.2, $this->utf8ToPdf($nivel), 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 35.8);
+            $pdf->Cell($contW, 2.8, $this->utf8ToPdf($nivel), 0, 1, 'C');
 
-            // 6. Zona 3: Valor de LUGAR DE TRABAJO (Nombre de la extensión donde se encuentra)
+            // 6. Bloque 3: Lugar de Trabajo (Valor ARRIBA de la etiqueta preimpresa LUGAR DE TRABAJO)
             $lugar = $this->obtenerLugarTrabajo($pastor);
             $lugarUpper = mb_strtoupper($lugar, 'UTF-8');
             $lugarIso = $this->utf8ToPdf($lugarUpper);
             $lugarLen = mb_strlen($lugarUpper, 'UTF-8');
 
-            $pdf->SetTextColor(15, 23, 42); // Slate 900
+            $pdf->SetTextColor(0, 0, 0); // Pure Black
             $lugarFontSize = ($lugarLen > 36) ? 5.2 : 6.0;
             $pdf->SetFont('Helvetica', 'B', $lugarFontSize);
 
             if ($lugarLen > 36) {
-                $pdf->SetXY($contX, $y + 47.0);
-                $pdf->MultiCell($contW, 2.3, $lugarIso, 0, 'C');
+                $pdf->SetXY($contX, $y + 42.2);
+                $pdf->MultiCell($contW, 2.4, $lugarIso, 0, 'C');
             } else {
-                $pdf->SetXY($contX, $y + 47.8);
-                $pdf->Cell($contW, 3.0, $lugarIso, 0, 1, 'C');
+                $pdf->SetXY($contX, $y + 43.0);
+                $pdf->Cell($contW, 2.8, $lugarIso, 0, 1, 'C');
             }
 
-            // 7. Indicador de Norma Oficial CR80 (esquina inferior derecha)
+            // 7. Indicador de Medida Oficial 90 x 55 mm
             $pdf->SetFont('Helvetica', '', 3.8);
             $pdf->SetTextColor(148, 163, 184); // Slate 400
-            $pdf->SetXY($x + self::ANCHO_MM - 28.0, $y + self::ALTO_MM - 3.2);
-            $pdf->Cell(25.0, 2.0, 'CR80 ' . chr(183) . ' 85.6 x 53.9 MM', 0, 0, 'R');
+            $pdf->SetXY($x + self::ANCHO_MM - 32.0, $y + self::ALTO_MM - 3.0);
+            $pdf->Cell(29.0, 2.0, '90 x 55 MM ' . chr(183) . ' FORMATO OFICIAL', 0, 0, 'R');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(15, 53, 99);
@@ -374,44 +366,43 @@ class CarnetService
         $atrasImg = self::getRutaPlantillaAtras();
 
         if (file_exists($atrasImg)) {
-            // 1. Fondo Oficial Trasero (300 DPI - 85.6mm x 53.9mm)
+            // 1. Fondo Oficial Trasero (300 DPI - 90.0mm x 55.0mm)
             $pdf->Image($atrasImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
             // 2. Nombre Titular + Cédula (zona libre inferior izquierda, bajo el texto legal)
-            $pdf->SetFont('Times', 'BI', 6.4);
+            $pdf->SetFont('Helvetica', 'B', 6.6);
             $pdf->SetTextColor(15, 53, 99);
             $titular = $this->obtenerNombreCompletoConTitulo($pastor, false);
-            $pdf->SetXY($x + 6.35, $y + 40.3);
-            $pdf->Cell(53.5, 2.7, $this->utf8ToPdf($titular), 0, 1, 'L');
+            $pdf->SetXY($x + 6.8, $y + 41.0);
+            $pdf->Cell(56.0, 2.8, $this->utf8ToPdf($titular), 0, 1, 'L');
 
-            $pdf->SetFont('Helvetica', '', 4.3);
+            $pdf->SetFont('Helvetica', '', 4.5);
             $pdf->SetTextColor(71, 85, 105);
-            $pdf->SetXY($x + 6.35, $y + 43.2);
+            $pdf->SetXY($x + 6.8, $y + 44.0);
             $docTexto = 'C.I. ' . $this->formatearDocumento($pastor->documento) . ($pastor->codigo ? '  |  Cód: ' . $pastor->codigo : '');
-            $pdf->Cell(53.5, 1.9, $this->utf8ToPdf($docTexto), 0, 1, 'L');
+            $pdf->Cell(56.0, 2.0, $this->utf8ToPdf($docTexto), 0, 1, 'L');
 
             // Línea para firma del titular
             $pdf->SetDrawColor(148, 163, 184);
             $pdf->SetLineWidth(0.15);
-            $pdf->Line($x + 6.35, $y + 47.0, $x + 34.5, $y + 47.0);
+            $pdf->Line($x + 6.8, $y + 48.0, $x + 36.0, $y + 48.0);
 
-            $pdf->SetFont('Helvetica', 'B', 3.0);
+            $pdf->SetFont('Helvetica', 'B', 3.2);
             $pdf->SetTextColor(148, 163, 184);
-            $pdf->SetXY($x + 6.35, $y + 47.3);
-            $pdf->Cell(28, 1.4, 'FIRMA DEL MINISTRO TITULAR', 0, 1, 'L');
-            //$pdf->Cell(40, 2.2, mb_convert_encoding('ACREDITADO POR: MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->SetXY($x + 6.8, $y + 48.4);
+            $pdf->Cell(30, 1.6, 'FIRMA DEL MINISTRO TITULAR', 0, 1, 'L');
 
             // 3. Código QR Real de Verificación (alejado de la cinta decorativa de la esquina)
-            $qrBoxX = $x + 63.1;
-            $qrBoxY = $y + 36.6;
-            $qrBox = 11.74;
+            $qrBoxX = $x + 66.5;
+            $qrBoxY = $y + 37.0;
+            $qrBox = 12.0;
             $pdf->SetFillColor(255, 255, 255);
             $pdf->SetDrawColor(226, 208, 138);
             $pdf->SetLineWidth(0.12);
             $pdf->Rect($qrBoxX, $qrBoxY, $qrBox, $qrBox, 'DF');
 
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-            $this->dibujarCodigoQR($pdf, $qrBoxX + 0.73, $qrBoxY + 0.73, $qrBox - 1.46, $qrUrl);
+            $this->dibujarCodigoQR($pdf, $qrBoxX + 0.75, $qrBoxY + 0.75, $qrBox - 1.5, $qrUrl);
 
             $pdf->SetFont('Helvetica', 'B', 3.4);
             $pdf->SetTextColor(71, 85, 105);

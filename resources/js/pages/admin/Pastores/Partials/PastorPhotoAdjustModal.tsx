@@ -60,11 +60,11 @@ export function PastorPhotoAdjustModal({
 
     const photoUrl = pastor ? getPastorPhotoUrl(pastor.foto || (pastor as any).foto_url) : null;
 
-    // Dimensiones exactas del marco oficial de la credencial: 201 x 285 px (escalada x2 para 300 DPI: 402 x 570)
-    const FRAME_W = 201;
-    const FRAME_H = 285;
-    const CANVAS_W = 402;
-    const CANVAS_H = 570;
+    // Dimensiones exactas del marco oficial de la tarjeta (90x55 mm): 208 x 288 px (escalada x2 para 300 DPI: 416 x 576)
+    const FRAME_W = 208;
+    const FRAME_H = 288;
+    const CANVAS_W = 416;
+    const CANVAS_H = 576;
 
     useEffect(() => {
         if (!isOpen || !pastor) return;
