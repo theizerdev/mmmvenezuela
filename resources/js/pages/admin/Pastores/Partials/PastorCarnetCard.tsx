@@ -28,6 +28,21 @@ export function formatDocumento(doc?: string) {
     return clean;
 }
 
+/**
+ * Retorna el nombre completo del pastor con el prefijo "REV." si es Ministro Ordenado
+ */
+export function getPastorCarnetFullName(pastor: Pastor, uppercase = false): string {
+    const raw = `${pastor.nombres || ''} ${pastor.apellidos || ''}`.trim().replace(/\s+/g, ' ');
+    const isOrdenado = (pastor.nivel_ministerial || '').toLowerCase().includes('ordenado');
+    let fullName = raw;
+
+    if (isOrdenado && !/^rev\.?\s+/i.test(raw)) {
+        fullName = uppercase ? `REV. ${raw}` : `Rev. ${raw}`;
+    }
+
+    return uppercase ? fullName.toUpperCase() : fullName;
+}
+
 export function getPastorPhotoUrl(foto?: string | null): string | null {
     if (!foto) return null;
     const trimmed = foto.trim();
@@ -160,7 +175,7 @@ export function PastorCarnetCard({
                         {/* Zona 1: Nombres, Cédula y Código (Debajo del banner PASTOR, encima de GRADO MINISTERIAL) */}
                         <div className="absolute left-[255px] right-[25px] top-[192px] h-[108px] flex flex-col items-center justify-center text-center px-2">
                             <h2 className="text-[20px] font-black uppercase leading-tight tracking-tight text-[#0c2340] line-clamp-2">
-                                {pastor.nombres} {pastor.apellidos}
+                                {getPastorCarnetFullName(pastor, true)}
                             </h2>
                             <p className="text-[14px] font-extrabold text-[#1e3a8a] mt-1 tracking-wider">
                                 C.I. {formatDocumento(pastor.documento)}
@@ -207,7 +222,7 @@ export function PastorCarnetCard({
                         {/* Sección Inferior Izquierda: Nombre Titular y Cédula (zona libre bajo el texto legal) */}
                         <div className="absolute left-[52px] top-[330px] w-[440px] text-left">
                             <span className="text-[17px] font-bold italic text-[#0f3563] font-serif tracking-wide block leading-[22px] truncate">
-                                {pastor.nombres} {pastor.apellidos}
+                                {getPastorCarnetFullName(pastor, false)}
                             </span>
                             <span className="text-[11.5px] font-medium text-slate-600 block mt-0.5">
                                 C.I. {formatDocumento(pastor.documento)}{pastor.codigo ? `  |  Cód: ${pastor.codigo}` : ''}

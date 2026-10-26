@@ -1,5 +1,6 @@
 import type { Pastor } from '../Index';
 import { formatDocumento, getPastorPhotoUrl } from './PastorCarnetCard';
+import { formatDocumento, getPastorPhotoUrl, getPastorCarnetFullName } from './PastorCarnetCard';
 
 /**
  * Carga una imagen como HTMLImageElement de forma asíncrona
@@ -108,6 +109,7 @@ export async function exportPastorCarnetPng(
         ctx.fillStyle = '#0c2340';
         ctx.font = `900 ${20 * scale}px system-ui, -apple-system, sans-serif`;
         const nombreCompleto = `${pastor.nombres} ${pastor.apellidos}`.toUpperCase();
+        const nombreCompleto = getPastorCarnetFullName(pastor, true);
         ctx.fillText(nombreCompleto, textCenterX, 222 * scale, textMaxWidth);
 
         ctx.fillStyle = '#1e3a8a';
@@ -165,6 +167,7 @@ export async function exportPastorCarnetPng(
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText(`${pastor.nombres} ${pastor.apellidos}`, textX, textY, 440 * scale);
+        ctx.fillText(getPastorCarnetFullName(pastor, false), textX, textY, 440 * scale);
 
         ctx.fillStyle = '#475569';
         ctx.font = `500 ${11.5 * scale}px system-ui, -apple-system, sans-serif`;

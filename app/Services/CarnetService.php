@@ -268,7 +268,7 @@ class CarnetService
             $contW = 52.5;
 
             // 3. Zona 1: Nombres y Apellidos del Pastor (Centrado debajo de la franja PASTOR)
-            $nombreCompleto = mb_strtoupper($pastor->nombres . ' ' . $pastor->apellidos, 'UTF-8');
+            $nombreCompleto = $this->obtenerNombreCompletoConTitulo($pastor, true);
             $nombreIso = $this->utf8ToPdf($nombreCompleto);
             $pdf->SetTextColor(12, 35, 64); // Dark Navy #0c2340
 
@@ -380,7 +380,7 @@ class CarnetService
             // 2. Nombre Titular + Cédula (zona libre inferior izquierda, bajo el texto legal)
             $pdf->SetFont('Times', 'BI', 6.4);
             $pdf->SetTextColor(15, 53, 99);
-            $titular = $pastor->nombres . ' ' . $pastor->apellidos;
+            $titular = $this->obtenerNombreCompletoConTitulo($pastor, false);
             $pdf->SetXY($x + 6.35, $y + 40.3);
             $pdf->Cell(53.5, 2.7, $this->utf8ToPdf($titular), 0, 1, 'L');
 
@@ -794,6 +794,25 @@ class CarnetService
         }
 
         return $clean;
+    }
+
+    /**
+     * Retorna el nombre completo del pastor con el prefijo "REV." si es Ministro Ordenado
+     */
+    public function obtenerNombreCompletoConTitulo(Pastor $pastor, bool $uppercase = false): string
+    {
+        $raw = trim(($pastor->nombres ?? '') . ' ' . ($pastor->apellidos ?? ''));
+        $raw = preg_replace('/\s+/', ' ', $raw);
+        $nivel = mb_strtolower($pastor->nivel_ministerial ?? '', 'UTF-8');
+
+        $isOrdenado = str_contains($nivel, 'ordenado');
+        $nombre = $raw;
+
+        if ($isOrdenado && !preg_match('/^rev\.?\s+/i', $raw)) {
+            $nombre = $uppercase ? 'REV. ' . $raw : 'Rev. ' . $raw;
+        }
+
+        return $uppercase ? mb_strtoupper($nombre, 'UTF-8') : $nombre;
     }
 
     /**
