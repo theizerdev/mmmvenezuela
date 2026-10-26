@@ -71,6 +71,8 @@ export interface Pastor {
     nivel_ministerial: 'Pastor Asociado' | 'Laico' | 'Licenciado' | 'Ministro Ordenado' | 'Colaborador';
     zona?: string;
     distrito?: string;
+    extension_nombre?: string;
+    iglesias?: Array<{ id: number; nombre: string }>;
     cargo_nacional?: string;
     telefono_tlf?: string;
     telefono_hab?: string;
@@ -528,6 +530,18 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     colorClassName="bg-indigo-600"
                 >
                     <div className="flex flex-wrap items-center gap-2">
+                        <Link href="/admin/pastores/carnets">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                className="gap-2 bg-indigo-900/60 hover:bg-indigo-950 text-white border border-white/20 font-semibold shadow-xs cursor-pointer transition-all hover:scale-[1.02]"
+                                title={__('Centro de Carnetización y Credenciales')}
+                            >
+                                <IdCard className="size-4 text-indigo-200" />
+                                <span>{__('Carnets & Credenciales')}</span>
+                            </Button>
+                        </Link>
+
                         <Button
                             type="button"
                             variant="secondary"

@@ -15,6 +15,80 @@ class CarnetService
     public const ALTO_MM = 53.9;
 
     /**
+     * Obtiene la ruta física en disco de la plantilla frontal (personalizada o por defecto)
+     */
+    public static function getRutaPlantillaFrente(): string
+    {
+        $customImg = public_path('image/custom-Credencial-frente.png');
+        if (file_exists($customImg)) {
+            return $customImg;
+        }
+        $customStorage = public_path('storage/carnets/Credencial-frente.png');
+        if (file_exists($customStorage)) {
+            return $customStorage;
+        }
+        $customApp = storage_path('app/public/carnets/Credencial-frente.png');
+        if (file_exists($customApp)) {
+            return $customApp;
+        }
+        return public_path('image/Credencial-frente.png');
+    }
+
+    /**
+     * Obtiene la ruta física en disco de la plantilla trasera (personalizada o por defecto)
+     */
+    public static function getRutaPlantillaAtras(): string
+    {
+        $customImg = public_path('image/custom-Credencial-atras.png');
+        if (file_exists($customImg)) {
+            return $customImg;
+        }
+        $customStorage = public_path('storage/carnets/Credencial-atras.png');
+        if (file_exists($customStorage)) {
+            return $customStorage;
+        }
+        $customApp = storage_path('app/public/carnets/Credencial-atras.png');
+        if (file_exists($customApp)) {
+            return $customApp;
+        }
+        return public_path('image/Credencial-atras.png');
+    }
+
+    /**
+     * Obtiene la URL pública para frontend de la plantilla frontal
+     */
+    public static function getUrlPlantillaFrente(): string
+    {
+        $customImg = public_path('image/custom-Credencial-frente.png');
+        if (file_exists($customImg)) {
+            return '/image/custom-Credencial-frente.png?v=' . filemtime($customImg);
+        }
+        $customStorage = public_path('storage/carnets/Credencial-frente.png');
+        if (file_exists($customStorage)) {
+            return '/storage/carnets/Credencial-frente.png?v=' . filemtime($customStorage);
+        }
+        $default = public_path('image/Credencial-frente.png');
+        return '/image/Credencial-frente.png?v=' . (file_exists($default) ? filemtime($default) : '1');
+    }
+
+    /**
+     * Obtiene la URL pública para frontend de la plantilla trasera
+     */
+    public static function getUrlPlantillaAtras(): string
+    {
+        $customImg = public_path('image/custom-Credencial-atras.png');
+        if (file_exists($customImg)) {
+            return '/image/custom-Credencial-atras.png?v=' . filemtime($customImg);
+        }
+        $customStorage = public_path('storage/carnets/Credencial-atras.png');
+        if (file_exists($customStorage)) {
+            return '/storage/carnets/Credencial-atras.png?v=' . filemtime($customStorage);
+        }
+        $default = public_path('image/Credencial-atras.png');
+        return '/image/Credencial-atras.png?v=' . (file_exists($default) ? filemtime($default) : '1');
+    }
+
+    /**
      * Genera el PDF con FPDF (Cara Frontal y Trasera) de un pastor.
      */
     public function generarPdfParaPastor(Pastor $pastor, ?CarnetFpdf $fpdf = null): CarnetFpdf
@@ -37,9 +111,30 @@ class CarnetService
 
     /**
      * Genera un pliego PDF masivo en hoja Carta para múltiples pastores seleccionados usando FPDF.
+     * Soporta modos:
+     * - 'duplex': Página impar = Frentes (hasta 8), Página par = Dorsos alineados en espejo para tiro y retiro exacto.
+     * - 'front_only': Solo páginas frontales (8 por página).
+     * - 'cr80_individual': Modo tarjetas individuales para impresoras térmicas de PVC (Zebra / Evolis).
      */
-    public function generarPdfMasivo(iterable $pastores, ?CarnetFpdf $fpdf = null): CarnetFpdf
+    public function generarPdfMasivo(iterable $pastores, ?CarnetFpdf $fpdf = null, string $tipoPliego = 'duplex'): CarnetFpdf
     {
+        $coleccion = is_array($pastores) ? $pastores : iterator_to_array($pastores);
+
+        if ($tipoPliego === 'cr80_individual') {
+            if (!$fpdf) {
+                $fpdf = new CarnetFpdf('L', 'mm', [self::ANCHO_MM, self::ALTO_MM]);
+            }
+            $fpdf->SetAutoPageBreak(false);
+            $fpdf->SetMargins(0, 0, 0);
+
+            foreach ($coleccion as $pastor) {
+                $this->dibujarCaraFrontal($fpdf, $pastor);
+                $this->dibujarCaraTrasera($fpdf, $pastor);
+            }
+
+            return $fpdf;
+        }
+
         if (!$fpdf) {
             $fpdf = new CarnetFpdf('P', 'mm', 'Letter');
         }
@@ -47,35 +142,77 @@ class CarnetService
         $fpdf->SetAutoPageBreak(false);
         $fpdf->SetMargins(0, 0, 0);
 
-        $posX = 15;
-        $posY = 15;
-        $ancho = self::ANCHO_MM;
-        $alto = self::ALTO_MM;
-        $gapX = 10;
-        $gapY = 10;
-        $col = 0;
-        $row = 0;
+        // Geometría calibrada simétrica para Hoja Carta (215.9 x 279.4 mm)
+        // 2 columnas x 4 filas = 8 carnets por pliego
+        $posX = 15.0;
+        $posY = 15.0;
+        $ancho = self::ANCHO_MM; // 85.6 mm
+        $alto = self::ALTO_MM;   // 53.9 mm
+        $gapX = 14.7; // Margen lateral simétrico exacto de 15mm en ambos lados
+        $gapY = 11.2;
 
-        $fpdf->AddPage();
+        $grupos = array_chunk($coleccion, 8);
 
-        foreach ($pastores as $pastor) {
-            $x = $posX + ($col * ($ancho + $gapX));
-            $y = $posY + ($row * ($alto + $gapY));
+        foreach ($grupos as $grupo) {
+            // --- PÁGINA IMPAR: FRENTES ---
+            $fpdf->AddPage();
+            foreach ($grupo as $index => $pastor) {
+                $col = $index % 2;
+                $row = (int) floor($index / 2);
 
-            $this->dibujarCaraFrontalEnPosicion($fpdf, $pastor, $x, $y);
+                $x = $posX + ($col * ($ancho + $gapX));
+                $y = $posY + ($row * ($alto + $gapY));
 
-            $col++;
-            if ($col >= 2) {
-                $col = 0;
-                $row++;
-                if ($row >= 4) {
-                    $fpdf->AddPage();
-                    $row = 0;
+                $this->dibujarMarcasCorte($fpdf, $x, $y, $ancho, $alto);
+                $this->dibujarCaraFrontalEnPosicion($fpdf, $pastor, $x, $y);
+            }
+
+            // --- PÁGINA PAR: DORSOS (Solo si es modo dúplex) ---
+            if ($tipoPliego === 'duplex') {
+                $fpdf->AddPage();
+                foreach ($grupo as $index => $pastor) {
+                    $colFront = $index % 2;
+                    $row = (int) floor($index / 2);
+
+                    // Espejar columna para que al voltear la hoja por el borde largo coincida anverso y reverso
+                    $colBack = ($colFront === 0) ? 1 : 0;
+
+                    $x = $posX + ($colBack * ($ancho + $gapX));
+                    $y = $posY + ($row * ($alto + $gapY));
+
+                    $this->dibujarMarcasCorte($fpdf, $x, $y, $ancho, $alto);
+                    $this->dibujarCaraTraseraEnPosicion($fpdf, $pastor, $x, $y);
                 }
             }
         }
 
         return $fpdf;
+    }
+
+    /**
+     * Dibuja sutiles marcas de corte o guías de guillotina en las 4 esquinas del carnet
+     */
+    protected function dibujarMarcasCorte(CarnetFpdf $pdf, float $x, float $y, float $ancho, float $alto): void
+    {
+        $pdf->SetDrawColor(203, 213, 225); // Slate 300
+        $pdf->SetLineWidth(0.15);
+        $len = 2.5;
+
+        // Esquina superior izquierda
+        $pdf->Line($x - $len, $y, $x, $y);
+        $pdf->Line($x, $y - $len, $x, $y);
+
+        // Esquina superior derecha
+        $pdf->Line($x + $ancho, $y, $x + $ancho + $len, $y);
+        $pdf->Line($x + $ancho, $y - $len, $x + $ancho, $y);
+
+        // Esquina inferior izquierda
+        $pdf->Line($x - $len, $y + $alto, $x, $y + $alto);
+        $pdf->Line($x, $y + $alto, $x, $y + $alto + $len);
+
+        // Esquina inferior derecha
+        $pdf->Line($x + $ancho, $y + $alto, $x + $ancho + $len, $y + $alto);
+        $pdf->Line($x + $ancho, $y + $alto, $x + $ancho, $y + $alto + $len);
     }
 
     /**
@@ -101,71 +238,80 @@ class CarnetService
      */
     public function dibujarCaraFrontalEnPosicion(CarnetFpdf $pdf, Pastor $pastor, float $x, float $y): void
     {
-        $frenteImg = public_path('image/Credencial-frente.png');
+        $frenteImg = self::getRutaPlantillaFrente();
 
         if (file_exists($frenteImg)) {
             // 1. Fondo Oficial en Alta Resolución (300 DPI - 85.6mm x 53.9mm)
             $pdf->Image($frenteImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-            // 2. Foto del Pastor Tipo Carnet Calibrada
+            // 2. Foto del Pastor Tipo Carnet Calibrada (Alineada al marco plateado de la plantilla)
             $fotoPath = $this->obtenerRutaFotoPastor($pastor);
-            $fotoX = $x + 5.5;
-            $fotoY = $y + 15.5;
-            $fotoW = 21.8;
-            $fotoH = 27.8;
+            $fotoX = $x + 4.66;
+            $fotoY = $y + 14.32;
+            $fotoW = 24.55;
+            $fotoH = 34.83;
 
-            // Borde / marco blanco fino protector
-            $pdf->SetFillColor(255, 255, 255);
-            $pdf->Rect($fotoX - 0.4, $fotoY - 0.4, $fotoW + 0.8, $fotoH + 0.8, 'F');
-
+            // Sin borde exterior artificial (el marco plateado de la plantilla ya lo contiene)
             if ($fotoPath && file_exists($fotoPath)) {
                 $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
             } else {
-                $pdf->SetFillColor(15, 30, 60);
+                $pdf->SetFillColor(12, 35, 64);
                 $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH, 'F');
                 $pdf->SetTextColor(255, 255, 255);
-                $pdf->SetFont('Helvetica', 'B', 13);
-                $pdf->SetXY($fotoX, $fotoY + 11);
+                $pdf->SetFont('Helvetica', 'B', 14);
+                $pdf->SetXY($fotoX, $fotoY + 14);
                 $iniciales = mb_strtoupper(mb_substr($pastor->nombres ?? '', 0, 1) . mb_substr($pastor->apellidos ?? '', 0, 1), 'UTF-8') ?: 'P';
                 $pdf->Cell($fotoW, 6, $iniciales, 0, 0, 'C');
             }
 
-            // 3. Nombres y Apellidos del Pastor (Vectorial Nítido)
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetFont('Helvetica', 'B', 9.0);
+            // Contenedor Derecho Calibrado con las Zonas de la Plantilla
+            $contX = $x + 31.0;
+            $contW = 51.5;
+
+            // 3. Zona 1: Nombres y Apellidos del Pastor (Centrado debajo de la franja PASTOR)
+            $pdf->SetTextColor(12, 35, 64); // Dark Navy #0c2340
+            $pdf->SetFont('Helvetica', 'B', 8.2);
 
             $nombreCompleto = mb_strtoupper($pastor->nombres . ' ' . $pastor->apellidos, 'UTF-8');
-            $pdf->SetXY($x + 30.5, $y + 16.8);
-            $pdf->MultiCell(52, 3.8, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'L');
+            $pdf->SetXY($contX, $y + 24.0);
+            $pdf->MultiCell($contW, 3.4, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'C');
 
             // 4. Cédula de Identidad
+            $pdf->SetFont('Helvetica', 'B', 6.8);
+            $pdf->SetTextColor(30, 58, 138); // Blue #1e3a8a
+            $docFormatted = 'C.I. ' . $this->formatearDocumento($pastor->documento);
+            $pdf->SetXY($contX, $pdf->GetY() + 0.6);
+            $pdf->Cell($contW, 2.8, mb_convert_encoding($docFormatted, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+
+            // Código adicional si existe
+            if (!empty($pastor->codigo)) {
+                $pdf->SetFont('Helvetica', 'B', 5.2);
+                $pdf->SetTextColor(100, 116, 139); // Slate 500
+                $pdf->SetXY($contX, $pdf->GetY() + 0.2);
+                $pdf->Cell($contW, 2.2, mb_convert_encoding('CÓD: ' . $pastor->codigo, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+            }
+
+            // 5. Zona 2: Valor de GRADO MINISTERIAL (Centrado bajo el rótulo de la plantilla)
             $pdf->SetFont('Helvetica', 'B', 7.5);
-            $pdf->SetTextColor(165, 243, 252);
-            $docFormatted = $this->formatearDocumento($pastor->documento);
-            $pdf->SetXY($x + 30.5, $pdf->GetY() + 0.6);
-            $pdf->Cell(52, 3.2, mb_convert_encoding($docFormatted, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-
-            // 5. Acreditación Ministerial & Grado
-            $pdf->SetXY($x + 30.5, $pdf->GetY() + 1.8);
-            $pdf->SetFont('Helvetica', '', 5.8);
-            $pdf->SetTextColor(220, 235, 255);
-            $pdf->Cell(52, 2.5, mb_convert_encoding('ACREDITACIÓN MINISTERIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
-
-            $pdf->SetFont('Helvetica', 'B', 8.2);
-            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetTextColor(12, 35, 64);
             $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
-            $pdf->SetXY($x + 30.5, $pdf->GetY());
-            $pdf->Cell(52, 3.4, mb_convert_encoding($nivel, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->SetXY($contX, $y + 39.8);
+            $pdf->Cell($contW, 3.5, mb_convert_encoding($nivel, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
 
-            // 6. Información adicional (Zona y Código)
-            $detalles = [];
-            if ($pastor->zona) $detalles[] = 'Zona: ' . $pastor->zona;
-            if ($pastor->codigo) $detalles[] = 'Cód: ' . $pastor->codigo;
-            if (!empty($detalles)) {
-                $pdf->SetXY($x + 30.5, $pdf->GetY() + 1.2);
-                $pdf->SetFont('Helvetica', 'B', 5.8);
-                $pdf->SetTextColor(186, 230, 253);
-                $pdf->Cell(52, 2.8, mb_convert_encoding(implode('  |  ', $detalles), 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            // 6. Zona 3: Valor de LUGAR DE TRABAJO (Nombre de la extensión donde se encuentra)
+            $lugar = $this->obtenerLugarTrabajo($pastor);
+            $lugarUpper = mb_strtoupper($lugar, 'UTF-8');
+            $lugarLen = mb_strlen($lugarUpper, 'UTF-8');
+
+            $pdf->SetTextColor(30, 41, 59); // Slate 800
+            if ($lugarLen > 34) {
+                $pdf->SetFont('Helvetica', 'B', 5.6);
+                $pdf->SetXY($contX, $y + 46.5);
+                $pdf->MultiCell($contW, 2.5, mb_convert_encoding($lugarUpper, 'ISO-8859-1', 'UTF-8'), 0, 'C');
+            } else {
+                $pdf->SetFont('Helvetica', 'B', 6.6);
+                $pdf->SetXY($contX, $y + 47.1);
+                $pdf->Cell($contW, 3.5, mb_convert_encoding($lugarUpper, 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
             }
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
@@ -203,43 +349,52 @@ class CarnetService
      */
     public function dibujarCaraTraseraEnPosicion(CarnetFpdf $pdf, Pastor $pastor, float $x, float $y): void
     {
-        $atrasImg = public_path('image/Credencial-atras.png');
+        $atrasImg = self::getRutaPlantillaAtras();
 
         if (file_exists($atrasImg)) {
             // 1. Fondo Oficial Trasero (300 DPI - 85.6mm x 53.9mm)
             $pdf->Image($atrasImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-            // 2. Nombre Titular + Cédula (Zona inferior izquierda en fondo blanco)
-            $pdf->SetFont('Times', 'I', 7.5);
+            // 2. Nombre Titular + Cédula (zona libre inferior izquierda, bajo el texto legal)
+            $pdf->SetFont('Times', 'BI', 6.4);
             $pdf->SetTextColor(15, 53, 99);
             $titular = $pastor->nombres . ' ' . $pastor->apellidos;
-            $pdf->SetXY($x + 7.5, $y + 36.5);
-            $pdf->Cell(54, 3.5, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->SetXY($x + 6.35, $y + 40.3);
+            $pdf->Cell(53.5, 2.7, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-            $pdf->SetFont('Helvetica', '', 5.8);
+            $pdf->SetFont('Helvetica', '', 4.3);
             $pdf->SetTextColor(71, 85, 105);
-            $pdf->SetXY($x + 7.5, $y + 40.0);
-            $docTexto = 'C.I. ' . $this->formatearDocumento($pastor->documento) . ($pastor->codigo ? ' | Cód: ' . $pastor->codigo : '');
-            $pdf->Cell(54, 3.0, mb_convert_encoding($docTexto, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->SetXY($x + 6.35, $y + 43.2);
+            $docTexto = 'C.I. ' . $this->formatearDocumento($pastor->documento) . ($pastor->codigo ? '  |  Cód: ' . $pastor->codigo : '');
+            $pdf->Cell(53.5, 1.9, mb_convert_encoding($docTexto, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-            // Línea para firma o sello acreditado
-            $pdf->SetDrawColor(203, 213, 225);
-            $pdf->SetLineWidth(0.2);
-            $pdf->Line($x + 7.5, $y + 47.0, $x + 48.0, $y + 47.0);
+            // Línea para firma del titular
+            $pdf->SetDrawColor(148, 163, 184);
+            $pdf->SetLineWidth(0.15);
+            $pdf->Line($x + 6.35, $y + 47.0, $x + 34.5, $y + 47.0);
 
-            $pdf->SetFont('Helvetica', '', 4.2);
+            $pdf->SetFont('Helvetica', 'B', 3.0);
             $pdf->SetTextColor(148, 163, 184);
-            $pdf->SetXY($x + 7.5, $y + 47.5);
+            $pdf->SetXY($x + 6.35, $y + 47.3);
+            $pdf->Cell(28, 1.4, mb_convert_encoding('FIRMA DEL MINISTRO TITULAR', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
             //$pdf->Cell(40, 2.2, mb_convert_encoding('ACREDITADO POR: MOVIMIENTO MISIONERO MUNDIAL', 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
 
-            // 3. Código QR Real de Verificación (Zona inferior derecha en fondo blanco)
-            $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-            $this->dibujarCodigoQR($pdf, $x + 64.5, $y + 33.0, 14.5, $qrUrl);
+            // 3. Código QR Real de Verificación (alejado de la cinta decorativa de la esquina)
+            $qrBoxX = $x + 63.1;
+            $qrBoxY = $y + 36.6;
+            $qrBox = 11.74;
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->SetDrawColor(226, 208, 138);
+            $pdf->SetLineWidth(0.12);
+            $pdf->Rect($qrBoxX, $qrBoxY, $qrBox, $qrBox, 'DF');
 
-            $pdf->SetFont('Helvetica', 'B', 4.5);
+            $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
+            $this->dibujarCodigoQR($pdf, $qrBoxX + 0.73, $qrBoxY + 0.73, $qrBox - 1.46, $qrUrl);
+
+            $pdf->SetFont('Helvetica', 'B', 3.4);
             $pdf->SetTextColor(71, 85, 105);
-            $pdf->SetXY($x + 64.5, $y + 48.2);
-            $pdf->Cell(14.5, 2.2, 'VALIDAR QR', 0, 0, 'C');
+            $pdf->SetXY($qrBoxX, $qrBoxY + $qrBox + 0.3);
+            $pdf->Cell($qrBox, 1.6, 'VALIDAR QR', 0, 0, 'C');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(255, 255, 255);
@@ -423,6 +578,22 @@ class CarnetService
         }
 
         return null;
+    }
+
+    /**
+     * Obtiene el nombre del lugar de trabajo para la credencial (Extensión o Zona).
+     */
+    public function obtenerLugarTrabajo(Pastor $pastor): string
+    {
+        if (!empty($pastor->extension_nombre)) {
+            return trim($pastor->extension_nombre);
+        }
+
+        $lugarParts = [];
+        if (!empty($pastor->zona)) $lugarParts[] = 'ZONA ' . $pastor->zona;
+        if (!empty($pastor->distrito)) $lugarParts[] = $pastor->distrito;
+
+        return !empty($lugarParts) ? implode(' - ', $lugarParts) : 'REPÚBLICA BOLIVARIANA DE VENEZUELA';
     }
 
     /**

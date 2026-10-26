@@ -101,7 +101,7 @@ class Pastor extends Model
         'edad' => 'integer',
     ];
 
-    protected $appends = ['nombre_completo', 'foto_url', 'foto_cedula_url'];
+    protected $appends = ['nombre_completo', 'foto_url', 'foto_cedula_url', 'extension_nombre'];
 
     /**
      * Generar código de pastor (11 a 15 dígitos):
@@ -284,6 +284,57 @@ class Pastor extends Model
     public function iglesiasPrincipales()
     {
         return $this->hasMany(Iglesia::class, 'pastor_id');
+    }
+
+    /**
+     * Nombre de la extensión / iglesia donde labora el pastor (para credenciales y visualización).
+     */
+    public function getExtensionNombreAttribute(): ?string
+    {
+        // 1. Iglesia donde figura como pastor titular o principal
+        $principal = $this->relationLoaded('iglesiasPrincipales')
+            ? $this->iglesiasPrincipales->first()
+            : $this->iglesiasPrincipales()->first();
+
+        if ($principal && !empty($principal->nombre)) {
+            return trim($principal->nombre);
+        }
+
+        // 2. Iglesia asignada a través de la tabla pivote (iglesia_pastor)
+        $pivot = $this->relationLoaded('iglesias')
+            ? $this->iglesias->first()
+            : $this->iglesias()->first();
+
+        if ($pivot && !empty($pivot->nombre)) {
+            return trim($pivot->nombre);
+        }
+
+        // 3. Heredada del cónyuge ministerial
+        if ($this->conyuge_id) {
+            $conyuge = $this->relationLoaded('conyuge')
+                ? $this->conyuge
+                : $this->conyuge()->with(['iglesiasPrincipales', 'iglesias'])->first();
+
+            if ($conyuge) {
+                $cPrincipal = $conyuge->relationLoaded('iglesiasPrincipales')
+                    ? $conyuge->iglesiasPrincipales->first()
+                    : $conyuge->iglesiasPrincipales()->first();
+
+                if ($cPrincipal && !empty($cPrincipal->nombre)) {
+                    return trim($cPrincipal->nombre);
+                }
+
+                $cPivot = $conyuge->relationLoaded('iglesias')
+                    ? $conyuge->iglesias->first()
+                    : $conyuge->iglesias()->first();
+
+                if ($cPivot && !empty($cPivot->nombre)) {
+                    return trim($cPivot->nombre);
+                }
+            }
+        }
+
+        return null;
     }
 
     public function asistencias(): HasMany

@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/pastores', [PastorController::class, 'index'])->name('pastores.index');
+    Route::get('/pastores/carnets', [PastorCarnetController::class, 'carnets'])->name('pastores.carnets');
+    Route::post('/pastores/carnets/guardar-plantilla', [PastorCarnetController::class, 'guardarPlantilla'])->name('pastores.carnets.guardar-plantilla');
+    Route::post('/pastores/carnets/restablecer-plantilla', [PastorCarnetController::class, 'restablecerPlantilla'])->name('pastores.carnets.restablecer-plantilla');
+    Route::post('/pastores/{id}/actualizar-foto', [PastorCarnetController::class, 'actualizarFotoPastor'])->name('pastores.actualizar-foto');
     Route::get('/pastores/export', [PastorExportController::class, 'export'])->name('pastores.export');
     Route::get('/pastores/create', [PastorController::class, 'create'])->name('pastores.create');
     Route::post('/pastores', [PastorController::class, 'store'])->name('pastores.store');

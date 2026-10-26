@@ -40,13 +40,141 @@ class PastorCarnetController extends Controller
     }
 
     /**
+     * Interfaz gráfica interactiva para el Centro de Carnetización y Emisión de Credenciales
+     */
+    public function carnets(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $query = Pastor::query();
+
+        // Filtro por búsqueda de texto
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombres', 'like', "%{$search}%")
+                  ->orWhere('apellidos', 'like', "%{$search}%")
+                  ->orWhere('documento', 'like', "%{$search}%")
+                  ->orWhere('codigo', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtro por zona
+        if ($zona = $request->input('zona')) {
+            $cleanZona = preg_replace('/\D/', '', $zona);
+            $query->where(function ($q) use ($zona, $cleanZona) {
+                $q->where('zona', $zona);
+                if ($cleanZona) {
+                    $q->orWhere('zona', $cleanZona)
+                      ->orWhere('zona', 'Zona ' . $cleanZona);
+                }
+            });
+        }
+
+        // Filtro por distrito
+        if ($distrito = $request->input('distrito')) {
+            $cleanDistrito = preg_replace('/\D/', '', $distrito);
+            $query->where(function ($q) use ($distrito, $cleanDistrito) {
+                $q->where('distrito', $distrito);
+                if ($cleanDistrito) {
+                    $q->orWhere('distrito', $cleanDistrito)
+                      ->orWhere('distrito', 'Distrito ' . $cleanDistrito);
+                }
+            });
+        }
+
+        // Filtro por nivel ministerial
+        if ($nivel = $request->input('nivel_ministerial')) {
+            $query->where('nivel_ministerial', $nivel);
+        }
+
+        // Filtro por foto
+        if ($request->input('con_foto') === 'si') {
+            $query->whereNotNull('foto')->where('foto', '!=', '');
+        } elseif ($request->input('con_foto') === 'no') {
+            $query->where(function ($q) {
+                $q->whereNull('foto')->orWhere('foto', '');
+            });
+        }
+
+        // Filtro por estatus
+        if ($request->filled('status')) {
+            $query->where('status', (bool) $request->input('status'));
+        }
+
+        // Estadísticas para el encabezado del módulo
+        $stats = [
+            'total' => Pastor::count(),
+            'con_foto' => Pastor::whereNotNull('foto')->where('foto', '!=', '')->count(),
+            'sin_foto' => Pastor::where(function ($q) {
+                $q->whereNull('foto')->orWhere('foto', '');
+            })->count(),
+            'ordenados' => Pastor::where('nivel_ministerial', 'Ministro Ordenado')->count(),
+        ];
+
+        $perPage = (int) $request->input('per_page', 40);
+        $pastores = $query->with([
+            'iglesiasPrincipales:id,nombre,pastor_id',
+            'iglesias:id,nombre',
+            'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
+            'conyuge.iglesias:id,nombre',
+        ])
+        ->orderBy('nombres', 'asc')
+        ->paginate($perPage)
+        ->withQueryString();
+
+        // Pastor preseleccionado para el visor
+        $selectedPastorId = $request->input('pastor_id');
+        $initialPastor = null;
+        if ($selectedPastorId) {
+            $initialPastor = Pastor::with([
+                'iglesiasPrincipales:id,nombre,pastor_id',
+                'iglesias:id,nombre',
+                'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
+                'conyuge.iglesias:id,nombre',
+            ])->find($selectedPastorId);
+        }
+        if (!$initialPastor && $pastores->count() > 0) {
+            $initialPastor = $pastores->first();
+        }
+
+        return Inertia::render('admin/Pastores/Carnets', [
+            'pastores' => $pastores,
+            'stats' => $stats,
+            'filters' => [
+                'search' => $request->input('search', ''),
+                'zona' => $request->input('zona', ''),
+                'distrito' => $request->input('distrito', ''),
+                'nivel_ministerial' => $request->input('nivel_ministerial', ''),
+                'con_foto' => $request->input('con_foto', ''),
+                'status' => $request->input('status', ''),
+                'per_page' => (string) $perPage,
+            ],
+            'initialPastor' => $initialPastor,
+            'plantillas' => [
+                'frente' => CarnetService::getUrlPlantillaFrente(),
+                'atras' => CarnetService::getUrlPlantillaAtras(),
+                'esPersonalizadaFrente' => file_exists(public_path('image/custom-Credencial-frente.png')) || file_exists(storage_path('app/public/carnets/Credencial-frente.png')),
+                'esPersonalizadaAtras' => file_exists(public_path('image/custom-Credencial-atras.png')) || file_exists(storage_path('app/public/carnets/Credencial-atras.png')),
+            ],
+        ]);
+    }
+
+    /**
      * Descargar / Previsualizar el PDF del carnet de un pastor (Frontal + Trasero)
      */
     public function carnetPdf(int $id)
     {
         $this->autorizarDescargaPdf();
 
-        $pastor = Pastor::findOrFail($id);
+        $pastor = Pastor::with([
+            'iglesiasPrincipales:id,nombre,pastor_id',
+            'iglesias:id,nombre',
+            'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
+            'conyuge.iglesias:id,nombre',
+        ])->findOrFail($id);
 
         $fpdf = new CarnetFpdf('L', 'mm', [CarnetService::ANCHO_MM, CarnetService::ALTO_MM]);
         $this->carnetService->generarPdfParaPastor($pastor, $fpdf);
@@ -68,18 +196,182 @@ class PastorCarnetController extends Controller
         $request->validate([
             'ids' => 'required|array|min:1',
             'ids.*' => 'integer|exists:pastores,id',
+            'tipo_pliego' => 'nullable|string|in:duplex,front_only,cr80_individual',
         ]);
 
-        $pastores = Pastor::whereIn('id', $request->input('ids'))->get();
+        $tipoPliego = $request->input('tipo_pliego', 'duplex');
+        $pastores = Pastor::with([
+            'iglesiasPrincipales:id,nombre,pastor_id',
+            'iglesias:id,nombre',
+            'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
+            'conyuge.iglesias:id,nombre',
+        ])->whereIn('id', $request->input('ids'))->get();
 
-        $fpdf = new CarnetFpdf('P', 'mm', 'Letter');
-        $this->carnetService->generarPdfMasivo($pastores, $fpdf);
+        $fpdf = ($tipoPliego === 'cr80_individual')
+            ? new CarnetFpdf('L', 'mm', [CarnetService::ANCHO_MM, CarnetService::ALTO_MM])
+            : new CarnetFpdf('P', 'mm', 'Letter');
 
-        $nombreArchivo = 'carnets_pastores_masivo.pdf';
+        $this->carnetService->generarPdfMasivo($pastores, $fpdf, $tipoPliego);
+
+        $nombreArchivo = 'carnets_pastores_' . $tipoPliego . '.pdf';
 
         return response($fpdf->Output('S', $nombreArchivo))
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="' . $nombreArchivo . '"');
+    }
+
+    /**
+     * Guarda la imagen modelo personalizada para la plantilla frontal o trasera del carnet
+     */
+    public function guardarPlantilla(Request $request)
+    {
+        $this->autorizarDescargaPdf();
+
+        $request->validate([
+            'tipo' => 'required|string|in:frente,atras',
+            'imagen' => 'required|string',
+        ]);
+
+        $tipo = $request->input('tipo');
+        $dataUri = $request->input('imagen');
+
+        if (!preg_match('/^data:image\/(\w+);base64,/', $dataUri, $matches)) {
+            return response()->json(['error' => 'Formato de imagen inválido'], 422);
+        }
+
+        $base64Data = substr($dataUri, strpos($dataUri, ',') + 1);
+        $decoded = base64_decode($base64Data);
+
+        if ($decoded === false) {
+            return response()->json(['error' => 'No se pudo decodificar la imagen'], 422);
+        }
+
+        $dirStorageApp = storage_path('app/public/carnets');
+        if (!file_exists($dirStorageApp)) {
+            mkdir($dirStorageApp, 0755, true);
+        }
+
+        $dirPublicStorage = public_path('storage/carnets');
+        if (!file_exists($dirPublicStorage)) {
+            mkdir($dirPublicStorage, 0755, true);
+        }
+
+        $dirPublicImage = public_path('image');
+        if (!file_exists($dirPublicImage)) {
+            mkdir($dirPublicImage, 0755, true);
+        }
+
+        $filename = ($tipo === 'frente') ? 'Credencial-frente.png' : 'Credencial-atras.png';
+        
+        // Guardar en todas las ubicaciones posibles para máxima compatibilidad con Apache/Laragon
+        file_put_contents($dirPublicImage . '/custom-' . $filename, $decoded);
+        file_put_contents($dirPublicStorage . '/' . $filename, $decoded);
+        file_put_contents($dirStorageApp . '/' . $filename, $decoded);
+
+        $url = ($tipo === 'frente')
+            ? CarnetService::getUrlPlantillaFrente()
+            : CarnetService::getUrlPlantillaAtras();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Plantilla ' . ($tipo === 'frente' ? 'frontal' : 'trasera') . ' guardada con éxito',
+            'url' => $url,
+            'tipo' => $tipo,
+        ]);
+    }
+
+    /**
+     * Restablece la plantilla a la versión oficial original
+     */
+    public function restablecerPlantilla(Request $request)
+    {
+        $this->autorizarDescargaPdf();
+
+        $tipo = $request->input('tipo', 'ambas');
+        $filesToDelete = [];
+
+        if ($tipo === 'frente' || $tipo === 'ambas') {
+            $filesToDelete[] = public_path('image/custom-Credencial-frente.png');
+            $filesToDelete[] = public_path('storage/carnets/Credencial-frente.png');
+            $filesToDelete[] = storage_path('app/public/carnets/Credencial-frente.png');
+        }
+
+        if ($tipo === 'atras' || $tipo === 'ambas') {
+            $filesToDelete[] = public_path('image/custom-Credencial-atras.png');
+            $filesToDelete[] = public_path('storage/carnets/Credencial-atras.png');
+            $filesToDelete[] = storage_path('app/public/carnets/Credencial-atras.png');
+        }
+
+        foreach ($filesToDelete as $file) {
+            if (file_exists($file)) {
+                @unlink($file);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Plantilla(s) restablecida(s) a la versión oficial por defecto',
+            'frenteUrl' => CarnetService::getUrlPlantillaFrente(),
+            'atrasUrl' => CarnetService::getUrlPlantillaAtras(),
+        ]);
+    }
+
+    /**
+     * Actualizar o recortar foto de un pastor directamente desde el Carnet Studio
+     */
+    public function actualizarFotoPastor(Request $request, int $id)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $pastor = Pastor::findOrFail($id);
+
+        $request->validate([
+            'foto' => 'required|string',
+        ]);
+
+        $dataUri = $request->input('foto');
+
+        if (!preg_match('/^data:image\/(\w+);base64,/', $dataUri, $matches)) {
+            return response()->json(['error' => 'Formato de imagen inválido'], 422);
+        }
+
+        $ext = strtolower($matches[1]);
+        if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp'])) {
+            $ext = 'png';
+        }
+
+        $base64Data = substr($dataUri, strpos($dataUri, ',') + 1);
+        $decoded = base64_decode($base64Data);
+
+        if ($decoded === false) {
+            return response()->json(['error' => 'Error al decodificar imagen'], 422);
+        }
+
+        $destDir = public_path('pastores');
+        if (!file_exists($destDir)) {
+            mkdir($destDir, 0755, true);
+        }
+
+        $cleanCodigo = preg_replace('/\D/', '', $pastor->codigo ?: $pastor->id);
+        $filename = 'pastor_' . $cleanCodigo . '_' . time() . '.' . $ext;
+        file_put_contents($destDir . '/' . $filename, $decoded);
+
+        if ($pastor->foto && !str_starts_with($pastor->foto, 'http') && file_exists(public_path('pastores/' . basename($pastor->foto)))) {
+            @unlink(public_path('pastores/' . basename($pastor->foto)));
+        }
+
+        $pastor->foto = $filename;
+        $pastor->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fotografía del pastor actualizada con éxito',
+            'foto' => $pastor->foto,
+            'foto_url' => '/' . 'pastores/' . $filename . '?v=' . time(),
+        ]);
     }
 
     /**
