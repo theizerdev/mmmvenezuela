@@ -355,56 +355,44 @@ class CarnetService
             // 1. Fondo Oficial Trasero (300 DPI - 90.0mm x 55.0mm)
             $pdf->Image($atrasImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-            // 2. Nombre Titular + Cédula (zona libre inferior izquierda, bajo el texto legal)
-            $pdf->SetFont('Helvetica', 'B', 6.6);
-            $pdf->SetTextColor(15, 53, 99);
+            // 2. Nombre Titular en Cursiva (zona libre inferior izquierda, idéntico a ejemplo.png)
+            $pdf->SetFont('Helvetica', 'I', 7.5);
+            $pdf->SetTextColor(0, 0, 0);
             $titular = $this->obtenerNombreCompletoConTitulo($pastor, false);
-            $pdf->SetXY($x + 6.8, $y + 41.0);
-            $pdf->Cell(56.0, 2.8, $this->utf8ToPdf($titular), 0, 1, 'L');
+            $pdf->SetXY($x + 9.0, $y + 42.6);
+            $pdf->Cell(56.0, 3.2, $this->utf8ToPdf($titular), 0, 1, 'L');
 
-            $pdf->SetFont('Helvetica', '', 4.5);
-            $pdf->SetTextColor(71, 85, 105);
-            $pdf->SetXY($x + 6.8, $y + 44.0);
-            $docTexto = 'C.I. ' . $this->formatearDocumento($pastor->documento) . ($pastor->codigo ? '  |  Cód: ' . $pastor->codigo : '');
-            $pdf->Cell(56.0, 2.0, $this->utf8ToPdf($docTexto), 0, 1, 'L');
+            // 3. Ubicación: Lugar - Zona - Distrito (Mayúsculas)
+            $pdf->SetFont('Helvetica', 'B', 5.0);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY($x + 9.0, $y + 45.4);
+            $lugarReverso = $this->obtenerLugarReverso($pastor);
+            $pdf->Cell(56.0, 2.4, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
 
-            // Línea para firma del titular
-            $pdf->SetDrawColor(148, 163, 184);
-            $pdf->SetLineWidth(0.15);
-            $pdf->Line($x + 6.8, $y + 48.0, $x + 36.0, $y + 48.0);
-
-            $pdf->SetFont('Helvetica', 'B', 3.2);
-            $pdf->SetTextColor(148, 163, 184);
-            $pdf->SetXY($x + 6.8, $y + 48.4);
-            $pdf->Cell(30, 1.6, 'FIRMA DEL MINISTRO TITULAR', 0, 1, 'L');
-
-            // 3. Código QR Real de Verificación (alejado de la cinta decorativa de la esquina)
-            $qrBoxX = $x + 66.5;
-            $qrBoxY = $y + 37.0;
-            $qrBox = 12.0;
-            $pdf->SetFillColor(255, 255, 255);
-            $pdf->SetDrawColor(226, 208, 138);
-            $pdf->SetLineWidth(0.12);
-            $pdf->Rect($qrBoxX, $qrBoxY, $qrBox, $qrBox, 'DF');
-
+            // 4. Código QR Oficial de Validación (Esquina inferior derecha)
+            $qrX = $x + 67.5;
+            $qrY = $y + 36.8;
+            $qrSize = 11.5;
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-            $this->dibujarCodigoQR($pdf, $qrBoxX + 0.75, $qrBoxY + 0.75, $qrBox - 1.5, $qrUrl);
-
-            $pdf->SetFont('Helvetica', 'B', 3.4);
-            $pdf->SetTextColor(71, 85, 105);
-            $pdf->SetXY($qrBoxX, $qrBoxY + $qrBox + 0.3);
-            $pdf->Cell($qrBox, 1.6, 'VALIDAR QR', 0, 0, 'C');
+            $this->dibujarCodigoQR($pdf, $qrX, $qrY, $qrSize, $qrUrl);
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(255, 255, 255);
             $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
-            $pdf->SetFont('Times', 'I', 7.5);
-            $pdf->SetTextColor(15, 53, 99);
-            $titular = $pastor->nombres . ' ' . $pastor->apellidos;
-            $pdf->SetXY($x + 8, $y + 44);
-            $pdf->Cell(52, 4, mb_convert_encoding($titular, 'ISO-8859-1', 'UTF-8'), 0, 1, 'L');
+            $pdf->SetFont('Helvetica', 'I', 7.5);
+            $pdf->SetTextColor(0, 0, 0);
+            $titular = $this->obtenerNombreCompletoConTitulo($pastor, false);
+            $pdf->SetXY($x + 9.0, $y + 42.6);
+            $pdf->Cell(56.0, 3.2, $this->utf8ToPdf($titular), 0, 1, 'L');
+
+            $pdf->SetFont('Helvetica', 'B', 5.0);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY($x + 9.0, $y + 45.4);
+            $lugarReverso = $this->obtenerLugarReverso($pastor);
+            $pdf->Cell(56.0, 2.4, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
+
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-            $this->dibujarCodigoQR($pdf, $x + 63.5, $y + 33.5, 15, $qrUrl);
+            $this->dibujarCodigoQR($pdf, $x + 67.5, $y + 36.8, 11.5, $qrUrl);
         }
     }
 
@@ -758,6 +746,47 @@ class CarnetService
         if (!empty($pastor->distrito)) $lugarParts[] = $pastor->distrito;
 
         return !empty($lugarParts) ? implode(' - ', $lugarParts) : 'REPÚBLICA BOLIVARIANA DE VENEZUELA';
+    }
+
+    /**
+     * Obtiene la línea de ubicación inferior del reverso (ej: CARACAS - ZONA 1- DISTRITO 1)
+     */
+    public function obtenerLugarReverso(Pastor $pastor): string
+    {
+        $lugar = '';
+        if (!empty($pastor->estado->nombre)) {
+            $lugar = trim($pastor->estado->nombre);
+        } elseif (!empty($pastor->municipio)) {
+            $lugar = trim($pastor->municipio);
+        } elseif (!empty($pastor->estado->nombre)) {
+            $lugar = trim($pastor->estado->nombre);
+        }
+
+        if (preg_match('/^iglesia\s+central\s+/i', $lugar)) {
+            $lugar = preg_replace('/^iglesia\s+central\s+/i', '', $lugar);
+        } elseif (preg_match('/^iglesia\s+extensi[oó]n\s+/i', $lugar)) {
+            $lugar = preg_replace('/^iglesia\s+extensi[oó]n\s+/i', '', $lugar);
+        } elseif (preg_match('/^iglesia\s+/i', $lugar)) {
+            $lugar = preg_replace('/^iglesia\s+/i', '', $lugar);
+        }
+
+        if (preg_match('/catia/i', $lugar) || ($pastor->estado_id ?? null) === 10) {
+            $lugar = 'CARACAS';
+        }
+
+        if (empty($lugar) || preg_match('/^zona\s+/i', $lugar)) {
+            $lugar = $pastor->municipio ?: 'VENEZUELA';
+        }
+
+        $linea = mb_strtoupper(trim($lugar), 'UTF-8');
+        if (!empty($pastor->zona)) {
+            $linea .= ' - ZONA ' . $pastor->zona;
+        }
+        if (!empty($pastor->distrito)) {
+            $linea .= '- DISTRITO ' . $pastor->distrito;
+        }
+
+        return $linea;
     }
 
     /**
