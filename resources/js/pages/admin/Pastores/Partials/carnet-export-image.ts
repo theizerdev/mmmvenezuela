@@ -58,12 +58,12 @@ export async function exportPastorCarnetPng(
             ctx.fillRect(0, 0, width, height);
         }
 
-        // 2. Foto del Pastor (Alineada exactamente dentro del marco plateado de la plantilla)
-        const photoX = 39 * scale;
-        const photoY = 117 * scale;
-        const photoW = 208 * scale;
-        const photoH = 288 * scale;
-        const photoRadius = 16 * scale;
+        // 2. Foto del Pastor (Alineada exactamente dentro del marco oficial de la plantilla: x=77, y=174, w=292, h=422, r=24 a 1063x650)
+        const photoX = Math.round(52 * scale);
+        const photoY = Math.round(118 * scale);
+        const photoW = Math.round(198 * scale);
+        const photoH = Math.round(286 * scale);
+        const photoRadius = Math.round(16 * scale);
 
         ctx.save();
         ctx.beginPath();

@@ -244,12 +244,12 @@ class CarnetService
             // 1. Fondo Oficial en Alta Resolución (300 DPI - 90.0mm x 55.0mm)
             $pdf->Image($frenteImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-            // 2. Foto del Pastor Tipo Carnet Calibrada (Alineada al marco plateado de la plantilla)
+            // 2. Foto del Pastor Tipo Carnet Calibrada (Alineada exactamente al marco oficial: 6.52mm x 14.72mm, 24.72mm x 35.71mm)
             $fotoPath = $this->prepararFotoParaCarnet($pastor) ?: $this->obtenerRutaFotoPastor($pastor);
-            $fotoX = $x + 4.88;
-            $fotoY = $y + 14.63;
-            $fotoW = 26.00;
-            $fotoH = 36.00;
+            $fotoX = $x + 6.52;
+            $fotoY = $y + 14.72;
+            $fotoW = 24.72;
+            $fotoH = 35.71;
 
             // Sin borde exterior artificial (el marco plateado de la plantilla ya lo contiene)
             if ($fotoPath && file_exists($fotoPath)) {
@@ -583,14 +583,24 @@ class CarnetService
             $origH = imagesy($src);
 
             // Si la foto ya fue ajustada o guardada a proporción oficial PNG con transparencia, usarla directamente
-            if (($origW === 416 && $origH === 576) || ($origW === 402 && $origH === 570) && $mime === 'image/png') {
-                imagedestroy($src);
-                return $fotoPath;
+            $proporcionesAceptadas = [
+                [396, 572],
+                [198, 286],
+                [584, 844],
+                [292, 422],
+                [416, 576],
+                [402, 570],
+            ];
+            foreach ($proporcionesAceptadas as $dim) {
+                if ($origW === $dim[0] && $origH === $dim[1] && $mime === 'image/png') {
+                    imagedestroy($src);
+                    return $fotoPath;
+                }
             }
 
-            // Proporción oficial: 208 de ancho x 288 de alto (416 x 576 en alta resolución 2x para 300 DPI)
-            $targetW = 416;
-            $targetH = 576;
+            // Proporción oficial: 198 de ancho x 286 de alto (396 x 572 en alta resolución 2x para 300 DPI)
+            $targetW = 396;
+            $targetH = 572;
             $targetRatio = $targetW / $targetH;
             $origRatio = $origW / $origH;
 
@@ -624,7 +634,7 @@ class CarnetService
                 $targetW, $targetH, $cropW, $cropH
             );
 
-            // Aplicar máscara de esquinas redondeadas oficial (radio 32px en lienzo 416x576)
+            // Aplicar máscara de esquinas redondeadas oficial (radio 32px en lienzo 396x572)
             $radius = 32;
             $final = imagecreatetruecolor($targetW, $targetH);
             imagealphablending($final, false);

@@ -173,13 +173,20 @@ export function PastorCarnetCard({
                             backgroundRepeat: 'no-repeat',
                         }}
                     >
-                        {/* Foto Rectangular Tipo Carnet Calibrada (Izquierda - Encaja exactamente en el marco de la plantilla) */}
+                        {/* Foto Rectangular Tipo Carnet Calibrada (Izquierda - Encaja exactamente en el marco oficial: 198x286 px en vista 720x440) */}
                         <div
                             onClick={interactive && onEditPhoto ? (e) => { e.stopPropagation(); onEditPhoto(); } : undefined}
                             className={cn(
-                                'absolute left-[39px] top-[117px] w-[208px] h-[288px] rounded-[16px] overflow-hidden bg-transparent flex items-center justify-center group/photo',
+                                'absolute left-[52px] top-[118px] w-[198px] h-[286px] rounded-[16px] overflow-hidden bg-transparent flex items-center justify-center group/photo',
                                 interactive && onEditPhoto && 'cursor-pointer'
                             )}
+                            style={{
+                                left: '52px',
+                                top: '118px',
+                                width: '198px',
+                                height: '286px',
+                                borderRadius: '16px',
+                            }}
                             title={interactive && onEditPhoto ? __('Haz clic para ajustar la foto al marco oficial') : undefined}
                         >
                             {photoUrl && !imgError ? (

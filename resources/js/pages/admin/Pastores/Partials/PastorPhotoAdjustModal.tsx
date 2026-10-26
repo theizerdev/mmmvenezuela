@@ -60,11 +60,11 @@ export function PastorPhotoAdjustModal({
 
     const photoUrl = pastor ? getPastorPhotoUrl(pastor.foto || (pastor as any).foto_url) : null;
 
-    // Dimensiones exactas del marco oficial de la tarjeta (90x55 mm): 208 x 288 px (escalada x2 para 300 DPI: 416 x 576)
-    const FRAME_W = 208;
-    const FRAME_H = 288;
-    const CANVAS_W = 416;
-    const CANVAS_H = 576;
+    // Dimensiones exactas del marco oficial de la tarjeta (90x55 mm): 198 x 286 px (escalada x2 para 300 DPI: 396 x 572)
+    const FRAME_W = 198;
+    const FRAME_H = 286;
+    const CANVAS_W = 396;
+    const CANVAS_H = 572;
 
     useEffect(() => {
         if (!isOpen || !pastor) return;
@@ -339,7 +339,7 @@ export function PastorPhotoAdjustModal({
                         </Button>
                     </div>
 
-                    {/* Canvas de recorte con la proporción y forma exactas del marco oficial: 208 x 288 px */}
+                    {/* Canvas de recorte con la proporción y forma exactas del marco oficial: 198 x 286 px */}
                     <div className="flex flex-col items-center justify-center p-3 bg-muted/40 rounded-xl border border-dashed">
                         <div
                             className="relative rounded-[16px] overflow-hidden shadow-xl border-[2.5px] border-indigo-500/70 cursor-grab active:cursor-grabbing"
