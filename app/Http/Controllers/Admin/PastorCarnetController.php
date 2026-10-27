@@ -20,22 +20,46 @@ class PastorCarnetController extends Controller
     }
 
     /**
-     * Valida que el usuario tenga rol de Super Administrador o Secretaría para descargar PDFs de credenciales.
+     * Valida que el usuario tenga acceso a Carnets & Credenciales.
+     * Permitido únicamente para roles: Super Administrador, Administrador, Secretaria Nacional y Junta Nacional.
      */
-    protected function autorizarDescargaPdf(): void
+    protected function autorizarAccesoCarnets(): void
     {
         $user = auth()->user();
         if (!$user) {
             abort(401);
         }
 
-        $tienePermiso = $user->isSuperAdmin() || $user->roles()->where(function ($q) {
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        $rolesPermitidos = [
+            'Super Administrador',
+            'super-admin',
+            'Super Admin',
+            'super_admin',
+            'Administrador',
+            'Admin',
+            'admin',
+            'Secretaria Nacional',
+            'Junta Nacional',
+        ];
+
+        if ($user->hasAnyRole($rolesPermitidos)) {
+            return;
+        }
+
+        $tieneRol = $user->roles()->where(function ($q) {
             $q->where('name', 'like', '%super%')
-              ->orWhere('name', 'like', '%secretaria%');
+              ->orWhere('name', 'like', '%administrador%')
+              ->orWhere('name', 'like', '%admin%')
+              ->orWhere('name', 'like', '%secretaria%')
+              ->orWhere('name', 'like', '%junta%');
         })->exists();
 
-        if (!$tienePermiso) {
-            abort(403, 'Solo el rol de Super Administrador o Secretaría puede descargar credenciales en PDF.');
+        if (!$tieneRol) {
+            abort(403, 'Acceso restringido: El módulo de Carnets & Credenciales solo está disponible para los roles: Super Administrador, Administrador, Secretaría Nacional y Junta Nacional.');
         }
     }
 
@@ -44,10 +68,7 @@ class PastorCarnetController extends Controller
      */
     public function carnets(Request $request)
     {
-        $user = auth()->user();
-        if (!$user) {
-            abort(401);
-        }
+        $this->autorizarAccesoCarnets();
 
         $query = Pastor::query();
 
@@ -164,7 +185,7 @@ class PastorCarnetController extends Controller
      */
     public function carnetPdf(int $id)
     {
-        $this->autorizarDescargaPdf();
+        $this->autorizarAccesoCarnets();
 
         $relations = [
             'estado',
@@ -191,7 +212,7 @@ class PastorCarnetController extends Controller
      */
     public function bulkCarnetPdf(Request $request)
     {
-        $this->autorizarDescargaPdf();
+        $this->autorizarAccesoCarnets();
 
         $request->validate([
             'ids' => 'required|array|min:1',
@@ -227,7 +248,7 @@ class PastorCarnetController extends Controller
      */
     public function guardarPlantilla(Request $request)
     {
-        $this->autorizarDescargaPdf();
+        $this->autorizarAccesoCarnets();
 
         $request->validate([
             'tipo' => 'required|string|in:frente,atras',
@@ -287,7 +308,7 @@ class PastorCarnetController extends Controller
      */
     public function restablecerPlantilla(Request $request)
     {
-        $this->autorizarDescargaPdf();
+        $this->autorizarAccesoCarnets();
 
         $tipo = $request->input('tipo', 'ambas');
         $filesToDelete = [];
@@ -323,10 +344,7 @@ class PastorCarnetController extends Controller
      */
     public function actualizarFotoPastor(Request $request, int $id)
     {
-        $user = auth()->user();
-        if (!$user) {
-            abort(401);
-        }
+        $this->autorizarAccesoCarnets();
 
         $pastor = Pastor::findOrFail($id);
 

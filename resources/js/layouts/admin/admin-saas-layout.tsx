@@ -274,6 +274,19 @@ export default function AdminSaasLayout({
         return userPermissions.includes(permission);
     };
 
+    const userRoles = (auth as any)?.user?.roles || [];
+    const isSuperAdmin = Boolean((auth as any)?.user?.is_super_admin);
+    const canAccessCarnets = isSuperAdmin || (Array.isArray(userRoles) && userRoles.some((r: any) => {
+        const name = (typeof r === 'string' ? r : r?.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return (
+            name.includes('super') ||
+            name.includes('administrador') ||
+            name.includes('admin') ||
+            name.includes('secretaria') ||
+            name.includes('junta')
+        );
+    }));
+
     const [notifications, setNotifications] = React.useState([
         {
             id: '1',
@@ -448,7 +461,12 @@ export default function AdminSaasLayout({
                                     href: typeof pastoresCreate === 'function' ? (pastoresCreate() as any)?.url || '/admin/pastores/create' : pastoresCreate.url(),
                                     permission: 'pastores.create',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                                ...(canAccessCarnets ? [{
+                                    title: 'Carnets & Credenciales',
+                                    href: '/admin/pastores/carnets',
+                                    permission: 'all',
+                                }] : []),
+                            ].filter(item => item.permission === 'all' || hasPermission(item.permission));
 
                             if (pastorItems.length === 0) return null;
 

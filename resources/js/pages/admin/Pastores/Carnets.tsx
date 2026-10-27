@@ -94,7 +94,7 @@ export default function PastoresCarnetsPage({
         (auth as any)?.user?.is_super_admin ||
         (Array.isArray(userRoles) && userRoles.some((r: any) => {
             const name = (typeof r === 'string' ? r : r?.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            return name.includes('super') || name.includes('secretaria');
+            return name.includes('super') || name.includes('administrador') || name.includes('admin') || name.includes('secretaria') || name.includes('junta');
         }))
     );
 

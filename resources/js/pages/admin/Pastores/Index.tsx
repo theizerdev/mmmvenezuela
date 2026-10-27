@@ -16,7 +16,6 @@ import {
     FileText,
     LayoutGrid,
     List,
-    IdCard,
     RotateCcw,
     CreditCard,
     Search,
@@ -25,7 +24,6 @@ import {
     FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { PastorCarnetModal } from './Partials/PastorCarnetModal';
 import { PastorCedulaModal } from './Partials/PastorCedulaModal';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -114,15 +112,6 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
     const userPermissions = (auth as any)?.user?.permissions || [];
     const hasPermission = (perm: string) => userPermissions.includes(perm);
 
-    const userRoles = (auth as any)?.user?.roles || [];
-    const canDownloadCarnet = Boolean(
-        (auth as any)?.user?.is_super_admin ||
-        (Array.isArray(userRoles) && userRoles.some((r: any) => {
-            const name = (typeof r === 'string' ? r : r?.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            return name.includes('super') || name.includes('secretaria');
-        }))
-    );
-
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [nivelFilter, setNivelFilter] = useState(filters.nivel_ministerial || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
@@ -170,48 +159,12 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
         setDistritoFilter('');
     };
 
-    const [carnetPastor, setCarnetPastor] = useState<Pastor | null>(null);
-    const [isCarnetModalOpen, setIsCarnetModalOpen] = useState(false);
     const [cedulaPastor, setCedulaPastor] = useState<Pastor | null>(null);
     const [isCedulaModalOpen, setIsCedulaModalOpen] = useState(false);
-
-    const handleOpenCarnet = (pastor: Pastor) => {
-        setCarnetPastor(pastor);
-        setIsCarnetModalOpen(true);
-    };
 
     const handleOpenCedula = (pastor: Pastor) => {
         setCedulaPastor(pastor);
         setIsCedulaModalOpen(true);
-    };
-
-    const handleBulkCarnetPdf = () => {
-        if (selectedIds.length === 0) return;
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/admin/pastores/bulk-carnet-pdf';
-        form.target = '_blank';
-
-        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
-        if (csrfToken) {
-            const tokenInput = document.createElement('input');
-            tokenInput.type = 'hidden';
-            tokenInput.name = '_token';
-            tokenInput.value = csrfToken;
-            form.appendChild(tokenInput);
-        }
-
-        selectedIds.forEach((id) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'ids[]';
-            input.value = String(id);
-            form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
     };
 
     const handleExportExcel = () => {
@@ -474,10 +427,6 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     <DropdownMenuContent align="end">
                         {hasPermission('pastores.edit') && (
                             <>
-                                <DropdownMenuItem onClick={() => handleOpenCarnet(row)} className="cursor-pointer">
-                                    <IdCard className="mr-2 size-4 text-indigo-500" />
-                                    {__('Digital Credential')}
-                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleOpenCedula(row)} className="cursor-pointer">
                                     <CreditCard className="mr-2 size-4 text-amber-500" />
                                     {__('Cédula de Identidad')}
@@ -532,18 +481,6 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                     colorClassName="bg-indigo-600"
                 >
                     <div className="flex flex-wrap items-center gap-2">
-                        <Link href="/admin/pastores/carnets">
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                className="gap-2 bg-indigo-900/60 hover:bg-indigo-950 text-white border border-white/20 font-semibold shadow-xs cursor-pointer transition-all hover:scale-[1.02]"
-                                title={__('Centro de Carnetización y Credenciales')}
-                            >
-                                <IdCard className="size-4 text-indigo-200" />
-                                <span>{__('Carnets & Credenciales')}</span>
-                            </Button>
-                        </Link>
-
                         <Button
                             type="button"
                             variant="secondary"
@@ -649,17 +586,6 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
 
                             {selectedIds.length > 0 && (
                                 <>
-                                    {canDownloadCarnet && (
-                                        <Button
-                                            variant="secondary"
-                                            size="sm"
-                                            onClick={handleBulkCarnetPdf}
-                                            className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 font-semibold shadow-xs"
-                                        >
-                                            <IdCard className="size-4 text-indigo-600 dark:text-indigo-400" />
-                                            {__('Carnets PDF')} ({selectedIds.length})
-                                        </Button>
-                                    )}
                                     {hasPermission('pastores.delete') && (
                                         <Button
                                             variant="destructive"
@@ -965,18 +891,6 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                                                         type="button"
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handleOpenCarnet(pastor)}
-                                                        className="h-8 px-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg flex-1 gap-1"
-                                                        title={__('View Ministerial Credential')}
-                                                    >
-                                                        <IdCard className="size-3.5" />
-                                                        <span>{__('Credential')}</span>
-                                                    </Button>
-
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
                                                         onClick={() => handleOpenCedula(pastor)}
                                                         className="h-8 px-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg flex-1 gap-1"
                                                         title={__('Ver Cédula de Identidad')}
@@ -1056,12 +970,6 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             ? __('Are you sure you want to permanently delete :count selected pastors?', { count: String(selectedIds.length) })
                             : __('Are you sure you want to permanently delete the selected pastor?')
                     }
-                />
-
-                <PastorCarnetModal
-                    pastor={carnetPastor}
-                    isOpen={isCarnetModalOpen}
-                    onClose={() => setIsCarnetModalOpen(false)}
                 />
 
                 <PastorCedulaModal
