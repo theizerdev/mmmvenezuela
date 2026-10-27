@@ -158,7 +158,7 @@ carnets.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     carnets.form = carnetsForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:322
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:324
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 export const actualizarFoto = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -173,7 +173,7 @@ actualizarFoto.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:322
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:324
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 actualizarFoto.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -201,7 +201,7 @@ actualizarFoto.url = (args: { id: string | number } | [id: string | number ] | s
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:322
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:324
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -211,7 +211,7 @@ actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | 
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:322
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:324
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
     const actualizarFotoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -221,7 +221,7 @@ actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | 
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:322
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:324
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
         actualizarFotoForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -642,7 +642,7 @@ planilla.head = (args: { id: string | number } | [id: string | number ] | string
     planilla.form = planillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:168
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:165
  * @route '/admin/pastores/{id}/carnet-pdf'
  */
 export const carnetPdf = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -657,7 +657,7 @@ carnetPdf.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:168
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:165
  * @route '/admin/pastores/{id}/carnet-pdf'
  */
 carnetPdf.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -685,7 +685,7 @@ carnetPdf.url = (args: { id: string | number } | [id: string | number ] | string
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:168
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:165
  * @route '/admin/pastores/{id}/carnet-pdf'
  */
 carnetPdf.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -694,7 +694,7 @@ carnetPdf.get = (args: { id: string | number } | [id: string | number ] | string
 })
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:168
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:165
  * @route '/admin/pastores/{id}/carnet-pdf'
  */
 carnetPdf.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -704,7 +704,7 @@ carnetPdf.head = (args: { id: string | number } | [id: string | number ] | strin
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:168
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:165
  * @route '/admin/pastores/{id}/carnet-pdf'
  */
     const carnetPdfForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -714,7 +714,7 @@ carnetPdf.head = (args: { id: string | number } | [id: string | number ] | strin
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:168
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:165
  * @route '/admin/pastores/{id}/carnet-pdf'
  */
         carnetPdfForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -723,7 +723,7 @@ carnetPdf.head = (args: { id: string | number } | [id: string | number ] | strin
         })
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:168
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:165
  * @route '/admin/pastores/{id}/carnet-pdf'
  */
         carnetPdfForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

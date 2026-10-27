@@ -49,13 +49,21 @@ export function getPastorCarnetFullName(pastor: Pastor, uppercase = false): stri
  */
 export function getPastorCarnetReversoLocation(pastor: Pastor): string {
     let lugar = '';
-    if (pastor.extension_nombre && pastor.extension_nombre.trim()) {
+    if (pastor.extension_estado && pastor.extension_estado.trim()) {
+        lugar = pastor.extension_estado.trim();
+    } else if ((pastor as any).estado?.nombre) {
+        lugar = (pastor as any).estado.nombre.trim();
+    } else if (pastor.extension_nombre && pastor.extension_nombre.trim()) {
         lugar = pastor.extension_nombre.trim();
     } else if ((pastor as any).extension && typeof (pastor as any).extension === 'string') {
         lugar = (pastor as any).extension.trim();
     } else if (Array.isArray((pastor as any).iglesias) && (pastor as any).iglesias.length > 0) {
         const ig = (pastor as any).iglesias[0];
-        if (ig?.nombre) lugar = ig.nombre.trim();
+        if (ig?.estado?.nombre) {
+            lugar = ig.estado.nombre.trim();
+        } else if (ig?.nombre) {
+            lugar = ig.nombre.trim();
+        }
     } else if ((pastor as any).municipio) {
         lugar = (pastor as any).municipio;
     }
@@ -68,7 +76,7 @@ export function getPastorCarnetReversoLocation(pastor: Pastor): string {
         lugar = lugar.replace(/^iglesia\s+/i, '');
     }
 
-    if (/catia/i.test(lugar) || (pastor as any).estado_id === 10) {
+    if (/catia|caracas|distrito\s+capital/i.test(lugar)) {
         lugar = 'CARACAS';
     }
 
@@ -122,7 +130,18 @@ export function PastorCarnetCard({
     const [imgError, setImgError] = React.useState(false);
 
     const lugarTrabajo = React.useMemo(() => {
-        // Priorizar el nombre oficial de la extensión donde se encuentra el pastor
+        // 1. Priorizar el Estado al que pertenece la extensión que pastorea
+        if (pastor.extension_estado && pastor.extension_estado.trim()) {
+            return pastor.extension_estado.trim();
+        }
+        if ((pastor as any).estado?.nombre && (pastor as any).estado.nombre.trim()) {
+            return (pastor as any).estado.nombre.trim();
+        }
+        if (Array.isArray((pastor as any).iglesias) && (pastor as any).iglesias.length > 0) {
+            const ig = (pastor as any).iglesias[0];
+            if (ig?.estado?.nombre) return ig.estado.nombre.trim();
+        }
+        // 2. Si no hay estado disponible, recurrir al nombre de la extensión o zona
         if (pastor.extension_nombre && pastor.extension_nombre.trim()) {
             return pastor.extension_nombre.trim();
         }
@@ -138,7 +157,7 @@ export function PastorCarnetCard({
         if (pastor.distrito) parts.push(pastor.distrito);
         if (parts.length === 0) return 'REPÚBLICA BOLIVARIANA DE VENEZUELA';
         return parts.join(' • ');
-    }, [pastor.extension_nombre, (pastor as any).extension, (pastor as any).iglesias, pastor.zona, pastor.distrito]);
+    }, [pastor.extension_estado, (pastor as any).estado, pastor.extension_nombre, (pastor as any).extension, (pastor as any).iglesias, pastor.zona, pastor.distrito]);
 
     React.useEffect(() => {
         setImgError(false);

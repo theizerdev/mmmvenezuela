@@ -740,24 +740,24 @@ class CarnetService
     }
 
     /**
-     * Obtiene el nombre del lugar de trabajo para la credencial (Extensión o Zona).
+     * Obtiene el Estado al que pertenece la extensión de trabajo para la credencial frontal.
      * Sincronizado idénticamente con la lógica de PastorCarnetCard.tsx
      */
     public function obtenerLugarTrabajo(Pastor $pastor): string
     {
-        if (!empty($pastor->extension_nombre) && trim($pastor->extension_nombre) !== '') {
-            return trim($pastor->extension_nombre);
-        }
-
-        if (!empty($pastor->extension) && is_string($pastor->extension) && trim($pastor->extension) !== '') {
-            return trim($pastor->extension);
-        }
-
-        if (!empty($pastor->iglesias) && $pastor->iglesias->isNotEmpty()) {
-            $primeraIglesia = $pastor->iglesias->first();
-            if (!empty($primeraIglesia->nombre)) {
-                return trim($primeraIglesia->nombre);
+        // 1. Priorizar el Estado al que pertenece la extensión que pastorea
+        $estado = $pastor->extension_estado ?: ($pastor->estado?->nombre ?: null);
+        if (!empty($estado) && trim($estado) !== '') {
+            $estadoStr = trim($estado);
+            if (stripos($estadoStr, 'Distrito Capital') !== false || stripos($estadoStr, 'Caracas') !== false) {
+                return 'DISTRITO CAPITAL';
             }
+            return mb_strtoupper($estadoStr, 'UTF-8');
+        }
+
+        // 2. Si no hay estado disponible, recurrir al nombre de la extensión o zona
+        if (!empty($pastor->extension_nombre) && trim($pastor->extension_nombre) !== '') {
+            return mb_strtoupper(trim($pastor->extension_nombre), 'UTF-8');
         }
 
         $parts = [];
@@ -772,33 +772,19 @@ class CarnetService
             return implode('   ', $parts);
         }
 
-        if (!empty($pastor->estado?->nombre)) {
-            return trim($pastor->estado->nombre);
-        }
-
         return 'REPÚBLICA BOLIVARIANA DE VENEZUELA';
     }
 
     /**
-     * Obtiene la línea de ubicación inferior del reverso (ej: CARACAS - ZONA 1- DISTRITO 1)
+     * Obtiene la línea de ubicación inferior del reverso (ej: ZULIA - ZONA 14- DISTRITO 2 o CARACAS - ZONA 1- DISTRITO 1)
      * Sincronizado idénticamente con getPastorCarnetReversoLocation en PastorCarnetCard.tsx
      */
     public function obtenerLugarReverso(Pastor $pastor): string
     {
-        $lugar = '';
-        if (!empty($pastor->extension_nombre) && trim($pastor->extension_nombre) !== '') {
-            $lugar = trim($pastor->extension_nombre);
-        } elseif (!empty($pastor->extension) && is_string($pastor->extension) && trim($pastor->extension) !== '') {
-            $lugar = trim($pastor->extension);
-        } elseif (!empty($pastor->iglesias) && $pastor->iglesias->isNotEmpty()) {
-            $primeraIglesia = $pastor->iglesias->first();
-            if (!empty($primeraIglesia->nombre)) {
-                $lugar = trim($primeraIglesia->nombre);
-            }
-        } elseif (!empty($pastor->municipio)) {
-            $lugar = trim($pastor->municipio);
-        } elseif (!empty($pastor->estado?->nombre)) {
-            $lugar = trim($pastor->estado->nombre);
+        $lugar = $pastor->extension_estado ?: ($pastor->estado?->nombre ?: ($pastor->municipio ?: ''));
+
+        if (empty($lugar) && !empty($pastor->extension_nombre)) {
+            $lugar = $pastor->extension_nombre;
         }
 
         if (preg_match('/^iglesia\s+central\s+/i', $lugar)) {
@@ -809,7 +795,7 @@ class CarnetService
             $lugar = preg_replace('/^iglesia\s+/i', '', $lugar);
         }
 
-        if (preg_match('/catia/i', $lugar) || ($pastor->estado_id ?? null) === 10) {
+        if (preg_match('/catia/i', $lugar) || stripos($lugar, 'Distrito Capital') !== false || stripos($lugar, 'Caracas') !== false) {
             $lugar = 'CARACAS';
         }
 

@@ -115,12 +115,14 @@ class PastorCarnetController extends Controller
         ];
 
         $perPage = (int) $request->input('per_page', 40);
-        $pastores = $query->with([
-            'iglesiasPrincipales:id,nombre,pastor_id',
-            'iglesias:id,nombre',
-            'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
-            'conyuge.iglesias:id,nombre',
-        ])
+        $relations = [
+            'estado',
+            'iglesiasPrincipales.estado',
+            'iglesias.estado',
+            'conyuge.iglesiasPrincipales.estado',
+            'conyuge.iglesias.estado',
+        ];
+        $pastores = $query->with($relations)
         ->orderBy('nombres', 'asc')
         ->paginate($perPage)
         ->withQueryString();
@@ -129,12 +131,7 @@ class PastorCarnetController extends Controller
         $selectedPastorId = $request->input('pastor_id');
         $initialPastor = null;
         if ($selectedPastorId) {
-            $initialPastor = Pastor::with([
-                'iglesiasPrincipales:id,nombre,pastor_id',
-                'iglesias:id,nombre',
-                'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
-                'conyuge.iglesias:id,nombre',
-            ])->find($selectedPastorId);
+            $initialPastor = Pastor::with($relations)->find($selectedPastorId);
         }
         if (!$initialPastor && $pastores->count() > 0) {
             $initialPastor = $pastores->first();
@@ -169,12 +166,15 @@ class PastorCarnetController extends Controller
     {
         $this->autorizarDescargaPdf();
 
-        $pastor = Pastor::with([
-            'iglesiasPrincipales:id,nombre,pastor_id',
-            'iglesias:id,nombre',
-            'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
-            'conyuge.iglesias:id,nombre',
-        ])->findOrFail($id);
+        $relations = [
+            'estado',
+            'iglesiasPrincipales.estado',
+            'iglesias.estado',
+            'conyuge.iglesiasPrincipales.estado',
+            'conyuge.iglesias.estado',
+        ];
+
+        $pastor = Pastor::with($relations)->findOrFail($id);
 
         $fpdf = new CarnetFpdf('L', 'mm', [CarnetService::ANCHO_MM, CarnetService::ALTO_MM]);
         $this->carnetService->generarPdfParaPastor($pastor, $fpdf);
@@ -200,12 +200,14 @@ class PastorCarnetController extends Controller
         ]);
 
         $tipoPliego = $request->input('tipo_pliego', 'duplex');
-        $pastores = Pastor::with([
-            'iglesiasPrincipales:id,nombre,pastor_id',
-            'iglesias:id,nombre',
-            'conyuge.iglesiasPrincipales:id,nombre,pastor_id',
-            'conyuge.iglesias:id,nombre',
-        ])->whereIn('id', $request->input('ids'))->get();
+        $relations = [
+            'estado',
+            'iglesiasPrincipales.estado',
+            'iglesias.estado',
+            'conyuge.iglesiasPrincipales.estado',
+            'conyuge.iglesias.estado',
+        ];
+        $pastores = Pastor::with($relations)->whereIn('id', $request->input('ids'))->get();
 
         $fpdf = ($tipoPliego === 'cr80_individual')
             ? new CarnetFpdf('L', 'mm', [CarnetService::ANCHO_MM, CarnetService::ALTO_MM])

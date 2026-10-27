@@ -72,7 +72,9 @@ export interface Pastor {
     zona?: string;
     distrito?: string;
     extension_nombre?: string;
-    iglesias?: Array<{ id: number; nombre: string }>;
+    extension_estado?: string;
+    estado?: { id: number; nombre: string };
+    iglesias?: Array<{ id: number; nombre: string; direccion?: string; estado?: { id: number; nombre: string } }>;
     cargo_nacional?: string;
     telefono_tlf?: string;
     telefono_hab?: string;

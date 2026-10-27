@@ -101,7 +101,7 @@ class Pastor extends Model
         'edad' => 'integer',
     ];
 
-    protected $appends = ['nombre_completo', 'foto_url', 'foto_cedula_url', 'extension_nombre'];
+    protected $appends = ['nombre_completo', 'foto_url', 'foto_cedula_url', 'extension_nombre', 'extension_estado'];
 
     /**
      * Generar código de pastor (11 a 15 dígitos):
@@ -331,6 +331,75 @@ class Pastor extends Model
                 if ($cPivot && !empty($cPivot->nombre)) {
                     return trim($cPivot->nombre);
                 }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Nombre del Estado al que pertenece la extensión / iglesia donde labora el pastor.
+     */
+    public function getExtensionEstadoAttribute(): ?string
+    {
+        // 1. Obtener la iglesia principal o asignada del pastor
+        $iglesia = null;
+        if ($this->relationLoaded('iglesiasPrincipales') ? $this->iglesiasPrincipales->isNotEmpty() : $this->iglesiasPrincipales()->exists()) {
+            $iglesia = $this->relationLoaded('iglesiasPrincipales') ? $this->iglesiasPrincipales->first() : $this->iglesiasPrincipales()->first();
+        }
+        if (!$iglesia) {
+            if ($this->relationLoaded('iglesias') ? $this->iglesias->isNotEmpty() : $this->iglesias()->exists()) {
+                $iglesia = $this->relationLoaded('iglesias') ? $this->iglesias->first() : $this->iglesias()->first();
+            }
+        }
+        if (!$iglesia && $this->conyuge_id) {
+            $conyuge = $this->relationLoaded('conyuge') ? $this->conyuge : $this->conyuge()->with(['iglesiasPrincipales', 'iglesias'])->first();
+            if ($conyuge) {
+                $iglesia = ($conyuge->relationLoaded('iglesiasPrincipales') && $conyuge->iglesiasPrincipales->isNotEmpty())
+                    ? $conyuge->iglesiasPrincipales->first()
+                    : ($conyuge->relationLoaded('iglesias') && $conyuge->iglesias->isNotEmpty()
+                        ? $conyuge->iglesias->first()
+                        : ($conyuge->iglesiasPrincipales()->first() ?? $conyuge->iglesias()->first()));
+            }
+        }
+
+        if ($iglesia) {
+            // Verificar si la dirección física indica explícitamente el Estado (evita desajustes de geocodificación)
+            $dir = $iglesia->direccion ?? '';
+            if (!empty($dir)) {
+                if (preg_match('/Estado\s+([^,]+)/i', $dir, $matches)) {
+                    $candidate = trim($matches[1]);
+                    if (stripos($candidate, 'Vargas') !== false) {
+                        return 'La Guaira';
+                    }
+                    $estadoEncontrado = Estado::where('nombre', 'like', $candidate)->first();
+                    if ($estadoEncontrado) {
+                        return $estadoEncontrado->nombre;
+                    }
+                }
+                if (stripos($dir, 'Distrito Capital') !== false || stripos($dir, 'Caracas') !== false) {
+                    return 'Distrito Capital';
+                }
+            }
+
+            // Si la iglesia tiene relación estado cargada
+            if ($iglesia->relationLoaded('estado') && $iglesia->estado) {
+                return $iglesia->estado->nombre;
+            } elseif ($iglesia->estado_id) {
+                $est = Estado::find($iglesia->estado_id);
+                if ($est) {
+                    return $est->nombre;
+                }
+            }
+        }
+
+        // Fallback al estado del pastor
+        if ($this->relationLoaded('estado') && $this->estado) {
+            return $this->estado->nombre;
+        } elseif ($this->estado_id) {
+            $est = Estado::find($this->estado_id);
+            if ($est) {
+                return $est->nombre;
             }
         }
 
