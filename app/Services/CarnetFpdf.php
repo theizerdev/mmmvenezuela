@@ -6,6 +6,21 @@ use Codedge\Fpdf\Fpdf\Fpdf;
 
 class CarnetFpdf extends Fpdf
 {
+    public function __construct(string $orientation = 'P', string $unit = 'mm', mixed $size = 'A4')
+    {
+        parent::__construct($orientation, $unit, $size);
+
+        $fontDir = public_path('fonts');
+        if (file_exists($fontDir . '/cocogoose-bold.php')) {
+            $this->AddFont('Cocogoose', 'B', 'cocogoose-bold.php', $fontDir);
+        }
+        if (file_exists($fontDir . '/cocogoose-regular.php')) {
+            $this->AddFont('Cocogoose', '', 'cocogoose-regular.php', $fontDir);
+        }
+        if (file_exists($fontDir . '/Cocogoose-Pro-Italic-trial.php')) {
+            $this->AddFont('Cocogoose', 'I', 'Cocogoose-Pro-Italic-trial.php', $fontDir);
+        }
+    }
     /**
      * Dibuja un polígono de N puntos en FPDF
      * @param array $points arreglo de coordenadas [x0, y0, x1, y1, x2, y2, ...]

@@ -264,41 +264,42 @@ class CarnetService
             }
 
             // Contenedor Derecho Calibrado con las Zonas de la Identidad Oficial
-            $contX = $x + 32.5;
-            $contW = 54.5;
+            $contX = $x + 31.9;
+            $contW = 53.8;
 
-            // 3. Bloque 1: Identificación Titular (Debajo de la franja PASTOR)
+            // 3. Bloque 1: Identificación Titular (Debajo de la franja PASTOR - Cocogoose Bold)
             $nombreCompleto = $this->obtenerNombreCompletoConTitulo($pastor, true);
             $nombreIso = $this->utf8ToPdf($nombreCompleto);
             $pdf->SetTextColor(0, 0, 0); // Pure Black #000000
 
-            $fontSize = 8.2;
-            $pdf->SetFont('Helvetica', 'B', $fontSize);
+            $nombreLen = mb_strlen($nombreCompleto, 'UTF-8');
+            $fontSize = ($nombreLen > 28) ? 6.8 : (($nombreLen > 22) ? 7.6 : 8.8);
+            $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $fontSize);
             $textWidth = $pdf->GetStringWidth($nombreIso);
 
-            if ($textWidth > $contW - 1) {
-                $fontSize = max(6.2, round($fontSize * ($contW - 1) / $textWidth, 1));
-                $pdf->SetFont('Helvetica', 'B', $fontSize);
+            if ($textWidth > $contW - 2) {
+                $fontSize = max(5.4, round($fontSize * ($contW - 2) / $textWidth, 2));
+                $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $fontSize);
             }
 
-            $pdf->SetXY($contX, $y + 26.2);
+            $pdf->SetXY($contX, $y + 26.0);
             $pdf->Cell($contW, 3.4, $nombreIso, 0, 1, 'C');
 
-            // 4. Documento de Identidad (Aribau Grotesk Regular, Negro Carbón)
-            $pdf->SetFont('Helvetica', '', 6.6);
+            // 4. Documento de Identidad (Aribau Grotesk Regular / Helvetica Regular)
+            $pdf->SetFont('Helvetica', '', 5.8);
             $pdf->SetTextColor(15, 23, 42); // Slate 900
             $docFormatted = 'C.I. ' . $this->formatearDocumento($pastor->documento);
-            $pdf->SetXY($contX, $y + 30.2);
-            $pdf->Cell($contW, 2.4, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 30.4);
+            $pdf->Cell($contW, 2.2, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
 
-            // 5. Bloque 2: Grado Ministerial (Valor ARRIBA de la etiqueta preimpresa GRADO MINISTERIAL)
-            $pdf->SetFont('Helvetica', 'B', 7.2);
+            // 5. Bloque 2: Grado Ministerial (Titular Cocogoose Bold)
+            $this->setFontWithFallback($pdf, 'Cocogoose', 'B', 6.8);
             $pdf->SetTextColor(0, 0, 0); // Pure Black
             $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
-            $pdf->SetXY($contX, $y + 34.0);
+            $pdf->SetXY($contX, $y + 33.8);
             $pdf->Cell($contW, 2.8, $this->utf8ToPdf($nivel), 0, 1, 'C');
 
-            // 6. Bloque 3: Lugar de Trabajo (Valor ARRIBA de la etiqueta preimpresa LUGAR DE TRABAJO)
+            // 6. Bloque 3: Lugar de Trabajo (Titular Cocogoose Bold)
             $lugar = $this->obtenerLugarTrabajo($pastor);
             if (mb_strlen($lugar, 'UTF-8') > 24 && preg_match('/^iglesia\s+extensi[oó]n\s+/i', $lugar)) {
                 $lugar = preg_replace('/^iglesia\s+/i', '', $lugar);
@@ -308,10 +309,16 @@ class CarnetService
             $lugarLen = mb_strlen($lugarUpper, 'UTF-8');
 
             $pdf->SetTextColor(0, 0, 0); // Pure Black
-            $lugarFontSize = ($lugarLen > 32) ? 4.8 : (($lugarLen > 24) ? 5.4 : 6.2);
-            $pdf->SetFont('Helvetica', 'B', $lugarFontSize);
+            $lugarFontSize = ($lugarLen > 28) ? 5.0 : (($lugarLen > 20) ? 5.6 : 6.4);
+            $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $lugarFontSize);
+            $textWidth = $pdf->GetStringWidth($lugarIso);
 
-            $pdf->SetXY($contX, $y + 42.0);
+            if ($textWidth > $contW - 2) {
+                $lugarFontSize = max(4.0, round($lugarFontSize * ($contW - 2) / $textWidth, 2));
+                $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $lugarFontSize);
+            }
+
+            $pdf->SetXY($contX, $y + 41.8);
             $pdf->Cell($contW, 2.8, $lugarIso, 0, 1, 'C');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
@@ -734,31 +741,63 @@ class CarnetService
 
     /**
      * Obtiene el nombre del lugar de trabajo para la credencial (Extensión o Zona).
+     * Sincronizado idénticamente con la lógica de PastorCarnetCard.tsx
      */
     public function obtenerLugarTrabajo(Pastor $pastor): string
-    {   //dd();
-        if (!empty($pastor->estado->nombre)) {
+    {
+        if (!empty($pastor->extension_nombre) && trim($pastor->extension_nombre) !== '') {
+            return trim($pastor->extension_nombre);
+        }
+
+        if (!empty($pastor->extension) && is_string($pastor->extension) && trim($pastor->extension) !== '') {
+            return trim($pastor->extension);
+        }
+
+        if (!empty($pastor->iglesias) && $pastor->iglesias->isNotEmpty()) {
+            $primeraIglesia = $pastor->iglesias->first();
+            if (!empty($primeraIglesia->nombre)) {
+                return trim($primeraIglesia->nombre);
+            }
+        }
+
+        $parts = [];
+        if (!empty($pastor->zona)) {
+            $parts[] = 'ZONA ' . $pastor->zona;
+        }
+        if (!empty($pastor->distrito)) {
+            $parts[] = 'DISTRITO ' . $pastor->distrito;
+        }
+
+        if (count($parts) > 0) {
+            return implode('   ', $parts);
+        }
+
+        if (!empty($pastor->estado?->nombre)) {
             return trim($pastor->estado->nombre);
         }
 
-        $lugarParts = [];
-        if (!empty($pastor->zona)) $lugarParts[] = 'ZONA ' . $pastor->zona;
-        if (!empty($pastor->distrito)) $lugarParts[] = $pastor->distrito;
-
-        return !empty($lugarParts) ? implode(' - ', $lugarParts) : 'REPÚBLICA BOLIVARIANA DE VENEZUELA';
+        return 'REPÚBLICA BOLIVARIANA DE VENEZUELA';
     }
 
     /**
      * Obtiene la línea de ubicación inferior del reverso (ej: CARACAS - ZONA 1- DISTRITO 1)
+     * Sincronizado idénticamente con getPastorCarnetReversoLocation en PastorCarnetCard.tsx
      */
     public function obtenerLugarReverso(Pastor $pastor): string
     {
         $lugar = '';
-        if (!empty($pastor->estado->nombre)) {
-            $lugar = trim($pastor->estado->nombre);
+        if (!empty($pastor->extension_nombre) && trim($pastor->extension_nombre) !== '') {
+            $lugar = trim($pastor->extension_nombre);
+        } elseif (!empty($pastor->extension) && is_string($pastor->extension) && trim($pastor->extension) !== '') {
+            $lugar = trim($pastor->extension);
+        } elseif (!empty($pastor->iglesias) && $pastor->iglesias->isNotEmpty()) {
+            $primeraIglesia = $pastor->iglesias->first();
+            if (!empty($primeraIglesia->nombre)) {
+                $lugar = trim($primeraIglesia->nombre);
+            }
         } elseif (!empty($pastor->municipio)) {
             $lugar = trim($pastor->municipio);
-        } elseif (!empty($pastor->estado->nombre)) {
+        } elseif (!empty($pastor->estado?->nombre)) {
             $lugar = trim($pastor->estado->nombre);
         }
 
@@ -775,7 +814,7 @@ class CarnetService
         }
 
         if (empty($lugar) || preg_match('/^zona\s+/i', $lugar)) {
-            $lugar = $pastor->municipio ?: 'VENEZUELA';
+            $lugar = $pastor->municipio ?: ($pastor->estado?->nombre ?: 'VENEZUELA');
         }
 
         $linea = mb_strtoupper(trim($lugar), 'UTF-8');
@@ -841,5 +880,18 @@ class CarnetService
             return $converted;
         }
         return utf8_decode($str);
+    }
+
+    /**
+     * Aplica la tipografía solicitada (ej. Cocogoose Bold) o recurre a una estándar si no está registrada.
+     */
+    public function setFontWithFallback(CarnetFpdf $pdf, string $family, string $style, float $size): void
+    {
+        try {
+            $pdf->SetFont($family, $style, $size);
+        } catch (\Throwable $e) {
+            $fallback = (strcasecmp($family, 'Cocogoose') === 0) ? 'Helvetica' : 'Arial';
+            $pdf->SetFont($fallback, $style, $size);
+        }
     }
 }
