@@ -158,7 +158,7 @@ carnets.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     carnets.form = carnetsForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:345
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 export const actualizarFoto = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -173,7 +173,7 @@ actualizarFoto.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:345
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 actualizarFoto.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -201,7 +201,7 @@ actualizarFoto.url = (args: { id: string | number } | [id: string | number ] | s
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:345
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -211,7 +211,7 @@ actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | 
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:345
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
     const actualizarFotoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -221,7 +221,7 @@ actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | 
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:345
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
         actualizarFotoForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -836,7 +836,7 @@ cedulaDescargar.head = (args: { id: string | number } | [id: string | number ] |
     cedulaDescargar.form = cedulaDescargarForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkCarnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:213
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:214
  * @route '/admin/pastores/bulk-carnet-pdf'
  */
 export const bulkCarnetPdf = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -851,7 +851,7 @@ bulkCarnetPdf.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkCarnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:213
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:214
  * @route '/admin/pastores/bulk-carnet-pdf'
  */
 bulkCarnetPdf.url = (options?: RouteQueryOptions) => {
@@ -860,7 +860,7 @@ bulkCarnetPdf.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkCarnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:213
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:214
  * @route '/admin/pastores/bulk-carnet-pdf'
  */
 bulkCarnetPdf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -870,7 +870,7 @@ bulkCarnetPdf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkCarnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:213
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:214
  * @route '/admin/pastores/bulk-carnet-pdf'
  */
     const bulkCarnetPdfForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -880,7 +880,7 @@ bulkCarnetPdf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkCarnetPdf
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:213
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:214
  * @route '/admin/pastores/bulk-carnet-pdf'
  */
         bulkCarnetPdfForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

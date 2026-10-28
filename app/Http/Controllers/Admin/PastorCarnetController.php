@@ -186,6 +186,7 @@ class PastorCarnetController extends Controller
     public function carnetPdf(int $id)
     {
         $this->autorizarAccesoCarnets();
+        @ini_set('memory_limit', '256M');
 
         $relations = [
             'estado',
@@ -213,6 +214,8 @@ class PastorCarnetController extends Controller
     public function bulkCarnetPdf(Request $request)
     {
         $this->autorizarAccesoCarnets();
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
 
         $request->validate([
             'ids' => 'required|array|min:1',

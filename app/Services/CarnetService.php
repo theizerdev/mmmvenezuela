@@ -17,20 +17,31 @@ class CarnetService
     /**
      * Obtiene la ruta física en disco de la plantilla frontal (personalizada o por defecto)
      */
+    /**
+     * Obtiene la ruta física en disco de la plantilla frontal (personalizada o por defecto)
+     */
     public static function getRutaPlantillaFrente(): string
     {
-        $customImg = public_path('image/custom-Credencial-frente.png');
-        if (file_exists($customImg)) {
-            return $customImg;
+        $docRoot = !empty($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null;
+        $candidates = [
+            public_path('image/custom-Credencial-frente.png'),
+            public_path('storage/carnets/Credencial-frente.png'),
+            storage_path('app/public/carnets/Credencial-frente.png'),
+            public_path('carnets/Credencial-frente.png'),
+            public_path('image/Credencial-frente.png'),
+            base_path('public/image/Credencial-frente.png'),
+            $docRoot ? $docRoot . '/image/custom-Credencial-frente.png' : null,
+            $docRoot ? $docRoot . '/image/Credencial-frente.png' : null,
+            base_path('../public_html/image/Credencial-frente.png'),
+            base_path('image/Credencial-frente.png'),
+        ];
+
+        foreach (array_filter($candidates) as $path) {
+            if (file_exists($path) && is_file($path)) {
+                return $path;
+            }
         }
-        $customStorage = public_path('storage/carnets/Credencial-frente.png');
-        if (file_exists($customStorage)) {
-            return $customStorage;
-        }
-        $customApp = storage_path('app/public/carnets/Credencial-frente.png');
-        if (file_exists($customApp)) {
-            return $customApp;
-        }
+
         return public_path('image/Credencial-frente.png');
     }
 
@@ -39,18 +50,26 @@ class CarnetService
      */
     public static function getRutaPlantillaAtras(): string
     {
-        $customImg = public_path('image/custom-Credencial-atras.png');
-        if (file_exists($customImg)) {
-            return $customImg;
+        $docRoot = !empty($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null;
+        $candidates = [
+            public_path('image/custom-Credencial-atras.png'),
+            public_path('storage/carnets/Credencial-atras.png'),
+            storage_path('app/public/carnets/Credencial-atras.png'),
+            public_path('carnets/Credencial-atras.png'),
+            public_path('image/Credencial-atras.png'),
+            base_path('public/image/Credencial-atras.png'),
+            $docRoot ? $docRoot . '/image/custom-Credencial-atras.png' : null,
+            $docRoot ? $docRoot . '/image/Credencial-atras.png' : null,
+            base_path('../public_html/image/Credencial-atras.png'),
+            base_path('image/Credencial-atras.png'),
+        ];
+
+        foreach (array_filter($candidates) as $path) {
+            if (file_exists($path) && is_file($path)) {
+                return $path;
+            }
         }
-        $customStorage = public_path('storage/carnets/Credencial-atras.png');
-        if (file_exists($customStorage)) {
-            return $customStorage;
-        }
-        $customApp = storage_path('app/public/carnets/Credencial-atras.png');
-        if (file_exists($customApp)) {
-            return $customApp;
-        }
+
         return public_path('image/Credencial-atras.png');
     }
 
@@ -543,19 +562,7 @@ class CarnetService
         }
 
         try {
-            $cacheDir = storage_path('app/public/carnets_cache');
-            if (!file_exists($cacheDir) && !@mkdir($cacheDir, 0777, true)) {
-                $cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carnets_cache';
-                if (!file_exists($cacheDir)) {
-                    @mkdir($cacheDir, 0777, true);
-                }
-            }
-            if (!is_writable($cacheDir)) {
-                $cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carnets_cache';
-                if (!file_exists($cacheDir)) {
-                    @mkdir($cacheDir, 0777, true);
-                }
-            }
+            $cacheDir = $this->obtenerDirectorioCache();
 
             $cacheKey = 'foto_' . $pastor->id . '_' . md5_file($fotoPath) . '.png';
             $cachedFile = $cacheDir . DIRECTORY_SEPARATOR . $cacheKey;
@@ -706,8 +713,36 @@ class CarnetService
     }
 
     /**
-     * Obtener ruta local absoluta de la foto del pastor, resolviendo tanto rutas relativas,
-     * almacenamiento estándar de Laravel Storage, enlaces simbólicos, carpetas públicas y URLs remotas.
+     * Directorio de caché seguro y con permisos de escritura garantizados para FPDF y GD
+     */
+    public function obtenerDirectorioCache(): string
+    {
+        $docRoot = !empty($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null;
+        $candidates = [
+            storage_path('app/carnets_cache'),
+            storage_path('framework/cache/carnets_cache'),
+            storage_path('app/public/carnets_cache'),
+            public_path('carnets_cache'),
+            $docRoot ? $docRoot . '/carnets_cache' : null,
+            base_path('public/carnets_cache'),
+            sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carnets_cache',
+        ];
+
+        foreach (array_filter($candidates) as $dir) {
+            if (!file_exists($dir)) {
+                @mkdir($dir, 0777, true);
+            }
+            if (is_dir($dir) && is_writable($dir)) {
+                return $dir;
+            }
+        }
+
+        return sys_get_temp_dir();
+    }
+
+    /**
+     * Obtener ruta local absoluta de la foto del pastor, resolviendo rutas en disco,
+     * subcarpetas cPanel / public_html, mayúsculas/minúsculas y fallback HTTP con caché local.
      */
     protected function obtenerRutaFotoPastor(Pastor $pastor): ?string
     {
@@ -716,13 +751,7 @@ class CarnetService
             return null;
         }
 
-        $cacheDir = storage_path('app/public/carnets_cache');
-        if (!file_exists($cacheDir) && !@mkdir($cacheDir, 0777, true)) {
-            $cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carnets_cache';
-            if (!file_exists($cacheDir)) {
-                @mkdir($cacheDir, 0777, true);
-            }
-        }
+        $cacheDir = $this->obtenerDirectorioCache();
 
         foreach ($candidates as $fotoRaw) {
             $trimmed = trim((string)$fotoRaw);
@@ -730,7 +759,7 @@ class CarnetService
                 continue;
             }
 
-            // 1. Si es base64 data URI
+            // 1. Data URI base64
             if (str_starts_with($trimmed, 'data:image/')) {
                 if (preg_match('/^data:image\/(\w+);base64,/', $trimmed, $type)) {
                     $data = base64_decode(substr($trimmed, strpos($trimmed, ',') + 1));
@@ -745,95 +774,118 @@ class CarnetService
                 }
             }
 
-            // 2. Si es una URL absoluta (http:// o https://)
-            if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
-                $ext = pathinfo(parse_url($trimmed, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION) ?: 'png';
-                $remoteFile = $cacheDir . DIRECTORY_SEPARATOR . 'rem_' . $pastor->id . '_' . md5($trimmed) . '.' . $ext;
-                if (file_exists($remoteFile) && filesize($remoteFile) > 0) {
-                    return $remoteFile;
-                }
-                $ctx = stream_context_create([
-                    'http' => ['timeout' => 5],
-                    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
-                ]);
-                $content = @file_get_contents($trimmed, false, $ctx);
-                if ($content !== false && strlen($content) > 0) {
-                    file_put_contents($remoteFile, $content);
-                    return $remoteFile;
-                }
+            // 2. Limpieza de URL / nombre de archivo (eliminar query strings como ?v=123 y decodificar espacios)
+            $cleanUrl = $trimmed;
+            if (($posQ = strpos($cleanUrl, '?')) !== false) {
+                $cleanUrl = substr($cleanUrl, 0, $posQ);
             }
-
-            // 3. Rutas en sistema de archivos local
-            $clean = ltrim($trimmed, '/\\');
+            $clean = urldecode(ltrim($cleanUrl, '/\\'));
             $basename = basename($clean);
-
-            // Mapeo exhaustivo de ubicaciones estándar en Laravel y servidores de producción
-            $posiblesRutas = [
-                // Almacenamiento en disco público (storage/app/public/pastores)
-                storage_path('app/public/pastores/' . $basename),
-                storage_path('app/public/pastores/' . $clean),
-                storage_path('app/public/' . $clean),
-                \Illuminate\Support\Facades\Storage::disk('public')->path('pastores/' . $basename),
-                \Illuminate\Support\Facades\Storage::disk('public')->path($clean),
-
-                // Carpeta public/pastores (local / Laragon)
-                public_path('pastores/' . $basename),
-                public_path('pastores/' . $clean),
-
-                // Enlace simbólico public/storage/pastores
-                public_path('storage/pastores/' . $basename),
-                public_path('storage/' . $clean),
-                public_path($clean),
-
-                // storage/app
-                storage_path('app/' . $clean),
-            ];
-
-            if (str_starts_with($clean, 'storage/')) {
-                $posiblesRutas[] = storage_path('app/public/' . substr($clean, 8));
+            if (!$basename) {
+                continue;
             }
 
-            // Soporte para servidores cPanel / Plesk con public_html
-            if (!empty($_SERVER['DOCUMENT_ROOT'])) {
-                $docRoot = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\');
-                $posiblesRutas[] = $docRoot . '/pastores/' . $basename;
-                $posiblesRutas[] = $docRoot . '/storage/pastores/' . $basename;
-                $posiblesRutas[] = $docRoot . '/storage/' . $clean;
-                $posiblesRutas[] = $docRoot . '/' . $clean;
-            }
+            // 3. Mapeo exhaustivo de ubicaciones estándar en Laravel y servidores de producción
+            $docRoot = !empty($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null;
+            $candidateDirs = array_filter(array_unique([
+                // Estándar Laravel (public/pastores)
+                public_path('pastores'),
+                public_path('/pastores'),
+                base_path('public/pastores'),
+                base_path('pastores'),
 
-            $publicHtml = base_path('../public_html');
-            if (is_dir($publicHtml)) {
-                $posiblesRutas[] = $publicHtml . '/pastores/' . $basename;
-                $posiblesRutas[] = $publicHtml . '/storage/pastores/' . $basename;
-                $posiblesRutas[] = $publicHtml . '/storage/' . $clean;
-                $posiblesRutas[] = $publicHtml . '/' . $clean;
-            }
+                // Document root del servidor web (Apache / Nginx / cPanel)
+                $docRoot ? $docRoot . '/pastores' : null,
+                $docRoot ? $docRoot . '/public/pastores' : null,
 
-            foreach ($posiblesRutas as $ruta) {
-                if ($ruta && file_exists($ruta) && is_file($ruta) && filesize($ruta) > 0) {
-                    return $ruta;
+                // Servidores cPanel / Plesk con public_html
+                base_path('../public_html/pastores'),
+                base_path('../public_html/public/pastores'),
+                base_path('public_html/pastores'),
+                base_path('../pastores'),
+                dirname(base_path()) . '/public_html/pastores',
+                dirname(base_path()) . '/pastores',
+                dirname(public_path()) . '/pastores',
+
+                // Storage de Laravel
+                storage_path('app/public/pastores'),
+                \Illuminate\Support\Facades\Storage::disk('public')->path('pastores'),
+            ]));
+
+            // 3.1 Búsqueda directa en directorios candidatos
+            foreach ($candidateDirs as $dir) {
+                $path = $dir . DIRECTORY_SEPARATOR . $basename;
+                if (file_exists($path) && is_file($path) && filesize($path) > 0) {
+                    return $path;
+                }
+                $pathClean = $dir . DIRECTORY_SEPARATOR . $clean;
+                if (file_exists($pathClean) && is_file($pathClean) && filesize($pathClean) > 0) {
+                    return $pathClean;
                 }
             }
 
-            // 4. Búsqueda insensible a mayúsculas/minúsculas para sistemas Linux (ej: .png vs .PNG)
-            $dirsToCheck = [
-                storage_path('app/public/pastores'),
-                public_path('pastores'),
-                public_path('storage/pastores'),
-            ];
-            foreach ($dirsToCheck as $dir) {
+            // 3.2 Búsqueda insensible a mayúsculas/minúsculas y variaciones de extensión (.jpg vs .jpeg vs .png)
+            $basenameNoExt = pathinfo($basename, PATHINFO_FILENAME);
+            foreach ($candidateDirs as $dir) {
                 if (is_dir($dir)) {
                     $files = @scandir($dir);
                     if ($files) {
                         foreach ($files as $f) {
+                            if ($f === '.' || $f === '..') continue;
                             if (strcasecmp($f, $basename) === 0) {
                                 $full = $dir . DIRECTORY_SEPARATOR . $f;
                                 if (is_file($full) && filesize($full) > 0) {
                                     return $full;
                                 }
                             }
+                            if (strcasecmp(pathinfo($f, PATHINFO_FILENAME), $basenameNoExt) === 0) {
+                                $full = $dir . DIRECTORY_SEPARATOR . $f;
+                                if (is_file($full) && filesize($full) > 0) {
+                                    return $full;
+                                }
+                            }
                         }
+                    }
+                }
+            }
+
+            // 4. Fallback HTTP: Si la vista previa del navegador muestra la foto en /pastores/...
+            // Descargar la foto directamente desde el servidor web local y guardarla en caché
+            $remoteUrls = [];
+            if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+                $remoteUrls[] = $trimmed;
+            } else {
+                if (!empty($_SERVER['HTTP_HOST'])) {
+                    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                    $remoteUrls[] = $scheme . '://' . $_SERVER['HTTP_HOST'] . '/pastores/' . $basename;
+                }
+                $appUrl = rtrim(config('app.url') ?: '', '/');
+                if ($appUrl) {
+                    $remoteUrls[] = $appUrl . '/pastores/' . $basename;
+                }
+                if (function_exists('url')) {
+                    $remoteUrls[] = url('/pastores/' . $basename);
+                }
+                $remoteUrls[] = 'https://saprcoe.mmmvenezuela.org/pastores/' . $basename;
+                $remoteUrls[] = 'https://mmmvenezuela.org/pastores/' . $basename;
+            }
+
+            foreach (array_unique(array_filter($remoteUrls)) as $url) {
+                $ext = pathinfo(parse_url($url, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION) ?: 'png';
+                $cachedRemote = $cacheDir . DIRECTORY_SEPARATOR . 'rem_' . $pastor->id . '_' . md5($url) . '.' . $ext;
+                if (file_exists($cachedRemote) && filesize($cachedRemote) > 0) {
+                    return $cachedRemote;
+                }
+
+                $ctx = stream_context_create([
+                    'http' => ['timeout' => 4, 'follow_location' => 1],
+                    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+                ]);
+                $content = @file_get_contents($url, false, $ctx);
+                if ($content !== false && strlen($content) > 100) {
+                    @file_put_contents($cachedRemote, $content);
+                    if (file_exists($cachedRemote) && filesize($cachedRemote) > 0) {
+                        return $cachedRemote;
                     }
                 }
             }

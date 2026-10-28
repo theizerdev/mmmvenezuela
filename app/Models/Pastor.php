@@ -171,21 +171,15 @@ class Pastor extends Model
         }
 
         if (str_starts_with($trimmed, 'pastores/')) {
-            if (file_exists(public_path($trimmed))) {
-                return '/' . $trimmed;
-            }
-            return '/storage/' . $trimmed;
+            return '/' . $trimmed;
         }
 
         if (str_starts_with($trimmed, '/')) {
             return $trimmed;
         }
 
-        if (file_exists(public_path('pastores/' . $trimmed))) {
-            return '/pastores/' . $trimmed;
-        }
-
-        return '/storage/pastores/' . $trimmed;
+        // Por defecto para archivos guardados en public/pastores/
+        return '/pastores/' . $trimmed;
     }
 
     /**
