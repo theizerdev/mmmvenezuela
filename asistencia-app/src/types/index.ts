@@ -11,6 +11,8 @@ export interface Actividad {
   id: number;
   nombre: string;
   tipo: string;
+  estado?: string;
+  activa?: boolean;
   fecha_inicio: string;
   fecha_fin: string;
   lugar: string | null;

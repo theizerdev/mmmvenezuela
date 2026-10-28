@@ -55,13 +55,17 @@ function MainApp() {
       await api.init();
       const resp = await api.getActividades();
       if (resp.success && resp.data.length > 0) {
-        setActividades(resp.data);
+        // Filtrar exclusivamente actividades en estado 'en_curso', descartando planificadas o finalizadas
+        const enCurso = resp.data.filter((a) => a.estado === 'en_curso');
+        setActividades(enCurso);
         setActividadActual((prev) => {
-          const matched = prev ? resp.data.find((a) => a.id === prev.id) : null;
-          return matched || resp.data.find((a) => a.activa) || resp.data[0];
+          const matched = prev ? enCurso.find((a) => a.id === prev.id) : null;
+          return matched || enCurso[0] || null;
         });
         setServerOnline(true);
       } else {
+        setActividades([]);
+        setActividadActual(null);
         setServerOnline(false);
       }
     } catch {

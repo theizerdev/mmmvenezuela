@@ -52,17 +52,25 @@ function MainApp() {
       await api.init();
       const res = await api.getActividadesActivas();
       if (res.success && res.actividades.length > 0) {
-        setActividades(res.actividades);
+        // Filtrar estrictamente actividades 'en_curso'
+        const enCurso = res.actividades.filter((a) => a.estado === 'en_curso');
+        setActividades(enCurso);
         setServerOnline(true);
 
         setActividadActual((prev) => {
-          const matched = prev ? res.actividades.find((a) => a.id === prev.id) : null;
-          const selected = matched || res.actividades[0];
-          setSesionActual(selected.sesion_activa || selected.sesiones[0] || null);
+          const matched = prev ? enCurso.find((a) => a.id === prev.id) : null;
+          const selected = matched || enCurso[0] || null;
+          if (selected) {
+            setSesionActual(selected.sesion_activa || selected.sesiones[0] || null);
+          } else {
+            setSesionActual(null);
+          }
           return selected;
         });
       } else {
         setActividades([]);
+        setActividadActual(null);
+        setSesionActual(null);
       }
     } catch (err) {
       setServerOnline(false);

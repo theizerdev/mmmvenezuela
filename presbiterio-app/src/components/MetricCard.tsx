@@ -49,17 +49,17 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     <Card style={[styles.card, style]}>
       {/* HEADER DE LA TARJETA */}
       <View style={styles.header}>
-        <View style={styles.titleRow}>
+        <View style={styles.topRow}>
           <View style={[styles.iconBox, { backgroundColor: ui.muted, borderColor: ui.border }]}>
             <MdiIcon name={iconName} size={15} color={ui.brand} />
           </View>
-          <Text style={[styles.title, { color: ui.mutedForeground }]} numberOfLines={2}>
-            {title}
-          </Text>
+          <Badge variant={badgeVariant} size="sm">
+            {badgeLabel}
+          </Badge>
         </View>
-        <Badge variant={badgeVariant} size="sm">
-          {badgeLabel}
-        </Badge>
+        <Text style={[styles.title, { color: ui.mutedForeground }]} numberOfLines={2}>
+          {title}
+        </Text>
       </View>
 
       {/* VALOR PRINCIPAL Y PORCENTAJE */}
@@ -102,20 +102,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   header: {
+    gap: 8,
+  },
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
-  },
-  titleRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   iconBox: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',
@@ -127,7 +123,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    flex: 1,
   },
   valueRow: {
     flexDirection: 'row',

@@ -151,10 +151,20 @@ class PresbiterioApiController extends Controller
         $actividadId = $request->input('actividad_id');
         $sesionId = $request->input('actividad_sesion_id') ?? $request->input('sesion_id');
 
-        // Obtener actividad activa si no se especificó (sin restringir por la zona del evento)
-        $actividad = $actividadId
-            ? Actividad::withoutGlobalScope('multitenancy')->find($actividadId)
-            : Actividad::withoutGlobalScope('multitenancy')->where('estado', '!=', 'cancelada')->orderBy('fecha_inicio', 'desc')->first();
+        // Obtener actividad activa si no se especificó (exclusivamente aquellas 'en_curso')
+        $actividad = null;
+        if ($actividadId) {
+            $actividad = Actividad::withoutGlobalScope('multitenancy')
+                ->where('id', $actividadId)
+                ->where('estado', 'en_curso')
+                ->first();
+        }
+        if (!$actividad) {
+            $actividad = Actividad::withoutGlobalScope('multitenancy')
+                ->where('estado', 'en_curso')
+                ->orderBy('fecha_inicio', 'desc')
+                ->first();
+        }
 
         if (!$actividad) {
             return response()->json([
@@ -357,9 +367,19 @@ class PresbiterioApiController extends Controller
         }
 
         $actividadId = $request->input('actividad_id');
-        $actividad = $actividadId
-            ? Actividad::withoutGlobalScope('multitenancy')->find($actividadId)
-            : Actividad::withoutGlobalScope('multitenancy')->where('estado', '!=', 'cancelada')->orderBy('fecha_inicio', 'desc')->first();
+        $actividad = null;
+        if ($actividadId) {
+            $actividad = Actividad::withoutGlobalScope('multitenancy')
+                ->where('id', $actividadId)
+                ->where('estado', 'en_curso')
+                ->first();
+        }
+        if (!$actividad) {
+            $actividad = Actividad::withoutGlobalScope('multitenancy')
+                ->where('estado', 'en_curso')
+                ->orderBy('fecha_inicio', 'desc')
+                ->first();
+        }
 
         if (!$actividad) {
             return response()->json([

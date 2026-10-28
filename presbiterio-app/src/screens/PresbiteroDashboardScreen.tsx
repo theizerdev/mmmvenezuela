@@ -179,7 +179,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
         {/* CABECERA EJECUTIVA DE LA ZONA (SENTINELA HUD) */}
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
-            <View style={{ flex: 1, marginRight: 8 }}>
+            <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <ShieldCheck size={18} color={ui.brand} />
                 <Text style={[styles.zonaTitle, { color: ui.foreground }]}>

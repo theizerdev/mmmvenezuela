@@ -149,7 +149,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
         {/* CABECERA SUPERVISOR NACIONAL */}
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
-            <View style={{ flex: 1, marginRight: 8 }}>
+            <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Globe2 size={18} color={ui.brand} />
                 <Text numberOfLines={1} style={[styles.title, { color: ui.foreground }]}>

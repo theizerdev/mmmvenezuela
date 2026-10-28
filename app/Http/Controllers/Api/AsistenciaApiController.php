@@ -24,7 +24,7 @@ class AsistenciaApiController extends Controller
         $actividades = Actividad::with(['sesiones' => function ($q) {
             $q->orderBy('fecha_hora_inicio', 'asc');
         }])
-        ->where('estado', '!=', 'cancelada')
+        ->where('estado', 'en_curso')
         ->orderBy('fecha_inicio', 'desc')
         ->limit(10)
         ->get()
@@ -46,6 +46,8 @@ class AsistenciaApiController extends Controller
                 'id' => $actividad->id,
                 'nombre' => $actividad->nombre,
                 'tipo' => $actividad->tipo,
+                'estado' => $actividad->estado,
+                'activa' => $actividad->estado === 'en_curso',
                 'fecha_inicio' => $actividad->fecha_inicio ? Carbon::parse($actividad->fecha_inicio)->format('d/m/Y') : null,
                 'fecha_fin' => $actividad->fecha_fin ? Carbon::parse($actividad->fecha_fin)->format('d/m/Y') : null,
                 'lugar' => $actividad->lugar,
