@@ -22,9 +22,20 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "predictiveBackGestureEnabled": false
+    },
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#090d16",
+      "translucent": false
+    },
+    "androidNavigationBar": {
+      "visible": "visible",
+      "barStyle": "light-content",
+      "backgroundColor": "#090d16"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -45,6 +56,11 @@
           ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f4800fdf-6754-41d3-8bf2-e7eda3dfb3de"
+      }
+    }
   }
 }

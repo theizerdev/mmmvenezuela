@@ -838,22 +838,15 @@ class CarnetService
     }
 
     /**
-     * Retorna el nombre completo del pastor con el prefijo "REV." si es Ministro Ordenado
+     * Retorna el nombre completo del pastor (sin prefijo "REV.")
      */
     public function obtenerNombreCompletoConTitulo(Pastor $pastor, bool $uppercase = false): string
     {
         $raw = trim(($pastor->nombres ?? '') . ' ' . ($pastor->apellidos ?? ''));
         $raw = preg_replace('/\s+/', ' ', $raw);
-        $nivel = mb_strtolower($pastor->nivel_ministerial ?? '', 'UTF-8');
+        $clean = preg_replace('/^rev\.?\s+/i', '', $raw);
 
-        $isOrdenado = str_contains($nivel, 'ordenado');
-        $nombre = $raw;
-
-        if ($isOrdenado && !preg_match('/^rev\.?\s+/i', $raw)) {
-            $nombre = $uppercase ? 'REV. ' . $raw : 'Rev. ' . $raw;
-        }
-
-        return $uppercase ? mb_strtoupper($nombre, 'UTF-8') : $nombre;
+        return $uppercase ? mb_strtoupper($clean, 'UTF-8') : $clean;
     }
 
     /**

@@ -30,18 +30,13 @@ export function formatDocumento(doc?: string) {
 }
 
 /**
- * Retorna el nombre completo del pastor con el prefijo "REV." si es Ministro Ordenado
+ * Retorna el nombre completo del pastor (sin prefijo "REV.")
  */
 export function getPastorCarnetFullName(pastor: Pastor, uppercase = false): string {
     const raw = `${pastor.nombres || ''} ${pastor.apellidos || ''}`.trim().replace(/\s+/g, ' ');
-    const isOrdenado = (pastor.nivel_ministerial || '').toLowerCase().includes('ordenado');
-    let fullName = raw;
+    const clean = raw.replace(/^rev\.?\s+/i, '');
 
-    if (isOrdenado && !/^rev\.?\s+/i.test(raw)) {
-        fullName = uppercase ? `REV. ${raw}` : `Rev. ${raw}`;
-    }
-
-    return uppercase ? fullName.toUpperCase() : fullName;
+    return uppercase ? clean.toUpperCase() : clean;
 }
 
 /**

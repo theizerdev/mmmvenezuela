@@ -104,8 +104,12 @@ function MainApp() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+    <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+      <StatusBar
+        style={isDark ? 'light' : 'dark'}
+        backgroundColor={colors.bgSecondary}
+        translucent={false}
+      />
 
       {/* 1. ENCABEZADO INSTITUCIONAL OFICIAL */}
       <Header
