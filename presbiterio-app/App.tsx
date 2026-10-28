@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { Header } from './src/components/Header';
 import { ActivitySelector } from './src/components/ActivitySelector';
 import { ServerConfigModal } from './src/components/ServerConfigModal';
+import { SetupQuickAccessModal } from './src/components/SetupQuickAccessModal';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { PresbiteroDashboardScreen } from './src/screens/PresbiteroDashboardScreen';
 import { SupervisorDashboardScreen } from './src/screens/SupervisorDashboardScreen';
@@ -33,7 +34,13 @@ Notifications.setNotificationHandler({
 
 function MainApp() {
   const { ui, resolvedTheme } = useTheme();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    loading: authLoading,
+    shouldShowQuickAccessSetup,
+    setShouldShowQuickAccessSetup,
+  } = useAuth();
 
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [actividadActual, setActividadActual] = useState<Actividad | null>(null);
@@ -154,6 +161,13 @@ function MainApp() {
         visible={configModalVisible}
         onClose={() => setConfigModalVisible(false)}
         onSaved={cargarActividades}
+      />
+
+      {/* CONFIGURACIÓN DE ACCESO RÁPIDO (PRIMER INGRESO O AJUSTE) */}
+      <SetupQuickAccessModal
+        visible={shouldShowQuickAccessSetup}
+        onClose={() => setShouldShowQuickAccessSetup(false)}
+        isInitialSetup
       />
     </SafeAreaView>
   );

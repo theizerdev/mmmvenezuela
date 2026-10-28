@@ -35,17 +35,18 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: ui.background, borderBottomColor: ui.border }]}>
-      <TouchableOpacity
-        style={[
-          styles.selectorBar,
-          {
-            backgroundColor: ui.card,
-            borderColor: ui.border,
-          },
-        ]}
-        onPress={() => setDialogOpen(true)}
-        activeOpacity={0.8}
-      >
+      <View style={styles.responsiveInner}>
+        <TouchableOpacity
+          style={[
+            styles.selectorBar,
+            {
+              backgroundColor: ui.card,
+              borderColor: ui.border,
+            },
+          ]}
+          onPress={() => setDialogOpen(true)}
+          activeOpacity={0.8}
+        >
         {/* ICONO CALENDARIO */}
         <View style={[styles.iconBox, { backgroundColor: ui.brandSoft }]}>
           <Calendar size={18} color={ui.brand} />
@@ -85,6 +86,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
           <ChevronRight size={16} color={ui.mutedForeground} />
         </View>
       </TouchableOpacity>
+      </View>
 
       {/* MODAL DIALOG */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -96,11 +98,11 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
         </DialogHeader>
 
         <ScrollView style={{ maxHeight: 380, marginTop: 10 }}>
-          {actividades.map((item) => {
+          {actividades.map((item, index) => {
             const isSelected = item.id === actividadActual?.id;
             return (
               <View
-                key={item.id}
+                key={`act-${item.id ?? index}`}
                 style={[
                   styles.activityItemCard,
                   {
@@ -137,11 +139,11 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                       BLOQUES DE ACTIVIDAD:
                     </Text>
                     <View style={styles.sessionsGrid}>
-                      {item.sesiones.map((ses) => {
+                      {item.sesiones.map((ses, sIndex) => {
                         const isSesSelected = ses.id === sesionActual?.id;
                         return (
                           <TouchableOpacity
-                            key={ses.id}
+                            key={`ses-${ses.id ?? sIndex}`}
                             style={[
                               styles.sessionChip,
                               {
@@ -186,6 +188,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderBottomWidth: 1,
+  },
+  responsiveInner: {
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
   },
   selectorBar: {
     flexDirection: 'row',

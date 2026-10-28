@@ -7,6 +7,7 @@ import {
   Settings2,
   ShieldCheck,
   Fingerprint,
+  KeyRound,
   Bell,
   BellOff,
   LogOut,
@@ -18,7 +19,8 @@ import { useAuth } from '../context/AuthContext';
 import { Actividad } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/Dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription } from './ui/Dialog';
+import { SetupQuickAccessModal } from './SetupQuickAccessModal';
 import { radius } from './ui/theme';
 
 interface HeaderProps {
@@ -39,79 +41,86 @@ export const Header: React.FC<HeaderProps> = ({
     toggleModoSilencioso,
     biometricsAvailable,
     biometricsEnabled,
-    enableBiometrics,
-    disableBiometrics,
+    hasPinConfigured,
+    platformAuthName,
   } = useAuth();
 
   const [themeDialogOpen, setThemeDialogOpen] = useState(false);
   const [userProfileDialogOpen, setUserProfileDialogOpen] = useState(false);
+  const [quickAccessModalOpen, setQuickAccessModalOpen] = useState(false);
 
   const isDark = resolvedTheme === 'dark';
 
   return (
     <View style={[styles.container, { backgroundColor: ui.card, borderBottomColor: ui.border }]}>
-      {/* 1. BARRA SUPERIOR INSTITUCIONAL OFICIAL MMM */}
-      <View style={styles.brandingRow}>
-        <View style={styles.brandLeft}>
-          <Image
-            source={isDark ? require('../../assets/logo_light.png') : require('../../assets/logo_color.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <View style={styles.brandTextCol}>
-            <Text numberOfLines={1} style={[styles.churchSub, { color: ui.mutedForeground }]}>
-              IGLESIA CRISTIANA PENTECOSTÉS VENEZUELA
-            </Text>
-            <Text numberOfLines={1} style={[styles.churchTitle, { color: ui.foreground }]}>
-              MOVIMIENTO MISIONERO MUNDIAL
-            </Text>
-          </View>
-        </View>
-
-        {/* ACCIONES SUPERIORES */}
-        <View style={styles.actionsRow}>
-          {/* BADGE DE USUARIO / PERFIL */}
-          {user && (
-            <TouchableOpacity
-              style={[styles.userBadgeBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
-              onPress={() => setUserProfileDialogOpen(true)}
-            >
-              <ShieldCheck size={14} color={ui.brand} />
-              <Text style={[styles.userBadgeText, { color: ui.foreground }]} numberOfLines={1}>
-                {user.es_supervisor ? 'Supervisor' : `Zona ${user.zona}`}
+      <View style={styles.responsiveInner}>
+        {/* 1. BARRA SUPERIOR INSTITUCIONAL OFICIAL MMM */}
+        <View style={styles.brandingRow}>
+          <View style={styles.brandLeft}>
+            <Image
+              source={
+                isDark
+                  ? require('../../assets/logo_light.png')
+                  : require('../../assets/logo_color.png')
+              }
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View style={styles.brandTextCol}>
+              <Text numberOfLines={1} style={[styles.churchSub, { color: ui.mutedForeground }]}>
+                IGLESIA CRISTIANA PENTECOSTÉS VENEZUELA
               </Text>
-            </TouchableOpacity>
-          )}
+              <Text numberOfLines={1} style={[styles.churchTitle, { color: ui.foreground }]}>
+                MOVIMIENTO MISIONERO MUNDIAL
+              </Text>
+            </View>
+          </View>
 
-          {/* SELECTOR DE TEMA */}
-          <TouchableOpacity
-            style={[styles.actionIconBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
-            onPress={() => setThemeDialogOpen(true)}
-            accessibilityLabel="Cambiar tema"
-          >
-            {themeMode === 'system' ? (
-              <Smartphone size={16} color={ui.brand} />
-            ) : isDark ? (
-              <Moon size={16} color="#38bdf8" />
-            ) : (
-              <Sun size={16} color="#f59e0b" />
+          {/* ACCIONES SUPERIORES */}
+          <View style={styles.actionsRow}>
+            {/* BADGE DE USUARIO / PERFIL */}
+            {user && (
+              <TouchableOpacity
+                style={[styles.userBadgeBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
+                onPress={() => setUserProfileDialogOpen(true)}
+              >
+                <ShieldCheck size={14} color={ui.brand} />
+                <Text style={[styles.userBadgeText, { color: ui.foreground }]} numberOfLines={1}>
+                  {user.es_supervisor ? 'Supervisor' : `Zona ${user.zona}`}
+                </Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
 
-          {/* CONFIGURACIÓN SERVIDOR */}
-          {onOpenServerConfig && (
+            {/* SELECTOR DE TEMA */}
             <TouchableOpacity
               style={[styles.actionIconBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
-              onPress={onOpenServerConfig}
-              accessibilityLabel="Configurar servidor"
+              onPress={() => setThemeDialogOpen(true)}
+              accessibilityLabel="Cambiar tema"
             >
-              {serverOnline ? (
-                <Settings2 size={16} color={ui.mutedForeground} />
+              {themeMode === 'system' ? (
+                <Smartphone size={16} color={ui.brand} />
+              ) : isDark ? (
+                <Moon size={16} color="#38bdf8" />
               ) : (
-                <CloudOff size={16} color={ui.destructive} />
+                <Sun size={16} color="#f59e0b" />
               )}
             </TouchableOpacity>
-          )}
+
+            {/* CONFIGURACIÓN SERVIDOR */}
+            {onOpenServerConfig && (
+              <TouchableOpacity
+                style={[styles.actionIconBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
+                onPress={onOpenServerConfig}
+                accessibilityLabel="Configurar servidor"
+              >
+                {serverOnline ? (
+                  <Settings2 size={16} color={ui.mutedForeground} />
+                ) : (
+                  <CloudOff size={16} color={ui.destructive} />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
@@ -122,9 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Palette size={20} color={ui.brand} />
             <DialogTitle>Tema Visual</DialogTitle>
           </View>
-          <DialogDescription>
-            Personalice la apariencia del panel ejecutivo:
-          </DialogDescription>
+          <DialogDescription>Personalice la apariencia del panel ejecutivo:</DialogDescription>
         </DialogHeader>
 
         <View style={styles.dialogOptionsList}>
@@ -143,8 +150,12 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Moon size={18} color="#38bdf8" />
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.optionTitle, { color: ui.foreground }]}>Tema Oscuro (Sentinela HUD)</Text>
-              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>Fondo Zinc-950 de alta concentración</Text>
+              <Text style={[styles.optionTitle, { color: ui.foreground }]}>
+                Tema Oscuro (Sentinela HUD)
+              </Text>
+              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
+                Fondo Zinc-950 de alta concentración
+              </Text>
             </View>
             {themeMode === 'dark' && <Badge variant="brand">ACTIVO</Badge>}
           </TouchableOpacity>
@@ -165,7 +176,9 @@ export const Header: React.FC<HeaderProps> = ({
             <Sun size={18} color="#f59e0b" />
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={[styles.optionTitle, { color: ui.foreground }]}>Tema Claro</Text>
-              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>Fondo Slate limpio y logotipo a color</Text>
+              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
+                Fondo Slate limpio y logotipo a color
+              </Text>
             </View>
             {themeMode === 'light' && <Badge variant="brand">ACTIVO</Badge>}
           </TouchableOpacity>
@@ -185,8 +198,12 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Smartphone size={18} color={ui.brand} />
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.optionTitle, { color: ui.foreground }]}>Automático (Sistema)</Text>
-              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>Sigue la apariencia del dispositivo</Text>
+              <Text style={[styles.optionTitle, { color: ui.foreground }]}>
+                Automático (Sistema)
+              </Text>
+              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
+                Sigue la apariencia del dispositivo
+              </Text>
             </View>
             {themeMode === 'system' && <Badge variant="brand">ACTIVO</Badge>}
           </TouchableOpacity>
@@ -202,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
               <DialogTitle>Sesión de Liderazgo</DialogTitle>
             </View>
             <DialogDescription>
-              Información de su cuenta y preferencias de alerta:
+              Información de su cuenta y preferencias de acceso:
             </DialogDescription>
           </DialogHeader>
 
@@ -220,30 +237,41 @@ export const Header: React.FC<HeaderProps> = ({
               </View>
             </View>
 
-            {/* OPCIÓN HUELLA */}
-            {biometricsAvailable && (
-              <TouchableOpacity
-                style={[styles.prefRow, { backgroundColor: ui.muted, borderColor: ui.border }]}
-                onPress={async () => {
-                  if (biometricsEnabled) {
-                    await disableBiometrics();
-                  } else {
-                    await enableBiometrics();
-                  }
-                }}
-              >
-                <Fingerprint size={20} color={ui.brand} />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={[styles.optionTitle, { color: ui.foreground }]}>Acceso con Huella</Text>
-                  <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
-                    {biometricsEnabled ? 'Habilitado en este teléfono' : 'Desactivado'}
-                  </Text>
-                </View>
-                <Badge variant={biometricsEnabled ? 'success' : 'outline'}>
-                  {biometricsEnabled ? 'ACTIVO' : 'ACTIVAR'}
-                </Badge>
-              </TouchableOpacity>
-            )}
+            {/* OPCIÓN CONFIGURAR LLAVE DE ACCESO RÁPIDO (PIN / HUELLA / WINDOWS HELLO) */}
+            <TouchableOpacity
+              style={[styles.prefRow, { backgroundColor: ui.muted, borderColor: ui.border }]}
+              onPress={() => {
+                setUserProfileDialogOpen(false);
+                setQuickAccessModalOpen(true);
+              }}
+            >
+              <KeyRound size={20} color={ui.brand} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.optionTitle, { color: ui.foreground }]}>
+                  {/Windows/i.test(platformAuthName)
+                    ? 'Windows Hello / Llave de Acceso'
+                    : 'Llave de Acceso del Dispositivo'}
+                </Text>
+                <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
+                  {hasPinConfigured && biometricsEnabled
+                    ? 'PIN y ' +
+                      (/Windows/i.test(platformAuthName)
+                        ? 'Windows Hello activos'
+                        : 'Biometría activos')
+                    : biometricsEnabled
+                    ? /Windows/i.test(platformAuthName)
+                      ? 'Windows Hello activo'
+                      : 'Sensor biométrico activo'
+                    : hasPinConfigured
+                    ? 'PIN numérico configurado'
+                    : 'Configurar ' +
+                      (/Windows/i.test(platformAuthName) ? 'Windows Hello' : 'acceso rápido')}
+                </Text>
+              </View>
+              <Badge variant={hasPinConfigured || biometricsEnabled ? 'success' : 'outline'}>
+                {hasPinConfigured || biometricsEnabled ? 'ACTIVO' : 'AJUSTAR'}
+              </Badge>
+            </TouchableOpacity>
 
             {/* MODO SILENCIOSO */}
             <TouchableOpacity
@@ -256,7 +284,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <Bell size={20} color={ui.success} />
               )}
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={[styles.optionTitle, { color: ui.foreground }]}>Modo Silencioso / Plenaria</Text>
+                <Text style={[styles.optionTitle, { color: ui.foreground }]}>
+                  Modo Silencioso / Plenaria
+                </Text>
                 <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
                   {user.push_modo_silencioso ? 'Sonido pausado' : 'Alertas audibles activas'}
                 </Text>
@@ -280,15 +310,26 @@ export const Header: React.FC<HeaderProps> = ({
           </View>
         </Dialog>
       )}
+
+      {/* MODAL CONFIGURACIÓN LLAVE DE ACCESO */}
+      <SetupQuickAccessModal
+        visible={quickAccessModalOpen}
+        onClose={() => setQuickAccessModalOpen(false)}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
+  },
+  responsiveInner: {
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
   },
   brandingRow: {
     flexDirection: 'row',
@@ -299,11 +340,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 6,
+    marginRight: 8,
   },
   logo: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     marginRight: 8,
   },
   brandTextCol: {
@@ -311,14 +352,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   churchSub: {
-    fontSize: 8,
+    fontSize: 8.5,
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   churchTitle: {
     fontFamily: 'CocogooseBold',
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '900',
     letterSpacing: -0.2,
     marginTop: 1,
@@ -326,7 +367,7 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   userBadgeBtn: {
     flexDirection: 'row',
@@ -389,4 +430,3 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 });
-

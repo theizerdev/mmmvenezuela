@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Card } from './ui/Card';
 import { Progress } from './ui/Progress';
-import { Badge } from './ui/Badge';
+import { Badge, BadgeVariant } from './ui/Badge';
 import { Sparkline } from './ui/Sparkline';
-import { ui, radius, useTheme, MdiIcon } from './ui/theme';
+import { radius, useTheme, MdiIcon } from './ui/theme';
 
 interface MetricCardProps {
   title: string;
@@ -14,11 +14,11 @@ interface MetricCardProps {
   iconName: string;
   type?: 'cpu' | 'ram' | 'disk' | 'net';
   badgeLabel?: string;
-  badgeVariant?: 'default' | 'secondary' | 'outline' | 'destructive' | 'success' | 'warning' | 'brand';
+  badgeVariant?: BadgeVariant;
   percentLabel?: string;
   sparklineData?: number[];
   sparklineColor?: string;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -35,11 +35,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   sparklineColor,
   style,
 }) => {
-  const { ui } = useTheme();
+  const { ui, resolvedTheme } = useTheme();
   const isCritical = percent >= 90;
   const isWarning = percent >= 75 && percent < 90;
 
-  const defaultBadgeVariant = isCritical ? 'destructive' : isWarning ? 'warning' : 'outline';
+  const defaultBadgeVariant: BadgeVariant = isCritical ? 'destructive' : isWarning ? 'warning' : 'outline';
   const defaultBadgeLabel = isCritical ? 'CRÍTICO' : isWarning ? 'ALTO' : 'ÓPTIMO';
 
   const badgeVariant = customBadgeVariant || defaultBadgeVariant;
@@ -47,33 +47,39 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
   return (
     <Card style={[styles.card, style]}>
+      {/* HEADER DE LA TARJETA */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={[styles.iconBox, { backgroundColor: ui.muted, borderColor: ui.border }]}>
-            <MdiIcon name={iconName} size={16} color={ui.foreground} />
+            <MdiIcon name={iconName} size={15} color={ui.brand} />
           </View>
           <Text style={[styles.title, { color: ui.mutedForeground }]} numberOfLines={1}>
             {title}
           </Text>
         </View>
-        <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+        <Badge variant={badgeVariant} size="sm">
+          {badgeLabel}
+        </Badge>
       </View>
 
+      {/* VALOR PRINCIPAL Y PORCENTAJE */}
       <View style={styles.valueRow}>
         <Text style={[styles.value, { color: ui.foreground }]} numberOfLines={1}>
           {value}
         </Text>
         <Text style={[styles.percentText, { color: ui.mutedForeground }]} numberOfLines={1}>
-          {percentLabel || `${percent.toFixed(0)}%`}
+          {percentLabel || `${Math.round(percent)}%`}
         </Text>
       </View>
 
+      {/* BARRA DE PROGRESO */}
       <Progress
         value={Math.max(percent, type === 'net' ? 6 : 0)}
-        height={6}
+        height={5}
         style={{ marginVertical: 8 }}
       />
 
+      {/* SUBTEXTO */}
       <Text style={[styles.subtext, { color: ui.subtle }]} numberOfLines={1} ellipsizeMode="tail">
         {subtext}
       </Text>
@@ -92,62 +98,55 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     padding: 14,
-    marginBottom: 10,
+    borderRadius: radius.xl,
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 8,
   },
   titleRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    minWidth: 0,
-    marginRight: 8,
+    gap: 6,
   },
   iconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    backgroundColor: ui.muted,
+    width: 26,
+    height: 26,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: ui.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   title: {
-    color: ui.mutedForeground,
-    fontSize: 13,
-    fontWeight: '500',
-    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    flex: 1,
   },
   valueRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 4,
-    gap: 8,
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 6,
   },
   value: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: ui.foreground,
+    fontSize: 22,
+    fontWeight: '800',
     letterSpacing: -0.5,
-    flexShrink: 1,
   },
   percentText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: ui.mutedForeground,
-    flexShrink: 0,
+    fontSize: 13,
+    fontWeight: '700',
   },
   subtext: {
-    fontSize: 11.5,
-    color: ui.subtle,
-    marginTop: 2,
+    fontSize: 11,
+    fontWeight: '500',
   },
 });

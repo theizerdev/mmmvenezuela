@@ -143,6 +143,11 @@ class PresbiterioApiController extends Controller
         // Determinar la zona: si es supervisor puede filtrar por cualquier zona, si es presbítero usa su zona
         $zona = $esSupervisor ? ($request->input('zona') ?? $user->zona ?? '1') : ($user->zona ?? '1');
 
+        // Buscar el presbítero oficial asignado a esta zona en la base de datos
+        $presbiteroUser = User::where('zona', $zona)->first();
+        $presbiteroNombre = $presbiteroUser ? $presbiteroUser->name : "Presbítero Zona {$zona}";
+        $presbiteroTelefono = $presbiteroUser?->telefono;
+
         $actividadId = $request->input('actividad_id');
         $sesionId = $request->input('actividad_sesion_id');
 
@@ -195,28 +200,34 @@ class PresbiterioApiController extends Controller
 
                 $presentes[] = [
                     'id' => $pastor->id,
+                    'pastor_id' => $pastor->id,
                     'asistencia_id' => $as->id,
                     'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
                     'documento' => $pastor->documento,
                     'codigo' => $pastor->codigo,
                     'foto' => $fotoUrl,
+                    'foto_url' => $fotoUrl,
                     'nivel_ministerial' => $pastor->nivel_ministerial ?? 'Obrero',
                     'extension_nombre' => $extension,
                     'extension_estado' => $pastor->extension_estado ?? $pastor->estado?->nombre,
                     'distrito' => $pastor->distrito,
                     'hora' => $as->fecha_registro?->format('h:i A') ?? 'Acreditado',
+                    'hora_asistencia' => $as->fecha_registro?->format('h:i A') ?? 'Acreditado',
                     'metodo' => $as->metodo,
                     'asistio_con_conyuge' => (bool) $as->asistio_con_conyuge,
+                    'conyuge_presente' => (bool) $as->asistio_con_conyuge,
                     'nombre_conyuge' => $pastor->nombre_conyuge,
                 ];
             } else {
                 $telefonoLimpio = preg_replace('/\D/', '', $pastor->telefono ?? '');
                 $pendientes[] = [
                     'id' => $pastor->id,
+                    'pastor_id' => $pastor->id,
                     'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
                     'documento' => $pastor->documento,
                     'codigo' => $pastor->codigo,
                     'foto' => $fotoUrl,
+                    'foto_url' => $fotoUrl,
                     'nivel_ministerial' => $pastor->nivel_ministerial ?? 'Obrero',
                     'extension_nombre' => $extension,
                     'extension_estado' => $pastor->extension_estado ?? $pastor->estado?->nombre,
@@ -235,7 +246,9 @@ class PresbiterioApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'zona' => $zona,
+            'zona' => (string) $zona,
+            'presbitero_nombre' => $presbiteroNombre,
+            'presbitero_telefono' => $presbiteroTelefono,
             'actividad' => [
                 'id' => $actividad->id,
                 'nombre' => $actividad->nombre,

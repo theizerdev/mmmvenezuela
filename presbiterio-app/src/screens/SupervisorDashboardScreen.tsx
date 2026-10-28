@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import {
   Globe2,
@@ -44,7 +45,11 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
   actividad,
   sesion,
 }) => {
+  const { width } = useWindowDimensions();
   const { ui } = useTheme();
+
+  const isWide = width >= 768;
+
   const [data, setData] = useState<SupervisorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,141 +124,179 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* CABECERA SUPERVISOR NACIONAL */}
-      <Card style={styles.headerCard}>
-        <View style={styles.headerRow}>
-          <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Globe2 size={18} color={ui.brand} />
-              <Text style={[styles.title, { color: ui.foreground }]}>
-                SUPERVISIÓN NACIONAL VENEZUELA
+      <View style={styles.responsiveInner}>
+        {/* CABECERA SUPERVISOR NACIONAL */}
+        <Card style={styles.headerCard}>
+          <View style={styles.headerRow}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Globe2 size={18} color={ui.brand} />
+                <Text style={[styles.title, { color: ui.foreground }]}>
+                  SUPERVISIÓN NACIONAL VENEZUELA
+                </Text>
+              </View>
+              <Text style={[styles.subtitle, { color: ui.mutedForeground }]}>
+                Monitoreo centralizado en tiempo real • 41 Zonas Convocadas
               </Text>
             </View>
-            <Text style={[styles.subtitle, { color: ui.mutedForeground }]}>
-              Monitoreo centralizado en tiempo real • 41 Zonas Convocadas
-            </Text>
+
+            <Badge variant="brand" size="sm">
+              EN DIRECTO
+            </Badge>
           </View>
-          <Badge variant="brand">CONSEJO NACIONAL</Badge>
+        </Card>
+
+        {/* MÉTRICAS NACIONALES CONSOLIDADAS */}
+        <View style={styles.metricsContainer}>
+          <MetricCard
+            title="PADRÓN PASTORAL"
+            value={String(metricas.total_padron)}
+            percent={100}
+            subtext="41 Zonas Eclesiásticas"
+            iconName="account-group"
+            badgeLabel="41 ZONAS"
+            badgeVariant="secondary"
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
+
+          <MetricCard
+            title="ASISTENCIA TOTAL"
+            value={String(metricas.total_presentes)}
+            percent={metricas.porcentaje_asistencia}
+            subtext={`${metricas.porcentaje_asistencia}% concurrencia`}
+            iconName="chart-timeline-variant"
+            badgeLabel={
+              metricas.porcentaje_asistencia >= 70
+                ? 'ÓPTIMO'
+                : metricas.porcentaje_asistencia >= 40
+                ? 'REGULAR'
+                : 'BAJO'
+            }
+            badgeVariant={
+              metricas.porcentaje_asistencia >= 70
+                ? 'success'
+                : metricas.porcentaje_asistencia >= 40
+                ? 'warning'
+                : 'destructive'
+            }
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
+
+          <MetricCard
+            title="PENDIENTES"
+            value={String(metricas.total_pendientes)}
+            percent={
+              metricas.total_padron > 0
+                ? (metricas.total_pendientes / metricas.total_padron) * 100
+                : 0
+            }
+            subtext="Obreros en camino o ausentes"
+            iconName="clock-alert-outline"
+            badgeLabel="POR LLEGAR"
+            badgeVariant="warning"
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
+
+          <MetricCard
+            title="CÓNYUGES"
+            value={String(metricas.total_con_conyuge)}
+            percent={
+              metricas.total_presentes > 0
+                ? (metricas.total_con_conyuge / metricas.total_presentes) * 100
+                : 0
+            }
+            subtext="Acompañando la obra"
+            iconName="heart"
+            badgeLabel="PAREJAS"
+            badgeVariant="brand"
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
         </View>
-      </Card>
 
-      {/* METRICCARDS NACIONALES */}
-      <View style={styles.metricsGrid}>
-        <MetricCard
-          title="PADRÓN PASTORAL"
-          value={String(metricas.total_padron)}
-          percent={100}
-          subtext="Pastores convocados en el país"
-          iconName="account-group"
-          badgeLabel="NACIONAL"
-          badgeVariant="secondary"
-          style={{ flex: 1, minWidth: 150 }}
-        />
+        {/* BUSCADOR DE ZONA */}
+        <View style={[styles.searchBox, { backgroundColor: ui.card, borderColor: ui.border }]}>
+          <Search size={16} color={ui.mutedForeground} style={{ marginRight: 8 }} />
+          <TextInput
+            style={[styles.searchInput, { color: ui.foreground }]}
+            placeholder="Filtrar por número de zona o nombre del presbítero..."
+            placeholderTextColor={ui.mutedForeground}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-        <MetricCard
-          title="ASISTENCIA TOTAL"
-          value={String(metricas.total_presentes)}
-          percent={metricas.porcentaje_asistencia}
-          subtext={`${metricas.porcentaje_asistencia}% concurrencia`}
-          iconName="chart-timeline-variant"
-          badgeLabel={metricas.porcentaje_asistencia >= 70 ? 'ÓPTIMO' : metricas.porcentaje_asistencia >= 40 ? 'REGULAR' : 'BAJO'}
-          badgeVariant={metricas.porcentaje_asistencia >= 70 ? 'success' : metricas.porcentaje_asistencia >= 40 ? 'warning' : 'destructive'}
-          style={{ flex: 1, minWidth: 150 }}
-        />
-      </View>
+        {/* LISTADO DE LAS 41 ZONAS */}
+        <Text style={[styles.sectionTitle, { color: ui.foreground }]}>
+          ESTADO POR PRESBITERIO ({zonasFiltradas.length} ZONAS)
+        </Text>
 
-      <View style={styles.metricsGrid}>
-        <MetricCard
-          title="PENDIENTES POR LLEGAR"
-          value={String(metricas.total_pendientes)}
-          percent={metricas.total_padron > 0 ? (metricas.total_pendientes / metricas.total_padron) * 100 : 0}
-          subtext="Obreros en camino o ausentes"
-          iconName="clock-alert-outline"
-          badgeLabel="POR LLEGAR"
-          badgeVariant="warning"
-          style={{ flex: 1, minWidth: 150 }}
-        />
+        <View style={styles.zonasGrid}>
+          {zonasFiltradas.map((z, index) => {
+            const badgeVariant =
+              z.porcentaje >= 70 ? 'success' : z.porcentaje >= 40 ? 'warning' : 'destructive';
+            const badgeLabel =
+              z.porcentaje >= 70 ? 'ÓPTIMO' : z.porcentaje >= 40 ? 'REGULAR' : 'BAJO';
 
-        <MetricCard
-          title="CÓNYUGES PRESENTES"
-          value={String(metricas.total_con_conyuge)}
-          percent={metricas.total_presentes > 0 ? (metricas.total_con_conyuge / metricas.total_presentes) * 100 : 0}
-          subtext="Acompañando la obra"
-          iconName="heart"
-          badgeLabel="PAREJAS"
-          badgeVariant="brand"
-          style={{ flex: 1, minWidth: 150 }}
-        />
-      </View>
-
-      {/* BUSCADOR DE ZONA */}
-      <View style={[styles.searchBox, { backgroundColor: ui.card, borderColor: ui.border }]}>
-        <Search size={16} color={ui.mutedForeground} style={{ marginRight: 8 }} />
-        <TextInput
-          style={[styles.searchInput, { color: ui.foreground }]}
-          placeholder="Filtrar por zona o presbítero..."
-          placeholderTextColor={ui.mutedForeground}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* LISTADO DE LAS 41 ZONAS */}
-      <Text style={[styles.sectionTitle, { color: ui.foreground }]}>
-        ESTADO POR PRESBITERIO ({zonasFiltradas.length} ZONAS)
-      </Text>
-
-      <View style={styles.zonasList}>
-        {zonasFiltradas.map((z, index) => {
-          const badgeVariant =
-            z.porcentaje >= 70 ? 'success' : z.porcentaje >= 40 ? 'warning' : 'destructive';
-          const badgeLabel =
-            z.porcentaje >= 70 ? 'ÓPTIMO' : z.porcentaje >= 40 ? 'REGULAR' : 'BAJO';
-
-          return (
-            <TouchableOpacity
-              key={z.zona}
-              style={[styles.zonaCard, { backgroundColor: ui.card, borderColor: ui.border }]}
-              onPress={() => setSelectedZona(z.zona)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.zonaHeaderRow}>
-                {/* ÍNDICE Y NOMBRE */}
-                <View style={styles.zonaTitleCol}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Badge variant="outline">#{index + 1}</Badge>
-                    <Text style={[styles.zonaNombre, { color: ui.foreground }]}>
-                      {z.nombre_zona.toUpperCase()}
+            return (
+              <TouchableOpacity
+                key={`zona-${z.zona ?? index}`}
+                style={[
+                  styles.zonaCard,
+                  isWide ? styles.zonaCardWide : styles.zonaCardMobile,
+                  { backgroundColor: ui.card, borderColor: ui.border },
+                ]}
+                onPress={() => setSelectedZona(z.zona)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.zonaHeaderRow}>
+                  {/* ÍNDICE Y NOMBRE */}
+                  <View style={styles.zonaTitleCol}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Badge variant="outline" size="sm">
+                        {`#${index + 1}`}
+                      </Badge>
+                      <Text style={[styles.zonaNombre, { color: ui.foreground }]}>
+                        {z.nombre_zona.toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.presbiteroNombre, { color: ui.mutedForeground }]}>
+                      Presbítero:{' '}
+                      <Text style={{ color: ui.foreground, fontWeight: '700' }}>
+                        {z.presbitero_nombre}
+                      </Text>
                     </Text>
                   </View>
-                  <Text style={[styles.presbiteroNombre, { color: ui.mutedForeground }]}>
-                    Presbítero: <Text style={{ color: ui.foreground, fontWeight: '700' }}>{z.presbitero_nombre}</Text>
+
+                  {/* SEMÁFORO BADGE */}
+                  <Badge variant={badgeVariant} size="sm">
+                    {badgeLabel}
+                  </Badge>
+                </View>
+
+                {/* BARRA DE PROGRESO */}
+                <View style={{ marginVertical: 8 }}>
+                  <Progress value={z.porcentaje} height={5} />
+                </View>
+
+                {/* DETALLES DE AUDITORÍA */}
+                <View style={styles.zonaFooterRow}>
+                  <Text style={[styles.footerStat, { color: ui.mutedForeground }]}>
+                    Presentes:{' '}
+                    <Text style={{ color: ui.foreground, fontWeight: '700' }}>
+                      {z.presentes}/{z.total_padron}
+                    </Text>{' '}
+                    ({z.porcentaje}%)
                   </Text>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={[styles.auditLink, { color: ui.brand }]}>Auditar Zona</Text>
+                    <ChevronRight size={14} color={ui.brand} />
+                  </View>
                 </View>
-
-                {/* SEMÁFORO BADGE */}
-                <Badge variant={badgeVariant}>{badgeLabel}</Badge>
-              </View>
-
-              {/* BARRA DE PROGRESO */}
-              <View style={{ marginVertical: 8 }}>
-                <Progress value={z.porcentaje} height={5} />
-              </View>
-
-              {/* DETALLES DE AUDITORÍA */}
-              <View style={styles.zonaFooterRow}>
-                <Text style={[styles.footerStat, { color: ui.mutedForeground }]}>
-                  Presentes: <Text style={{ color: ui.foreground, fontWeight: '700' }}>{z.presentes}/{z.total_padron}</Text> ({z.porcentaje}%)
-                </Text>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={[styles.auditLink, { color: ui.brand }]}>Auditar Zona</Text>
-                  <ChevronRight size={14} color={ui.brand} />
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </ScrollView>
   );
@@ -266,6 +309,11 @@ const styles = StyleSheet.create({
   content: {
     padding: 14,
     paddingBottom: 40,
+  },
+  responsiveInner: {
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
   },
   centerLoading: {
     flex: 1,
@@ -280,6 +328,7 @@ const styles = StyleSheet.create({
   headerCard: {
     padding: 16,
     marginBottom: 12,
+    borderRadius: radius.xl,
   },
   headerRow: {
     flexDirection: 'row',
@@ -295,17 +344,28 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     marginTop: 2,
   },
-  metricsGrid: {
+  metricsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
+    marginBottom: 10,
+  },
+  metricWide: {
+    flex: 1,
+    minWidth: 200,
+  },
+  metricMobile: {
+    width: '48.5%',
+    minWidth: 140,
+    flexGrow: 1,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    height: 42,
+    borderRadius: radius.lg,
+    paddingHorizontal: 14,
+    height: 44,
     marginVertical: 12,
   },
   searchInput: {
@@ -314,12 +374,15 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
     letterSpacing: 0.8,
     marginBottom: 10,
+    textTransform: 'uppercase',
   },
-  zonasList: {
+  zonasGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   zonaCard: {
@@ -327,10 +390,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
   },
+  zonaCardWide: {
+    width: '49%',
+    flexGrow: 1,
+  },
+  zonaCardMobile: {
+    width: '100%',
+  },
   zonaHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   zonaTitleCol: {
     flex: 1,
@@ -357,4 +428,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

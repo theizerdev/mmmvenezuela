@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import {
   Users,
@@ -35,9 +36,8 @@ import {
   PastorPendiente,
 } from '../types';
 import { MetricCard } from '../components/MetricCard';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
 import { radius } from '../components/ui/theme';
 
 interface PresbiteroDashboardScreenProps {
@@ -53,14 +53,18 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
   zonaOverride,
   onVolverSupervisor,
 }) => {
+  const { width } = useWindowDimensions();
   const { ui, resolvedTheme } = useTheme();
   const { user, toggleModoSilencioso } = useAuth();
+
+  const isWide = width >= 768;
 
   const [data, setData] = useState<PresbiteroDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'presentes' | 'pendientes'>('presentes');
   const [searchQuery, setSearchQuery] = useState('');
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   const zonaTarget = zonaOverride || user?.zona || '1';
 
@@ -143,267 +147,387 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* BOTÓN REGRESAR SI ES AUDITORÍA DE SUPERVISOR */}
-      {onVolverSupervisor && (
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
-          onPress={onVolverSupervisor}
-        >
-          <ChevronLeft size={16} color={ui.foreground} />
-          <Text style={[styles.backText, { color: ui.foreground }]}>Volver al Dashboard Nacional</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.responsiveInner}>
+        {/* BOTÓN REGRESAR SI ES AUDITORÍA DE SUPERVISOR */}
+        {onVolverSupervisor && (
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
+            onPress={onVolverSupervisor}
+          >
+            <ChevronLeft size={16} color={ui.foreground} />
+            <Text style={[styles.backText, { color: ui.foreground }]}>
+              Volver al Dashboard Nacional
+            </Text>
+          </TouchableOpacity>
+        )}
 
-      {/* CABECERA EJECUTIVA DE LA ZONA (SENTINELA HUD) */}
-      <Card style={styles.headerCard}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <ShieldCheck size={18} color={ui.brand} />
-              <Text style={[styles.zonaTitle, { color: ui.foreground }]}>
-                PRESBITERIO ZONA {zonaTarget}
+        {/* CABECERA EJECUTIVA DE LA ZONA (SENTINELA HUD) */}
+        <Card style={styles.headerCard}>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <ShieldCheck size={18} color={ui.brand} />
+                <Text style={[styles.zonaTitle, { color: ui.foreground }]}>
+                  PRESBITERIO ZONA {data?.zona || zonaTarget}
+                </Text>
+              </View>
+              <Text style={[styles.presbiteroSub, { color: ui.mutedForeground }]}>
+                Presbítero a cargo:{' '}
+                <Text style={{ color: ui.foreground, fontWeight: '700' }}>
+                  {data?.presbitero_nombre ||
+                    (user?.es_supervisor ? 'Cargando presbítero...' : user?.name || 'Maikel Páez')}
+                </Text>
               </Text>
             </View>
-            <Text style={[styles.presbiteroSub, { color: ui.mutedForeground }]}>
-              Presbítero a cargo: <Text style={{ color: ui.foreground, fontWeight: '700' }}>{data?.presbitero_nombre || user?.name || 'Maikel Páez'}</Text>
-            </Text>
-          </View>
 
-          {/* MODO SILENCIOSO / PLENARIA */}
+            {/* MODO SILENCIOSO / PLENARIA */}
+            <TouchableOpacity
+              style={[
+                styles.silenceBtn,
+                {
+                  backgroundColor: user?.push_modo_silencioso
+                    ? 'rgba(245, 158, 11, 0.12)'
+                    : ui.successSoft,
+                  borderColor: user?.push_modo_silencioso ? ui.warning : ui.success,
+                },
+              ]}
+              onPress={toggleModoSilencioso}
+            >
+              {user?.push_modo_silencioso ? (
+                <>
+                  <BellOff size={15} color={ui.warning} />
+                  <Text style={[styles.silenceText, { color: ui.warning }]}>SILENCIADO</Text>
+                </>
+              ) : (
+                <>
+                  <Bell size={15} color={ui.success} />
+                  <Text style={[styles.silenceText, { color: ui.success }]}>ALERTAS ON</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Card>
+
+        {/* MÉTRICAS GRID RESPONSIVE */}
+        <View style={styles.metricsContainer}>
+          <MetricCard
+            title="PADRÓN CONVOCADO"
+            value={String(metricas.total_padron)}
+            percent={100}
+            subtext="Pastores asignados a esta zona"
+            iconName="account-group"
+            badgeLabel="PADRÓN"
+            badgeVariant="secondary"
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
+
+          <MetricCard
+            title="ASISTENCIA ACTUAL"
+            value={String(metricas.total_presentes)}
+            percent={metricas.porcentaje_asistencia}
+            subtext={`${metricas.porcentaje_asistencia}% del total presente`}
+            iconName="check-decagram"
+            badgeLabel={
+              metricas.porcentaje_asistencia >= 70
+                ? 'ÓPTIMO'
+                : metricas.porcentaje_asistencia >= 40
+                ? 'REGULAR'
+                : 'BAJO'
+            }
+            badgeVariant={
+              metricas.porcentaje_asistencia >= 70
+                ? 'success'
+                : metricas.porcentaje_asistencia >= 40
+                ? 'warning'
+                : 'destructive'
+            }
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
+
+          <MetricCard
+            title="PENDIENTES"
+            value={String(metricas.total_pendientes)}
+            percent={
+              metricas.total_padron > 0
+                ? (metricas.total_pendientes / metricas.total_padron) * 100
+                : 0
+            }
+            subtext="Pastores aún no registrados"
+            iconName="clock-alert-outline"
+            badgeLabel="POR LLEGAR"
+            badgeVariant={metricas.total_pendientes > 0 ? 'warning' : 'success'}
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
+
+          <MetricCard
+            title="CON CÓNYUGE"
+            value={String(metricas.con_conyuge)}
+            percent={
+              metricas.total_presentes > 0
+                ? (metricas.con_conyuge / metricas.total_presentes) * 100
+                : 0
+            }
+            subtext="Acompañados de su esposa/o"
+            iconName="heart"
+            badgeLabel="CÓNYUGES"
+            badgeVariant="brand"
+            style={isWide ? styles.metricWide : styles.metricMobile}
+          />
+        </View>
+
+        {/* BUSCADOR RÁPIDO */}
+        <View style={[styles.searchBox, { backgroundColor: ui.card, borderColor: ui.border }]}>
+          <Search size={16} color={ui.mutedForeground} style={{ marginRight: 8 }} />
+          <TextInput
+            style={[styles.searchInput, { color: ui.foreground }]}
+            placeholder="Buscar por nombre, cédula o congregación..."
+            placeholderTextColor={ui.mutedForeground}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        {/* TABS DE SELECCIÓN PRESENTES / PENDIENTES */}
+        <View style={[styles.tabBar, { backgroundColor: ui.muted, borderColor: ui.border }]}>
           <TouchableOpacity
             style={[
-              styles.silenceBtn,
-              {
-                backgroundColor: user?.push_modo_silencioso ? 'rgba(245, 158, 11, 0.12)' : ui.successSoft,
-                borderColor: user?.push_modo_silencioso ? ui.warning : ui.success,
-              },
+              styles.tabBtn,
+              activeTab === 'presentes' && [
+                styles.tabBtnActive,
+                { backgroundColor: ui.card, borderColor: ui.border },
+              ],
             ]}
-            onPress={toggleModoSilencioso}
+            onPress={() => setActiveTab('presentes')}
           >
-            {user?.push_modo_silencioso ? (
-              <>
-                <BellOff size={15} color={ui.warning} />
-                <Text style={[styles.silenceText, { color: ui.warning }]}>SILENCIADO</Text>
-              </>
-            ) : (
-              <>
-                <Bell size={15} color={ui.success} />
-                <Text style={[styles.silenceText, { color: ui.success }]}>ALERTAS ON</Text>
-              </>
-            )}
+            <CheckCircle2
+              size={15}
+              color={activeTab === 'presentes' ? ui.success : ui.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.tabBtnText,
+                { color: activeTab === 'presentes' ? ui.foreground : ui.mutedForeground },
+              ]}
+            >
+              Presentes
+            </Text>
+            <Badge variant={activeTab === 'presentes' ? 'success' : 'secondary'} size="sm">
+              {presentesFiltrados.length}
+            </Badge>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.tabBtn,
+              activeTab === 'pendientes' && [
+                styles.tabBtnActive,
+                { backgroundColor: ui.card, borderColor: ui.border },
+              ],
+            ]}
+            onPress={() => setActiveTab('pendientes')}
+          >
+            <Clock
+              size={15}
+              color={activeTab === 'pendientes' ? ui.warning : ui.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.tabBtnText,
+                { color: activeTab === 'pendientes' ? ui.foreground : ui.mutedForeground },
+              ]}
+            >
+              Por Llegar
+            </Text>
+            <Badge variant={activeTab === 'pendientes' ? 'warning' : 'secondary'} size="sm">
+              {pendientesFiltrados.length}
+            </Badge>
           </TouchableOpacity>
         </View>
-      </Card>
 
-      {/* MÉTRICAS GRID (SENTINELA METRICCARD SYSTEM) */}
-      <View style={styles.metricsGrid}>
-        <MetricCard
-          title="PADRÓN CONVOCADO"
-          value={String(metricas.total_padron)}
-          percent={100}
-          subtext="Pastores asignados a esta zona"
-          iconName="account-group"
-          badgeLabel="PADRÓN"
-          badgeVariant="secondary"
-          style={{ flex: 1, minWidth: 150 }}
-        />
-
-        <MetricCard
-          title="ASISTENCIA ACTUAL"
-          value={String(metricas.total_presentes)}
-          percent={metricas.porcentaje_asistencia}
-          subtext={`${metricas.porcentaje_asistencia}% del total presente`}
-          iconName="check-decagram"
-          badgeLabel={metricas.porcentaje_asistencia >= 70 ? 'ÓPTIMO' : metricas.porcentaje_asistencia >= 40 ? 'REGULAR' : 'BAJO'}
-          badgeVariant={metricas.porcentaje_asistencia >= 70 ? 'success' : metricas.porcentaje_asistencia >= 40 ? 'warning' : 'destructive'}
-          style={{ flex: 1, minWidth: 150 }}
-        />
-      </View>
-
-      <View style={styles.metricsGrid}>
-        <MetricCard
-          title="PENDIENTES POR LLEGAR"
-          value={String(metricas.total_pendientes)}
-          percent={metricas.total_padron > 0 ? (metricas.total_pendientes / metricas.total_padron) * 100 : 0}
-          subtext="Pastores aún no registrados"
-          iconName="clock-alert-outline"
-          badgeLabel="POR LLEGAR"
-          badgeVariant={metricas.total_pendientes > 0 ? 'warning' : 'success'}
-          style={{ flex: 1, minWidth: 150 }}
-        />
-
-        <MetricCard
-          title="CON CÓNYUGE"
-          value={String(metricas.con_conyuge)}
-          percent={metricas.total_presentes > 0 ? (metricas.con_conyuge / metricas.total_presentes) * 100 : 0}
-          subtext="Acompañados de su esposa/o"
-          iconName="heart"
-          badgeLabel="CÓNYUGES"
-          badgeVariant="brand"
-          style={{ flex: 1, minWidth: 150 }}
-        />
-      </View>
-
-      {/* BUSCADOR RÁPIDO */}
-      <View style={[styles.searchBox, { backgroundColor: ui.card, borderColor: ui.border }]}>
-        <Search size={16} color={ui.mutedForeground} style={{ marginRight: 8 }} />
-        <TextInput
-          style={[styles.searchInput, { color: ui.foreground }]}
-          placeholder="Buscar por nombre, cédula o congregación..."
-          placeholderTextColor={ui.mutedForeground}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* TABS DE SELECCIÓN PRESENTES / PENDIENTES */}
-      <View style={[styles.tabBar, { backgroundColor: ui.muted, borderColor: ui.border }]}>
-        <TouchableOpacity
-          style={[
-            styles.tabBtn,
-            activeTab === 'presentes' && [styles.tabBtnActive, { backgroundColor: ui.card, borderColor: ui.border }],
-          ]}
-          onPress={() => setActiveTab('presentes')}
-        >
-          <CheckCircle2 size={15} color={activeTab === 'presentes' ? ui.success : ui.mutedForeground} />
-          <Text
-            style={[
-              styles.tabBtnText,
-              { color: activeTab === 'presentes' ? ui.foreground : ui.mutedForeground },
-            ]}
-          >
-            Presentes ({presentesFiltrados.length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabBtn,
-            activeTab === 'pendientes' && [styles.tabBtnActive, { backgroundColor: ui.card, borderColor: ui.border }],
-          ]}
-          onPress={() => setActiveTab('pendientes')}
-        >
-          <Clock size={15} color={activeTab === 'pendientes' ? ui.warning : ui.mutedForeground} />
-          <Text
-            style={[
-              styles.tabBtnText,
-              { color: activeTab === 'pendientes' ? ui.foreground : ui.mutedForeground },
-            ]}
-          >
-            Por Llegar ({pendientesFiltrados.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* LISTA DE PASTORES PRESENTES */}
-      {activeTab === 'presentes' && (
-        <View style={styles.listContainer}>
-          {presentesFiltrados.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Text style={[styles.emptyText, { color: ui.mutedForeground }]}>
-                {searchQuery ? 'No se encontraron obreros con ese criterio.' : 'Aún no se registran pastores de esta zona en el evento.'}
-              </Text>
-            </Card>
-          ) : (
-            presentesFiltrados.map((pastor) => (
-              <Card key={pastor.pastor_id} style={styles.pastorCard}>
-                <View style={styles.pastorRow}>
-                  {/* AVATAR / INICIALES */}
-                  <View style={[styles.avatarBox, { backgroundColor: ui.muted, borderColor: ui.border }]}>
-                    <Text style={[styles.avatarText, { color: ui.brand }]}>
-                      {pastor.nombre_completo.substring(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-
-                  {/* INFORMACIÓN DEL PASTOR */}
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={[styles.pastorNombre, { color: ui.foreground }]} numberOfLines={1}>
-                      {pastor.nombre_completo}
-                    </Text>
-                    <Text style={[styles.pastorSub, { color: ui.mutedForeground }]} numberOfLines={1}>
-                      C.I. V-{pastor.documento} • {pastor.extension_nombre}
-                    </Text>
-                    <View style={styles.tagsRow}>
-                      <Badge variant="success" icon={<Clock size={11} color={ui.success} />}>
-                        {pastor.hora_asistencia}
-                      </Badge>
-                      {pastor.conyuge_presente && (
-                        <Badge variant="brand" icon={<Heart size={11} color={ui.brand} />}>
-                          Con Esposa
-                        </Badge>
-                      )}
-                    </View>
-                  </View>
-                </View>
+        {/* LISTA DE PASTORES PRESENTES */}
+        {activeTab === 'presentes' && (
+          <View style={styles.listContainer}>
+            {presentesFiltrados.length === 0 ? (
+              <Card style={styles.emptyCard}>
+                <Text style={[styles.emptyText, { color: ui.mutedForeground }]}>
+                  {searchQuery
+                    ? 'No se encontraron obreros con ese criterio.'
+                    : 'Aún no se registran pastores de esta zona en el evento.'}
+                </Text>
               </Card>
-            ))
-          )}
-        </View>
-      )}
+            ) : (
+              presentesFiltrados.map((pastor, index) => {
+                const pastorKey = `pres-${pastor.pastor_id ?? (pastor as any).id ?? pastor.documento ?? index}`;
+                const rawFoto = (pastor as any).foto_url || (pastor as any).foto;
+                const resolvedUri = rawFoto ? api.resolveImageUrl(rawFoto) : null;
+                const hasFoto = !!resolvedUri && !imageErrors[pastorKey];
 
-      {/* LISTA DE PASTORES PENDIENTES */}
-      {activeTab === 'pendientes' && (
-        <View style={styles.listContainer}>
-          {pendientesFiltrados.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Text style={[styles.emptyText, { color: ui.success }]}>
-                🎉 ¡Excelente! Todos los pastores de la Zona {zonaTarget} ya están presentes.
-              </Text>
-            </Card>
-          ) : (
-            pendientesFiltrados.map((pastor) => (
-              <Card key={pastor.pastor_id} style={styles.pastorCard}>
-                <View style={styles.pastorRow}>
-                  <View style={[styles.avatarBox, { backgroundColor: ui.muted, borderColor: ui.border }]}>
-                    <Text style={[styles.avatarText, { color: ui.mutedForeground }]}>
-                      {pastor.nombre_completo.substring(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
+                return (
+                  <Card key={pastorKey} style={styles.pastorCard}>
+                    <View style={styles.pastorRow}>
+                      {/* AVATAR: FOTO OFICIAL O INICIALES */}
+                      <View
+                        style={[
+                          styles.avatarBox,
+                          { backgroundColor: ui.muted, borderColor: ui.border },
+                        ]}
+                      >
+                        {hasFoto ? (
+                          <Image
+                            source={{ uri: resolvedUri! }}
+                            style={styles.avatarImage}
+                            resizeMode="cover"
+                            onError={() =>
+                              setImageErrors((prev) => ({ ...prev, [pastorKey]: true }))
+                            }
+                          />
+                        ) : (
+                          <Text style={[styles.avatarText, { color: ui.brand }]}>
+                            {pastor.nombre_completo.substring(0, 2).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
 
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={[styles.pastorNombre, { color: ui.foreground }]} numberOfLines={1}>
-                      {pastor.nombre_completo}
-                    </Text>
-                    <Text style={[styles.pastorSub, { color: ui.mutedForeground }]} numberOfLines={1}>
-                      C.I. V-{pastor.documento} • {pastor.extension_nombre}
-                    </Text>
-                    <View style={styles.tagsRow}>
-                      <Badge variant="warning">PENDIENTE</Badge>
-                      {pastor.telefono && (
-                        <Text style={[styles.phoneText, { color: ui.subtle }]}>
-                          📞 {pastor.telefono}
+                      {/* INFORMACIÓN DEL PASTOR */}
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text
+                          style={[styles.pastorNombre, { color: ui.foreground }]}
+                          numberOfLines={1}
+                        >
+                          {pastor.nombre_completo}
                         </Text>
-                      )}
+                        <Text
+                          style={[styles.pastorSub, { color: ui.mutedForeground }]}
+                          numberOfLines={1}
+                        >
+                          C.I. V-{pastor.documento} • {pastor.extension_nombre}
+                        </Text>
+                        <View style={styles.tagsRow}>
+                          <Badge
+                            variant="success"
+                            size="sm"
+                            icon={<Clock size={11} color={ui.success} />}
+                          >
+                            {pastor.hora_asistencia}
+                          </Badge>
+                          {pastor.conyuge_presente && (
+                            <Badge
+                              variant="brand"
+                              size="sm"
+                              icon={<Heart size={11} color={ui.brand} />}
+                            >
+                              Con Esposa
+                            </Badge>
+                          )}
+                        </View>
+                      </View>
                     </View>
-                  </View>
+                  </Card>
+                );
+              })
+            )}
+          </View>
+        )}
 
-                  {/* ACCIONES DIRECTAS WHATSAPP Y TELÉFONO */}
-                  <View style={styles.actionCol}>
-                    {pastor.telefono && (
-                      <>
-                        <TouchableOpacity
-                          style={[styles.actionBtnWhatsApp, { backgroundColor: '#25D366' }]}
-                          onPress={() => handleWhatsApp(pastor)}
-                          accessibilityLabel="Contactar por WhatsApp"
-                        >
-                          <MessageCircle size={15} color="#ffffff" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.actionBtnPhone, { backgroundColor: ui.muted, borderColor: ui.border }]}
-                          onPress={() => handleLlamar(pastor.telefono)}
-                          accessibilityLabel="Llamar por teléfono"
-                        >
-                          <Phone size={15} color={ui.foreground} />
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </View>
-                </View>
+        {/* LISTA DE PASTORES PENDIENTES */}
+        {activeTab === 'pendientes' && (
+          <View style={styles.listContainer}>
+            {pendientesFiltrados.length === 0 ? (
+              <Card style={styles.emptyCard}>
+                <Text style={[styles.emptyText, { color: ui.success }]}>
+                  🎉 ¡Excelente! Todos los pastores de la Zona {data?.zona || zonaTarget} ya están presentes.
+                </Text>
               </Card>
-            ))
-          )}
-        </View>
-      )}
+            ) : (
+              pendientesFiltrados.map((pastor, index) => {
+                const pastorKey = `pend-${pastor.pastor_id ?? (pastor as any).id ?? pastor.documento ?? index}`;
+                const rawFoto = (pastor as any).foto_url || (pastor as any).foto;
+                const resolvedUri = rawFoto ? api.resolveImageUrl(rawFoto) : null;
+                const hasFoto = !!resolvedUri && !imageErrors[pastorKey];
+
+                return (
+                  <Card key={pastorKey} style={styles.pastorCard}>
+                    <View style={styles.pastorRow}>
+                      {/* AVATAR: FOTO OFICIAL O INICIALES */}
+                      <View
+                        style={[
+                          styles.avatarBox,
+                          { backgroundColor: ui.muted, borderColor: ui.border },
+                        ]}
+                      >
+                        {hasFoto ? (
+                          <Image
+                            source={{ uri: resolvedUri! }}
+                            style={styles.avatarImage}
+                            resizeMode="cover"
+                            onError={() =>
+                              setImageErrors((prev) => ({ ...prev, [pastorKey]: true }))
+                            }
+                          />
+                        ) : (
+                          <Text style={[styles.avatarText, { color: ui.mutedForeground }]}>
+                            {pastor.nombre_completo.substring(0, 2).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text
+                          style={[styles.pastorNombre, { color: ui.foreground }]}
+                          numberOfLines={1}
+                        >
+                          {pastor.nombre_completo}
+                        </Text>
+                        <Text
+                          style={[styles.pastorSub, { color: ui.mutedForeground }]}
+                          numberOfLines={1}
+                        >
+                          C.I. V-{pastor.documento} • {pastor.extension_nombre}
+                        </Text>
+                        <View style={styles.tagsRow}>
+                          <Badge variant="warning" size="sm">
+                            PENDIENTE
+                          </Badge>
+                          {pastor.telefono && (
+                            <Text style={[styles.phoneText, { color: ui.subtle }]}>
+                              📞 {pastor.telefono}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* ACCIONES DIRECTAS WHATSAPP Y TELÉFONO */}
+                      <View style={styles.actionCol}>
+                        {pastor.telefono && (
+                          <>
+                            <TouchableOpacity
+                              style={[styles.actionBtnWhatsApp, { backgroundColor: '#25D366' }]}
+                              onPress={() => handleWhatsApp(pastor)}
+                              accessibilityLabel="Contactar por WhatsApp"
+                            >
+                              <MessageCircle size={15} color="#ffffff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[
+                                styles.actionBtnPhone,
+                                { backgroundColor: ui.muted, borderColor: ui.border },
+                              ]}
+                              onPress={() => handleLlamar(pastor.telefono)}
+                              accessibilityLabel="Llamar por teléfono"
+                            >
+                              <Phone size={15} color={ui.foreground} />
+                            </TouchableOpacity>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                  </Card>
+                );
+              })
+            )}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -415,6 +539,11 @@ const styles = StyleSheet.create({
   content: {
     padding: 14,
     paddingBottom: 40,
+  },
+  responsiveInner: {
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
   },
   centerLoading: {
     flex: 1,
@@ -431,29 +560,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: radius.md,
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: 12,
     gap: 4,
   },
   backText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   headerCard: {
     padding: 16,
     marginBottom: 12,
+    borderRadius: radius.xl,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
   },
   zonaTitle: {
     fontSize: 15,
-    fontFamily: 'CocogooseBold',
-    letterSpacing: -0.3,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   presbiteroSub: {
     fontSize: 12,
@@ -463,27 +594,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: radius.full,
     borderWidth: 1,
     gap: 5,
+    flexShrink: 0,
   },
   silenceText: {
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  metricsGrid: {
+  metricsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
+    marginBottom: 10,
+  },
+  metricWide: {
+    flex: 1,
+    minWidth: 200,
+  },
+  metricMobile: {
+    width: '48.5%',
+    minWidth: 140,
+    flexGrow: 1,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    height: 42,
+    borderRadius: radius.lg,
+    paddingHorizontal: 14,
+    height: 44,
     marginVertical: 10,
   },
   searchInput: {
@@ -517,7 +660,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   tabBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
   },
   listContainer: {
@@ -525,18 +668,26 @@ const styles = StyleSheet.create({
   },
   pastorCard: {
     padding: 12,
+    borderRadius: radius.lg,
   },
   pastorRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarText: {
     fontSize: 14,
@@ -555,6 +706,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginTop: 6,
+    flexWrap: 'wrap',
   },
   phoneText: {
     fontSize: 11,
@@ -564,18 +716,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     marginLeft: 8,
+    flexShrink: 0,
   },
   actionBtnWhatsApp: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionBtnPhone: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -583,6 +736,7 @@ const styles = StyleSheet.create({
   emptyCard: {
     padding: 24,
     alignItems: 'center',
+    borderRadius: radius.xl,
   },
   emptyText: {
     fontSize: 13,
@@ -590,4 +744,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

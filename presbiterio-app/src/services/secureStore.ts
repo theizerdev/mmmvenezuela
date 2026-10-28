@@ -33,5 +33,9 @@ export const secureStorage = {
     BIOMETRIC_TOKEN: 'mmm_biometric_token',
     ACTIVE_SERVER_ID: 'mmm_active_server_id',
     RECENT_SERVERS: 'mmm_recent_servers',
+    QUICK_ACCESS_PIN: 'mmm_quick_access_pin',
+    QUICK_ACCESS_CONFIGURED: 'mmm_quick_access_configured',
+    QUICK_ACCESS_TYPE: 'mmm_quick_access_type', // 'biometric' | 'pin' | 'both' | 'dismissed'
+    SAVED_CREDENTIALS: 'mmm_saved_credentials',
   },
 };
