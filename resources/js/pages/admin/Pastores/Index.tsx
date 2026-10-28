@@ -194,11 +194,17 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
         if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
             return trimmed;
         }
-        if (trimmed.startsWith('storage/')) {
-            return `/${trimmed}`;
+        if (trimmed.startsWith('/storage/pastores/')) {
+            return trimmed.replace('/storage/pastores/', '/pastores/');
+        }
+        if (trimmed.startsWith('storage/pastores/')) {
+            return trimmed.replace('storage/pastores/', '/pastores/');
         }
         if (trimmed.startsWith('pastores/')) {
-            return `/storage/${trimmed}`;
+            return `/${trimmed}`;
+        }
+        if (trimmed.startsWith('storage/')) {
+            return `/${trimmed}`;
         }
         if (trimmed.startsWith('/')) {
             return trimmed;
@@ -306,7 +312,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
             accessorKey: 'nombres',
             header: __('Pastor'),
             cell: (row) => {
-                const photoUrl = getPastorPhotoUrl(row.foto);
+                const photoUrl = getPastorPhotoUrl(row.foto_url || row.foto);
                 const initials = getPastorInitials(row.nombres, row.apellidos);
                 return (
                     <div className="flex items-center gap-3">
@@ -771,7 +777,7 @@ export default function PastoresIndexPage({ auth, pastores, stats, filters }: Pa
                             {pastores.data.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {pastores.data.map((pastor) => {
-                                        const photoUrl = getPastorPhotoUrl(pastor.foto);
+                                        const photoUrl = getPastorPhotoUrl(pastor.foto_url || pastor.foto);
                                         const initials = getPastorInitials(pastor.nombres, pastor.apellidos);
 
                                         return (

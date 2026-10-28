@@ -70,7 +70,7 @@ export async function exportPastorCarnetPng(
         ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
         ctx.clip();
 
-        const photoUrl = getPastorPhotoUrl(pastor.foto || (pastor as any).foto_url);
+        const photoUrl = getPastorPhotoUrl((pastor as any).foto_url || pastor.foto);
         let photoLoaded = false;
         if (photoUrl) {
             try {

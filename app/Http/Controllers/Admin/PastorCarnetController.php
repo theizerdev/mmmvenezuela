@@ -378,12 +378,32 @@ class PastorCarnetController extends Controller
             mkdir($destDir, 0755, true);
         }
 
-        $cleanCodigo = preg_replace('/\D/', '', $pastor->codigo ?: $pastor->id);
+        $cleanCodigo = preg_replace('/\D/', '', (string)($pastor->codigo ?: $pastor->id));
         $filename = 'pastor_' . $cleanCodigo . '_' . time() . '.' . $ext;
-        file_put_contents($destDir . '/' . $filename, $decoded);
 
-        if ($pastor->foto && !str_starts_with($pastor->foto, 'http') && file_exists(public_path('pastores/' . basename($pastor->foto)))) {
-            @unlink(public_path('pastores/' . basename($pastor->foto)));
+        $docRoot = !empty($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null;
+        $targetDirs = array_filter(array_unique([
+            public_path('pastores'),
+            base_path('public/pastores'),
+            $docRoot ? $docRoot . '/pastores' : null,
+            base_path('../public_html/pastores'),
+        ]));
+
+        foreach ($targetDirs as $destDir) {
+            if (!file_exists($destDir)) {
+                @mkdir($destDir, 0755, true);
+            }
+            if (is_dir($destDir) && is_writable($destDir)) {
+                @file_put_contents($destDir . '/' . $filename, $decoded);
+
+                // Limpiar fotos anteriores del mismo pastor
+                if ($pastor->foto && !str_starts_with($pastor->foto, 'http')) {
+                    $oldBase = basename($pastor->foto);
+                    if ($oldBase !== $filename && file_exists($destDir . '/' . $oldBase)) {
+                        @unlink($destDir . '/' . $oldBase);
+                    }
+                }
+            }
         }
 
         $pastor->foto = $filename;
@@ -395,6 +415,86 @@ class PastorCarnetController extends Controller
             'foto' => $pastor->foto,
             'foto_url' => '/' . 'pastores/' . $filename . '?v=' . time(),
         ]);
+    }
+
+    /**
+     * Servir fotografía del pastor con tolerancia a mayúsculas/minúsculas, extensiones (.jpg vs .jpeg vs .png)
+     * y variaciones de timestamp para evitar errores 404 si la imagen fue renombrada o actualizada.
+     */
+    public function servirFotoPastor(string $filename)
+    {
+        $cleanUrl = urldecode($filename);
+        if (($posQ = strpos($cleanUrl, '?')) !== false) {
+            $cleanUrl = substr($cleanUrl, 0, $posQ);
+        }
+        $basename = basename(ltrim($cleanUrl, '/\\'));
+        if (!$basename) {
+            abort(404, 'Nombre de imagen no especificado');
+        }
+
+        $docRoot = !empty($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null;
+        $candidateDirs = array_filter(array_unique([
+            public_path('pastores'),
+            base_path('public/pastores'),
+            $docRoot ? $docRoot . '/pastores' : null,
+            base_path('../public_html/pastores'),
+            storage_path('app/carnets_cache'),
+        ]));
+
+        // 1. Coincidencia exacta de archivo
+        foreach ($candidateDirs as $dir) {
+            $full = $dir . DIRECTORY_SEPARATOR . $basename;
+            if (file_exists($full) && is_file($full) && filesize($full) > 0) {
+                return response()->file($full, [
+                    'Content-Type' => mime_content_type($full) ?: 'image/png',
+                    'Cache-Control' => 'public, max-age=86400',
+                ]);
+            }
+        }
+
+        // 2. Insensible a mayúsculas/minúsculas y variaciones de extensión (.jpg vs .jpeg vs .png)
+        $basenameNoExt = pathinfo($basename, PATHINFO_FILENAME);
+        foreach ($candidateDirs as $dir) {
+            if (is_dir($dir)) {
+                $files = @scandir($dir);
+                if ($files) {
+                    foreach ($files as $f) {
+                        if ($f === '.' || $f === '..') continue;
+                        if (strcasecmp($f, $basename) === 0 || strcasecmp(pathinfo($f, PATHINFO_FILENAME), $basenameNoExt) === 0) {
+                            $full = $dir . DIRECTORY_SEPARATOR . $f;
+                            if (is_file($full) && filesize($full) > 0) {
+                                return response()->file($full, [
+                                    'Content-Type' => mime_content_type($full) ?: 'image/png',
+                                    'Cache-Control' => 'public, max-age=86400',
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Tolerancia por identificador del pastor (pastor_{codigo}_* o pastor_{documento}_*)
+        if (preg_match('/^pastor_(\d+)_/i', $basename, $m)) {
+            $idOrDoc = $m[1];
+            foreach ($candidateDirs as $dir) {
+                if (is_dir($dir)) {
+                    $matches = glob($dir . DIRECTORY_SEPARATOR . 'pastor_' . $idOrDoc . '_*');
+                    if ($matches && count($matches) > 0) {
+                        usort($matches, fn($a, $b) => filemtime($b) <=> filemtime($a));
+                        $found = $matches[0];
+                        if (is_file($found) && filesize($found) > 0) {
+                            return response()->file($found, [
+                                'Content-Type' => mime_content_type($found) ?: 'image/png',
+                                'Cache-Control' => 'public, max-age=86400',
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        abort(404, 'Fotografía del pastor no encontrada');
     }
 
     /**

@@ -96,11 +96,17 @@ export function getPastorPhotoUrl(foto?: string | null): string | null {
     if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
         return trimmed;
     }
-    if (trimmed.startsWith('storage/')) {
-        return `/${trimmed}`;
+    if (trimmed.startsWith('/storage/pastores/')) {
+        return trimmed.replace('/storage/pastores/', '/pastores/');
+    }
+    if (trimmed.startsWith('storage/pastores/')) {
+        return trimmed.replace('storage/pastores/', '/pastores/');
     }
     if (trimmed.startsWith('pastores/')) {
-        return `/storage/${trimmed}`;
+        return `/${trimmed}`;
+    }
+    if (trimmed.startsWith('storage/')) {
+        return `/${trimmed}`;
     }
     if (trimmed.startsWith('/')) {
         return trimmed;
@@ -120,7 +126,7 @@ export function PastorCarnetCard({
     className,
 }: PastorCarnetCardProps) {
     const { __ } = useTranslate();
-    const photoUrl = getPastorPhotoUrl(pastor.foto || (pastor as any).foto_url);
+    const photoUrl = getPastorPhotoUrl((pastor as any).foto_url || pastor.foto);
     const initials = `${pastor.nombres?.trim()?.[0] || ''}${pastor.apellidos?.trim()?.[0] || ''}`.toUpperCase() || 'P';
     const [imgError, setImgError] = React.useState(false);
 

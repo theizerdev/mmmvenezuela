@@ -906,7 +906,7 @@ export default function PastoresCarnetsPage({
                                     pastores.data.map((pastor) => {
                                         const isSelected = selectedIds.includes(pastor.id);
                                         const isActive = selectedPastor?.id === pastor.id;
-                                        const photoUrl = getPastorPhotoUrl(pastor.foto || (pastor as any).foto_url);
+                                        const photoUrl = getPastorPhotoUrl((pastor as any).foto_url || pastor.foto);
                                         const initials = `${pastor.nombres?.trim()?.[0] || ''}${pastor.apellidos?.trim()?.[0] || ''}`.toUpperCase() || 'P';
 
                                         return (

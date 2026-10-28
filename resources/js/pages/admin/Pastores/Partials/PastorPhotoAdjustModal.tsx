@@ -58,7 +58,7 @@ export function PastorPhotoAdjustModal({
     const isDraggingRef = useRef<boolean>(false);
     const lastPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-    const photoUrl = pastor ? getPastorPhotoUrl(pastor.foto || (pastor as any).foto_url) : null;
+    const photoUrl = pastor ? getPastorPhotoUrl((pastor as any).foto_url || pastor.foto) : null;
 
     // Dimensiones exactas del marco oficial de la tarjeta (90x55 mm): 198 x 286 px (escalada x2 para 300 DPI: 396 x 572)
     const FRAME_W = 198;
@@ -95,6 +95,16 @@ export function PastorPhotoAdjustModal({
                     }
                 } catch {
                     // Ignorar si hay restricciones CORS en imagen remota
+                }
+            };
+            img.onerror = () => {
+                // Reintentar sin crossOrigin si el servidor no incluye headers CORS
+                if (img.crossOrigin) {
+                    const fallbackImg = new Image();
+                    fallbackImg.onload = () => setImageObj(fallbackImg);
+                    fallbackImg.src = photoUrl;
+                } else {
+                    setImageObj(null);
                 }
             };
             img.src = photoUrl;

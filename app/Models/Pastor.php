@@ -166,6 +166,13 @@ class Pastor extends Model
             return $trimmed;
         }
 
+        // Si viene con prefijo storage/pastores, normalizar a /pastores/
+        if (str_starts_with($trimmed, 'storage/pastores/')) {
+            $trimmed = substr($trimmed, strlen('storage/'));
+        } elseif (str_starts_with($trimmed, '/storage/pastores/')) {
+            $trimmed = substr($trimmed, strlen('/storage/'));
+        }
+
         if (str_starts_with($trimmed, 'storage/')) {
             return '/' . $trimmed;
         }
@@ -179,7 +186,27 @@ class Pastor extends Model
         }
 
         // Por defecto para archivos guardados en public/pastores/
-        return '/pastores/' . $trimmed;
+        $cleanName = basename($trimmed);
+
+        // Si el archivo exacto no existe en disco, buscar coincidencias por código o cédula
+        $directPath = public_path('pastores/' . $cleanName);
+        if (!file_exists($directPath)) {
+            $cleanCodigo = preg_replace('/\D/', '', (string)($this->codigo ?? ''));
+            $cleanDoc = preg_replace('/\D/', '', (string)($this->documento ?? ''));
+            $patterns = array_filter([
+                $cleanCodigo ? public_path("pastores/pastor_{$cleanCodigo}_*") : null,
+                $cleanDoc ? public_path("pastores/pastor_{$cleanDoc}_*") : null,
+            ]);
+            foreach ($patterns as $pattern) {
+                $matches = glob($pattern);
+                if ($matches && count($matches) > 0) {
+                    usort($matches, fn($a, $b) => filemtime($b) <=> filemtime($a));
+                    return '/pastores/' . basename($matches[0]);
+                }
+            }
+        }
+
+        return '/pastores/' . $cleanName;
     }
 
     /**

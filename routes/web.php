@@ -19,6 +19,9 @@ Route::get('/', function () {
 // Ruta pública de verificación del carnet mediante escaneo de Código QR
 Route::get('/validar-credencial/{codigo}', [PastorCarnetController::class, 'validarCredencial'])->name('pastores.validar-credencial');
 
+// Ruta fallback inteligente para servir fotografías de pastores (maneja variaciones de nombres, extensiones y cachés)
+Route::get('/pastores/{filename}', [PastorCarnetController::class, 'servirFotoPastor'])->where('filename', '.*')->name('pastores.foto-serve');
+
 // Ruta pública de registro de Pastores (Wizard de 5 Pasos)
 Route::get('/registro', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
 Route::post('/registro', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
