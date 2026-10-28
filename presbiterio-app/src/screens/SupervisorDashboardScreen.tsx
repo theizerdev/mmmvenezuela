@@ -77,7 +77,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
 
   useEffect(() => {
     cargarDashboard();
-    const interval = setInterval(cargarDashboard, 25000);
+    const interval = setInterval(cargarDashboard, 15000); // 15s auto-refresh
     return () => clearInterval(interval);
   }, [cargarDashboard]);
 

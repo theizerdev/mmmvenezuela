@@ -58,6 +58,9 @@ class ApiService {
     const headers: Record<string, string> = {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
     };
     if (this.authToken) {
       headers.Authorization = `Bearer ${this.authToken}`;
@@ -110,9 +113,12 @@ class ApiService {
     if (actividadId) params.append('actividad_id', String(actividadId));
     if (sesionId) params.append('sesion_id', String(sesionId));
     if (zona) params.append('zona', zona);
+    params.append('_t', String(Date.now())); // Evita almacenamiento en caché de navegador
 
     const resp = await fetch(`${this.baseUrl}/api/v1/presbitero/dashboard?${params.toString()}`, {
+      method: 'GET',
       headers: this.getHeaders(),
+      cache: 'no-store',
     });
     return resp.json();
   }
@@ -120,9 +126,12 @@ class ApiService {
   async getSupervisorDashboard(actividadId?: number): Promise<SupervisorDashboardData> {
     const params = new URLSearchParams();
     if (actividadId) params.append('actividad_id', String(actividadId));
+    params.append('_t', String(Date.now())); // Evita almacenamiento en caché de navegador
 
     const resp = await fetch(`${this.baseUrl}/api/v1/supervisor/dashboard?${params.toString()}`, {
+      method: 'GET',
       headers: this.getHeaders(),
+      cache: 'no-store',
     });
     return resp.json();
   }
@@ -150,12 +159,17 @@ class ApiService {
 
   async getActividades(): Promise<{ success: boolean; data: Actividad[] }> {
     try {
-      let resp = await fetch(`${this.baseUrl}/api/v1/actividades/activas`, {
+      const t = Date.now();
+      let resp = await fetch(`${this.baseUrl}/api/v1/actividades/activas?_t=${t}`, {
+        method: 'GET',
         headers: this.getHeaders(),
+        cache: 'no-store',
       });
       if (!resp.ok) {
-        resp = await fetch(`${this.baseUrl}/api/v1/actividades`, {
+        resp = await fetch(`${this.baseUrl}/api/v1/actividades?_t=${t}`, {
+          method: 'GET',
           headers: this.getHeaders(),
+          cache: 'no-store',
         });
       }
       const json = await resp.json();

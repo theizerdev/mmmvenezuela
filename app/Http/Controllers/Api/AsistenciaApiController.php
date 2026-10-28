@@ -263,9 +263,54 @@ class AsistenciaApiController extends Controller
             }
             if (!$conyugePastor && !empty($pastor->nombre_conyuge)) {
                 $nombreLimpio = trim($pastor->nombre_conyuge);
-                $conyugePastor = Pastor::whereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$nombreLimpio}%"])
-                    ->orWhere('documento', $nombreLimpio)
-                    ->first();
+                // Búsqueda directa por documento si colocó cédula
+                $conyugePastor = Pastor::where('id', '!=', $pastor->id)->where('documento', $nombreLimpio)->first();
+
+                // Búsqueda por coincidencia directa de nombre
+                if (!$conyugePastor) {
+                    $conyugePastor = Pastor::where('id', '!=', $pastor->id)
+                        ->whereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$nombreLimpio}%"])
+                        ->first();
+                }
+
+                // Búsqueda inteligente por tokens de nombres y apellidos (ej: "Euclides Palencia" -> "Euclides del Carmen Palencia Lugos")
+                if (!$conyugePastor) {
+                    $words = array_filter(explode(' ', $nombreLimpio), fn($w) => mb_strlen($w) >= 3);
+                    if (count($words) >= 2) {
+                        $q = Pastor::query()->where('id', '!=', $pastor->id);
+                        foreach ($words as $w) {
+                            $q->where(function($sub) use ($w) {
+                                $sub->where('nombres', 'like', "%{$w}%")
+                                    ->orWhere('apellidos', 'like', "%{$w}%");
+                            });
+                        }
+                        $conyugePastor = $q->first();
+                    }
+                }
+
+                // Búsqueda por coincidencia inversa en el nombre_conyuge del otro pastor
+                if (!$conyugePastor) {
+                    $primerNombre = explode(' ', trim($pastor->nombres))[0] ?? '';
+                    $primerApellido = explode(' ', trim($pastor->apellidos))[0] ?? '';
+                    if ($primerNombre && $primerApellido) {
+                        $conyugePastor = Pastor::where('id', '!=', $pastor->id)
+                            ->where('nombre_conyuge', 'like', "%{$primerNombre}%")
+                            ->where('nombre_conyuge', 'like', "%{$primerApellido}%")
+                            ->first();
+                    }
+                }
+
+                // Si encontramos al cónyuge pastor, vincular recíprocamente sus conyuge_id para registros futuros
+                if ($conyugePastor && $conyugePastor->id !== $pastor->id) {
+                    if (!$pastor->conyuge_id) {
+                        $pastor->conyuge_id = $conyugePastor->id;
+                        $pastor->saveQuietly();
+                    }
+                    if (!$conyugePastor->conyuge_id) {
+                        $conyugePastor->conyuge_id = $pastor->id;
+                        $conyugePastor->saveQuietly();
+                    }
+                }
             }
 
             if ($conyugePastor && $conyugePastor->id !== $pastor->id) {

@@ -185,6 +185,78 @@ class PresbiterioApiController extends Controller
         $asistencias = $asistenciasQuery->orderBy('fecha_registro', 'desc')->get();
         $asistenciasPorPastor = $asistencias->keyBy('pastor_id');
 
+        // Sincronizar cónyuges pastores: si un pastor asistió con su cónyuge y este también es pastor,
+        // garantizar que la asistencia de ambos esté acreditada en la convocatoria.
+        foreach ($pastoresZona as $pastor) {
+            if ($asistenciasPorPastor->has($pastor->id)) {
+                $as = $asistenciasPorPastor->get($pastor->id);
+                if ($as->asistio_con_conyuge) {
+                    $conyugePastor = null;
+                    if ($pastor->conyuge_id) {
+                        $conyugePastor = Pastor::find($pastor->conyuge_id);
+                    }
+                    if (!$conyugePastor) {
+                        $conyugePastor = Pastor::where('conyuge_id', $pastor->id)->first();
+                    }
+                    if (!$conyugePastor && !empty($pastor->nombre_conyuge)) {
+                        $nombreLimpio = trim($pastor->nombre_conyuge);
+                        $words = array_filter(explode(' ', $nombreLimpio), fn($w) => mb_strlen($w) >= 3);
+                        if (count($words) >= 2) {
+                            $q = Pastor::query()->where('id', '!=', $pastor->id);
+                            foreach ($words as $w) {
+                                $q->where(function($sub) use ($w) {
+                                    $sub->where('nombres', 'like', "%{$w}%")
+                                        ->orWhere('apellidos', 'like', "%{$w}%");
+                                });
+                            }
+                            $conyugePastor = $q->first();
+                        }
+                        if (!$conyugePastor) {
+                            $primerNombre = explode(' ', trim($pastor->nombres))[0] ?? '';
+                            $primerApellido = explode(' ', trim($pastor->apellidos))[0] ?? '';
+                            if ($primerNombre && $primerApellido) {
+                                $conyugePastor = Pastor::where('id', '!=', $pastor->id)
+                                    ->where('nombre_conyuge', 'like', "%{$primerNombre}%")
+                                    ->where('nombre_conyuge', 'like', "%{$primerApellido}%")
+                                    ->first();
+                            }
+                        }
+                    }
+
+                    if ($conyugePastor && $conyugePastor->id !== $pastor->id) {
+                        if (!$pastor->conyuge_id) {
+                            $pastor->conyuge_id = $conyugePastor->id;
+                            $pastor->saveQuietly();
+                        }
+                        if (!$conyugePastor->conyuge_id) {
+                            $conyugePastor->conyuge_id = $pastor->id;
+                            $conyugePastor->saveQuietly();
+                        }
+
+                        if (!$asistenciasPorPastor->has($conyugePastor->id)) {
+                            $asConyuge = Asistencia::firstOrCreate(
+                                [
+                                    'actividad_id' => $actividad->id,
+                                    'pastor_id' => $conyugePastor->id,
+                                    'actividad_sesion_id' => $sesionId,
+                                ],
+                                [
+                                    'fecha_registro' => $as->fecha_registro ?? now(),
+                                    'metodo' => 'conyuge_vinculado',
+                                    'asistio_con_conyuge' => true,
+                                    'nombre_acompanante' => "{$pastor->nombres} {$pastor->apellidos}",
+                                    'kit_entregado' => (bool) $as->kit_entregado,
+                                    'comida_entregada' => (bool) $as->comida_entregada,
+                                    'observaciones' => "Acreditado automáticamente con su cónyuge {$pastor->nombres} {$pastor->apellidos}",
+                                ]
+                            );
+                            $asistenciasPorPastor->put($conyugePastor->id, $asConyuge);
+                        }
+                    }
+                }
+            }
+        }
+
         $presentes = [];
         $pendientes = [];
         $conConyugeCount = 0;
@@ -265,7 +337,10 @@ class PresbiterioApiController extends Controller
             ],
             'presentes' => $presentes,
             'pendientes' => $pendientes,
-        ]);
+        ])
+        ->header('Cache-Control', 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
     }
 
     /**
@@ -368,7 +443,10 @@ class PresbiterioApiController extends Controller
                 'total_zonas' => count($zonas),
             ],
             'zonas' => $zonas,
-        ]);
+        ])
+        ->header('Cache-Control', 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
     }
 }
 

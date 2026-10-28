@@ -24,6 +24,7 @@ import {
   BellOff,
   ShieldCheck,
   ChevronLeft,
+  RefreshCw,
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -74,32 +75,37 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
   const [activeTab, setActiveTab] = useState<'presentes' | 'pendientes'>('presentes');
   const [searchQuery, setSearchQuery] = useState('');
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
   const zonaTarget = zonaOverride || user?.zona || '1';
 
-  const cargarDashboard = useCallback(async () => {
+  const cargarDashboard = useCallback(async (isManual = false) => {
+    if (isManual) setIsUpdating(true);
     try {
       const res = await api.getPresbiteroDashboard(actividad?.id, sesion?.id, zonaTarget);
       if (res.success) {
         setData(res);
+        setLastUpdated(new Date());
       }
     } catch (e) {
       console.warn('Error cargando dashboard del presbítero:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      if (isManual) setIsUpdating(false);
     }
   }, [actividad?.id, sesion?.id, zonaTarget]);
 
   useEffect(() => {
     cargarDashboard();
-    const interval = setInterval(cargarDashboard, 20000); // 20s auto-refresh
+    const interval = setInterval(() => cargarDashboard(false), 15000); // Auto-verificación en tiempo real cada 15s
     return () => clearInterval(interval);
   }, [cargarDashboard]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    cargarDashboard();
+    cargarDashboard(true);
   };
 
   const handleLlamar = (telefono?: string | null) => {
@@ -173,7 +179,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
         {/* CABECERA EJECUTIVA DE LA ZONA (SENTINELA HUD) */}
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <ShieldCheck size={18} color={ui.brand} />
                 <Text style={[styles.zonaTitle, { color: ui.foreground }]}>
@@ -187,33 +193,56 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
                     (user?.es_supervisor ? 'Cargando presbítero...' : user?.name || 'Maikel Páez')}
                 </Text>
               </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                <View style={[styles.livePulseDot, { backgroundColor: ui.success }]} />
+                <Text style={{ fontSize: 10, color: ui.mutedForeground, fontWeight: '600' }}>
+                  En vivo cada 15s • {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </Text>
+              </View>
             </View>
 
-            {/* MODO SILENCIOSO / PLENARIA */}
-            <TouchableOpacity
-              style={[
-                styles.silenceBtn,
-                {
-                  backgroundColor: user?.push_modo_silencioso
-                    ? 'rgba(245, 158, 11, 0.12)'
-                    : ui.successSoft,
-                  borderColor: user?.push_modo_silencioso ? ui.warning : ui.success,
-                },
-              ]}
-              onPress={toggleModoSilencioso}
-            >
-              {user?.push_modo_silencioso ? (
-                <>
-                  <BellOff size={15} color={ui.warning} />
-                  <Text style={[styles.silenceText, { color: ui.warning }]}>SILENCIADO</Text>
-                </>
-              ) : (
-                <>
-                  <Bell size={15} color={ui.success} />
-                  <Text style={[styles.silenceText, { color: ui.success }]}>ALERTAS ON</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {/* BOTÓN FORZAR ACTUALIZACIÓN MANUAL */}
+              <TouchableOpacity
+                style={[
+                  styles.refreshBtn,
+                  { backgroundColor: ui.muted, borderColor: ui.border },
+                ]}
+                onPress={() => onRefresh()}
+                disabled={isUpdating || refreshing}
+              >
+                <RefreshCw
+                  size={14}
+                  color={ui.foreground}
+                />
+              </TouchableOpacity>
+
+              {/* MODO SILENCIOSO / PLENARIA */}
+              <TouchableOpacity
+                style={[
+                  styles.silenceBtn,
+                  {
+                    backgroundColor: user?.push_modo_silencioso
+                      ? 'rgba(245, 158, 11, 0.12)'
+                      : ui.successSoft,
+                    borderColor: user?.push_modo_silencioso ? ui.warning : ui.success,
+                  },
+                ]}
+                onPress={toggleModoSilencioso}
+              >
+                {user?.push_modo_silencioso ? (
+                  <>
+                    <BellOff size={15} color={ui.warning} />
+                    <Text style={[styles.silenceText, { color: ui.warning }]}>SILENCIADO</Text>
+                  </>
+                ) : (
+                  <>
+                    <Bell size={15} color={ui.success} />
+                    <Text style={[styles.silenceText, { color: ui.success }]}>ALERTAS ON</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </Card>
 
@@ -276,7 +305,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
                 ? (metricas.con_conyuge / metricas.total_presentes) * 100
                 : 0
             }
-            subtext="Acompañados de su esposa/o"
+            subtext="Acompañados de su cónyuge"
             iconName="heart"
             badgeLabel="CÓNYUGES"
             badgeVariant="brand"
@@ -425,7 +454,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
                               size="sm"
                               icon={<Heart size={11} color={ui.brand} />}
                             >
-                              Con Esposa
+                              Cónyuge Presente
                             </Badge>
                           )}
                         </View>
@@ -608,6 +637,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 5,
     flexShrink: 0,
+  },
+  refreshBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  livePulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   silenceText: {
     fontSize: 10,

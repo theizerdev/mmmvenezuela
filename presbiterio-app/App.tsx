@@ -49,18 +49,17 @@ function MainApp() {
   const [serverOnline, setServerOnline] = useState<boolean>(true);
   const [configModalVisible, setConfigModalVisible] = useState<boolean>(false);
 
-  const cargarActividades = useCallback(async () => {
-    setLoadingActividades(true);
+  const cargarActividades = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoadingActividades(true);
     try {
       await api.init();
       const resp = await api.getActividades();
       if (resp.success && resp.data.length > 0) {
         setActividades(resp.data);
-        const activa = resp.data.find((a) => a.activa) || resp.data[0];
-        setActividadActual(activa);
-        const sesActiva =
-          activa.sesiones?.find((s) => s.activa) || activa.sesiones?.[0] || null;
-        setSesionActual(sesActiva);
+        setActividadActual((prev) => {
+          const matched = prev ? resp.data.find((a) => a.id === prev.id) : null;
+          return matched || resp.data.find((a) => a.activa) || resp.data[0];
+        });
         setServerOnline(true);
       } else {
         setServerOnline(false);
@@ -68,12 +67,14 @@ function MainApp() {
     } catch {
       setServerOnline(false);
     } finally {
-      setLoadingActividades(false);
+      if (!isSilent) setLoadingActividades(false);
     }
   }, []);
 
   useEffect(() => {
     cargarActividades();
+    const interval = setInterval(() => cargarActividades(true), 15000); // 15s sincronización en vivo
+    return () => clearInterval(interval);
   }, [cargarActividades]);
 
   const handleSelectActividad = (act: Actividad) => {
