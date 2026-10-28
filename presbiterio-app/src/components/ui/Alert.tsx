@@ -38,7 +38,7 @@ export const Alert: React.FC<AlertProps> = ({ variant = 'default', title, descri
         }
       : { bg: ui.muted, border: ui.border, fg: ui.foreground, icon: ui.brand };
 
-  const iconName = icon ?? (variant === 'destructive' ? 'alert-circle-outline' : variant === 'success' ? 'checkmark-circle-outline' : 'information-circle-outline');
+  const iconName = icon ?? (variant === 'destructive' ? 'alert-circle-outline' : variant === 'success' ? 'check-circle-outline' : 'information-outline');
 
   return (
     <Animated.View

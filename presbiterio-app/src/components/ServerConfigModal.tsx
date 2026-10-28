@@ -94,7 +94,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
 
         {/* RESULTADO DE LA PRUEBA */}
         {testResult === 'success' && (
-          <Alert variant="default" title="Conexión Exitosa" description="El servidor nacional respondió correctamente." />
+          <Alert variant="success" title="Conexión Exitosa" description="El servidor nacional respondió correctamente." />
         )}
 
         {testResult === 'error' && (

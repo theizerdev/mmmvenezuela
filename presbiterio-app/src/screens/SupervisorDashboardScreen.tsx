@@ -175,7 +175,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
         {/* MÉTRICAS NACIONALES CONSOLIDADAS (CADA UNA POR SEPARADO EN MÓVIL, RESPONSIVE EN DESKTOP) */}
         <View style={styles.metricsContainer}>
           <MetricCard
-            title="PADRÓN PASTORAL"
+            title="PADRÓN"
             value={String(metricas.total_padron)}
             percent={100}
             subtext="41 Zonas Eclesiásticas Oficiales"
@@ -186,7 +186,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
           />
 
           <MetricCard
-            title="ASISTENCIA TOTAL"
+            title="ASISTENCIA"
             value={String(metricas.total_presentes)}
             percent={metricas.porcentaje_asistencia}
             subtext={`${metricas.porcentaje_asistencia}% concurrencia nacional`}
@@ -209,7 +209,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
           />
 
           <MetricCard
-            title="PENDIENTES POR LLEGAR"
+            title="PENDIENTES"
             value={String(metricas.total_pendientes)}
             percent={
               metricas.total_padron > 0
@@ -224,7 +224,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
           />
 
           <MetricCard
-            title="CÓNYUGES PRESENTES"
+            title="CON CÓNYUGE"
             value={String(metricas.total_con_conyuge)}
             percent={
               metricas.total_presentes > 0

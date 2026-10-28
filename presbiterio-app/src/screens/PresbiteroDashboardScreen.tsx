@@ -179,14 +179,14 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
         {/* CABECERA EJECUTIVA DE LA ZONA (SENTINELA HUD) */}
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
-            <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <ShieldCheck size={18} color={ui.brand} />
-                <Text style={[styles.zonaTitle, { color: ui.foreground }]}>
+                <Text numberOfLines={1} style={[styles.zonaTitle, { color: ui.foreground }]}>
                   PRESBITERIO ZONA {data?.zona || zonaTarget}
                 </Text>
               </View>
-              <Text style={[styles.presbiteroSub, { color: ui.mutedForeground }]}>
+              <Text numberOfLines={1} style={[styles.presbiteroSub, { color: ui.mutedForeground }]}>
                 Presbítero a cargo:{' '}
                 <Text style={{ color: ui.foreground, fontWeight: '700' }}>
                   {data?.presbitero_nombre ||
@@ -195,7 +195,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
                 <View style={[styles.livePulseDot, { backgroundColor: ui.success }]} />
-                <Text style={{ fontSize: 10, color: ui.mutedForeground, fontWeight: '600' }}>
+                <Text numberOfLines={1} style={{ fontSize: 10, color: ui.mutedForeground, fontWeight: '600' }}>
                   En vivo cada 15s • {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </Text>
               </View>
@@ -238,7 +238,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
                 ) : (
                   <>
                     <Bell size={15} color={ui.success} />
-                    <Text style={[styles.silenceText, { color: ui.success }]}>ALERTAS ON</Text>
+                    <Text style={[styles.silenceText, { color: ui.success }]}>ALERTAS</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -620,9 +620,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   zonaTitle: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: -0.2,
+    flexShrink: 1,
+    whiteSpace: 'nowrap' as any,
   },
   presbiteroSub: {
     fontSize: 12,
