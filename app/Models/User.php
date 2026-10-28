@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Passkeys\Contracts\PasskeyUser;
 use Laravel\Passkeys\PasskeyAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
@@ -44,12 +45,12 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  */
-#[Fillable(['name', 'username', 'status', 'must_change_password', 'password_changed_at', 'email', 'password', 'telefono', 'whatsapp_opt_out', 'whatsapp_unsubscribed_at', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'zona', 'distrito', 'zona_2', 'distrito_2', 'layout_settings'])]
+#[Fillable(['name', 'username', 'status', 'must_change_password', 'password_changed_at', 'email', 'password', 'telefono', 'whatsapp_opt_out', 'whatsapp_unsubscribed_at', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'zona', 'distrito', 'zona_2', 'distrito_2', 'layout_settings', 'expo_push_token', 'push_notificaciones_activas', 'push_modo_silencioso'])]
 #[Hidden(['password', 'remember_token', 'whatsapp_otp', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, HasSpanishActivityLog, LogsActivity, Multitenantable, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, HasSpanishActivityLog, LogsActivity, Multitenantable, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -85,6 +86,8 @@ class User extends Authenticatable implements PasskeyUser
             'must_change_password' => 'boolean',
             'password' => 'hashed',
             'layout_settings' => 'array',
+            'push_notificaciones_activas' => 'boolean',
+            'push_modo_silencioso' => 'boolean',
         ];
     }
 

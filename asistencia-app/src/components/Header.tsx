@@ -7,10 +7,9 @@ import {
   Settings2,
   Check,
   Palette,
-  CloudCheck,
   CloudOff,
 } from 'lucide-react-native';
-import { useTheme, ThemeMode } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { Actividad } from '../types';
 import {
   Button,
@@ -37,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.cardBorder }]}>
-      {/* 1. BARRA SUPERIOR: IDENTIDAD INSTITUCIONAL OFICIAL MMM (LOGIN.TSX) */}
+      {/* 1. BARRA SUPERIOR: IDENTIDAD INSTITUCIONAL OFICIAL MMM */}
       <View style={styles.brandingRow}>
         <View style={styles.brandLeft}>
           <Image
@@ -55,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
           </View>
         </View>
 
-        {/* ACCIONES SUPERIORES CON SHADCN BUTTONS */}
+        {/* ACCIONES SUPERIORES */}
         <View style={styles.actionsRow}>
           {/* BOTÓN SELECTOR DE TEMA */}
           <Button
@@ -66,11 +65,11 @@ export const Header: React.FC<HeaderProps> = ({
             style={styles.actionIconBtn}
           >
             {themeMode === 'system' ? (
-              <Smartphone size={18} color={colors.primary} />
+              <Smartphone size={17} color={colors.primary} />
             ) : isDark ? (
-              <Moon size={18} color="#38bdf8" />
+              <Moon size={17} color="#38bdf8" />
             ) : (
-              <Sun size={18} color="#d97706" />
+              <Sun size={17} color="#d97706" />
             )}
           </Button>
 
@@ -84,16 +83,16 @@ export const Header: React.FC<HeaderProps> = ({
               style={styles.actionIconBtn}
             >
               {serverOnline ? (
-                <Settings2 size={18} color={colors.textSecondary} />
+                <Settings2 size={17} color={colors.textSecondary} />
               ) : (
-                <CloudOff size={18} color={colors.danger} />
+                <CloudOff size={17} color={colors.danger} />
               )}
             </Button>
           )}
         </View>
       </View>
 
-      {/* 2. MODAL DE SELECCIÓN DE TEMA (RADIX UI DIALOG CON ESTILO SHADCN) */}
+      {/* 2. MODAL DE SELECCIÓN DE TEMA */}
       <Dialog open={themeDialogOpen} onOpenChange={setThemeDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -160,10 +159,10 @@ export const Header: React.FC<HeaderProps> = ({
                   Fondo blanco y logotipo oficial a color
                 </Text>
               </View>
-              {themeMode === 'light' && <Check size={18} color={colors.primary} />}
+            {themeMode === 'light' && <Check size={18} color={colors.primary} />}
             </Pressable>
 
-            {/* MODO AUTOMÁTICO / SISTEMA */}
+            {/* MODO AUTOMÁTICO */}
             <Pressable
               style={[
                 styles.themeOption,
@@ -185,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
                   Automático (Sistema)
                 </Text>
                 <Text style={[styles.optionSub, { color: colors.textSecondary }]}>
-                  Se adapta a la configuración de este dispositivo
+                  Se adapta a la apariencia de este dispositivo
                 </Text>
               </View>
               {themeMode === 'system' && <Check size={18} color={colors.primary} />}
@@ -212,26 +211,26 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 6,
   },
   logo: {
-    width: 36,
-    height: 36,
-    marginRight: 9,
+    width: 34,
+    height: 34,
+    marginRight: 8,
   },
   brandTextCol: {
     flex: 1,
     justifyContent: 'center',
   },
   churchSub: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   churchTitle: {
     fontFamily: 'CocogooseBold',
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '900',
     letterSpacing: -0.2,
     marginTop: 1,
@@ -241,9 +240,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  loginBtn: {
+    height: 32,
+    paddingHorizontal: 10,
+    gap: 5,
+  },
+  loginBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  userBadgeBtn: {
+    height: 32,
+    paddingHorizontal: 10,
+    gap: 5,
+  },
+  userBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    maxWidth: 90,
+  },
   actionIconBtn: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
   },
   optionsList: {
     gap: 8,
@@ -269,6 +287,42 @@ const styles = StyleSheet.create({
   },
   optionSub: {
     fontSize: 11,
+    marginTop: 1,
+  },
+  profileBody: {
+    marginTop: 12,
+    gap: 12,
+  },
+  profileCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  profileName: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  profileEmail: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  profileBadges: {
+    marginTop: 8,
+    flexDirection: 'row',
+  },
+  prefOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  prefTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  prefSub: {
+    fontSize: 10.5,
     marginTop: 1,
   },
 });

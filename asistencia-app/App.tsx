@@ -29,10 +29,13 @@ import {
 import { api } from './src/services/api';
 import { Actividad, Sesion, Pastor } from './src/types';
 
-type ModoTab = 'scan' | 'manual';
+type ModoKiosco = 'scan' | 'manual';
 
 function MainApp() {
   const { isDark, colors } = useTheme();
+
+  // Sub-modo Kiosco: Escaneo QR o Búsqueda Manual
+  const [modoKiosco, setModoKiosco] = useState<ModoKiosco>('manual');
 
   // Estados de conexión y actividades
   const [actividades, setActividades] = useState<Actividad[]>([]);
@@ -40,11 +43,6 @@ function MainApp() {
   const [sesionActual, setSesionActual] = useState<Sesion | null>(null);
   const [loadingActividades, setLoadingActividades] = useState<boolean>(true);
   const [serverOnline, setServerOnline] = useState<boolean>(true);
-
-  // Modo activo: Escaneo QR o Búsqueda Manual
-  const [modo, setModo] = useState<ModoTab>('manual');
-
-  // Modal de configuración de servidor
   const [configModalVisible, setConfigModalVisible] = useState<boolean>(false);
 
   // Carga de actividades
@@ -126,29 +124,29 @@ function MainApp() {
         >
           <CloudOff size={15} color={colors.danger} />
           <Text style={[styles.offlineText, { color: isDark ? '#fecdd3' : colors.danger }]}>
-            Sin conexión con {api.getBaseUrl()}. Toque aquí para configurar la IP del servidor.
+            Sin conexión con {api.getBaseUrl()}. Toque la rueda de configuración para cambiar la IP.
           </Text>
         </Pressable>
       )}
 
-      {/* 3. TABS SHADCN / RADIX PRIMITIVES PARA LAS 2 MODALIDADES */}
+      {/* 3. KIOSCO DE CONTROL DE ACCESO EN PUERTA (EXCLUSIVO) */}
       <Tabs
-        value={modo}
-        onValueChange={(val) => setModo(val as ModoTab)}
+        value={modoKiosco}
+        onValueChange={(val) => setModoKiosco(val as ModoKiosco)}
         style={styles.tabsRoot}
       >
         <View style={styles.tabsHeaderContainer}>
           <TabsList style={styles.tabsList}>
             <TabsTrigger value="scan">
-              <QrCode size={15} color={modo === 'scan' ? '#ffffff' : colors.textSecondary} />
-              <Text style={[styles.tabTriggerText, { color: modo === 'scan' ? '#ffffff' : colors.textSecondary }]}>
+              <QrCode size={15} color={modoKiosco === 'scan' ? '#ffffff' : colors.textSecondary} />
+              <Text style={[styles.tabTriggerText, { color: modoKiosco === 'scan' ? '#ffffff' : colors.textSecondary }]}>
                 Escaneo QR
               </Text>
             </TabsTrigger>
 
             <TabsTrigger value="manual">
-              <Search size={15} color={modo === 'manual' ? '#ffffff' : colors.textSecondary} />
-              <Text style={[styles.tabTriggerText, { color: modo === 'manual' ? '#ffffff' : colors.textSecondary }]}>
+              <Search size={15} color={modoKiosco === 'manual' ? '#ffffff' : colors.textSecondary} />
+              <Text style={[styles.tabTriggerText, { color: modoKiosco === 'manual' ? '#ffffff' : colors.textSecondary }]}>
                 Registro Manual
               </Text>
             </TabsTrigger>
@@ -183,7 +181,7 @@ function MainApp() {
         )}
       </Tabs>
 
-      {/* 4. MODAL DE CONFIGURACIÓN DE IP */}
+      {/* MODAL DE CONFIGURACIÓN DE IP */}
       <ServerConfigModal
         visible={configModalVisible}
         onClose={() => setConfigModalVisible(false)}
@@ -195,15 +193,14 @@ function MainApp() {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    'Cocogoose': require('./assets/fonts/cocogoose-bold.ttf'),
-    'CocogooseBold': require('./assets/fonts/cocogoose-bold.ttf'),
-    'CocogooseRegular': require('./assets/fonts/cocogoose-regular.ttf'),
+    CocogooseBold: require('./assets/fonts/cocogoose-bold.ttf'),
+    CocogooseRegular: require('./assets/fonts/cocogoose-regular.ttf'),
   });
 
   if (!fontsLoaded) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+      <View style={styles.splashContainer}>
+        <ActivityIndicator size="large" color="#0284c7" />
       </View>
     );
   }
@@ -221,43 +218,53 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  splashContainer: {
+    flex: 1,
+    backgroundColor: '#020617',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 8,
   },
   offlineText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     flex: 1,
   },
   tabsRoot: {
     flex: 1,
   },
   tabsHeaderContainer: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   tabsList: {
     width: '100%',
   },
   tabTriggerText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    alignItems: 'center',
     padding: 20,
+    gap: 12,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
+    textAlign: 'center',
   },
 });

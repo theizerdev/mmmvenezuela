@@ -294,6 +294,19 @@ class AsistenciaApiController extends Controller
             ->distinct('pastor_id')
             ->count('pastor_id');
 
+        // 5. Disparar notificación push al presbítero de la zona en vivo
+        try {
+            $extensionNombre = $pastor->extension_nombre ?? $pastor->iglesiasPrincipales->first()?->nombre ?? 'Sede Principal';
+            app(\App\Services\ExpoPushNotificationService::class)->notificarPresbitero(
+                $pastor,
+                $asistencia,
+                $extensionNombre,
+                $asistioConConyuge
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Error enviando push al presbítero: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => '¡Asistencia registrada exitosamente!',

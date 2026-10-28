@@ -16,6 +16,8 @@
     "expo-camera": "~58.0.13",
     "expo-font": "~58.0.10",
     "expo-haptics": "~58.0.7",
+    "expo-local-authentication": "~58.0.2",
+    "expo-notifications": "~58.1.6",
     "expo-status-bar": "~58.0.4",
     "lucide-react-native": "^1.63.0",
     "react": "19.3.0",

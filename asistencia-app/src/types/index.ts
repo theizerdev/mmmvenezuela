@@ -81,3 +81,113 @@ export interface RegistroResponse {
   total_presentes?: number;
 }
 
+// ----------------------------------------------------------------------
+// TIPOS PARA LIDERAZGO (PRESBÍTEROS Y SUPERVISORES)
+// ----------------------------------------------------------------------
+
+export interface User {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+  telefono: string | null;
+  zona: string | null;
+  distrito: string | null;
+  zona_2: string | null;
+  roles: string[];
+  es_presbitero: boolean;
+  es_supervisor: boolean;
+  push_notificaciones_activas: boolean;
+  push_modo_silencioso: boolean;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+  user?: User;
+}
+
+export interface PastorPresente {
+  id: number;
+  asistencia_id: number;
+  nombre_completo: string;
+  documento: string;
+  codigo: string;
+  foto: string | null;
+  nivel_ministerial: string;
+  extension_nombre: string;
+  extension_estado: string;
+  distrito: string | null;
+  hora: string;
+  metodo: string;
+  asistio_con_conyuge: boolean;
+  nombre_conyuge: string | null;
+}
+
+export interface PastorPendiente {
+  id: number;
+  nombre_completo: string;
+  documento: string;
+  codigo: string;
+  foto: string | null;
+  nivel_ministerial: string;
+  extension_nombre: string;
+  extension_estado: string;
+  distrito: string | null;
+  telefono: string | null;
+  telefono_limpio: string;
+  tiene_telefono: boolean;
+  nombre_conyuge: string | null;
+}
+
+export interface PresbiteroDashboardData {
+  success: boolean;
+  zona: string;
+  actividad: {
+    id: number;
+    nombre: string;
+    tipo: string;
+    lugar: string | null;
+  };
+  metricas: {
+    total_padron: number;
+    total_presentes: number;
+    total_pendientes: number;
+    porcentaje_asistencia: number;
+    con_conyuge: number;
+  };
+  presentes: PastorPresente[];
+  pendientes: PastorPendiente[];
+}
+
+export interface ZonaResumen {
+  zona: string;
+  nombre_zona: string;
+  presbitero_nombre: string;
+  presbitero_telefono: string | null;
+  padron: number;
+  presentes: number;
+  pendientes: number;
+  porcentaje: number;
+  semaforo: 'green' | 'amber' | 'red';
+}
+
+export interface SupervisorDashboardData {
+  success: boolean;
+  actividad: {
+    id: number;
+    nombre: string;
+    tipo: string;
+    lugar: string | null;
+  };
+  metricas_nacionales: {
+    total_padron: number;
+    total_presentes: number;
+    total_pendientes: number;
+    porcentaje_asistencia: number;
+    total_con_conyuge: number;
+    total_zonas: number;
+  };
+  zonas: ZonaResumen[];
+}
