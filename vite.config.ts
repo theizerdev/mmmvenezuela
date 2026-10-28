@@ -5,13 +5,47 @@ import { VitePWA } from 'vite-plugin-pwa';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+
+function faceApiSsrPlugin(): Plugin {
+    return {
+        name: 'vite-plugin-face-api-ssr',
+        enforce: 'pre',
+        resolveId(id: string, _importer: string | undefined, options?: { ssr?: boolean }) {
+            if (options?.ssr && (id === '@vladmandic/face-api' || id.startsWith('@tensorflow/tfjs-node'))) {
+                return '\0face-api-ssr-mock';
+            }
+        },
+        load(id: string) {
+            if (id === '\0face-api-ssr-mock') {
+                return `
+                    export default {};
+                    export const nets = {
+                        tinyFaceDetector: { loadFromUri: async () => {} },
+                        faceLandmark68TinyNet: { loadFromUri: async () => {} },
+                        faceRecognitionNet: { loadFromUri: async () => {} },
+                    };
+                    export class TinyFaceDetectorOptions {}
+                    export class LabeledFaceDescriptors {}
+                    export class FaceMatcher {}
+                    export const fetchImage = async () => ({});
+                    export const detectSingleFace = () => ({
+                        withFaceLandmarks: () => ({
+                            withFaceDescriptor: async () => null,
+                        }),
+                    });
+                `;
+            }
+        },
+    };
+}
 
 export default defineConfig({
     define: {
         __dirname: '""',
     },
     plugins: [
+        faceApiSsrPlugin(),
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             ssr: 'resources/js/ssr.tsx',

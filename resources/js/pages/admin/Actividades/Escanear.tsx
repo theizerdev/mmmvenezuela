@@ -35,7 +35,15 @@ import {
     Share2,
 } from 'lucide-react';
 import jsQR from 'jsqr';
-import * as faceapi from '@vladmandic/face-api';
+import type * as faceapi from '@vladmandic/face-api';
+
+let faceapiInstance: typeof import('@vladmandic/face-api') | null = null;
+const loadFaceApi = async () => {
+    if (!faceapiInstance) {
+        faceapiInstance = await import('@vladmandic/face-api');
+    }
+    return faceapiInstance;
+};
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -410,6 +418,7 @@ export default function ActividadesEscanear({
         setProgresoPorcentaje(25);
 
         try {
+            const faceapi = await loadFaceApi();
             await Promise.all([
                 faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
                 faceapi.nets.faceLandmark68TinyNet.loadFromUri('/models'),
@@ -441,6 +450,7 @@ export default function ActividadesEscanear({
             return;
         }
 
+        const faceapi = await loadFaceApi();
         const lote = pastoresConFoto.slice(0, 150);
         setProgresoEntrenamiento(`Indexando ${lote.length} fotos para biometría...`);
         const descriptors: faceapi.LabeledFaceDescriptors[] = [];
@@ -662,6 +672,7 @@ export default function ActividadesEscanear({
                         lastFaceCheck = now;
 
                         try {
+                            const faceapi = faceapiInstance || (await loadFaceApi());
                             const detection = await faceapi
                                 .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.45 }))
                                 .withFaceLandmarks(true)
@@ -797,6 +808,7 @@ export default function ActividadesEscanear({
 
                 // Extraer el descriptor facial de la nueva foto y añadirlo al FaceMatcher en memoria
                 try {
+                    const faceapi = await loadFaceApi();
                     const img = await faceapi.fetchImage(data.foto_url || capturaSnapshot);
                     const det = await faceapi
                         .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))

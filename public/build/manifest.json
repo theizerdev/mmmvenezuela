@@ -408,12 +408,21 @@
     "src": "_space-grotesk-700-normal-RjhwGPKo.woff2"
   },
   "node_modules/@mediapipe/tasks-vision/vision_bundle.mjs": {
-    "file": "assets/vision_bundle-BBtdm8EQ.js",
+    "file": "assets/vision_bundle-C9waP2kp.js",
     "name": "vision_bundle",
     "src": "node_modules/@mediapipe/tasks-vision/vision_bundle.mjs",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx"
+    ]
+  },
+  "node_modules/@vladmandic/face-api/dist/face-api.esm.js": {
+    "file": "assets/face-api.esm-DCOOgINk.js",
+    "name": "face-api.esm",
+    "src": "node_modules/@vladmandic/face-api/dist/face-api.esm.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-DaJ6WEGw.js"
     ]
   },
   "node_modules/leaflet/dist/images/layers-2x.png": {
@@ -442,7 +451,7 @@
     "src": "node_modules/leaflet/dist/leaflet.css"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DGCk2afp.css",
+    "file": "assets/app-lQ7p-2yQ.css",
     "name": "app",
     "names": [
       "app.css"
@@ -451,7 +460,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-DDyWwm5e.js",
+    "file": "assets/app-Dx2LYPVY.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -461,6 +470,7 @@
     "dynamicImports": [
       "node_modules/leaflet/dist/leaflet-src.js",
       "node_modules/@mediapipe/tasks-vision/vision_bundle.mjs",
+      "node_modules/@vladmandic/face-api/dist/face-api.esm.js",
       "resources/js/pages/admin/Empresas/Partials/MapComponent.tsx",
       "resources/js/pages/admin/Estados/Partials/EstadosMap.tsx",
       "resources/js/pages/admin/Municipios/Partials/MunicipiosMap.tsx",
@@ -472,7 +482,7 @@
     ]
   },
   "resources/js/pages/admin/Empresas/Partials/MapComponent.tsx": {
-    "file": "assets/MapComponent-D6haT_Gc.js",
+    "file": "assets/MapComponent-CLkGS2SJ.js",
     "name": "MapComponent",
     "src": "resources/js/pages/admin/Empresas/Partials/MapComponent.tsx",
     "isDynamicEntry": true,
@@ -482,7 +492,7 @@
     ]
   },
   "resources/js/pages/admin/Estados/Partials/EstadosMap.tsx": {
-    "file": "assets/EstadosMap-Beil6mLb.js",
+    "file": "assets/EstadosMap-DkGnlc-g.js",
     "name": "EstadosMap",
     "src": "resources/js/pages/admin/Estados/Partials/EstadosMap.tsx",
     "isDynamicEntry": true,
@@ -492,7 +502,7 @@
     ]
   },
   "resources/js/pages/admin/Municipios/Partials/MunicipiosMap.tsx": {
-    "file": "assets/MunicipiosMap-DiKGh8pw.js",
+    "file": "assets/MunicipiosMap-QwM-570V.js",
     "name": "MunicipiosMap",
     "src": "resources/js/pages/admin/Municipios/Partials/MunicipiosMap.tsx",
     "isDynamicEntry": true,
@@ -502,7 +512,7 @@
     ]
   },
   "resources/js/pages/admin/Paises/Partials/MapComponent.tsx": {
-    "file": "assets/MapComponent-CWg5z20w.js",
+    "file": "assets/MapComponent-uWCyEP6X.js",
     "name": "MapComponent",
     "src": "resources/js/pages/admin/Paises/Partials/MapComponent.tsx",
     "isDynamicEntry": true,
@@ -512,7 +522,7 @@
     ]
   },
   "resources/js/pages/admin/Parroquias/Partials/ParroquiasMap.tsx": {
-    "file": "assets/ParroquiasMap-TPr9hRuW.js",
+    "file": "assets/ParroquiasMap-c0mIVE6L.js",
     "name": "ParroquiasMap",
     "src": "resources/js/pages/admin/Parroquias/Partials/ParroquiasMap.tsx",
     "isDynamicEntry": true,
