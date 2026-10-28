@@ -20,6 +20,7 @@ import {
   Search,
   ShieldCheck,
   Phone,
+  FilterX,
 } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
@@ -30,6 +31,7 @@ import {
   ZonaResumen,
 } from '../types';
 import { MetricCard } from '../components/MetricCard';
+import { SupervisorApexChart } from '../components/SupervisorApexChart';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Progress } from '../components/ui/Progress';
@@ -48,13 +50,16 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
   const { width } = useWindowDimensions();
   const { ui } = useTheme();
 
-  const isWide = width >= 768;
+  const isDesktop = width >= 992;
+  const isTablet = width >= 600 && width < 992;
+  const isMobile = width < 600;
 
   const [data, setData] = useState<SupervisorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedZona, setSelectedZona] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterSemaforo, setFilterSemaforo] = useState<'todas' | 'optimo' | 'regular' | 'critico'>('todas');
 
   const cargarDashboard = useCallback(async () => {
     try {
@@ -101,11 +106,27 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
     total_zonas: 0,
   };
 
-  const zonasFiltradas = (data?.zonas || []).filter(
-    (z) =>
-      z.nombre_zona.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      z.presbitero_nombre.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const zonasFiltradas = (data?.zonas || []).filter((z) => {
+    const query = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !query ||
+      z.nombre_zona.toLowerCase().includes(query) ||
+      z.presbitero_nombre.toLowerCase().includes(query) ||
+      String(z.zona) === query;
+
+    if (!matchesSearch) return false;
+
+    if (filterSemaforo === 'optimo') return z.porcentaje >= 70;
+    if (filterSemaforo === 'regular') return z.porcentaje >= 40 && z.porcentaje < 70;
+    if (filterSemaforo === 'critico') return z.porcentaje < 40;
+    return true;
+  });
+
+  const getMetricCardStyle = () => {
+    if (isDesktop) return styles.metricDesktop;
+    if (isTablet) return styles.metricTablet;
+    return styles.metricMobile;
+  };
 
   if (loading && !data) {
     return (
@@ -128,42 +149,47 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
         {/* CABECERA SUPERVISOR NACIONAL */}
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
-            <View>
+            <View style={{ flex: 1, marginRight: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Globe2 size={18} color={ui.brand} />
-                <Text style={[styles.title, { color: ui.foreground }]}>
+                <Text numberOfLines={1} style={[styles.title, { color: ui.foreground }]}>
                   SUPERVISIÓN NACIONAL VENEZUELA
                 </Text>
               </View>
-              <Text style={[styles.subtitle, { color: ui.mutedForeground }]}>
+              <Text numberOfLines={1} style={[styles.subtitle, { color: ui.mutedForeground }]}>
                 Monitoreo centralizado en tiempo real • 41 Zonas Convocadas
               </Text>
             </View>
 
-            <Badge variant="brand" size="sm">
-              EN DIRECTO
+            <Badge
+              variant="brand"
+              size="sm"
+              icon={<View style={[styles.livePulseDot, { backgroundColor: ui.brand }]} />}
+              style={styles.headerBadge}
+            >
+              EN VIVO
             </Badge>
           </View>
         </Card>
 
-        {/* MÉTRICAS NACIONALES CONSOLIDADAS */}
+        {/* MÉTRICAS NACIONALES CONSOLIDADAS (CADA UNA POR SEPARADO EN MÓVIL, RESPONSIVE EN DESKTOP) */}
         <View style={styles.metricsContainer}>
           <MetricCard
             title="PADRÓN PASTORAL"
             value={String(metricas.total_padron)}
             percent={100}
-            subtext="41 Zonas Eclesiásticas"
+            subtext="41 Zonas Eclesiásticas Oficiales"
             iconName="account-group"
             badgeLabel="41 ZONAS"
             badgeVariant="secondary"
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
 
           <MetricCard
             title="ASISTENCIA TOTAL"
             value={String(metricas.total_presentes)}
             percent={metricas.porcentaje_asistencia}
-            subtext={`${metricas.porcentaje_asistencia}% concurrencia`}
+            subtext={`${metricas.porcentaje_asistencia}% concurrencia nacional`}
             iconName="chart-timeline-variant"
             badgeLabel={
               metricas.porcentaje_asistencia >= 70
@@ -179,11 +205,11 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
                 ? 'warning'
                 : 'destructive'
             }
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
 
           <MetricCard
-            title="PENDIENTES"
+            title="PENDIENTES POR LLEGAR"
             value={String(metricas.total_pendientes)}
             percent={
               metricas.total_padron > 0
@@ -194,24 +220,34 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
             iconName="clock-alert-outline"
             badgeLabel="POR LLEGAR"
             badgeVariant="warning"
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
 
           <MetricCard
-            title="CÓNYUGES"
+            title="CÓNYUGES PRESENTES"
             value={String(metricas.total_con_conyuge)}
             percent={
               metricas.total_presentes > 0
                 ? (metricas.total_con_conyuge / metricas.total_presentes) * 100
                 : 0
             }
-            subtext="Acompañando la obra"
+            subtext="Acompañando la obra pastoral"
             iconName="heart"
             badgeLabel="PAREJAS"
             badgeVariant="brand"
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
         </View>
+
+        {/* RADAR EJECUTIVO NACIONAL - APEXCHART AVANZADO DE LAS 41 ZONAS */}
+        {data && (
+          <SupervisorApexChart
+            data={data}
+            selectedFilter={filterSemaforo}
+            onSelectFilter={setFilterSemaforo}
+            onSelectZona={(zonaId) => setSelectedZona(zonaId)}
+          />
+        )}
 
         {/* BUSCADOR DE ZONA */}
         <View style={[styles.searchBox, { backgroundColor: ui.card, borderColor: ui.border }]}>
@@ -223,12 +259,30 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+              <FilterX size={16} color={ui.mutedForeground} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* LISTADO DE LAS 41 ZONAS */}
-        <Text style={[styles.sectionTitle, { color: ui.foreground }]}>
-          ESTADO POR PRESBITERIO ({zonasFiltradas.length} ZONAS)
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: ui.foreground }]}>
+            ESTADO POR PRESBITERIO ({zonasFiltradas.length} de {data?.zonas?.length || 41} ZONAS)
+          </Text>
+
+          {filterSemaforo !== 'todas' && (
+            <TouchableOpacity
+              onPress={() => setFilterSemaforo('todas')}
+              style={[styles.clearFilterPill, { backgroundColor: ui.muted }]}
+            >
+              <Text style={[styles.clearFilterText, { color: ui.brand }]}>
+                Ver Todas ({data?.zonas?.length || 41})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         <View style={styles.zonasGrid}>
           {zonasFiltradas.map((z, index) => {
@@ -242,7 +296,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
                 key={`zona-${z.zona ?? index}`}
                 style={[
                   styles.zonaCard,
-                  isWide ? styles.zonaCardWide : styles.zonaCardMobile,
+                  isDesktop ? styles.zonaCardWide : styles.zonaCardMobile,
                   { backgroundColor: ui.card, borderColor: ui.border },
                 ]}
                 onPress={() => setSelectedZona(z.zona)}
@@ -253,7 +307,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
                   <View style={styles.zonaTitleCol}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Badge variant="outline" size="sm">
-                        {`#${index + 1}`}
+                        {`#${z.zona}`}
                       </Badge>
                       <Text style={[styles.zonaNombre, { color: ui.foreground }]}>
                         {z.nombre_zona.toUpperCase()}
@@ -283,7 +337,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
                   <Text style={[styles.footerStat, { color: ui.mutedForeground }]}>
                     Presentes:{' '}
                     <Text style={{ color: ui.foreground, fontWeight: '700' }}>
-                      {z.presentes}/{z.total_padron}
+                      {z.presentes}/{z.total_padron || z.padron}
                     </Text>{' '}
                     ({z.porcentaje}%)
                   </Text>
@@ -334,10 +388,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  livePulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  headerBadge: {
+    flexShrink: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
   },
   title: {
     fontSize: 14.5,
-    fontFamily: 'CocogooseBold',
+    fontWeight: '800',
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -348,16 +413,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 14,
   },
-  metricWide: {
+  metricDesktop: {
     flex: 1,
-    minWidth: 200,
+    minWidth: 220,
+  },
+  metricTablet: {
+    width: '48.5%',
+    flexGrow: 1,
   },
   metricMobile: {
-    width: '48.5%',
-    minWidth: 140,
-    flexGrow: 1,
+    width: '100%',
   },
   searchBox: {
     flexDirection: 'row',
@@ -366,19 +433,33 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingHorizontal: 14,
     height: 44,
-    marginVertical: 12,
+    marginBottom: 14,
   },
   searchInput: {
     flex: 1,
     fontSize: 13,
     height: '100%',
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 11.5,
     fontWeight: '800',
     letterSpacing: 0.8,
-    marginBottom: 10,
     textTransform: 'uppercase',
+  },
+  clearFilterPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  clearFilterText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   zonasGrid: {
     flexDirection: 'row',

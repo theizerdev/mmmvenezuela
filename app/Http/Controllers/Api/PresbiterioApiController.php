@@ -316,40 +316,39 @@ class PresbiterioApiController extends Controller
             ->toArray();
 
         // Obtener presbíteros asignados a cada zona
-        $presbiterosPorZona = User::role(['Presbitero', 'presbitero'])
-            ->whereNotNull('zona')
+        $presbiterosPorZona = User::whereNotNull('zona')
             ->get()
             ->keyBy('zona');
 
-        // Construir tabla clasificada de Zonas
+        // Construir listado oficial de las 41 Zonas de Venezuela en estricto orden numérico (1 al 41)
         $zonas = [];
-        foreach ($padronPorZona as $z => $padronCount) {
-            $presentesCount = $presentesPorZona[$z] ?? 0;
+        for ($z = 1; $z <= 41; $z++) {
+            $zStr = (string) $z;
+            $padronCount = $padronPorZona[$zStr] ?? $padronPorZona[$z] ?? 0;
+            $presentesCount = $presentesPorZona[$zStr] ?? $presentesPorZona[$z] ?? 0;
             $pct = $padronCount > 0 ? round(($presentesCount / $padronCount) * 100, 1) : 0;
-            $presbitero = $presbiterosPorZona->get($z);
+            $presbitero = $presbiterosPorZona->get($zStr) ?? $presbiterosPorZona->get($z);
 
             $semaforo = 'red';
-            if ($pct >= 80) {
+            if ($pct >= 70) {
                 $semaforo = 'green';
-            } elseif ($pct >= 50) {
+            } elseif ($pct >= 40) {
                 $semaforo = 'amber';
             }
 
             $zonas[] = [
-                'zona' => $z,
+                'zona' => $zStr,
                 'nombre_zona' => "Zona {$z}",
-                'presbitero_nombre' => $presbitero ? $presbitero->name : 'Sin asignar',
+                'presbitero_nombre' => $presbitero ? $presbitero->name : "Presbítero Zona {$z}",
                 'presbitero_telefono' => $presbitero?->telefono,
                 'padron' => $padronCount,
+                'total_padron' => $padronCount,
                 'presentes' => $presentesCount,
                 'pendientes' => max(0, $padronCount - $presentesCount),
                 'porcentaje' => $pct,
                 'semaforo' => $semaforo,
             ];
         }
-
-        // Ordenar por porcentaje descendente (las zonas más avanzadas primero)
-        usort($zonas, fn ($a, $b) => $b['porcentaje'] <=> $a['porcentaje']);
 
         return response()->json([
             'success' => true,

@@ -53,7 +53,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           <View style={[styles.iconBox, { backgroundColor: ui.muted, borderColor: ui.border }]}>
             <MdiIcon name={iconName} size={15} color={ui.brand} />
           </View>
-          <Text style={[styles.title, { color: ui.mutedForeground }]} numberOfLines={1}>
+          <Text style={[styles.title, { color: ui.mutedForeground }]} numberOfLines={2}>
             {title}
           </Text>
         </View>
@@ -80,7 +80,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       />
 
       {/* SUBTEXTO */}
-      <Text style={[styles.subtext, { color: ui.subtle }]} numberOfLines={1} ellipsizeMode="tail">
+      <Text style={[styles.subtext, { color: ui.subtle }]} numberOfLines={2} ellipsizeMode="tail">
         {subtext}
       </Text>
 

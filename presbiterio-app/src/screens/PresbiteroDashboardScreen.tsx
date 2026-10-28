@@ -57,7 +57,16 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
   const { ui, resolvedTheme } = useTheme();
   const { user, toggleModoSilencioso } = useAuth();
 
+  const isDesktop = width >= 992;
+  const isTablet = width >= 600 && width < 992;
+  const isMobile = width < 600;
   const isWide = width >= 768;
+
+  const getMetricCardStyle = () => {
+    if (isDesktop) return styles.metricDesktop;
+    if (isTablet) return styles.metricTablet;
+    return styles.metricMobile;
+  };
 
   const [data, setData] = useState<PresbiteroDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -218,7 +227,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
             iconName="account-group"
             badgeLabel="PADRÓN"
             badgeVariant="secondary"
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
 
           <MetricCard
@@ -241,7 +250,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
                 ? 'warning'
                 : 'destructive'
             }
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
 
           <MetricCard
@@ -256,7 +265,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
             iconName="clock-alert-outline"
             badgeLabel="POR LLEGAR"
             badgeVariant={metricas.total_pendientes > 0 ? 'warning' : 'success'}
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
 
           <MetricCard
@@ -271,7 +280,7 @@ export const PresbiteroDashboardScreen: React.FC<PresbiteroDashboardScreenProps>
             iconName="heart"
             badgeLabel="CÓNYUGES"
             badgeVariant="brand"
-            style={isWide ? styles.metricWide : styles.metricMobile}
+            style={getMetricCardStyle()}
           />
         </View>
 
@@ -611,14 +620,16 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  metricWide: {
+  metricDesktop: {
     flex: 1,
-    minWidth: 200,
+    minWidth: 210,
+  },
+  metricTablet: {
+    width: '48.5%',
+    flexGrow: 1,
   },
   metricMobile: {
-    width: '48.5%',
-    minWidth: 140,
-    flexGrow: 1,
+    width: '100%',
   },
   searchBox: {
     flexDirection: 'row',
