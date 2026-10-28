@@ -149,12 +149,12 @@ class PresbiterioApiController extends Controller
         $presbiteroTelefono = $presbiteroUser?->telefono;
 
         $actividadId = $request->input('actividad_id');
-        $sesionId = $request->input('actividad_sesion_id');
+        $sesionId = $request->input('actividad_sesion_id') ?? $request->input('sesion_id');
 
-        // Obtener actividad activa si no se especificó
+        // Obtener actividad activa si no se especificó (sin restringir por la zona del evento)
         $actividad = $actividadId
-            ? Actividad::find($actividadId)
-            : Actividad::where('estado', '!=', 'cancelada')->orderBy('fecha_inicio', 'desc')->first();
+            ? Actividad::withoutGlobalScope('multitenancy')->find($actividadId)
+            : Actividad::withoutGlobalScope('multitenancy')->where('estado', '!=', 'cancelada')->orderBy('fecha_inicio', 'desc')->first();
 
         if (!$actividad) {
             return response()->json([
@@ -164,7 +164,8 @@ class PresbiterioApiController extends Controller
         }
 
         // 1. Padrón de pastores de esta zona
-        $pastoresZona = Pastor::with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+        $pastoresZona = Pastor::withoutGlobalScope('multitenancy')
+            ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
             ->where('zona', $zona)
             ->where('status', true)
             ->orderBy('nombres')
@@ -282,8 +283,8 @@ class PresbiterioApiController extends Controller
 
         $actividadId = $request->input('actividad_id');
         $actividad = $actividadId
-            ? Actividad::find($actividadId)
-            : Actividad::where('estado', '!=', 'cancelada')->orderBy('fecha_inicio', 'desc')->first();
+            ? Actividad::withoutGlobalScope('multitenancy')->find($actividadId)
+            : Actividad::withoutGlobalScope('multitenancy')->where('estado', '!=', 'cancelada')->orderBy('fecha_inicio', 'desc')->first();
 
         if (!$actividad) {
             return response()->json([
@@ -293,7 +294,7 @@ class PresbiterioApiController extends Controller
         }
 
         // 1. Métricas Globales País
-        $totalPastoresPadron = Pastor::where('status', true)->count();
+        $totalPastoresPadron = Pastor::withoutGlobalScope('multitenancy')->where('status', true)->count();
         $asistenciasNacionales = Asistencia::where('actividad_id', $actividad->id)->get();
         $pastorIdsPresentes = $asistenciasNacionales->pluck('pastor_id')->unique()->values();
         $totalPresentesNacional = $pastorIdsPresentes->count();
@@ -301,14 +302,14 @@ class PresbiterioApiController extends Controller
         $totalConConyugeNacional = $asistenciasNacionales->where('asistio_con_conyuge', true)->unique('pastor_id')->count();
 
         // 2. Conteo de pastores por Zona
-        $padronPorZona = Pastor::where('status', true)
+        $padronPorZona = Pastor::withoutGlobalScope('multitenancy')->where('status', true)
             ->whereNotNull('zona')
             ->select('zona', DB::raw('count(*) as total'))
             ->groupBy('zona')
             ->pluck('total', 'zona')
             ->toArray();
 
-        $presentesPorZona = Pastor::whereIn('id', $pastorIdsPresentes)
+        $presentesPorZona = Pastor::withoutGlobalScope('multitenancy')->whereIn('id', $pastorIdsPresentes)
             ->whereNotNull('zona')
             ->select('zona', DB::raw('count(*) as total'))
             ->groupBy('zona')

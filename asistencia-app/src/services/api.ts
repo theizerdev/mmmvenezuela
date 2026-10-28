@@ -5,20 +5,15 @@ import {
   AsistenciaPrevia,
   RegistroResponse,
   UltimoEscaneo,
-  AuthResponse,
-  PresbiteroDashboardData,
-  SupervisorDashboardData,
 } from '../types';
 
 const STORAGE_API_KEY = '@mmm_asistencia_api_url';
-const STORAGE_AUTH_TOKEN_KEY = '@mmm_asistencia_auth_token';
 
 // Lee la URL base del backend desde la variable de entorno EXPO_PUBLIC_API_URL (.env)
 export const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.101.102';
 
 class ApiService {
   private baseUrl: string = DEFAULT_API_URL;
-  private authToken: string | null = null;
 
   constructor() {
     this.init();
@@ -26,16 +21,9 @@ class ApiService {
 
   async init(): Promise<string> {
     try {
-      const [savedUrl, savedToken] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_API_KEY),
-        AsyncStorage.getItem(STORAGE_AUTH_TOKEN_KEY),
-      ]);
-
+      const savedUrl = await AsyncStorage.getItem(STORAGE_API_KEY);
       if (savedUrl) {
         this.baseUrl = savedUrl;
-      }
-      if (savedToken) {
-        this.authToken = savedToken;
       }
     } catch (e) {
       console.warn('Error inicializando ApiService:', e);
@@ -53,19 +41,6 @@ class ApiService {
     return this.baseUrl;
   }
 
-  setAuthToken(token: string | null): void {
-    this.authToken = token;
-    if (token) {
-      AsyncStorage.setItem(STORAGE_AUTH_TOKEN_KEY, token);
-    } else {
-      AsyncStorage.removeItem(STORAGE_AUTH_TOKEN_KEY);
-    }
-  }
-
-  getAuthToken(): string | null {
-    return this.authToken;
-  }
-
   resolveImageUrl(path?: string | null): string | null {
     if (!path) return null;
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
@@ -79,7 +54,6 @@ class ApiService {
     const headers: Record<string, string> = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      ...(this.authToken ? { 'Authorization': `Bearer ${this.authToken}` } : {}),
       ...((options.headers as Record<string, string>) || {}),
     };
 
@@ -107,7 +81,7 @@ class ApiService {
   }
 
   // ----------------------------------------------------------------------
-  // 1. MÉTODOS PÚBLICOS (KIOSCO)
+  // MÉTODOS PÚBLICOS DEL KIOSCO DE ASISTENCIA
   // ----------------------------------------------------------------------
 
   async getActividadesActivas(): Promise<{ success: boolean; actividades: Actividad[] }> {
@@ -174,70 +148,6 @@ class ApiService {
       clearTimeout(timeoutId);
       return false;
     }
-  }
-
-  // ----------------------------------------------------------------------
-  // 2. MÉTODOS DE AUTENTICACIÓN Y LIDERAZGO
-  // ----------------------------------------------------------------------
-
-  async login(login: string, password: string, expoPushToken?: string | null): Promise<AuthResponse> {
-    const res = await this.request<AuthResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        login,
-        password,
-        expo_push_token: expoPushToken || null,
-      }),
-    });
-
-    if (res.success && res.token) {
-      this.setAuthToken(res.token);
-    }
-    return res;
-  }
-
-  async logout(): Promise<{ success: boolean; message: string }> {
-    try {
-      await this.request('/auth/logout', { method: 'POST' });
-    } catch (e) {
-      // Ignorar error si no había conexión activa
-    } finally {
-      this.setAuthToken(null);
-    }
-    return { success: true, message: 'Sesión cerrada' };
-  }
-
-  async updatePushSettings(params: {
-    expo_push_token?: string | null;
-    push_notificaciones_activas?: boolean;
-    push_modo_silencioso?: boolean;
-  }): Promise<{ success: boolean }> {
-    return this.request('/auth/push-settings', {
-      method: 'POST',
-      body: JSON.stringify(params),
-    });
-  }
-
-  async getPresbiteroDashboard(
-    actividadId?: number,
-    sesionId?: number,
-    zona?: string
-  ): Promise<PresbiteroDashboardData> {
-    const query = new URLSearchParams({
-      ...(actividadId ? { actividad_id: actividadId.toString() } : {}),
-      ...(sesionId ? { actividad_sesion_id: sesionId.toString() } : {}),
-      ...(zona ? { zona } : {}),
-    });
-
-    return this.request<PresbiteroDashboardData>(`/presbitero/dashboard?${query.toString()}`);
-  }
-
-  async getSupervisorDashboard(actividadId?: number): Promise<SupervisorDashboardData> {
-    const query = new URLSearchParams({
-      ...(actividadId ? { actividad_id: actividadId.toString() } : {}),
-    });
-
-    return this.request<SupervisorDashboardData>(`/supervisor/dashboard?${query.toString()}`);
   }
 }
 

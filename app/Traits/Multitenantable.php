@@ -126,7 +126,9 @@ trait Multitenantable
                         ? $user->getZonasList()
                         : array_values(array_filter([$user->zona ?? null, $user->zona_2 ?? null], fn ($val) => $val !== null && $val !== ''));
 
-                    if (Schema::hasColumn($table, 'zona') && ! empty($zonas)) {
+                    // Las actividades son eventos institucionales donde participan pastores de cualquier zona;
+                    // por ende, la tabla 'actividades' no se restringe por la zona de origen del usuario.
+                    if ($table !== 'actividades' && Schema::hasColumn($table, 'zona') && ! empty($zonas)) {
                         // Expandir zonas para admitir tanto formato entero "9" como con ceros "09" o "Zona 9"
                         $zonasExpanded = [];
                         foreach ($zonas as $z) {

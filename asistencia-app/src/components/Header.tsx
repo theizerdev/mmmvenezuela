@@ -240,25 +240,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  loginBtn: {
-    height: 32,
-    paddingHorizontal: 10,
-    gap: 5,
-  },
-  loginBtnText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-  },
-  userBadgeBtn: {
-    height: 32,
-    paddingHorizontal: 10,
-    gap: 5,
-  },
-  userBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    maxWidth: 90,
-  },
   actionIconBtn: {
     width: 32,
     height: 32,
@@ -287,42 +268,6 @@ const styles = StyleSheet.create({
   },
   optionSub: {
     fontSize: 11,
-    marginTop: 1,
-  },
-  profileBody: {
-    marginTop: 12,
-    gap: 12,
-  },
-  profileCard: {
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  profileName: {
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  profileEmail: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  profileBadges: {
-    marginTop: 8,
-    flexDirection: 'row',
-  },
-  prefOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  prefTitle: {
-    fontSize: 12.5,
-    fontWeight: '800',
-  },
-  prefSub: {
-    fontSize: 10.5,
     marginTop: 1,
   },
 });
