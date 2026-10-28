@@ -27,7 +27,7 @@ class CarnetService
         if (file_exists($customStorage)) {
             return $customStorage;
         }
-        $customApp = public_path('/carnets/Credencial-frente.png');
+        $customApp = storage_path('app/public/carnets/Credencial-frente.png');
         if (file_exists($customApp)) {
             return $customApp;
         }
@@ -47,7 +47,7 @@ class CarnetService
         if (file_exists($customStorage)) {
             return $customStorage;
         }
-        $customApp = public_path('/carnets/Credencial-atras.png');
+        $customApp = storage_path('app/public/carnets/Credencial-atras.png');
         if (file_exists($customApp)) {
             return $customApp;
         }
@@ -543,7 +543,7 @@ class CarnetService
         }
 
         try {
-            $cacheDir = public_path('/carnets_cache');
+            $cacheDir = storage_path('app/public/carnets_cache');
             if (!file_exists($cacheDir) && !@mkdir($cacheDir, 0777, true)) {
                 $cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carnets_cache';
                 if (!file_exists($cacheDir)) {
@@ -716,7 +716,7 @@ class CarnetService
             return null;
         }
 
-        $cacheDir = public_path('/carnets_cache');
+        $cacheDir = storage_path('app/public/carnets_cache');
         if (!file_exists($cacheDir) && !@mkdir($cacheDir, 0777, true)) {
             $cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carnets_cache';
             if (!file_exists($cacheDir)) {
@@ -770,9 +770,9 @@ class CarnetService
             // Mapeo exhaustivo de ubicaciones estándar en Laravel y servidores de producción
             $posiblesRutas = [
                 // Almacenamiento en disco público (storage/app/public/pastores)
-                public_path('/pastores/' . $basename),
-                public_path('/pastores/' . $clean),
-                public_path('/' . $clean),
+                storage_path('app/public/pastores/' . $basename),
+                storage_path('app/public/pastores/' . $clean),
+                storage_path('app/public/' . $clean),
                 \Illuminate\Support\Facades\Storage::disk('public')->path('pastores/' . $basename),
                 \Illuminate\Support\Facades\Storage::disk('public')->path($clean),
 
@@ -786,11 +786,11 @@ class CarnetService
                 public_path($clean),
 
                 // storage/app
-                public_path('app/' . $clean),
+                storage_path('app/' . $clean),
             ];
 
             if (str_starts_with($clean, 'storage/')) {
-                $posiblesRutas[] = public_path('/' . substr($clean, 8));
+                $posiblesRutas[] = storage_path('app/public/' . substr($clean, 8));
             }
 
             // Soporte para servidores cPanel / Plesk con public_html
@@ -818,7 +818,7 @@ class CarnetService
 
             // 4. Búsqueda insensible a mayúsculas/minúsculas para sistemas Linux (ej: .png vs .PNG)
             $dirsToCheck = [
-                public_path('/pastores'),
+                storage_path('app/public/pastores'),
                 public_path('pastores'),
                 public_path('storage/pastores'),
             ];
