@@ -30,13 +30,77 @@ export function formatDocumento(doc?: string) {
 }
 
 /**
- * Retorna el nombre completo del pastor (sin prefijo "REV.")
+ * Retorna el nombre formateado para el carnet del pastor:
+ * - Primer y segundo nombre
+ * - Pastoras casadas: Primer apellido + apellido de casada (omitiendo segundo apellido materno)
+ * - Hombres o solteras: Primer apellido (omitiendo segundo apellido)
  */
 export function getPastorCarnetFullName(pastor: Pastor, uppercase = false): string {
-    const raw = `${pastor.nombres || ''} ${pastor.apellidos || ''}`.trim().replace(/\s+/g, ' ');
-    const clean = raw.replace(/^rev\.?\s+/i, '');
+    if ((pastor as any).nombre_carnet) {
+        const val = String((pastor as any).nombre_carnet).trim();
+        return uppercase ? val.toUpperCase() : val;
+    }
 
-    return uppercase ? clean.toUpperCase() : clean;
+    const rawNombres = (pastor.nombres || '').trim().replace(/\s+/g, ' ').replace(/^rev\.?\s+/i, '');
+    let cleanNombres = rawNombres;
+    let cleanApellidos = (pastor.apellidos || '').trim().replace(/\s+/g, ' ');
+
+    // Reasignar segundo nombre religioso si vino en el campo apellidos (ej. "de Jesús", "del Valle", etc.)
+    const relMatch = cleanApellidos.match(/^(de\s+jes[uú]s|del\s+valle|del\s+carmen|del\s+rosario)\s+(.*)$/i);
+    if (relMatch) {
+        cleanNombres += ' ' + relMatch[1];
+        cleanApellidos = relMatch[2];
+    }
+
+    // 1. Nombres: hasta 2 nombres (respetando partículas compuestas: "del Carmen", "de Jesús")
+    const nWords = cleanNombres.split(' ').filter(Boolean);
+    let nombresResult = '';
+    if (nWords.length <= 2) {
+        nombresResult = cleanNombres;
+    } else {
+        if (['de', 'del', 'la', 'los', 'las'].includes(nWords[1].toLowerCase())) {
+            nombresResult = `${nWords[0]} ${nWords[1]} ${nWords[2] || ''}`.trim();
+        } else {
+            nombresResult = `${nWords[0]} ${nWords[1]}`;
+        }
+    }
+
+    // 2. Apellidos:
+    let apellidosResult = '';
+    // Detectar si tiene apellido de casada (" de [Esposo]")
+    const casadoMatch = cleanApellidos.match(/^(.*?)\s+\b(de\s+(?:la\s+|los\s+|las\s+)?[\p{L}'-]+(?:\s+[\p{L}'-]+)?)$/iu);
+    if (casadoMatch) {
+        const paternoParte = casadoMatch[1].trim();
+        const esposoParte = casadoMatch[2].trim();
+
+        const pWords = paternoParte.split(' ').filter(Boolean);
+        let primerApellido = '';
+        if (pWords.length > 1 && ['de', 'del', 'san', 'santa'].includes(pWords[0].toLowerCase())) {
+            primerApellido = `${pWords[0]} ${pWords[1]}`;
+        } else if (pWords.length > 0) {
+            primerApellido = pWords[0];
+        }
+
+        apellidosResult = primerApellido ? `${primerApellido} ${esposoParte}` : esposoParte;
+    } else if (/^\b(de\s+(?:la\s+|los\s+|las\s+)?[\p{L}'-]+)$/iu.test(cleanApellidos)) {
+        apellidosResult = cleanApellidos;
+    } else {
+        const aWords = cleanApellidos.split(' ').filter(Boolean);
+        if (aWords.length > 1 && ['de', 'del', 'san', 'santa'].includes(aWords[0].toLowerCase())) {
+            if (aWords[0].toLowerCase() === 'de' && ['la', 'los', 'las'].includes(aWords[1].toLowerCase()) && aWords[2]) {
+                apellidosResult = `${aWords[0]} ${aWords[1]} ${aWords[2]}`;
+            } else {
+                apellidosResult = `${aWords[0]} ${aWords[1]}`;
+            }
+        } else if (aWords.length > 0) {
+            apellidosResult = aWords[0];
+        } else {
+            apellidosResult = cleanApellidos;
+        }
+    }
+
+    const final = `${nombresResult} ${apellidosResult}`.trim().replace(/\s+/g, ' ');
+    return uppercase ? final.toUpperCase() : final;
 }
 
 /**
@@ -182,8 +246,8 @@ export function PastorCarnetCard({
 
     const rawFullName = getPastorCarnetFullName(pastor, true);
     const nameFontSize = rawFullName.length > 28
-        ? 'text-[15px]'
-        : (rawFullName.length > 22 ? 'text-[17px]' : 'text-[19.5px]');
+        ? 'text-[17.5px]'
+        : (rawFullName.length > 22 ? 'text-[19.5px]' : 'text-[22px]');
 
     const lugarFontSize = cleanLugar.length > 28
         ? 'text-[11px]'
@@ -343,7 +407,7 @@ export function PastorCarnetCard({
                             }}
                         >
                             <span
-                                className="text-[19px] italic font-normal tracking-tight text-black block leading-[24px] truncate"
+                                className="text-[20.5px] italic font-normal tracking-tight text-black block leading-[25px] truncate"
                                 style={{
                                     fontFamily: "'Instrument Sans', 'Aribau Grotesk', Arial, sans-serif",
                                     fontStyle: 'italic',

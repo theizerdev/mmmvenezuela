@@ -101,7 +101,7 @@ class Pastor extends Model
         'edad' => 'integer',
     ];
 
-    protected $appends = ['nombre_completo', 'foto_url', 'foto_cedula_url', 'extension_nombre', 'extension_estado'];
+    protected $appends = ['nombre_completo', 'nombre_carnet', 'foto_url', 'foto_cedula_url', 'extension_nombre', 'extension_estado'];
 
     /**
      * Generar código de pastor (11 a 15 dígitos):
@@ -146,6 +146,14 @@ class Pastor extends Model
     public function getNombreCompletoAttribute(): string
     {
         return trim("{$this->nombres} {$this->apellidos}");
+    }
+
+    /**
+     * Obtenedor del nombre optimizado y formateado para el carnet ministerial oficial.
+     */
+    public function getNombreCarnetAttribute(): string
+    {
+        return \App\Services\CarnetService::formatearNombreCarnet($this->nombres, $this->apellidos);
     }
 
     /**

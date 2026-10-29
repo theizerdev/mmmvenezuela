@@ -287,22 +287,22 @@ class CarnetService
             $contW = 53.8;
 
             // 3. Bloque 1: Identificación Titular (Debajo de la franja PASTOR - Cocogoose Bold)
-            $nombreCompleto = $this->obtenerNombreCompletoConTitulo($pastor, true);
+            $nombreCompleto = $this->obtenerNombreCarnet($pastor, true);
             $nombreIso = $this->utf8ToPdf($nombreCompleto);
             $pdf->SetTextColor(0, 0, 0); // Pure Black #000000
 
             $nombreLen = mb_strlen($nombreCompleto, 'UTF-8');
-            $fontSize = ($nombreLen > 28) ? 6.8 : (($nombreLen > 22) ? 7.6 : 8.8);
+            $fontSize = ($nombreLen > 28) ? 8.0 : (($nombreLen > 22) ? 9.0 : 10.2);
             $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $fontSize);
             $textWidth = $pdf->GetStringWidth($nombreIso);
 
             if ($textWidth > $contW - 2) {
-                $fontSize = max(5.4, round($fontSize * ($contW - 2) / $textWidth, 2));
+                $fontSize = max(6.4, round($fontSize * ($contW - 2) / $textWidth, 2));
                 $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $fontSize);
             }
 
-            $pdf->SetXY($contX, $y + 26.0);
-            $pdf->Cell($contW, 3.4, $nombreIso, 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 25.8);
+            $pdf->Cell($contW, 3.8, $nombreIso, 0, 1, 'C');
 
             // 4. Documento de Identidad (Aribau Grotesk Regular / Helvetica Regular)
             $pdf->SetFont('Helvetica', '', 5.8);
@@ -382,11 +382,11 @@ class CarnetService
             $pdf->Image($atrasImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
             // 2. Nombre Titular en Cursiva (zona libre inferior izquierda, idéntico a ejemplo.png)
-            $pdf->SetFont('Helvetica', 'I', 7.5);
+            $pdf->SetFont('Helvetica', 'I', 8.2);
             $pdf->SetTextColor(0, 0, 0);
-            $titular = $this->obtenerNombreCompletoConTitulo($pastor, false);
-            $pdf->SetXY($x + 9.0, $y + 42.6);
-            $pdf->Cell(56.0, 3.2, $this->utf8ToPdf($titular), 0, 1, 'L');
+            $titular = $this->obtenerNombreCarnet($pastor, false);
+            $pdf->SetXY($x + 9.0, $y + 42.4);
+            $pdf->Cell(56.0, 3.4, $this->utf8ToPdf($titular), 0, 1, 'L');
 
             // 3. Ubicación: Lugar - Zona - Distrito (Mayúsculas)
             $pdf->SetFont('Helvetica', 'B', 5.0);
@@ -405,11 +405,11 @@ class CarnetService
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(255, 255, 255);
             $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
-            $pdf->SetFont('Helvetica', 'I', 7.5);
+            $pdf->SetFont('Helvetica', 'I', 8.2);
             $pdf->SetTextColor(0, 0, 0);
-            $titular = $this->obtenerNombreCompletoConTitulo($pastor, false);
-            $pdf->SetXY($x + 9.0, $y + 42.6);
-            $pdf->Cell(56.0, 3.2, $this->utf8ToPdf($titular), 0, 1, 'L');
+            $titular = $this->obtenerNombreCarnet($pastor, false);
+            $pdf->SetXY($x + 9.0, $y + 42.4);
+            $pdf->Cell(56.0, 3.4, $this->utf8ToPdf($titular), 0, 1, 'L');
 
             $pdf->SetFont('Helvetica', 'B', 5.0);
             $pdf->SetTextColor(0, 0, 0);
@@ -993,15 +993,101 @@ class CarnetService
     }
 
     /**
+     * Formatea el nombre del pastor calibrado para el carnet oficial:
+     * - Primer y segundo nombre (respetando partículas compuestas: "del Carmen", "de Jesús", "del Valle", etc.)
+     * - Pastoras casadas: Primer apellido paterno + apellido del esposo (omitiendo segundo apellido materno)
+     * - Hombres o solteras: Primer apellido paterno (omitiendo segundo apellido)
+     */
+    public static function formatearNombreCarnet(?string $nombres, ?string $apellidos, bool $uppercase = false): string
+    {
+        $cleanNombres = trim(preg_replace('/\s+/', ' ', (string)$nombres));
+        $cleanNombres = preg_replace('/^rev\.?\s+/i', '', $cleanNombres);
+
+        $cleanApellidos = trim(preg_replace('/\s+/', ' ', (string)$apellidos));
+
+        // Si al inicio de apellidos viene un segundo nombre religioso ("de Jesús", "del Valle", "del Carmen", "del Rosario")
+        if (preg_match('/^(de\s+jes[uú]s|del\s+valle|del\s+carmen|del\s+rosario)\s+(.*)$/ui', $cleanApellidos, $relM)) {
+            $cleanNombres .= ' ' . $relM[1];
+            $cleanApellidos = $relM[2];
+        }
+
+        // --- 1. PROCESAR NOMBRES ---
+        $nWords = explode(' ', $cleanNombres);
+        $nCount = count($nWords);
+        $nombresResult = '';
+
+        if ($nCount <= 2) {
+            $nombresResult = $cleanNombres;
+        } else {
+            // Si la segunda palabra es partícula ("del", "de", "la", "los", "las"), el segundo nombre es compuesto (ej. "del Carmen")
+            if (in_array(mb_strtolower($nWords[1]), ['de', 'del', 'la', 'los', 'las'])) {
+                $nombresResult = $nWords[0] . ' ' . $nWords[1] . ' ' . ($nWords[2] ?? '');
+            } else {
+                // Primer y segundo nombre simples
+                $nombresResult = $nWords[0] . ' ' . $nWords[1];
+            }
+        }
+
+        // --- 2. PROCESAR APELLIDOS ---
+        $apellidosResult = '';
+
+        // Buscar si contiene partícula matrimonial (" de [Esposo]" o " del [Esposo]" o " de la [Esposo]")
+        if (preg_match('/^(.*?)\s+\b(de\s+(?:la\s+|los\s+|las\s+)?[\p{L}\'\-]+(?:\s+[\p{L}\'\-]+)?)$/ui', $cleanApellidos, $m)) {
+            $paternoParte = trim($m[1]);
+            $esposoParte = trim($m[2]);
+
+            $pWords = explode(' ', $paternoParte);
+            if (count($pWords) > 1 && in_array(mb_strtolower($pWords[0]), ['de', 'del', 'san', 'santa']) && isset($pWords[1])) {
+                $primerApellido = $pWords[0] . ' ' . $pWords[1];
+            } elseif (count($pWords) > 0 && !empty($pWords[0])) {
+                $primerApellido = $pWords[0];
+            } else {
+                $primerApellido = '';
+            }
+
+            if ($primerApellido) {
+                $apellidosResult = $primerApellido . ' ' . $esposoParte;
+            } else {
+                $apellidosResult = $esposoParte;
+            }
+        } elseif (preg_match('/^\b(de\s+(?:la\s+|los\s+|las\s+)?[\p{L}\'\-]+)$/ui', $cleanApellidos)) {
+            $apellidosResult = $cleanApellidos;
+        } else {
+            // Caso estándar (hombres o solteras sin "de"): solo el primer apellido
+            $aWords = explode(' ', $cleanApellidos);
+            if (count($aWords) > 1 && in_array(mb_strtolower($aWords[0]), ['de', 'del', 'san', 'santa']) && isset($aWords[1])) {
+                if (in_array(mb_strtolower($aWords[0]), ['de']) && in_array(mb_strtolower($aWords[1]), ['la', 'los', 'las']) && isset($aWords[2])) {
+                    $apellidosResult = $aWords[0] . ' ' . $aWords[1] . ' ' . $aWords[2];
+                } else {
+                    $apellidosResult = $aWords[0] . ' ' . $aWords[1];
+                }
+            } elseif (count($aWords) > 0) {
+                $apellidosResult = $aWords[0];
+            } else {
+                $apellidosResult = $cleanApellidos;
+            }
+        }
+
+        $final = trim($nombresResult . ' ' . $apellidosResult);
+        $final = preg_replace('/\s+/', ' ', $final);
+
+        return $uppercase ? mb_strtoupper($final, 'UTF-8') : $final;
+    }
+
+    /**
+     * Retorna el nombre formateado para el carnet del pastor
+     */
+    public function obtenerNombreCarnet(Pastor $pastor, bool $uppercase = false): string
+    {
+        return self::formatearNombreCarnet($pastor->nombres, $pastor->apellidos, $uppercase);
+    }
+
+    /**
      * Retorna el nombre completo del pastor (sin prefijo "REV.")
      */
     public function obtenerNombreCompletoConTitulo(Pastor $pastor, bool $uppercase = false): string
     {
-        $raw = trim(($pastor->nombres ?? '') . ' ' . ($pastor->apellidos ?? ''));
-        $raw = preg_replace('/\s+/', ' ', $raw);
-        $clean = preg_replace('/^rev\.?\s+/i', '', $raw);
-
-        return $uppercase ? mb_strtoupper($clean, 'UTF-8') : $clean;
+        return $this->obtenerNombreCarnet($pastor, $uppercase);
     }
 
     /**

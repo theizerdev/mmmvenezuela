@@ -119,7 +119,7 @@ export async function exportPastorCarnetPng(
 
         // Bloque 1: Identificación Titular (Debajo de franja PASTOR)
         const nombreCompleto = getPastorCarnetFullName(pastor, true);
-        const nameFontSize = nombreCompleto.length > 28 ? 15 * scale : (nombreCompleto.length > 22 ? 17 * scale : 19.5 * scale);
+        const nameFontSize = nombreCompleto.length > 28 ? 17.5 * scale : (nombreCompleto.length > 22 ? 19.5 * scale : 22 * scale);
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${nameFontSize}px Cocogoose, sans-serif`;
         ctx.fillText(nombreCompleto, textCenterX, 223 * scale, textMaxWidth);
@@ -174,7 +174,7 @@ export async function exportPastorCarnetPng(
         const textY = 352 * scale; // ~512px en 1063x650
 
         ctx.fillStyle = '#000000';
-        ctx.font = `italic ${18 * scale}px "Aribau Grotesk", sans-serif`;
+        ctx.font = `italic ${20.5 * scale}px "Aribau Grotesk", sans-serif`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText(getPastorCarnetFullName(pastor, false), textX, textY, 470 * scale);
