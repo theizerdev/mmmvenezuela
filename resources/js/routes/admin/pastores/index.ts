@@ -158,7 +158,7 @@ carnets.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     carnets.form = carnetsForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:375
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 export const actualizarFoto = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -173,7 +173,7 @@ actualizarFoto.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:375
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 actualizarFoto.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -201,7 +201,7 @@ actualizarFoto.url = (args: { id: string | number } | [id: string | number ] | s
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:375
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
 actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -211,7 +211,7 @@ actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | 
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:375
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
     const actualizarFotoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -221,7 +221,7 @@ actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | 
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFoto
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:375
  * @route '/admin/pastores/{id}/actualizar-foto'
  */
         actualizarFotoForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

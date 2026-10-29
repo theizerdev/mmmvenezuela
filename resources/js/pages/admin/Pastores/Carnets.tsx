@@ -24,6 +24,8 @@ import {
     Filter,
     Scissors,
     Upload,
+    Sparkles,
+    Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -52,6 +54,7 @@ import { PastorCarnetCard, getPastorPhotoUrl, formatDocumento } from './Partials
 import { exportPastorCarnetPng } from './Partials/carnet-export-image';
 import { PastorCarnetTemplateModal } from './Partials/PastorCarnetTemplateModal';
 import { PastorPhotoAdjustModal } from './Partials/PastorPhotoAdjustModal';
+import { removeBackgroundWithAi } from './Partials/ai-photo-segmenter';
 
 interface CarnetsPageProps {
     auth: Auth;
@@ -155,6 +158,9 @@ export default function PastoresCarnetsPage({
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [tipoPliego, setTipoPliego] = useState<'duplex' | 'front_only' | 'cr80_individual'>('duplex');
     const [isPrinting, setIsPrinting] = useState(false);
+    const [isBulkBackgroundModalOpen, setIsBulkBackgroundModalOpen] = useState(false);
+    const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+    const [backgroundProgress, setBackgroundProgress] = useState({ completed: 0, total: 0 });
 
     // Sincronizar pastor seleccionado si cambia la lista
     useEffect(() => {
@@ -298,6 +304,138 @@ export default function PastoresCarnetsPage({
         router.reload({ only: ['pastores'] });
     };
 
+    const handleRemoveSelectedBackgrounds = async () => {
+        if (selectedIds.length === 0 || isRemovingBackground) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        setIsRemovingBackground(true);
+
+        try {
+            const listResponse = await fetch('/admin/pastores/carnets/fotos-seleccionadas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({ ids: selectedIds }),
+            });
+            const listResult = await listResponse.json();
+
+            if (!listResponse.ok) {
+                throw new Error(listResult.message || listResult.error || __('No se pudieron cargar las fotos seleccionadas.'));
+            }
+
+            const pastorsWithPhotos: Array<{
+                id: number;
+                nombres: string;
+                apellidos: string;
+                foto: string;
+            }> = listResult.pastores || [];
+
+            if (pastorsWithPhotos.length === 0) {
+                toast.info(__('Los obreros seleccionados no tienen fotos para procesar.'));
+                setIsBulkBackgroundModalOpen(false);
+
+                return;
+            }
+
+            setBackgroundProgress({ completed: 0, total: pastorsWithPhotos.length });
+
+            let succeeded = 0;
+            const failures: string[] = [];
+
+            for (const pastor of pastorsWithPhotos) {
+                const pastorName = `${pastor.nombres} ${pastor.apellidos}`.trim();
+
+                try {
+                    const photoUrl = getPastorPhotoUrl(pastor.foto);
+
+                    if (!photoUrl) {
+                        throw new Error(__('No se encontró la foto.'));
+                    }
+
+                    const image = new Image();
+                    image.crossOrigin = 'anonymous';
+                    await new Promise<void>((resolve, reject) => {
+                        image.onload = () => resolve();
+                        image.onerror = () => reject(new Error(__('No se pudo cargar la foto.')));
+                        image.src = photoUrl;
+                    });
+
+                    const segmentedImageData = await removeBackgroundWithAi(
+                        image,
+                        image.naturalWidth,
+                        image.naturalHeight
+                    );
+                    const canvas = document.createElement('canvas');
+                    canvas.width = image.naturalWidth;
+                    canvas.height = image.naturalHeight;
+                    const context = canvas.getContext('2d');
+
+                    if (!context) {
+                        throw new Error(__('No se pudo preparar la foto procesada.'));
+                    }
+
+                    context.putImageData(segmentedImageData, 0, 0);
+
+                    const saveResponse = await fetch(`/admin/pastores/${pastor.id}/actualizar-foto`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            Accept: 'application/json',
+                        },
+                        body: JSON.stringify({ foto: canvas.toDataURL('image/png') }),
+                    });
+                    const saveResult = await saveResponse.json();
+
+                    if (!saveResponse.ok || !saveResult.success) {
+                        throw new Error(saveResult.message || saveResult.error || __('No se pudo guardar la foto.'));
+                    }
+
+                    succeeded += 1;
+                    setSelectedPastor((current) =>
+                        current?.id === pastor.id
+                            ? { ...current, foto: saveResult.foto_url, foto_url: saveResult.foto_url }
+                            : current
+                    );
+                } catch (error) {
+                    console.error(`Error al eliminar el fondo de la foto del obrero ${pastor.id}:`, error);
+                    const reason = error instanceof Error ? error.message : __('Error desconocido');
+                    failures.push(`${pastorName || pastor.id} (${reason})`);
+                } finally {
+                    setBackgroundProgress((current) => ({ ...current, completed: current.completed + 1 }));
+                }
+            }
+
+            if (succeeded > 0) {
+                toast.success(__('Fondo eliminado con IA en :count foto(s).', { count: String(succeeded) }));
+                router.reload({ only: ['pastores'] });
+            }
+
+            if (failures.length > 0) {
+                const failedNames = failures.slice(0, 3).join(', ');
+                const moreFailures = failures.length > 3 ? ` (+${failures.length - 3})` : '';
+                toast.error(
+                    __('No se pudieron procesar :count foto(s): :names', {
+                        count: String(failures.length),
+                        names: `${failedNames}${moreFailures}`,
+                    })
+                );
+            }
+
+            setIsBulkBackgroundModalOpen(false);
+        } catch (error) {
+            console.error('Error al procesar las fotos seleccionadas:', error);
+            toast.error(error instanceof Error ? error.message : __('No se pudieron procesar las fotos seleccionadas.'));
+        } finally {
+            setIsRemovingBackground(false);
+        }
+    };
+
     // Generar pliego masivo
     const handleConfirmBulkPrint = () => {
         if (selectedIds.length === 0) return;
@@ -389,26 +527,48 @@ export default function PastoresCarnetsPage({
                         </Button>
 
                         {canDownloadCarnet && (
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={() => setIsPrintModalOpen(true)}
-                                disabled={selectedIds.length === 0}
-                                className={cn(
-                                    'gap-2 font-semibold shadow-xs transition-all',
-                                    selectedIds.length > 0
-                                        ? 'bg-white text-indigo-700 hover:bg-indigo-50 hover:scale-[1.02]'
-                                        : 'bg-white/30 text-white/70 cursor-not-allowed'
-                                )}
-                            >
-                                <Printer className="size-4" />
-                                <span>{__('Imprimir Pliego')}</span>
-                                {selectedIds.length > 0 && (
-                                    <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 h-4 ml-1">
-                                        {selectedIds.length}
-                                    </Badge>
-                                )}
-                            </Button>
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => setIsBulkBackgroundModalOpen(true)}
+                                    disabled={selectedIds.length === 0 || isRemovingBackground}
+                                    className={cn(
+                                        'gap-2 font-semibold shadow-xs transition-all',
+                                        selectedIds.length > 0
+                                            ? 'bg-white text-indigo-700 hover:bg-indigo-50 hover:scale-[1.02]'
+                                            : 'bg-white/30 text-white/70 cursor-not-allowed'
+                                    )}
+                                >
+                                    <Sparkles className="size-4" />
+                                    <span>{__('Quitar fondo con IA')}</span>
+                                    {selectedIds.length > 0 && (
+                                        <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 h-4 ml-1">
+                                            {selectedIds.length}
+                                        </Badge>
+                                    )}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => setIsPrintModalOpen(true)}
+                                    disabled={selectedIds.length === 0}
+                                    className={cn(
+                                        'gap-2 font-semibold shadow-xs transition-all',
+                                        selectedIds.length > 0
+                                            ? 'bg-white text-indigo-700 hover:bg-indigo-50 hover:scale-[1.02]'
+                                            : 'bg-white/30 text-white/70 cursor-not-allowed'
+                                    )}
+                                >
+                                    <Printer className="size-4" />
+                                    <span>{__('Imprimir Pliego')}</span>
+                                    {selectedIds.length > 0 && (
+                                        <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 h-4 ml-1">
+                                            {selectedIds.length}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </>
                         )}
                     </div>
                 </ModuleHeader>
@@ -1049,6 +1209,69 @@ export default function PastoresCarnetsPage({
                 pastor={selectedPastor}
                 onPhotoUpdated={handlePhotoUpdated}
             />
+
+            {/* MODAL PARA ELIMINAR EL FONDO DE TODAS LAS FOTOS SELECCIONADAS */}
+            <Dialog
+                open={isBulkBackgroundModalOpen}
+                onOpenChange={(open) => {
+                    if (!isRemovingBackground) setIsBulkBackgroundModalOpen(open);
+                }}
+            >
+                <DialogContent className="sm:max-w-[480px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Sparkles className="size-5 text-indigo-600" />
+                            {__('Quitar fondo de fotos seleccionadas')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {__('Se procesarán con IA las fotos de los :count obreros seleccionados. Los obreros sin foto se omitirán. El procesamiento se realiza en este dispositivo.', {
+                                count: String(selectedIds.length),
+                            })}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {isRemovingBackground && (
+                        <div className="flex items-center gap-3 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200">
+                            <Loader2 className="size-4 animate-spin shrink-0" />
+                            <span>
+                                {__('Procesando foto :completed de :total...', {
+                                    completed: String(backgroundProgress.completed + 1),
+                                    total: String(backgroundProgress.total || selectedIds.length),
+                                })}
+                            </span>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsBulkBackgroundModalOpen(false)}
+                            disabled={isRemovingBackground}
+                        >
+                            {__('Cancelar')}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleRemoveSelectedBackgrounds}
+                            disabled={isRemovingBackground || selectedIds.length === 0}
+                            className="gap-2 bg-indigo-600 text-white hover:bg-indigo-700"
+                        >
+                            {isRemovingBackground ? (
+                                <>
+                                    <Loader2 className="size-4 animate-spin" />
+                                    {__('Procesando...')}
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="size-4" />
+                                    {__('Procesar fotos')}
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* MODAL DE IMPRESIÓN POR LOTES */}
             <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>

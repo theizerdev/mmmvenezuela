@@ -343,6 +343,33 @@ class PastorCarnetController extends Controller
     }
 
     /**
+     * Obtener las fotografías de los pastores seleccionados para procesamiento local.
+     */
+    public function fotosSeleccionadas(Request $request)
+    {
+        $this->autorizarAccesoCarnets();
+
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:pastores,id',
+        ]);
+
+        $pastores = Pastor::query()
+            ->whereIn('id', $validated['ids'])
+            ->get(['id', 'nombres', 'apellidos', 'foto'])
+            ->filter(fn (Pastor $pastor) => !empty($pastor->foto))
+            ->values()
+            ->map(fn (Pastor $pastor) => [
+                'id' => $pastor->id,
+                'nombres' => $pastor->nombres,
+                'apellidos' => $pastor->apellidos,
+                'foto' => $pastor->foto,
+            ]);
+
+        return response()->json(['pastores' => $pastores]);
+    }
+
+    /**
      * Actualizar o recortar foto de un pastor directamente desde el Carnet Studio
      */
     public function actualizarFotoPastor(Request $request, int $id)
@@ -389,12 +416,16 @@ class PastorCarnetController extends Controller
             base_path('../public_html/pastores'),
         ]));
 
+        $saved = false;
         foreach ($targetDirs as $destDir) {
             if (!file_exists($destDir)) {
                 @mkdir($destDir, 0755, true);
             }
             if (is_dir($destDir) && is_writable($destDir)) {
-                @file_put_contents($destDir . '/' . $filename, $decoded);
+                if (@file_put_contents($destDir . '/' . $filename, $decoded) === false) {
+                    continue;
+                }
+                $saved = true;
 
                 // Limpiar fotos anteriores del mismo pastor
                 if ($pastor->foto && !str_starts_with($pastor->foto, 'http')) {
@@ -404,6 +435,10 @@ class PastorCarnetController extends Controller
                     }
                 }
             }
+        }
+
+        if (!$saved) {
+            return response()->json(['error' => 'No se pudo guardar la fotografía en el servidor'], 500);
         }
 
         $pastor->foto = $filename;
@@ -528,4 +563,3 @@ class PastorCarnetController extends Controller
         ]);
     }
 }
-

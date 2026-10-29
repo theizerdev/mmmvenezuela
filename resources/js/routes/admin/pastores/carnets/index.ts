@@ -52,7 +52,7 @@ guardarPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
             action: guardarPlantilla.url(options),
             method: 'post',
         })
-    
+
     guardarPlantilla.form = guardarPlantillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
@@ -107,11 +107,67 @@ restablecerPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post
             action: restablecerPlantilla.url(options),
             method: 'post',
         })
-    
+
     restablecerPlantilla.form = restablecerPlantillaForm
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @route '/admin/pastores/carnets/fotos-seleccionadas'
+ */
+export const fotosSeleccionadas = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: fotosSeleccionadas.url(options),
+    method: 'post',
+})
+
+fotosSeleccionadas.definition = {
+    methods: ["post"],
+    url: '/admin/pastores/carnets/fotos-seleccionadas',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @route '/admin/pastores/carnets/fotos-seleccionadas'
+ */
+fotosSeleccionadas.url = (options?: RouteQueryOptions) => {
+    return fotosSeleccionadas.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @route '/admin/pastores/carnets/fotos-seleccionadas'
+ */
+fotosSeleccionadas.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: fotosSeleccionadas.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @route '/admin/pastores/carnets/fotos-seleccionadas'
+ */
+    const fotosSeleccionadasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: fotosSeleccionadas.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @route '/admin/pastores/carnets/fotos-seleccionadas'
+ */
+        fotosSeleccionadasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: fotosSeleccionadas.url(options),
+            method: 'post',
+        })
+
+    fotosSeleccionadas.form = fotosSeleccionadasForm
 const carnets = {
     guardarPlantilla: Object.assign(guardarPlantilla, guardarPlantilla),
 restablecerPlantilla: Object.assign(restablecerPlantilla, restablecerPlantilla),
+fotosSeleccionadas: Object.assign(fotosSeleccionadas, fotosSeleccionadas),
 }
 
 export default carnets
