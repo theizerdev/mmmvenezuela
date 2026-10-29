@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "PRESBITERIO CN2026",
+    "slug": "presbiterio-cn2026",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mmmvenezuela.presbiterio",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permite el acceso a la cámara para escanear credenciales y códigos QR de obreros."
+      }
+    },
+    "android": {
+      "package": "com.mmmvenezuela.presbiterio",
+      "adaptiveIcon": {
+        "backgroundColor": "#090d16",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#090d16",
+      "translucent": false
+    },
+    "androidNavigationBar": {
+      "visible": "visible",
+      "barStyle": "light-content",
+      "backgroundColor": "#090d16"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permite el acceso a la cámara para escanear credenciales y códigos QR de obreros."
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/cocogoose-bold.ttf",
+            "./assets/fonts/cocogoose-regular.ttf"
+          ]
+        }
+      ]
+    ]
+  }
+}
+
