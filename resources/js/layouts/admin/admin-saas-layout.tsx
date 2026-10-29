@@ -685,6 +685,11 @@ export default function AdminSaasLayout({
                                     href: tasksMonitoringIndex.url(),
                                     permission: 'monitoreo.view',
                                 },
+                                {
+                                    title: 'Public Registration',
+                                    href: '/admin/monitoring/registration',
+                                    permission: 'monitoreo.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (monitoringItems.length === 0) return null;

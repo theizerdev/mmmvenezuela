@@ -16,6 +16,7 @@ import PastorController from './PastorController'
 import PastorExportController from './PastorExportController'
 import PastorPlanillaController from './PastorPlanillaController'
 import QueueMonitoringController from './QueueMonitoringController'
+import RegistroPublicoMonitoringController from './RegistroPublicoMonitoringController'
 import RoleController from './RoleController'
 import ServerMonitoringController from './ServerMonitoringController'
 import SessionMonitoringController from './SessionMonitoringController'
@@ -41,6 +42,7 @@ PastorController: Object.assign(PastorController, PastorController),
 PastorExportController: Object.assign(PastorExportController, PastorExportController),
 PastorPlanillaController: Object.assign(PastorPlanillaController, PastorPlanillaController),
 QueueMonitoringController: Object.assign(QueueMonitoringController, QueueMonitoringController),
+RegistroPublicoMonitoringController: Object.assign(RegistroPublicoMonitoringController, RegistroPublicoMonitoringController),
 RoleController: Object.assign(RoleController, RoleController),
 ServerMonitoringController: Object.assign(ServerMonitoringController, ServerMonitoringController),
 SessionMonitoringController: Object.assign(SessionMonitoringController, SessionMonitoringController),

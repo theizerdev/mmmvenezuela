@@ -10,6 +10,7 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\Admin\PastorCarnetController;
 use App\Http\Controllers\Public\PastorRegistroPublicoController;
+use App\Http\Middleware\EnsurePublicRegistrationIsActive;
 
 // Landing page pública
 Route::get('/', function () {
@@ -22,17 +23,19 @@ Route::get('/validar-credencial/{codigo}', [PastorCarnetController::class, 'vali
 // Ruta fallback inteligente para servir fotografías de pastores (maneja variaciones de nombres, extensiones y cachés)
 Route::get('/pastores/{filename}', [PastorCarnetController::class, 'servirFotoPastor'])->where('filename', '.*')->name('pastores.foto-serve');
 
-// Ruta pública de registro de Pastores (Wizard de 5 Pasos)
-Route::get('/registro', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
-Route::post('/registro', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
-Route::get('/registro/verificar-cedula/{cedula}', [PastorRegistroPublicoController::class, 'verificarCedula'])->name('registro-pastor.verificar-cedula');
-Route::post('/registro/crear-municipio', [PastorRegistroPublicoController::class, 'crearMunicipioRapido'])->name('registro-pastor.crear-municipio');
-Route::post('/registro/crear-parroquia', [PastorRegistroPublicoController::class, 'crearParroquiaRapida'])->name('registro-pastor.crear-parroquia');
-Route::redirect('/registro-pastor', '/registro');
+Route::middleware(EnsurePublicRegistrationIsActive::class)->group(function () {
+    // Ruta pública de registro de Pastores (Wizard de 5 Pasos)
+    Route::get('/registro', [PastorRegistroPublicoController::class, 'index'])->name('registro-pastor.index');
+    Route::post('/registro', [PastorRegistroPublicoController::class, 'store'])->name('registro-pastor.store');
+    Route::get('/registro/verificar-cedula/{cedula}', [PastorRegistroPublicoController::class, 'verificarCedula'])->name('registro-pastor.verificar-cedula');
+    Route::post('/registro/crear-municipio', [PastorRegistroPublicoController::class, 'crearMunicipioRapido'])->name('registro-pastor.crear-municipio');
+    Route::post('/registro/crear-parroquia', [PastorRegistroPublicoController::class, 'crearParroquiaRapida'])->name('registro-pastor.crear-parroquia');
+    Route::redirect('/registro-pastor', '/registro');
 
-// Ruta pública dedicada de registro de Extensiones por Pastor (/registro/{pastor}/extension)
-Route::get('/registro/{pastor}/extension', [PastorRegistroPublicoController::class, 'extensionIndex'])->name('registro-extension.index');
-Route::post('/registro/{pastor}/extension', [PastorRegistroPublicoController::class, 'extensionStore'])->name('registro-extension.store');
+    // Ruta pública dedicada de registro de Extensiones por Pastor (/registro/{pastor}/extension)
+    Route::get('/registro/{pastor}/extension', [PastorRegistroPublicoController::class, 'extensionIndex'])->name('registro-extension.index');
+    Route::post('/registro/{pastor}/extension', [PastorRegistroPublicoController::class, 'extensionStore'])->name('registro-extension.store');
+});
 
 // Rutas Públicas del Terminal de Escaneo y Registro de Asistencia (Sin necesidad de login)
 use App\Http\Controllers\Admin\AsistenciaController;
