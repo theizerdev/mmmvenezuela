@@ -904,8 +904,8 @@ class CarnetService
      */
     public function obtenerLugarTrabajo(Pastor $pastor): string
     {
-        // 1. Priorizar el Estado al que pertenece la extensión que pastorea
-        $estado = $pastor->extension_estado ?: ($pastor->estado?->nombre ?: null);
+        // 1. Priorizar el Estado registrado para el pastor.
+        $estado = $pastor->estado?->nombre ?: ($pastor->extension_estado ?: null);
         if (!empty($estado) && trim($estado) !== '') {
             $estadoStr = trim($estado);
             if (stripos($estadoStr, 'Distrito Capital') !== false || stripos($estadoStr, 'Caracas') !== false) {
@@ -940,7 +940,7 @@ class CarnetService
      */
     public function obtenerLugarReverso(Pastor $pastor): string
     {
-        $lugar = $pastor->extension_estado ?: ($pastor->estado?->nombre ?: ($pastor->municipio ?: ''));
+        $lugar = $pastor->estado?->nombre ?: ($pastor->extension_estado ?: ($pastor->municipio ?: ''));
 
         if (empty($lugar) && !empty($pastor->extension_nombre)) {
             $lugar = $pastor->extension_nombre;

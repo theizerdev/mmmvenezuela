@@ -136,7 +136,7 @@ export async function exportPastorCarnetPng(
         ctx.fillText(nivel, textCenterX, 283 * scale, textMaxWidth);
 
         // Bloque 3: Lugar de Trabajo (Valor ARRIBA de la etiqueta LUGAR DE TRABAJO)
-        let lugarTexto = pastor.extension_nombre?.trim() || '';
+        let lugarTexto = pastor.estado?.nombre?.trim() || pastor.extension_nombre?.trim() || '';
         if (!lugarTexto && (pastor as any).extension && typeof (pastor as any).extension === 'string') {
             lugarTexto = (pastor as any).extension.trim();
         }

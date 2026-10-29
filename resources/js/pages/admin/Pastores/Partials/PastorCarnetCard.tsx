@@ -108,10 +108,10 @@ export function getPastorCarnetFullName(pastor: Pastor, uppercase = false): stri
  */
 export function getPastorCarnetReversoLocation(pastor: Pastor): string {
     let lugar = '';
-    if (pastor.extension_estado && pastor.extension_estado.trim()) {
+    if (pastor.estado?.nombre && pastor.estado.nombre.trim()) {
+        lugar = pastor.estado.nombre.trim();
+    } else if (pastor.extension_estado && pastor.extension_estado.trim()) {
         lugar = pastor.extension_estado.trim();
-    } else if ((pastor as any).estado?.nombre) {
-        lugar = (pastor as any).estado.nombre.trim();
     } else if (pastor.extension_nombre && pastor.extension_nombre.trim()) {
         lugar = pastor.extension_nombre.trim();
     } else if ((pastor as any).extension && typeof (pastor as any).extension === 'string') {
@@ -195,12 +195,12 @@ export function PastorCarnetCard({
     const [imgError, setImgError] = React.useState(false);
 
     const lugarTrabajo = React.useMemo(() => {
-        // 1. Priorizar el Estado al que pertenece la extensión que pastorea
+        // 1. Priorizar el Estado registrado para el pastor
+        if (pastor.estado?.nombre && pastor.estado.nombre.trim()) {
+            return pastor.estado.nombre.trim();
+        }
         if (pastor.extension_estado && pastor.extension_estado.trim()) {
             return pastor.extension_estado.trim();
-        }
-        if ((pastor as any).estado?.nombre && (pastor as any).estado.nombre.trim()) {
-            return (pastor as any).estado.nombre.trim();
         }
         if (Array.isArray((pastor as any).iglesias) && (pastor as any).iglesias.length > 0) {
             const ig = (pastor as any).iglesias[0];
