@@ -24,7 +24,7 @@ validarCredencial.url = (args: { codigo: string | number } | [codigo: string | n
         args = { codigo: args }
     }
 
-
+    
     if (Array.isArray(args)) {
         args = {
                     codigo: args[0],
@@ -94,7 +94,7 @@ validarCredencial.head = (args: { codigo: string | number } | [codigo: string | 
                     }),
             method: 'get',
         })
-
+    
     validarCredencial.form = validarCredencialForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::servirFotoPastor
@@ -121,7 +121,7 @@ servirFotoPastor.url = (args: { filename: string | number } | [filename: string 
         args = { filename: args }
     }
 
-
+    
     if (Array.isArray(args)) {
         args = {
                     filename: args[0],
@@ -191,7 +191,7 @@ servirFotoPastor.head = (args: { filename: string | number } | [filename: string
                     }),
             method: 'get',
         })
-
+    
     servirFotoPastor.form = servirFotoPastorForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnets
@@ -269,7 +269,7 @@ carnets.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
                     }),
             method: 'get',
         })
-
+    
     carnets.form = carnetsForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::guardarPlantilla
@@ -324,7 +324,7 @@ guardarPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
             action: guardarPlantilla.url(options),
             method: 'post',
         })
-
+    
     guardarPlantilla.form = guardarPlantillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
@@ -379,7 +379,7 @@ restablecerPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post
             action: restablecerPlantilla.url(options),
             method: 'post',
         })
-
+    
     restablecerPlantilla.form = restablecerPlantillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
@@ -434,7 +434,7 @@ fotosSeleccionadas.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
             action: fotosSeleccionadas.url(options),
             method: 'post',
         })
-
+    
     fotosSeleccionadas.form = fotosSeleccionadasForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::actualizarFotoPastor
@@ -461,7 +461,7 @@ actualizarFotoPastor.url = (args: { id: string | number } | [id: string | number
         args = { id: args }
     }
 
-
+    
     if (Array.isArray(args)) {
         args = {
                     id: args[0],
@@ -508,7 +508,7 @@ actualizarFotoPastor.post = (args: { id: string | number } | [id: string | numbe
             action: actualizarFotoPastor.url(args, options),
             method: 'post',
         })
-
+    
     actualizarFotoPastor.form = actualizarFotoPastorForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::carnetPdf
@@ -535,7 +535,7 @@ carnetPdf.url = (args: { id: string | number } | [id: string | number ] | string
         args = { id: args }
     }
 
-
+    
     if (Array.isArray(args)) {
         args = {
                     id: args[0],
@@ -605,7 +605,7 @@ carnetPdf.head = (args: { id: string | number } | [id: string | number ] | strin
                     }),
             method: 'get',
         })
-
+    
     carnetPdf.form = carnetPdfForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkCarnetPdf
@@ -660,7 +660,7 @@ bulkCarnetPdf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
             action: bulkCarnetPdf.url(options),
             method: 'post',
         })
-
+    
     bulkCarnetPdf.form = bulkCarnetPdfForm
 const PastorCarnetController = { validarCredencial, servirFotoPastor, carnets, guardarPlantilla, restablecerPlantilla, fotosSeleccionadas, actualizarFotoPastor, carnetPdf, bulkCarnetPdf }
 

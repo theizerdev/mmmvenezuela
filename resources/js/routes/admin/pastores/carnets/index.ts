@@ -52,7 +52,7 @@ guardarPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
             action: guardarPlantilla.url(options),
             method: 'post',
         })
-
+    
     guardarPlantilla.form = guardarPlantillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
@@ -107,7 +107,7 @@ restablecerPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post
             action: restablecerPlantilla.url(options),
             method: 'post',
         })
-
+    
     restablecerPlantilla.form = restablecerPlantillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
@@ -162,7 +162,7 @@ fotosSeleccionadas.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
             action: fotosSeleccionadas.url(options),
             method: 'post',
         })
-
+    
     fotosSeleccionadas.form = fotosSeleccionadasForm
 const carnets = {
     guardarPlantilla: Object.assign(guardarPlantilla, guardarPlantilla),
