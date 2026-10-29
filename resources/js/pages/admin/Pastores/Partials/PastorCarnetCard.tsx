@@ -350,17 +350,17 @@ export function PastorCarnetCard({
                                 className={cn('font-cocogoose font-bold uppercase tracking-tight text-black whitespace-nowrap select-text leading-none', nameFontSize)}
                                 style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
                             >
-                                {rawFullName}
+                                {rawFullName.toUpperCase()}
                             </h2>
                         </div>
 
                         {/* Bloque 2: Cédula de Identidad (Aribau Grotesk Regular) */}
                         <div className="absolute left-[255px] w-[430px] top-[243px] h-[20px] flex items-center justify-center text-center px-3 pointer-events-none">
                             <p
-                                className="font-aribau text-[13px] font-normal text-slate-900 tracking-wider whitespace-nowrap select-text leading-none"
+                                className="font-aribau text-[13px] font-normal text-slate-900 tracking-wider whitespace-nowrap select-text leading-none uppercase"
                                 style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
                             >
-                                C.I. {formatDocumento(pastor.documento)}
+                                C.I. {formatDocumento(pastor.documento).toUpperCase()}
                             </p>
                         </div>
 
@@ -370,7 +370,7 @@ export function PastorCarnetCard({
                                 className="font-cocogoose text-[15px] font-bold uppercase tracking-wide text-black text-center whitespace-nowrap select-text leading-none"
                                 style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
                             >
-                                {pastor.nivel_ministerial || 'MINISTRO ORDENADO'}
+                                {(pastor.nivel_ministerial || 'MINISTRO ORDENADO').toUpperCase()}
                             </span>
                         </div>
 
@@ -380,7 +380,7 @@ export function PastorCarnetCard({
                                 className={cn('font-cocogoose font-bold uppercase tracking-wide text-black text-center whitespace-nowrap select-text leading-none', lugarFontSize)}
                                 style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
                             >
-                                {cleanLugar}
+                                {cleanLugar.toUpperCase()}
                             </span>
                         </div>
                     </div>
@@ -407,13 +407,13 @@ export function PastorCarnetCard({
                             }}
                         >
                             <span
-                                className="text-[20.5px] italic font-normal tracking-tight text-black block leading-[25px] truncate"
+                                className="text-[17.5px] italic font-bold tracking-tight text-black block leading-[23px] truncate uppercase"
                                 style={{
                                     fontFamily: "'Instrument Sans', 'Aribau Grotesk', Arial, sans-serif",
                                     fontStyle: 'italic',
                                 }}
                             >
-                                {getPastorCarnetFullName(pastor, false)}
+                                {getPastorCarnetFullName(pastor, true).toUpperCase()}
                             </span>
                             <span
                                 className="text-[11.5px] font-bold uppercase text-black tracking-wider block mt-1 leading-none truncate"
@@ -421,7 +421,7 @@ export function PastorCarnetCard({
                                     fontFamily: "'Aribau Grotesk', 'Instrument Sans', Arial, sans-serif",
                                 }}
                             >
-                                {reversoLocation}
+                                {reversoLocation.toUpperCase()}
                             </span>
                         </div>
 

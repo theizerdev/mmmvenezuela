@@ -118,7 +118,7 @@ export async function exportPastorCarnetPng(
         ctx.shadowOffsetY = 0;
 
         // Bloque 1: Identificación Titular (Debajo de franja PASTOR)
-        const nombreCompleto = getPastorCarnetFullName(pastor, true);
+        const nombreCompleto = getPastorCarnetFullName(pastor, true).toUpperCase();
         const nameFontSize = nombreCompleto.length > 28 ? 17.5 * scale : (nombreCompleto.length > 22 ? 19.5 * scale : 22 * scale);
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${nameFontSize}px Cocogoose, sans-serif`;
@@ -127,7 +127,7 @@ export async function exportPastorCarnetPng(
         // Documento de Identidad (Aribau Grotesk Regular, Negro Carbón)
         ctx.fillStyle = '#0f172a';
         ctx.font = `normal ${13 * scale}px "Aribau Grotesk", sans-serif`;
-        ctx.fillText(`C.I. ${formatDocumento(pastor.documento)}`, textCenterX, 253 * scale);
+        ctx.fillText(`C.I. ${formatDocumento(pastor.documento).toUpperCase()}`, textCenterX, 253 * scale);
 
         // Bloque 2: Grado Ministerial (Valor ARRIBA de la etiqueta GRADO MINISTERIAL)
         ctx.fillStyle = '#000000';
@@ -173,15 +173,17 @@ export async function exportPastorCarnetPng(
         const textX = 85 * scale; // ~107px en 1063x650
         const textY = 352 * scale; // ~512px en 1063x650
 
+        const reversoTitular = getPastorCarnetFullName(pastor, true).toUpperCase();
+        const reversoFontSize = reversoTitular.length > 28 ? 16.5 * scale : (reversoTitular.length > 22 ? 18.5 * scale : 20.5 * scale);
         ctx.fillStyle = '#000000';
-        ctx.font = `italic ${20.5 * scale}px "Aribau Grotesk", sans-serif`;
+        ctx.font = `italic bold ${reversoFontSize}px "Aribau Grotesk", sans-serif`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
-        ctx.fillText(getPastorCarnetFullName(pastor, false), textX, textY, 470 * scale);
+        ctx.fillText(reversoTitular, textX, textY, 470 * scale);
 
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${11.5 * scale}px "Aribau Grotesk", sans-serif`;
-        const reversoLocation = getPastorCarnetReversoLocation(pastor);
+        const reversoLocation = getPastorCarnetReversoLocation(pastor).toUpperCase();
         ctx.fillText(reversoLocation, textX, textY + (22 * scale), 470 * scale);
 
         // Código QR inferior derecho (sin recuadro ni adornos, idéntico a ejemplo.png)

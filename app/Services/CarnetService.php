@@ -381,10 +381,12 @@ class CarnetService
             // 1. Fondo Oficial Trasero (300 DPI - 90.0mm x 55.0mm)
             $pdf->Image($atrasImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-            // 2. Nombre Titular en Cursiva (zona libre inferior izquierda, idéntico a ejemplo.png)
-            $pdf->SetFont('Helvetica', 'I', 8.2);
+            // 2. Nombre Titular en Mayúsculas (zona libre inferior izquierda)
+            $titular = $this->obtenerNombreCarnet($pastor, true);
+            $titularLen = mb_strlen($titular, 'UTF-8');
+            $titularFontSize = ($titularLen > 28) ? 7.2 : (($titularLen > 22) ? 7.8 : 8.4);
+            $pdf->SetFont('Helvetica', 'I', $titularFontSize);
             $pdf->SetTextColor(0, 0, 0);
-            $titular = $this->obtenerNombreCarnet($pastor, false);
             $pdf->SetXY($x + 9.0, $y + 42.4);
             $pdf->Cell(56.0, 3.4, $this->utf8ToPdf($titular), 0, 1, 'L');
 
@@ -392,7 +394,7 @@ class CarnetService
             $pdf->SetFont('Helvetica', 'B', 5.0);
             $pdf->SetTextColor(0, 0, 0);
             $pdf->SetXY($x + 9.0, $y + 45.4);
-            $lugarReverso = $this->obtenerLugarReverso($pastor);
+            $lugarReverso = mb_strtoupper($this->obtenerLugarReverso($pastor), 'UTF-8');
             $pdf->Cell(56.0, 2.4, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
 
             // 4. Código QR Oficial de Validación (Esquina inferior derecha)
@@ -405,16 +407,18 @@ class CarnetService
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(255, 255, 255);
             $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
-            $pdf->SetFont('Helvetica', 'I', 8.2);
+            $titular = $this->obtenerNombreCarnet($pastor, true);
+            $titularLen = mb_strlen($titular, 'UTF-8');
+            $titularFontSize = ($titularLen > 28) ? 7.2 : (($titularLen > 22) ? 7.8 : 8.4);
+            $pdf->SetFont('Helvetica', 'I', $titularFontSize);
             $pdf->SetTextColor(0, 0, 0);
-            $titular = $this->obtenerNombreCarnet($pastor, false);
             $pdf->SetXY($x + 9.0, $y + 42.4);
             $pdf->Cell(56.0, 3.4, $this->utf8ToPdf($titular), 0, 1, 'L');
 
             $pdf->SetFont('Helvetica', 'B', 5.0);
             $pdf->SetTextColor(0, 0, 0);
             $pdf->SetXY($x + 9.0, $y + 45.4);
-            $lugarReverso = $this->obtenerLugarReverso($pastor);
+            $lugarReverso = mb_strtoupper($this->obtenerLugarReverso($pastor), 'UTF-8');
             $pdf->Cell(56.0, 2.4, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
 
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
