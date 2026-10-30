@@ -613,34 +613,19 @@ class CarnetService
             $origW = imagesx($src);
             $origH = imagesy($src);
 
-            // Si la foto ya fue ajustada o guardada a proporción oficial PNG con transparencia, usarla directamente
-            $proporcionesAceptadas = [
-                [374, 562],
-                [187, 281],
-                [276, 414],
-                [552, 828],
-                [396, 572],
-                [198, 286],
-                [584, 844],
-                [292, 422],
-                [416, 576],
-                [402, 570],
-            ];
-            foreach ($proporcionesAceptadas as $dim) {
-                if ($origW === $dim[0] && $origH === $dim[1] && $mime === 'image/png') {
-                    imagedestroy($src);
-                    return $fotoPath;
-                }
-            }
-
-            // Proporción oficial para 8.5 x 5.4 cm: 187 de ancho x 281 de alto (374 x 562 en alta resolución 2x para 300 DPI)
-            $targetW = 374;
-            $targetH = 562;
+            // Proporción oficial para 8.5 x 5.4 cm: 187x281 (748 x 1124 en Ultra-HD 4x / >600 DPI para PVC y prensa)
+            $targetW = 748;
+            $targetH = 1124;
             $targetRatio = $targetW / $targetH;
             $origRatio = $origW / $origH;
 
-            // Recorte inteligente centrado y ponderado al rostro (zona superior)
-            if ($origRatio > $targetRatio) {
+            // Si la foto ya viene encuadrada a la proporción oficial del Estudio (ej. 187:281, 374:562, 748:1124), no recortar bordes
+            if (abs($origRatio - $targetRatio) < 0.018) {
+                $cropX = 0;
+                $cropY = 0;
+                $cropW = $origW;
+                $cropH = $origH;
+            } elseif ($origRatio > $targetRatio) {
                 // La imagen es más ancha: recortar laterales, centrado en X
                 $cropH = $origH;
                 $cropW = (int) round($origH * $targetRatio);
@@ -669,8 +654,8 @@ class CarnetService
                 $targetW, $targetH, $cropW, $cropH
             );
 
-            // Aplicar máscara de esquinas redondeadas oficial (radio 30px en lienzo 374x562)
-            $radius = 30;
+            // Aplicar máscara de esquinas redondeadas oficial (radio proporcional: 60px en lienzo 748x1124 = 15px en 187x281)
+            $radius = 60;
             $final = imagecreatetruecolor($targetW, $targetH);
             imagealphablending($final, false);
             imagesavealpha($final, true);

@@ -231,8 +231,156 @@ actualizarFoto.post = (args: { id: string | number } | [id: string | number ] | 
     
     actualizarFoto.form = actualizarFotoForm
 /**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaAnalyze
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:484
+ * @route '/admin/pastores/{id}/ia-analyze'
+ */
+export const iaAnalyze = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iaAnalyze.url(args, options),
+    method: 'post',
+})
+
+iaAnalyze.definition = {
+    methods: ["post"],
+    url: '/admin/pastores/{id}/ia-analyze',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaAnalyze
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:484
+ * @route '/admin/pastores/{id}/ia-analyze'
+ */
+iaAnalyze.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return iaAnalyze.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaAnalyze
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:484
+ * @route '/admin/pastores/{id}/ia-analyze'
+ */
+iaAnalyze.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iaAnalyze.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaAnalyze
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:484
+ * @route '/admin/pastores/{id}/ia-analyze'
+ */
+    const iaAnalyzeForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: iaAnalyze.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaAnalyze
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:484
+ * @route '/admin/pastores/{id}/ia-analyze'
+ */
+        iaAnalyzeForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: iaAnalyze.url(args, options),
+            method: 'post',
+        })
+    
+    iaAnalyze.form = iaAnalyzeForm
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaRemoveBg
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:512
+ * @route '/admin/pastores/{id}/ia-remove-bg'
+ */
+export const iaRemoveBg = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iaRemoveBg.url(args, options),
+    method: 'post',
+})
+
+iaRemoveBg.definition = {
+    methods: ["post"],
+    url: '/admin/pastores/{id}/ia-remove-bg',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaRemoveBg
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:512
+ * @route '/admin/pastores/{id}/ia-remove-bg'
+ */
+iaRemoveBg.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return iaRemoveBg.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaRemoveBg
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:512
+ * @route '/admin/pastores/{id}/ia-remove-bg'
+ */
+iaRemoveBg.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iaRemoveBg.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaRemoveBg
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:512
+ * @route '/admin/pastores/{id}/ia-remove-bg'
+ */
+    const iaRemoveBgForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: iaRemoveBg.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PastorCarnetController::iaRemoveBg
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:512
+ * @route '/admin/pastores/{id}/ia-remove-bg'
+ */
+        iaRemoveBgForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: iaRemoveBg.url(args, options),
+            method: 'post',
+        })
+    
+    iaRemoveBg.form = iaRemoveBgForm
+/**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::iaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:459
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:546
  * @route '/admin/pastores/{id}/ia-enhance'
  */
 export const iaEnhance = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -247,7 +395,7 @@ iaEnhance.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::iaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:459
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:546
  * @route '/admin/pastores/{id}/ia-enhance'
  */
 iaEnhance.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -275,7 +423,7 @@ iaEnhance.url = (args: { id: string | number } | [id: string | number ] | string
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::iaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:459
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:546
  * @route '/admin/pastores/{id}/ia-enhance'
  */
 iaEnhance.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -285,7 +433,7 @@ iaEnhance.post = (args: { id: string | number } | [id: string | number ] | strin
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::iaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:459
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:546
  * @route '/admin/pastores/{id}/ia-enhance'
  */
     const iaEnhanceForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -295,7 +443,7 @@ iaEnhance.post = (args: { id: string | number } | [id: string | number ] | strin
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::iaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:459
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:546
  * @route '/admin/pastores/{id}/ia-enhance'
  */
         iaEnhanceForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -306,7 +454,7 @@ iaEnhance.post = (args: { id: string | number } | [id: string | number ] | strin
     iaEnhance.form = iaEnhanceForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:507
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
  * @route '/admin/pastores/bulk-ia-enhance'
  */
 export const bulkIaEnhance = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -321,7 +469,7 @@ bulkIaEnhance.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:507
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
  * @route '/admin/pastores/bulk-ia-enhance'
  */
 bulkIaEnhance.url = (options?: RouteQueryOptions) => {
@@ -330,7 +478,7 @@ bulkIaEnhance.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:507
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
  * @route '/admin/pastores/bulk-ia-enhance'
  */
 bulkIaEnhance.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -340,7 +488,7 @@ bulkIaEnhance.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:507
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
  * @route '/admin/pastores/bulk-ia-enhance'
  */
     const bulkIaEnhanceForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -350,7 +498,7 @@ bulkIaEnhance.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:507
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
  * @route '/admin/pastores/bulk-ia-enhance'
  */
         bulkIaEnhanceForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -575,7 +723,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-export const edit = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const edit = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
@@ -590,7 +738,7 @@ edit.definition = {
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-edit.url = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+edit.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastore: args }
     }
@@ -623,7 +771,7 @@ edit.url = (args: { pastore: string | number | { id: string | number } } | [past
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-edit.get = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+edit.get = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
@@ -632,7 +780,7 @@ edit.get = (args: { pastore: string | number | { id: string | number } } | [past
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-edit.head = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: edit.url(args, options),
     method: 'head',
 })
@@ -642,7 +790,7 @@ edit.head = (args: { pastore: string | number | { id: string | number } } | [pas
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-    const editForm = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const editForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: edit.url(args, options),
         method: 'get',
     })
@@ -652,7 +800,7 @@ edit.head = (args: { pastore: string | number | { id: string | number } } | [pas
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-        editForm.get = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.get = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, options),
             method: 'get',
         })
@@ -661,7 +809,7 @@ edit.head = (args: { pastore: string | number | { id: string | number } } | [pas
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-        editForm.head = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.head = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -1023,7 +1171,7 @@ bulkCarnetPdf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-export const update = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -1038,7 +1186,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-update.url = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+update.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastore: args }
     }
@@ -1071,7 +1219,7 @@ update.url = (args: { pastore: string | number | { id: string | number } } | [pa
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-update.put = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -1081,7 +1229,7 @@ update.put = (args: { pastore: string | number | { id: string | number } } | [pa
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-    const updateForm = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -1096,7 +1244,7 @@ update.put = (args: { pastore: string | number | { id: string | number } } | [pa
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-        updateForm.put = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -1112,7 +1260,7 @@ update.put = (args: { pastore: string | number | { id: string | number } } | [pa
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-export const toggleStatus = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const toggleStatus = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -1127,7 +1275,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-toggleStatus.url = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastore: args }
     }
@@ -1160,7 +1308,7 @@ toggleStatus.url = (args: { pastore: string | number | { id: string | number } }
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-toggleStatus.post = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -1170,7 +1318,7 @@ toggleStatus.post = (args: { pastore: string | number | { id: string | number } 
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-    const toggleStatusForm = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, options),
         method: 'post',
     })
@@ -1180,7 +1328,7 @@ toggleStatus.post = (args: { pastore: string | number | { id: string | number } 
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-        toggleStatusForm.post = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.post = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, options),
             method: 'post',
         })
@@ -1245,6 +1393,8 @@ const pastores = {
     index: Object.assign(index, index),
 carnets: Object.assign(carnets, carnets390589),
 actualizarFoto: Object.assign(actualizarFoto, actualizarFoto),
+iaAnalyze: Object.assign(iaAnalyze, iaAnalyze),
+iaRemoveBg: Object.assign(iaRemoveBg, iaRemoveBg),
 iaEnhance: Object.assign(iaEnhance, iaEnhance),
 bulkIaEnhance: Object.assign(bulkIaEnhance, bulkIaEnhance),
 export: Object.assign(exportMethod, exportMethod),

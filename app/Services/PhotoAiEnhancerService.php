@@ -9,19 +9,66 @@ use Symfony\Component\Process\Process;
 
 class PhotoAiEnhancerService
 {
-    const API_URL = 'http://127.0.0.1:8001';
+    public const API_URL = 'http://127.0.0.1:8001';
 
     /**
-     * Comprueba si el microservicio local de FastAPI está en ejecución.
+     * Comprueba si el microservicio local de FastAPI (MMM Studio AI) está activo.
      */
     public function isApiServerRunning(): bool
     {
         try {
             $resp = Http::timeout(0.6)->get(self::API_URL . '/health');
-            return $resp->successful() && ($resp->json('status') === 'ready');
+            return $resp->successful() && in_array($resp->json('status'), ['ready', 'degraded'], true);
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    /**
+     * Intenta levantar automáticamente en segundo plano el microservicio FastAPI local
+     * si aún no está en ejecución, para mantener las redes neuronales precargadas en RAM.
+     */
+    public function ensureApiServerRunning(): bool
+    {
+        if ($this->isApiServerRunning()) {
+            return true;
+        }
+
+        $scriptsDir = base_path('app/Scripts');
+        $serverFile = $scriptsDir . DIRECTORY_SEPARATOR . 'ai_server.py';
+        if (!file_exists($serverFile)) {
+            return false;
+        }
+
+        try {
+            $python = $this->getPythonBinary();
+            if (PHP_OS_FAMILY === 'Windows') {
+                $cmd = sprintf(
+                    'start "" /B "%s" -m uvicorn ai_server:app --host 127.0.0.1 --port 8001 --log-level warning',
+                    $python
+                );
+                @pclose(@popen('cd /d "' . $scriptsDir . '" && ' . $cmd, 'r'));
+            } else {
+                $cmd = sprintf(
+                    'cd %s && nohup %s -m uvicorn ai_server:app --host 127.0.0.1 --port 8001 --log-level warning > /dev/null 2>&1 &',
+                    escapeshellarg($scriptsDir),
+                    escapeshellarg($python)
+                );
+                @exec($cmd);
+            }
+
+            // Esperar brevemente hasta 3.2s a que el servidor responda
+            for ($i = 0; $i < 8; $i++) {
+                usleep(400000);
+                if ($this->isApiServerRunning()) {
+                    return true;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::debug('No se pudo auto-iniciar ai_server.py en segundo plano: ' . $e->getMessage());
+        }
+
+        return false;
     }
 
     /**
@@ -88,13 +135,13 @@ class PhotoAiEnhancerService
         }
 
         // 2. Coincidencia por código o documento
-        $cleanCodigo = preg_replace('/\D/', '', (string)($pastor->codigo ?: $pastor->id));
+        $cleanCodigo = preg_replace('/\D/', '', (string) ($pastor->codigo ?: $pastor->id));
         if ($cleanCodigo) {
             foreach ($candidateDirs as $dir) {
                 if (is_dir($dir)) {
                     $matches = glob($dir . DIRECTORY_SEPARATOR . 'pastor_' . $cleanCodigo . '_*');
                     if ($matches && count($matches) > 0) {
-                        usort($matches, fn($a, $b) => filemtime($b) <=> filemtime($a));
+                        usort($matches, fn ($a, $b) => filemtime($b) <=> filemtime($a));
                         return $matches[0];
                     }
                 }
@@ -105,18 +152,169 @@ class PhotoAiEnhancerService
     }
 
     /**
-     * Ejecuta la mejora de una fotografía (vía API o script CLI local).
+     * Invalida cualquier miniatura cacheada para FPDF perteneciente al pastor.
      */
-    public function runEnhancement(string $inputPath, string $outputPath): array
+    public function clearPastorCarnetCache(int $pastorId): void
     {
-        // 1. Intentar por el microservicio local de FastAPI (mucho más rápido, modelo en RAM)
-        if ($this->isApiServerRunning()) {
+        $dirs = [
+            storage_path('app/carnets_cache'),
+            storage_path('framework/cache/carnets_cache'),
+            storage_path('app/public/carnets_cache'),
+            public_path('carnets_cache'),
+            sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carnets_cache',
+        ];
+
+        foreach ($dirs as $dir) {
+            if (is_dir($dir)) {
+                foreach (glob($dir . DIRECTORY_SEPARATOR . 'foto_' . $pastorId . '_*') ?: [] as $cached) {
+                    @unlink($cached);
+                }
+            }
+        }
+    }
+
+    /**
+     * Valida y decodifica un Data URI de imagen (PNG/JPEG/WEBP hasta 12 MB).
+     */
+    protected function decodeAndValidateDataUri(string $dataUri): array
+    {
+        if (!preg_match('/^data:image\/(?:png|jpe?g|webp);base64,/', $dataUri)) {
+            return ['valid' => false, 'error' => 'Formato de imagen inválido (use PNG, JPG o WEBP).'];
+        }
+
+        $base64Data = substr($dataUri, strpos($dataUri, ',') + 1);
+        $decoded = base64_decode($base64Data, true);
+        if ($decoded === false) {
+            return ['valid' => false, 'error' => 'Error al decodificar la imagen Base64.'];
+        }
+
+        if (strlen($decoded) > 12 * 1024 * 1024) {
+            return ['valid' => false, 'error' => 'La imagen supera el tamaño máximo permitido de 12 MB.'];
+        }
+
+        $imageInfo = @getimagesizefromstring($decoded);
+        if ($imageInfo === false || ($imageInfo[0] * $imageInfo[1]) > 45000000) {
+            return ['valid' => false, 'error' => 'La imagen no es válida o supera la resolución máxima permitida.'];
+        }
+
+        return ['valid' => true, 'bytes' => $decoded];
+    }
+
+    /**
+     * Analiza una fotografía de un pastor en disco con el Agente Diseñador.
+     */
+    public function analyzePastorPhoto(Pastor $pastor): array
+    {
+        $sourcePath = $this->resolvePastorPhotoPath($pastor);
+        if (!$sourcePath || !file_exists($sourcePath)) {
+            return [
+                'success' => false,
+                'error' => 'No se encontró archivo de fotografía para analizar.',
+            ];
+        }
+
+        if ($this->ensureApiServerRunning()) {
             try {
-                $response = Http::timeout(60)->post(self::API_URL . '/enhance-file', [
+                $resp = Http::timeout(20)->post(self::API_URL . '/analyze', [
+                    'input_path' => $sourcePath,
+                ]);
+                if ($resp->successful() && $resp->json('success')) {
+                    return $resp->json();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Fallo /analyze en FastAPI, usando CLI: ' . $e->getMessage());
+            }
+        }
+
+        return $this->runCliCommand(['--analyze', $sourcePath], 45);
+    }
+
+    /**
+     * Analiza una imagen enviada en Base64 (Data URI) con el Agente Diseñador.
+     */
+    public function analyzeBase64Image(string $dataUri): array
+    {
+        $check = $this->decodeAndValidateDataUri($dataUri);
+        if (!$check['valid']) {
+            return ['success' => false, 'error' => $check['error']];
+        }
+
+        if ($this->ensureApiServerRunning()) {
+            try {
+                $resp = Http::timeout(25)->post(self::API_URL . '/analyze', [
+                    'data_url' => $dataUri,
+                ]);
+                if ($resp->successful() && $resp->json('success')) {
+                    return $resp->json();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Fallo /analyze Base64 en FastAPI, usando CLI: ' . $e->getMessage());
+            }
+        }
+
+        return $this->withTempInputFile($check['bytes'], function (string $tempInput) {
+            return $this->runCliCommand(['--analyze', $tempInput], 45);
+        });
+    }
+
+    /**
+     * Remueve el fondo con precisión de estudio (cabello HD + Defringe anti-halos) sobre imagen Base64.
+     */
+    public function removeBackgroundBase64(string $dataUri, array $options = []): array
+    {
+        $check = $this->decodeAndValidateDataUri($dataUri);
+        if (!$check['valid']) {
+            return ['success' => false, 'error' => $check['error']];
+        }
+
+        if ($this->ensureApiServerRunning()) {
+            try {
+                $resp = Http::timeout(60)->post(self::API_URL . '/remove-background', [
+                    'data_url' => $dataUri,
+                    'mode' => $options['mode'] ?? 'ensemble',
+                    'defringe' => (float) ($options['defringe'] ?? 65),
+                    'edge_feather' => (float) ($options['edge_feather'] ?? 1.3),
+                    'edge_shift' => (float) ($options['edge_shift'] ?? -0.3),
+                ]);
+                if ($resp->successful() && $resp->json('success')) {
+                    return $resp->json();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Fallo /remove-background en FastAPI, usando CLI: ' . $e->getMessage());
+            }
+        }
+
+        return $this->withTempInputOutputFiles($check['bytes'], function (string $tempIn, string $tempOut, string $tempJson) use ($options) {
+            file_put_contents($tempJson, json_encode($options, JSON_UNESCAPED_UNICODE));
+            $res = $this->runCliCommand(['--remove-bg', $tempIn, $tempOut, $tempJson], 90);
+            if (!($res['success'] ?? false) || !file_exists($tempOut)) {
+                return $res;
+            }
+            $outBytes = file_get_contents($tempOut);
+            if ($outBytes === false) {
+                return ['success' => false, 'error' => 'No se pudo leer el recorte generado.'];
+            }
+            $res['data_url'] = 'data:image/png;base64,' . base64_encode($outBytes);
+            return $res;
+        });
+    }
+
+    /**
+     * Ejecuta el pipeline completo del Agente Diseñador sobre archivo físico.
+     */
+    public function runEnhancement(string $inputPath, string $outputPath, ?array $options = null): array
+    {
+        if ($this->ensureApiServerRunning()) {
+            try {
+                $payload = [
                     'input_path' => $inputPath,
                     'output_path' => $outputPath,
-                ]);
+                ];
+                if (!empty($options)) {
+                    $payload['options'] = $options;
+                }
 
+                $response = Http::timeout(90)->post(self::API_URL . '/enhance-file', $payload);
                 if ($response->successful() && $response->json('success')) {
                     return $response->json();
                 }
@@ -125,69 +323,28 @@ class PhotoAiEnhancerService
             }
         }
 
-        // 2. Si el microservicio no está activo, ejecutar directamente el motor ONNX por proceso Python
-        $scriptPath = base_path('app/Scripts/enhance_photo.py');
-        if (!file_exists($scriptPath)) {
-            return [
-                'success' => false,
-                'error' => 'El script de IA enhance_photo.py no existe en ' . $scriptPath,
-            ];
-        }
-
-        $python = $this->getPythonBinary();
-        $process = new Process([
-            $python,
-            $scriptPath,
-            $inputPath,
-            $outputPath,
-        ]);
-
-        $process->setTimeout(120);
-
+        $tempJson = null;
         try {
-            $process->run();
-            $output = trim($process->getOutput());
-            $errorOutput = trim($process->getErrorOutput());
-
-            if (!empty($output)) {
-                $data = json_decode($output, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
-                    return $data;
-                }
+            $args = [$inputPath, $outputPath];
+            if (!empty($options)) {
+                $tempDir = $this->ensureTempDir();
+                $tempJson = $tempDir . DIRECTORY_SEPARATOR . 'opts_' . bin2hex(random_bytes(8)) . '.json';
+                file_put_contents($tempJson, json_encode($options, JSON_UNESCAPED_UNICODE));
+                $args[] = $tempJson;
             }
 
-            if (!$process->isSuccessful()) {
-                Log::error('Error en proceso CLI de IA: ' . ($errorOutput ?: $output));
-                return [
-                    'success' => false,
-                    'error' => $errorOutput ?: ($output ?: 'Error al ejecutar proceso de IA.'),
-                ];
+            return $this->runCliCommand($args, 150, $outputPath);
+        } finally {
+            if ($tempJson && file_exists($tempJson)) {
+                @unlink($tempJson);
             }
-
-            if (file_exists($outputPath) && filesize($outputPath) > 0) {
-                return [
-                    'success' => true,
-                    'output_path' => $outputPath,
-                ];
-            }
-
-            return [
-                'success' => false,
-                'error' => 'No se generó la imagen en la ruta esperada.',
-            ];
-        } catch (\Throwable $e) {
-            Log::error('Excepción al ejecutar IA local: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'error' => 'Error de ejecución: ' . $e->getMessage(),
-            ];
         }
     }
 
     /**
-     * Mejora la foto de un pastor existente y actualiza su registro en la BD.
+     * Mejora / diseña la foto de un pastor existente en disco y actualiza su registro en BD.
      */
-    public function enhancePastor(Pastor $pastor): array
+    public function enhancePastor(Pastor $pastor, ?array $options = null): array
     {
         $sourcePath = $this->resolvePastorPhotoPath($pastor);
         if (!$sourcePath || !file_exists($sourcePath)) {
@@ -197,7 +354,7 @@ class PhotoAiEnhancerService
             ];
         }
 
-        $cleanCodigo = preg_replace('/\D/', '', (string)($pastor->codigo ?: $pastor->id));
+        $cleanCodigo = preg_replace('/\D/', '', (string) ($pastor->codigo ?: $pastor->id));
         $newFilename = 'pastor_' . $cleanCodigo . '_' . time() . '_ai.png';
 
         $destDir = public_path('pastores');
@@ -206,10 +363,9 @@ class PhotoAiEnhancerService
         }
 
         $targetPath = $destDir . DIRECTORY_SEPARATOR . $newFilename;
+        $result = $this->runEnhancement($sourcePath, $targetPath, $options);
 
-        $result = $this->runEnhancement($sourcePath, $targetPath);
-
-        if (!$result['success']) {
+        if (!($result['success'] ?? false)) {
             return $result;
         }
 
@@ -227,97 +383,171 @@ class PhotoAiEnhancerService
             }
         }
 
-        // Actualizar foto en el modelo
         $pastor->foto = $newFilename;
         $pastor->save();
+        $this->clearPastorCarnetCache($pastor->id);
 
         return [
             'success' => true,
-            'message' => 'Fotografía mejorada con IA exitosamente.',
+            'message' => 'Fotografía optimizada por el Agente Diseñador IA exitosamente.',
             'foto' => $newFilename,
             'foto_url' => '/pastores/' . $newFilename . '?v=' . time(),
             'duration_seconds' => $result['duration_seconds'] ?? null,
-            'engine' => $result['engine'] ?? 'local_realesrgan',
+            'engine' => $result['engine'] ?? 'MMM-Studio-Agent-2.0',
+            'steps_applied' => $result['steps_applied'] ?? [],
+            'before_score' => $result['before_score'] ?? null,
+            'after_score' => $result['after_score'] ?? null,
         ];
     }
 
     /**
-     * Mejora una imagen en formato Base64 (Data URI) y devuelve la imagen resultante en Base64.
+     * Ejecuta el Agente Diseñador sobre una imagen en Base64 (Data URI) con opciones de estudio completas.
      */
-    public function enhanceBase64Image(string $dataUri): array
+    public function enhanceBase64Image(string $dataUri, ?array $options = null): array
     {
-        if (!preg_match('/^data:image\/(?:png|jpe?g|webp);base64,/', $dataUri)) {
-            return ['success' => false, 'error' => 'Formato de imagen inválido'];
+        $check = $this->decodeAndValidateDataUri($dataUri);
+        if (!$check['valid']) {
+            return ['success' => false, 'error' => $check['error']];
         }
 
-        $base64Data = substr($dataUri, strpos($dataUri, ',') + 1);
-        $decoded = base64_decode($base64Data, true);
-        if ($decoded === false) {
-            return ['success' => false, 'error' => 'Error al decodificar la imagen'];
-        }
-
-        if (strlen($decoded) > 8 * 1024 * 1024) {
-            return ['success' => false, 'error' => 'La imagen supera el tamaño máximo permitido de 8 MB.'];
-        }
-
-        $imageInfo = getimagesizefromstring($decoded);
-        if ($imageInfo === false || ($imageInfo[0] * $imageInfo[1]) > 40000000) {
-            return ['success' => false, 'error' => 'La imagen no es válida o supera la resolución máxima permitida.'];
-        }
-
-        // 1. Intentar por el microservicio local de FastAPI
-        if ($this->isApiServerRunning()) {
+        if ($this->ensureApiServerRunning()) {
             try {
-                $response = Http::timeout(60)->post(self::API_URL . '/enhance-base64', [
-                    'data_url' => $dataUri,
-                ]);
+                $endpoint = !empty($options) ? '/studio-process' : '/enhance-base64';
+                $payload = ['data_url' => $dataUri];
+                if (!empty($options)) {
+                    $payload['options'] = $options;
+                }
 
+                $response = Http::timeout(90)->post(self::API_URL . $endpoint, $payload);
                 if ($response->successful() && $response->json('success')) {
                     return $response->json();
                 }
             } catch (\Throwable $e) {
-                Log::warning('Fallo microservicio en base64, alternando a CLI: ' . $e->getMessage());
+                Log::warning('Fallo microservicio en Base64, alternando a CLI: ' . $e->getMessage());
             }
         }
 
-        // 2. Alternativa por archivo temporal
-        $tempDir = storage_path('app/temp_ai');
-        if (!is_dir($tempDir) && !mkdir($tempDir, 0755, true) && !is_dir($tempDir)) {
-            return ['success' => false, 'error' => 'No se pudo preparar el directorio temporal para procesar la imagen.'];
-        }
-
-        $fileToken = bin2hex(random_bytes(16));
-        $tempInput = $tempDir . DIRECTORY_SEPARATOR . 'input_' . $fileToken . '.png';
-        $tempOutput = $tempDir . DIRECTORY_SEPARATOR . 'output_' . $fileToken . '.png';
-
-        try {
-            if (file_put_contents($tempInput, $decoded, LOCK_EX) === false) {
-                return ['success' => false, 'error' => 'No se pudo preparar la imagen para procesarla.'];
-            }
-
-            $result = $this->runEnhancement($tempInput, $tempOutput);
-            if (!$result['success']) {
+        return $this->withTempInputOutputFiles($check['bytes'], function (string $tempIn, string $tempOut) use ($options) {
+            $result = $this->runEnhancement($tempIn, $tempOut, $options);
+            if (!($result['success'] ?? false)) {
                 return $result;
             }
 
-            $outputBytes = file_get_contents($tempOutput);
+            $outputBytes = @file_get_contents($tempOut);
             if ($outputBytes === false) {
-                return ['success' => false, 'error' => 'No se pudo leer la imagen mejorada.'];
+                return ['success' => false, 'error' => 'No se pudo leer la imagen procesada por el Agente IA.'];
+            }
+
+            return array_merge($result, [
+                'success' => true,
+                'data_url' => 'data:image/png;base64,' . base64_encode($outputBytes),
+            ]);
+        });
+    }
+
+    protected function ensureTempDir(): string
+    {
+        $tempDir = storage_path('app/temp_ai');
+        if (!is_dir($tempDir)) {
+            @mkdir($tempDir, 0755, true);
+        }
+        return $tempDir;
+    }
+
+    protected function withTempInputFile(string $bytes, callable $callback): array
+    {
+        $tempDir = $this->ensureTempDir();
+        $token = bin2hex(random_bytes(12));
+        $tempIn = $tempDir . DIRECTORY_SEPARATOR . 'in_' . $token . '.png';
+
+        try {
+            if (file_put_contents($tempIn, $bytes, LOCK_EX) === false) {
+                return ['success' => false, 'error' => 'No se pudo escribir archivo temporal para análisis.'];
+            }
+            return $callback($tempIn);
+        } finally {
+            if (file_exists($tempIn)) {
+                @unlink($tempIn);
+            }
+        }
+    }
+
+    protected function withTempInputOutputFiles(string $bytes, callable $callback): array
+    {
+        $tempDir = $this->ensureTempDir();
+        $token = bin2hex(random_bytes(12));
+        $tempIn = $tempDir . DIRECTORY_SEPARATOR . 'in_' . $token . '.png';
+        $tempOut = $tempDir . DIRECTORY_SEPARATOR . 'out_' . $token . '.png';
+        $tempJson = $tempDir . DIRECTORY_SEPARATOR . 'opt_' . $token . '.json';
+
+        try {
+            if (file_put_contents($tempIn, $bytes, LOCK_EX) === false) {
+                return ['success' => false, 'error' => 'No se pudo preparar archivo temporal de imagen.'];
+            }
+            return $callback($tempIn, $tempOut, $tempJson);
+        } finally {
+            foreach ([$tempIn, $tempOut, $tempJson] as $f) {
+                if (file_exists($f)) {
+                    @unlink($f);
+                }
+            }
+        }
+    }
+
+    protected function runCliCommand(array $scriptArgs, int $timeout = 120, ?string $expectedOutput = null): array
+    {
+        $scriptPath = base_path('app/Scripts/enhance_photo.py');
+        if (!file_exists($scriptPath)) {
+            return [
+                'success' => false,
+                'error' => 'El script enhance_photo.py no existe en ' . $scriptPath,
+            ];
+        }
+
+        $python = $this->getPythonBinary();
+        $process = new Process(array_merge([$python, $scriptPath], $scriptArgs));
+        $process->setTimeout($timeout);
+
+        try {
+            $process->run();
+            $output = trim($process->getOutput());
+            $errorOutput = trim($process->getErrorOutput());
+
+            if (!empty($output)) {
+                // Extraer última línea JSON por seguridad ante cualquier warning externo
+                $lines = array_values(array_filter(array_map('trim', preg_split('/\R/', $output))));
+                $jsonCandidate = end($lines) ?: $output;
+                $data = json_decode($jsonCandidate, true) ?? json_decode($output, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
+                    return $data;
+                }
+            }
+
+            if (!$process->isSuccessful()) {
+                Log::error('Error en CLI de Agente IA: ' . ($errorOutput ?: $output));
+                return [
+                    'success' => false,
+                    'error' => $errorOutput ?: ($output ?: 'Error al ejecutar el motor de IA local.'),
+                ];
+            }
+
+            if ($expectedOutput && file_exists($expectedOutput) && filesize($expectedOutput) > 0) {
+                return [
+                    'success' => true,
+                    'output_path' => $expectedOutput,
+                ];
             }
 
             return [
-                'success' => true,
-                'data_url' => 'data:image/png;base64,' . base64_encode($outputBytes),
-                'duration_seconds' => $result['duration_seconds'] ?? null,
-                'engine' => $result['engine'] ?? 'local_realesrgan',
+                'success' => false,
+                'error' => 'El proceso de IA no devolvió respuesta válida.',
             ];
-        } finally {
-            if (file_exists($tempInput)) {
-                unlink($tempInput);
-            }
-            if (file_exists($tempOutput)) {
-                unlink($tempOutput);
-            }
+        } catch (\Throwable $e) {
+            Log::error('Excepción en CLI de Agente IA: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => 'Excepción de ejecución: ' . $e->getMessage(),
+            ];
         }
     }
 }

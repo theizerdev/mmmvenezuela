@@ -164,6 +164,8 @@ export default function PastoresCarnetsPage({
     const [isEnhancingSingleAi, setIsEnhancingSingleAi] = useState(false);
     const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
     const [isEnhancingBulkAi, setIsEnhancingBulkAi] = useState(false);
+    const [bulkAiPreset, setBulkAiPreset] = useState<'studio_credential_pro' | 'auto_agent' | 'cutout_only'>('studio_credential_pro');
+    const [bulkAiProgress, setBulkAiProgress] = useState({ completed: 0, total: 0, currentName: '' });
 
     // Sincronizar pastor seleccionado si cambia la lista
     useEffect(() => {
@@ -354,7 +356,7 @@ export default function PastoresCarnetsPage({
         }
     };
 
-    // Procesamiento masivo por lotes con IA de estudio
+    // Procesamiento masivo por lotes con el Agente Diseñador IA (progreso en tiempo real pastor por pastor)
     const handleBulkAiEnhancement = async () => {
         if (selectedIds.length === 0 || isEnhancingBulkAi) {
             return;
@@ -362,52 +364,98 @@ export default function PastoresCarnetsPage({
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         setIsEnhancingBulkAi(true);
-        toast.info(__('Iniciando mejora con IA para los pastores seleccionados...'));
 
         try {
-            const response = await fetch('/admin/pastores/bulk-ia-enhance', {
+            const listResponse = await fetch('/admin/pastores/carnets/fotos-seleccionadas', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
+                    Accept: 'application/json',
                 },
                 body: JSON.stringify({ ids: selectedIds }),
             });
+            const listData = await listResponse.json();
+            const targets: Array<{ id: number; nombres: string; apellidos: string; foto: string }> =
+                listData.pastores || [];
 
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                if (result.succeeded_count > 0) {
-
-                    if (result.failed_count > 0) {
-                        toast.warning(__('Se mejoraron :succeeded fotos; :failed no pudieron procesarse.', {
-                            succeeded: String(result.succeeded_count),
-                            failed: String(result.failed_count),
-                        }), {
-                            description: result.failed?.[0]?.error,
-                        });
-                    } else {
-                        toast.success(__('¡:count fotos mejoradas con IA!', {
-                            count: String(result.succeeded_count),
-                        }));
-                    }
-                } else {
-                    toast.error(__('No se pudo mejorar ninguna fotografía.'), {
-                        description: result.failed?.[0]?.error,
-                    });
-                }
-
+            if (targets.length === 0) {
+                toast.info(__('Ninguno de los pastores seleccionados tiene fotografía registrada.'));
                 setIsBulkAiModalOpen(false);
-                if (result.succeeded_count > 0) {
-                    router.reload({ only: ['pastores'] });
-                }
-            } else {
-                toast.error(result.error || __('Error al procesar el lote con IA.'));
+                return;
             }
+
+            setBulkAiProgress({ completed: 0, total: targets.length, currentName: '' });
+            let succeededCount = 0;
+            const failedErrors: string[] = [];
+
+            for (const target of targets) {
+                const fullName = `${target.nombres} ${target.apellidos}`.trim();
+                setBulkAiProgress((prev) => ({ ...prev, currentName: fullName }));
+
+                try {
+                    const response = await fetch(`/admin/pastores/${target.id}/ia-enhance`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            Accept: 'application/json',
+                        },
+                        body: JSON.stringify({
+                            options: { preset: bulkAiPreset },
+                        }),
+                    });
+
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        succeededCount += 1;
+                        if (result.foto_url) {
+                            setSelectedPastor((curr) =>
+                                curr?.id === target.id
+                                    ? { ...curr, foto: result.foto_url, foto_url: result.foto_url }
+                                    : curr
+                            );
+                        }
+                    } else {
+                        failedErrors.push(`${fullName}: ${result.error || __('Error')}`);
+                    }
+                } catch (err) {
+                    failedErrors.push(`${fullName}: ${err instanceof Error ? err.message : __('Error')}`);
+                } finally {
+                    setBulkAiProgress((prev) => ({
+                        ...prev,
+                        completed: prev.completed + 1,
+                    }));
+                }
+            }
+
+            if (succeededCount > 0) {
+                if (failedErrors.length > 0) {
+                    toast.warning(
+                        __('Se optimizaron :succeeded fotos; :failed presentaron inconvenientes.', {
+                            succeeded: String(succeededCount),
+                            failed: String(failedErrors.length),
+                        }),
+                        { description: failedErrors[0] }
+                    );
+                } else {
+                    toast.success(
+                        __('¡:count fotografías diseñadas y optimizadas con el Agente IA!', {
+                            count: String(succeededCount),
+                        })
+                    );
+                }
+                router.reload({ only: ['pastores'] });
+            } else {
+                toast.error(__('No se pudo procesar ninguna fotografía.'), {
+                    description: failedErrors[0],
+                });
+            }
+
+            setIsBulkAiModalOpen(false);
         } catch (error) {
             console.error('Error en lote de IA:', error);
-            toast.error(__('Ocurrió un error al procesar el lote con IA.'));
+            toast.error(__('Ocurrió un error al coordinar el lote con el Agente IA.'));
         } finally {
             setIsEnhancingBulkAi(false);
         }
@@ -460,6 +508,29 @@ export default function PastoresCarnetsPage({
                 const pastorName = `${pastor.nombres} ${pastor.apellidos}`.trim();
 
                 try {
+                    // 1. Priorizar recorte de estudio Python (RMBG-1.4 + MODNet cabello + Defringe anti-halos)
+                    const studioRes = await fetch(`/admin/pastores/${pastor.id}/ia-enhance`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            Accept: 'application/json',
+                        },
+                        body: JSON.stringify({ options: { preset: 'cutout_only' } }),
+                    });
+                    const studioJson = await studioRes.json();
+
+                    if (studioRes.ok && studioJson.success && studioJson.foto_url) {
+                        succeeded += 1;
+                        setSelectedPastor((current) =>
+                            current?.id === pastor.id
+                                ? { ...current, foto: studioJson.foto_url, foto_url: studioJson.foto_url }
+                                : current
+                        );
+                        continue;
+                    }
+
+                    // 2. Respaldo en navegador (MediaPipe) si el motor Python no estuvo disponible
                     const photoUrl = getPastorPhotoUrl(pastor.foto);
 
                     if (!photoUrl) {
@@ -917,11 +988,11 @@ export default function PastoresCarnetsPage({
                                             variant="outline"
                                             size="sm"
                                             onClick={() => setIsPhotoModalOpen(true)}
-                                            className="gap-2 text-xs font-semibold h-9 px-3 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50/50"
-                                            title={__('Ajustar tamaño y eliminar fondo de la foto del pastor')}
+                                            className="gap-2 text-xs font-bold h-9 px-3 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50/60"
+                                            title={__('Abrir MMM Studio AI: Agente Diseñador, recorte de cabello HD, calibración y encuadre biométrico')}
                                         >
                                             <Scissors className="size-3.5 text-emerald-600" />
-                                            {__('Ajustar Foto Pastor')}
+                                            {__('Estudio IA de Foto')}
                                         </Button>
 
                                         <Button
@@ -1358,12 +1429,13 @@ export default function PastoresCarnetsPage({
                 onRestored={handleTemplateRestored}
             />
 
-            {/* MODAL PARA AJUSTAR FOTO DEL PASTOR (TAMAÑO Y ELIMINAR FONDO) */}
+            {/* ESTUDIO DISEÑADOR FOTOGRÁFICO PROPIO (MMM STUDIO AI) */}
             <PastorPhotoAdjustModal
                 isOpen={isPhotoModalOpen}
                 onClose={() => setIsPhotoModalOpen(false)}
                 pastor={selectedPastor}
                 onPhotoUpdated={handlePhotoUpdated}
+                templateFrontUrl={frontTemplateUrl}
             />
 
             {/* MODAL PARA ELIMINAR EL FONDO DE TODAS LAS FOTOS SELECCIONADAS */}
@@ -1429,38 +1501,95 @@ export default function PastoresCarnetsPage({
                 </DialogContent>
             </Dialog>
 
-            {/* MODAL PARA MEJORA MASIVA DE FOTOGRAFÍAS */}
+            {/* MODAL DEL AGENTE DISEÑADOR IA POR LOTES */}
             <Dialog
                 open={isBulkAiModalOpen}
                 onOpenChange={(open) => {
                     if (!isEnhancingBulkAi) setIsBulkAiModalOpen(open);
                 }}
             >
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[540px]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                             <Sparkles className="size-5 text-amber-500 fill-amber-400" />
-                            {__('Mejorar fotos con IA')}
+                            {__('Agente Diseñador IA por Lotes')}
                         </DialogTitle>
                         <DialogDescription>
-                            {__('Se aumentará la resolución y se mejorará el enfoque, el ruido y la iluminación de las fotos de :count pastores. Los pastores sin foto se omitirán.', {
+                            {__('Selecciona el flujo de diseño automático que se aplicará a los :count pastores seleccionados (los registros sin foto se omitirán).', {
                                 count: String(selectedIds.length),
                             })}
                         </DialogDescription>
                     </DialogHeader>
 
+                    <div className="space-y-2.5 py-1">
+                        {[
+                            {
+                                id: 'studio_credential_pro' as const,
+                                title: __('✨ Estudio Credencial Completo (Recomendado)'),
+                                desc: __('Remueve fondo con detalle en cabello + restaura rostro (GFPGAN) + equilibra sombras/color + encuadre biométrico oficial y sombra 3D.'),
+                            },
+                            {
+                                id: 'auto_agent' as const,
+                                title: __('💎 Restauración Facial + Luz y Nitidez (Conservar Fondo)'),
+                                desc: __('Audita cada foto y restaura ojos/piel, corrige subexposición, balance de blancos y ruido sin recortar el fondo.'),
+                            },
+                            {
+                                id: 'cutout_only' as const,
+                                title: __('✂️ Solo Recorte de Silueta y Cabello HD + Anti-Halos'),
+                                desc: __('Aísla al pastor con RMBG-1.4 + MODNet y descontamina bordes de color manteniendo tonos originales.'),
+                            },
+                        ].map((item) => (
+                            <div
+                                key={item.id}
+                                onClick={() => !isEnhancingBulkAi && setBulkAiPreset(item.id)}
+                                className={cn(
+                                    'p-3 rounded-xl border cursor-pointer transition-all',
+                                    bulkAiPreset === item.id
+                                        ? 'border-purple-600 bg-purple-50/70 dark:bg-purple-950/40 ring-1 ring-purple-600'
+                                        : 'border-border hover:bg-muted/50',
+                                    isEnhancingBulkAi && 'opacity-60 pointer-events-none'
+                                )}
+                            >
+                                <p className="text-xs font-bold text-foreground">{item.title}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                                    {item.desc}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
                     {isEnhancingBulkAi && (
                         <div className="flex flex-col gap-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 p-3.5 text-xs text-purple-900 dark:text-purple-200">
-                            <div className="flex items-center gap-3">
-                                <Loader2 className="size-5 animate-spin text-purple-600 shrink-0" />
-                                <div>
-                                    <p className="font-bold">
-                                        {__('Mejorando fotografías con IA en curso...')}
-                                    </p>
-                                    <p className="text-[11px] text-purple-700/80 dark:text-purple-300/80">
-                                        {__('Esto puede tomar unos segundos por cada foto. Por favor, mantén esta ventana abierta.')}
-                                    </p>
-                                </div>
+                            <div className="flex items-center justify-between font-bold">
+                                <span className="flex items-center gap-2">
+                                    <Loader2 className="size-4 animate-spin text-purple-600 shrink-0" />
+                                    {__('Procesando :done de :total...', {
+                                        done: String(Math.min(bulkAiProgress.completed + 1, bulkAiProgress.total || selectedIds.length)),
+                                        total: String(bulkAiProgress.total || selectedIds.length),
+                                    })}
+                                </span>
+                                <span className="font-mono text-[11px]">
+                                    {bulkAiProgress.total > 0
+                                        ? `${Math.round((bulkAiProgress.completed / bulkAiProgress.total) * 100)}%`
+                                        : '0%'}
+                                </span>
+                            </div>
+                            {bulkAiProgress.currentName && (
+                                <p className="text-[11px] text-purple-700/90 dark:text-purple-300/90 truncate">
+                                    {__('Diseñando retrato de:')} <strong>{bulkAiProgress.currentName}</strong>
+                                </p>
+                            )}
+                            <div className="w-full h-1.5 rounded-full bg-purple-200 dark:bg-purple-900 overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-purple-600 to-indigo-500 transition-all duration-300"
+                                    style={{
+                                        width: `${
+                                            bulkAiProgress.total > 0
+                                                ? Math.round((bulkAiProgress.completed / bulkAiProgress.total) * 100)
+                                                : 5
+                                        }%`,
+                                    }}
+                                />
                             </div>
                         </div>
                     )}
@@ -1483,12 +1612,12 @@ export default function PastoresCarnetsPage({
                             {isEnhancingBulkAi ? (
                                 <>
                                     <Loader2 className="size-4 animate-spin text-amber-300" />
-                                    {__('Mejorando con IA...')}
+                                    {__('Diseñando con IA...')}
                                 </>
                             ) : (
                                 <>
                                     <Sparkles className="size-4 text-amber-300 fill-amber-300" />
-                                    {__('Iniciar Mejora con IA')}
+                                    {__('Ejecutar Agente Diseñador')}
                                 </>
                             )}
                         </Button>

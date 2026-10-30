@@ -13,6 +13,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/pastores/carnets/restablecer-plantilla', [PastorCarnetController::class, 'restablecerPlantilla'])->name('pastores.carnets.restablecer-plantilla');
     Route::post('/pastores/carnets/fotos-seleccionadas', [PastorCarnetController::class, 'fotosSeleccionadas'])->name('pastores.carnets.fotos-seleccionadas');
     Route::post('/pastores/{id}/actualizar-foto', [PastorCarnetController::class, 'actualizarFotoPastor'])->name('pastores.actualizar-foto');
+    Route::post('/pastores/{id}/ia-analyze', [PastorCarnetController::class, 'iaAnalyzeFoto'])->name('pastores.ia-analyze');
+    Route::post('/pastores/{id}/ia-remove-bg', [PastorCarnetController::class, 'iaRemoveBgFoto'])->name('pastores.ia-remove-bg');
     Route::post('/pastores/{id}/ia-enhance', [PastorCarnetController::class, 'iaEnhanceFoto'])->name('pastores.ia-enhance');
     Route::post('/pastores/bulk-ia-enhance', [PastorCarnetController::class, 'bulkIaEnhance'])->name('pastores.bulk-ia-enhance');
     Route::get('/pastores/export', [PastorExportController::class, 'export'])->name('pastores.export');

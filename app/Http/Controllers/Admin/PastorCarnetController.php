@@ -445,6 +445,8 @@ class PastorCarnetController extends Controller
         $pastor->foto = $filename;
         $pastor->save();
 
+        app(PhotoAiEnhancerService::class)->clearPastorCarnetCache($pastor->id);
+
         return response()->json([
             'success' => true,
             'message' => 'Fotografía del pastor actualizada con éxito',
@@ -454,7 +456,92 @@ class PastorCarnetController extends Controller
     }
 
     /**
-     * Mejora la fotografía del pastor utilizando Inteligencia Artificial (CodeFormer de estudio fotográfico).
+     * Valida y filtra los parámetros permitidos para el Agente Diseñador Fotográfico.
+     */
+    protected function validarOpcionesEstudioIa(Request $request): ?array
+    {
+        $raw = $request->input('options');
+        if (!is_array($raw) || empty($raw)) {
+            return null;
+        }
+
+        $allowed = [
+            'preset', 'auto_pilot', 'remove_bg', 'matting_mode', 'defringe',
+            'edge_feather', 'edge_shift', 'face_restore', 'face_strength',
+            'eye_clarity', 'skin_smooth', 'upscale', 'upscale_mode',
+            'auto_frame', 'rotation', 'exposure', 'brightness', 'contrast',
+            'shadows', 'highlights', 'temperature', 'tint', 'vibrance',
+            'saturation', 'clarity', 'sharpness', 'denoise', 'bg_type',
+            'bg_color', 'bg_color_secondary', 'drop_shadow',
+        ];
+
+        return array_intersect_key($raw, array_flip($allowed));
+    }
+
+    /**
+     * Inspecciona y diagnostica la fotografía del pastor con el Agente Diseñador IA.
+     */
+    public function iaAnalyzeFoto(Request $request, int $id, PhotoAiEnhancerService $aiService)
+    {
+        $this->autorizarAccesoCarnets();
+        @set_time_limit(60);
+
+        $validated = $request->validate([
+            'foto' => ['sometimes', 'required', 'string', 'max:16000000'],
+        ]);
+
+        $pastor = Pastor::findOrFail($id);
+
+        $result = array_key_exists('foto', $validated)
+            ? $aiService->analyzeBase64Image($validated['foto'])
+            : $aiService->analyzePastorPhoto($pastor);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'] ?? 'No se pudo analizar la fotografía.',
+            ], 422);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Remueve el fondo con precisión de estudio (RMBG-1.4 + MODNet cabello + Defringe anti-halos).
+     */
+    public function iaRemoveBgFoto(Request $request, int $id, PhotoAiEnhancerService $aiService)
+    {
+        $this->autorizarAccesoCarnets();
+        @set_time_limit(120);
+
+        $validated = $request->validate([
+            'foto' => ['required', 'string', 'max:16000000'],
+            'options' => ['sometimes', 'array'],
+        ]);
+
+        Pastor::findOrFail($id);
+
+        $options = $this->validarOpcionesEstudioIa($request) ?? [];
+        $result = $aiService->removeBackgroundBase64($validated['foto'], $options);
+
+        if (!($result['success'] ?? false) || empty($result['data_url'])) {
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'] ?? 'No se pudo remover el fondo con el motor de estudio.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fondo removido con precisión de estudio.',
+            'data_url' => $result['data_url'],
+            'duration_seconds' => $result['duration_seconds'] ?? null,
+            'face' => $result['face'] ?? null,
+        ]);
+    }
+
+    /**
+     * Procesa / optimiza la fotografía del pastor utilizando el Agente Diseñador Fotográfico IA.
      */
     public function iaEnhanceFoto(Request $request, int $id, PhotoAiEnhancerService $aiService)
     {
@@ -462,18 +549,25 @@ class PastorCarnetController extends Controller
         @set_time_limit(180);
 
         $validated = $request->validate([
-            'foto' => ['sometimes', 'required', 'string', 'max:11200000'],
+            'foto' => ['sometimes', 'required', 'string', 'max:16000000'],
+            'options' => ['sometimes', 'array'],
         ]);
         $pastor = Pastor::findOrFail($id);
+        $options = $this->validarOpcionesEstudioIa($request);
 
         if (array_key_exists('foto', $validated)) {
-            $result = $aiService->enhanceBase64Image($validated['foto']);
-            if ($result['success'] && !empty($result['data_url'])) {
+            $result = $aiService->enhanceBase64Image($validated['foto'], $options);
+            if (($result['success'] ?? false) && !empty($result['data_url'])) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Fotografía mejorada con IA.',
+                    'message' => 'Fotografía optimizada por el Agente Diseñador IA.',
                     'data_url' => $result['data_url'],
                     'duration_seconds' => $result['duration_seconds'] ?? null,
+                    'steps_applied' => $result['steps_applied'] ?? [],
+                    'applied_params' => $result['applied_params'] ?? null,
+                    'before_score' => $result['before_score'] ?? null,
+                    'after_score' => $result['after_score'] ?? null,
+                    'diagnosis' => $result['diagnosis'] ?? null,
                 ]);
             }
 
@@ -483,9 +577,9 @@ class PastorCarnetController extends Controller
             ], 422);
         }
 
-        $result = $aiService->enhancePastor($pastor);
+        $result = $aiService->enhancePastor($pastor, $options);
 
-        if (!$result['success']) {
+        if (!($result['success'] ?? false)) {
             return response()->json([
                 'success' => false,
                 'error' => $result['error'] ?? 'Error al procesar la fotografía con IA.',
@@ -498,21 +592,27 @@ class PastorCarnetController extends Controller
             'foto' => $result['foto'],
             'foto_url' => $result['foto_url'],
             'duration_seconds' => $result['duration_seconds'] ?? null,
+            'steps_applied' => $result['steps_applied'] ?? [],
+            'before_score' => $result['before_score'] ?? null,
+            'after_score' => $result['after_score'] ?? null,
         ]);
     }
 
     /**
-     * Mejora masiva de fotografías con IA para los pastores seleccionados.
+     * Diseño y mejora masiva de fotografías con el Agente Diseñador IA para los pastores seleccionados.
      */
     public function bulkIaEnhance(Request $request, PhotoAiEnhancerService $aiService)
     {
         $this->autorizarAccesoCarnets();
-        @set_time_limit(600); // 10 minutos para lotes
+        @set_time_limit(900); // 15 minutos para lotes grandes
 
         $validated = $request->validate([
             'ids' => 'required|array|min:1',
             'ids.*' => 'integer|exists:pastores,id',
+            'options' => 'sometimes|array',
         ]);
+
+        $options = $this->validarOpcionesEstudioIa($request);
 
         $pastores = Pastor::whereIn('id', $validated['ids'])
             ->whereNotNull('foto')
@@ -530,12 +630,14 @@ class PastorCarnetController extends Controller
         $failed = [];
 
         foreach ($pastores as $pastor) {
-            $res = $aiService->enhancePastor($pastor);
-            if ($res['success']) {
+            $res = $aiService->enhancePastor($pastor, $options);
+            if ($res['success'] ?? false) {
                 $succeeded[] = [
                     'id' => $pastor->id,
                     'nombre' => $pastor->nombres . ' ' . $pastor->apellidos,
                     'foto_url' => $res['foto_url'],
+                    'before_score' => $res['before_score'] ?? null,
+                    'after_score' => $res['after_score'] ?? null,
                 ];
             } else {
                 $failed[] = [
