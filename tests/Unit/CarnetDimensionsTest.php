@@ -71,6 +71,6 @@ class CarnetDimensionsTest extends TestCase
         $carnetService->generarPdfParaPastor($pastor, $pdf);
         $rawPdf = $pdf->Output('S');
 
-        $this->assertStringContainsString('VENCE - DICIEMBRE DEL 2028', $rawPdf);
+        $this->assertStringContainsString('VENCE 12/28', $rawPdf);
     }
 }

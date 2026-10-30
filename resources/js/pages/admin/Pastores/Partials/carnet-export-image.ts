@@ -213,7 +213,7 @@ export async function exportPastorCarnetPng(
         ctx.font = `bold ${8.5 * scale}px "Aribau Grotesk", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('VENCE - DICIEMBRE DEL 2028', qrCenterX, venceY);
+        ctx.fillText('VENCE 12/28', qrCenterX, venceY);
     }
 
     // Convertir canvas a archivo descargable

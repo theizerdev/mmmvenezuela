@@ -455,7 +455,7 @@ export function PastorCarnetCard({
                                     fontFamily: "'Aribau Grotesk', 'Instrument Sans', Arial, sans-serif",
                                 }}
                             >
-                                VENCE - DICIEMBRE DEL 2028
+                                VENCE 12/28
                             </span>
                         </div>
                     </div>

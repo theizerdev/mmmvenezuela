@@ -410,7 +410,7 @@ class CarnetService
             $venceWidth = 24.0;
             $venceX = $qrX + ($qrSize / 2) - ($venceWidth / 2);
             $pdf->SetXY($venceX, $y + 47.9);
-            $pdf->Cell($venceWidth, 2.0, $this->utf8ToPdf('VENCE - DICIEMBRE DEL 2028'), 0, 0, 'C');
+            $pdf->Cell($venceWidth, 2.0, $this->utf8ToPdf('VENCE 12/28'), 0, 0, 'C');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(255, 255, 255);
@@ -438,7 +438,7 @@ class CarnetService
             $venceWidth = 24.0;
             $venceX = ($x + 63.75) + (11.0 / 2) - ($venceWidth / 2);
             $pdf->SetXY($venceX, $y + 47.9);
-            $pdf->Cell($venceWidth, 2.0, $this->utf8ToPdf('VENCE - DICIEMBRE DEL 2028'), 0, 0, 'C');
+            $pdf->Cell($venceWidth, 2.0, $this->utf8ToPdf('VENCE 12/28'), 0, 0, 'C');
         }
     }
 

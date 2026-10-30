@@ -400,7 +400,7 @@
                     <img src="{{ $qrBase64 }}" class="qr-img" style="width: 12mm; height: 12mm; border: 0.5pt solid #cbd5e1; padding: 0.5mm; background: #ffffff; display: block; margin: 0 auto;" alt="QR Verificación">
                 @endif
                 <div style="font-size: 3.5pt; font-weight: bold; color: #000000; text-align: center; margin-top: 0.6mm; text-transform: uppercase; white-space: nowrap;">
-                    VENCE - DICIEMBRE DEL 2028
+                    VENCE 12/28
                 </div>
             </div>
         </div>
