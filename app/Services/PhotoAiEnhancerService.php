@@ -104,7 +104,7 @@ class PhotoAiEnhancerService
      */
     public function getPythonBinary(): string
     {
-        $configured = config('services.python.path') ?: env('PYTHON_BINARY');
+        $configured = config('services.photo_studio.python_path') ?: config('services.python.path') ?: env('PYTHON_BINARY');
         if ($configured && file_exists($configured)) {
             return $configured;
         }
