@@ -395,10 +395,13 @@
                 {{ $pastor->nombres }} {{ $pastor->apellidos }} ({{ preg_replace('/[^0-9]/', '', $pastor->documento) ?: $pastor->codigo }})
             </div>
 
-            <div class="qr-box" style="float: right; width: 14mm; text-align: right;">
+            <div class="qr-box" style="float: right; width: 22mm; text-align: center;">
                 @if($qrBase64)
-                    <img src="{{ $qrBase64 }}" class="qr-img" style="width: 14mm; height: 14mm; border: 0.5pt solid #cbd5e1; padding: 0.5mm; background: #ffffff;" alt="QR Verificación">
+                    <img src="{{ $qrBase64 }}" class="qr-img" style="width: 12mm; height: 12mm; border: 0.5pt solid #cbd5e1; padding: 0.5mm; background: #ffffff; display: block; margin: 0 auto;" alt="QR Verificación">
                 @endif
+                <div style="font-size: 3.5pt; font-weight: bold; color: #000000; text-align: center; margin-top: 0.6mm; text-transform: uppercase; white-space: nowrap;">
+                    VENCE - DICIEMBRE DEL 2028
+                </div>
             </div>
         </div>
     </div>

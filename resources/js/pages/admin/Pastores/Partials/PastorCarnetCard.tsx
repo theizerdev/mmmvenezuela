@@ -425,23 +425,38 @@ export function PastorCarnetCard({
                             </span>
                         </div>
 
-                        {/* Sección Inferior Derecha: Código QR Oficial de Validación (sin marco ni texto decorativo, idéntico a ejemplo.png) */}
+                        {/* Sección Inferior Derecha: Código QR Oficial de Validación + Vencimiento */}
                         <div
-                            className="absolute flex items-center justify-center shrink-0"
+                            className="absolute flex flex-col items-center justify-center shrink-0 pointer-events-none"
                             style={{
-                                left: '525px',
+                                left: '495px',
                                 top: '289px',
-                                width: '94px',
-                                height: '94px',
+                                width: '154px',
                             }}
-                            title={__('Escanear para verificar credencial')}
                         >
-                            <img
-                                src={qrImageUrl}
-                                alt={__('Verification QR Code')}
-                                className="w-full h-full object-contain"
-                                crossOrigin="anonymous"
-                            />
+                            <div
+                                className="flex items-center justify-center shrink-0 pointer-events-auto"
+                                style={{
+                                    width: '94px',
+                                    height: '94px',
+                                }}
+                                title={__('Escanear para verificar credencial')}
+                            >
+                                <img
+                                    src={qrImageUrl}
+                                    alt={__('Verification QR Code')}
+                                    className="w-full h-full object-contain"
+                                    crossOrigin="anonymous"
+                                />
+                            </div>
+                            <span
+                                className="text-[8.5px] font-bold uppercase tracking-wider text-black block mt-1.5 leading-none select-text whitespace-nowrap text-center"
+                                style={{
+                                    fontFamily: "'Aribau Grotesk', 'Instrument Sans', Arial, sans-serif",
+                                }}
+                            >
+                                VENCE - DICIEMBRE DEL 2028
+                            </span>
                         </div>
                     </div>
                 </div>

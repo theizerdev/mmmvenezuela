@@ -403,6 +403,14 @@ class CarnetService
             $qrSize = 11.0;
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
             $this->dibujarCodigoQR($pdf, $qrX, $qrY, $qrSize, $qrUrl);
+
+            // 5. Fecha de Vencimiento debajo del QR
+            $pdf->SetFont('Helvetica', 'B', 4.1);
+            $pdf->SetTextColor(0, 0, 0);
+            $venceWidth = 24.0;
+            $venceX = $qrX + ($qrSize / 2) - ($venceWidth / 2);
+            $pdf->SetXY($venceX, $y + 47.9);
+            $pdf->Cell($venceWidth, 2.0, $this->utf8ToPdf('VENCE - DICIEMBRE DEL 2028'), 0, 0, 'C');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(255, 255, 255);
@@ -423,6 +431,14 @@ class CarnetService
 
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
             $this->dibujarCodigoQR($pdf, $x + 63.75, $y + 36.13, 11.0, $qrUrl);
+
+            // Fecha de Vencimiento debajo del QR
+            $pdf->SetFont('Helvetica', 'B', 4.1);
+            $pdf->SetTextColor(0, 0, 0);
+            $venceWidth = 24.0;
+            $venceX = ($x + 63.75) + (11.0 / 2) - ($venceWidth / 2);
+            $pdf->SetXY($venceX, $y + 47.9);
+            $pdf->Cell($venceWidth, 2.0, $this->utf8ToPdf('VENCE - DICIEMBRE DEL 2028'), 0, 0, 'C');
         }
     }
 

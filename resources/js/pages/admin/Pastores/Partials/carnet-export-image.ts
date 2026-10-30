@@ -205,6 +205,15 @@ export async function exportPastorCarnetPng(
         } catch {
             // Fallback si QR no carga
         }
+
+        // Texto de vencimiento debajo del código QR
+        const qrCenterX = qrX + qrSize / 2;
+        const venceY = qrY + qrSize + (8 * scale);
+        ctx.fillStyle = '#000000';
+        ctx.font = `bold ${8.5 * scale}px "Aribau Grotesk", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('VENCE - DICIEMBRE DEL 2028', qrCenterX, venceY);
     }
 
     // Convertir canvas a archivo descargable
