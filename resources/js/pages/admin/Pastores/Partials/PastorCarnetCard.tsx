@@ -246,12 +246,12 @@ export function PastorCarnetCard({
 
     const rawFullName = getPastorCarnetFullName(pastor, true);
     const nameFontSize = rawFullName.length > 28
-        ? 'text-[17.5px]'
-        : (rawFullName.length > 22 ? 'text-[19.5px]' : 'text-[22px]');
+        ? 'text-[16.5px]'
+        : (rawFullName.length > 22 ? 'text-[18.5px]' : 'text-[21px]');
 
     const lugarFontSize = cleanLugar.length > 28
-        ? 'text-[11px]'
-        : (cleanLugar.length > 20 ? 'text-[12.5px]' : 'text-[14px]');
+        ? 'text-[10.5px]'
+        : (cleanLugar.length > 20 ? 'text-[12px]' : 'text-[13.5px]');
 
     const isFlipped = activeSide === 'back';
 
@@ -259,15 +259,15 @@ export function PastorCarnetCard({
         <div
             className={cn('relative select-none flex items-center justify-center shrink-0 overflow-visible', className)}
             style={{
-                width: `${Math.round(720 * scale)}px`,
-                height: `${Math.round(440 * scale)}px`,
+                width: `${Math.round(680 * scale)}px`,
+                height: `${Math.round(432 * scale)}px`,
             }}
         >
-            {/* Contenedor anclado al centro absoluto con perspectiva 3D (Formato Oficial 9cm x 5.5cm) */}
+            {/* Contenedor anclado al centro absoluto con perspectiva 3D (Formato Oficial 8.5cm x 5.4cm) */}
             <div
                 style={{
-                    width: '720px',
-                    height: '440px',
+                    width: '680px',
+                    height: '432px',
                     position: 'absolute',
                     left: '50%',
                     top: '50%',
@@ -281,7 +281,7 @@ export function PastorCarnetCard({
                 <div
                     onClick={interactive ? onFlip : undefined}
                     className={cn(
-                        'relative w-[720px] h-[440px] rounded-2xl shadow-2xl transition-transform duration-700 ease-out',
+                        'relative w-[680px] h-[432px] rounded-2xl shadow-2xl transition-transform duration-700 ease-out',
                         interactive && 'cursor-pointer hover:shadow-indigo-500/25'
                     )}
                     style={{
@@ -301,19 +301,19 @@ export function PastorCarnetCard({
                             backgroundRepeat: 'no-repeat',
                         }}
                     >
-                        {/* Foto Rectangular Tipo Carnet Calibrada (Izquierda - Encaja exactamente en el marco oficial: 198x286 px en vista 720x440) */}
+                        {/* Foto Rectangular Tipo Carnet Calibrada (Izquierda - Encaja exactamente en el marco oficial: 187x281 px en vista 680x432) */}
                         <div
                             onClick={interactive && onEditPhoto ? (e) => { e.stopPropagation(); onEditPhoto(); } : undefined}
                             className={cn(
-                                'absolute left-[52px] top-[118px] w-[198px] h-[286px] rounded-[16px] overflow-hidden bg-transparent flex items-center justify-center group/photo',
+                                'absolute left-[49px] top-[116px] w-[187px] h-[281px] rounded-[15px] overflow-hidden bg-transparent flex items-center justify-center group/photo',
                                 interactive && onEditPhoto && 'cursor-pointer'
                             )}
                             style={{
-                                left: '52px',
-                                top: '118px',
-                                width: '198px',
-                                height: '286px',
-                                borderRadius: '16px',
+                                left: '49px',
+                                top: '116px',
+                                width: '187px',
+                                height: '281px',
+                                borderRadius: '15px',
                             }}
                             title={interactive && onEditPhoto ? __('Haz clic para ajustar la foto al marco oficial') : undefined}
                         >
@@ -345,7 +345,7 @@ export function PastorCarnetCard({
                         </div>
 
                         {/* Bloque 1: Identificación Titular (Debajo del banner PASTOR) */}
-                        <div className="absolute left-[255px] w-[430px] top-[206px] h-[34px] flex items-center justify-center text-center px-3 pointer-events-none">
+                        <div className="absolute left-[241px] w-[406px] top-[202px] h-[33px] flex items-center justify-center text-center px-3 pointer-events-none">
                             <h2
                                 className={cn('font-cocogoose font-bold uppercase tracking-tight text-black whitespace-nowrap select-text leading-none', nameFontSize)}
                                 style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
@@ -355,9 +355,9 @@ export function PastorCarnetCard({
                         </div>
 
                         {/* Bloque 2: Cédula de Identidad (Aribau Grotesk Regular) */}
-                        <div className="absolute left-[255px] w-[430px] top-[243px] h-[20px] flex items-center justify-center text-center px-3 pointer-events-none">
+                        <div className="absolute left-[241px] w-[406px] top-[239px] h-[20px] flex items-center justify-center text-center px-3 pointer-events-none">
                             <p
-                                className="font-aribau text-[13px] font-normal text-slate-900 tracking-wider whitespace-nowrap select-text leading-none uppercase"
+                                className="font-aribau text-[12.5px] font-normal text-slate-900 tracking-wider whitespace-nowrap select-text leading-none uppercase"
                                 style={{ fontFamily: "'Aribau Grotesk', 'Instrument Sans', sans-serif" }}
                             >
                                 C.I. {formatDocumento(pastor.documento).toUpperCase()}
@@ -365,9 +365,9 @@ export function PastorCarnetCard({
                         </div>
 
                         {/* Bloque 3: Grado Ministerial - Valor (Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta GRADO MINISTERIAL) */}
-                        <div className="absolute left-[255px] w-[430px] top-[270px] h-[26px] flex items-center justify-center text-center px-3 pointer-events-none">
+                        <div className="absolute left-[241px] w-[406px] top-[265px] h-[26px] flex items-center justify-center text-center px-3 pointer-events-none">
                             <span
-                                className="font-cocogoose text-[15px] font-bold uppercase tracking-wide text-black text-center whitespace-nowrap select-text leading-none"
+                                className="font-cocogoose text-[14.5px] font-bold uppercase tracking-wide text-black text-center whitespace-nowrap select-text leading-none"
                                 style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
                             >
                                 {(pastor.nivel_ministerial || 'MINISTRO ORDENADO').toUpperCase()}
@@ -375,7 +375,7 @@ export function PastorCarnetCard({
                         </div>
 
                         {/* Bloque 4: Lugar de Trabajo - Valor (Titular Cocogoose, ubicado DIRECTAMENTE ARRIBA de la etiqueta LUGAR DE TRABAJO) */}
-                        <div className="absolute left-[255px] w-[430px] top-[334px] h-[26px] flex items-center justify-center text-center px-3 pointer-events-none">
+                        <div className="absolute left-[241px] w-[406px] top-[328px] h-[26px] flex items-center justify-center text-center px-3 pointer-events-none">
                             <span
                                 className={cn('font-cocogoose font-bold uppercase tracking-wide text-black text-center whitespace-nowrap select-text leading-none', lugarFontSize)}
                                 style={{ fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif", fontWeight: 700 }}
@@ -401,13 +401,13 @@ export function PastorCarnetCard({
                         <div
                             className="absolute text-left pointer-events-none select-text"
                             style={{
-                                left: '58px',
-                                top: '344px',
-                                width: '470px',
+                                left: '55px',
+                                top: '338px',
+                                width: '444px',
                             }}
                         >
                             <span
-                                className="text-[17.5px] italic font-bold tracking-tight text-black block leading-[23px] truncate uppercase"
+                                className="text-[16.5px] italic font-bold tracking-tight text-black block leading-[22px] truncate uppercase"
                                 style={{
                                     fontFamily: "'Instrument Sans', 'Aribau Grotesk', Arial, sans-serif",
                                     fontStyle: 'italic',
@@ -416,7 +416,7 @@ export function PastorCarnetCard({
                                 {getPastorCarnetFullName(pastor, true).toUpperCase()}
                             </span>
                             <span
-                                className="text-[11.5px] font-bold uppercase text-black tracking-wider block mt-1 leading-none truncate"
+                                className="text-[11px] font-bold uppercase text-black tracking-wider block mt-1 leading-none truncate"
                                 style={{
                                     fontFamily: "'Aribau Grotesk', 'Instrument Sans', Arial, sans-serif",
                                 }}
@@ -429,10 +429,10 @@ export function PastorCarnetCard({
                         <div
                             className="absolute flex items-center justify-center shrink-0"
                             style={{
-                                left: '556px',
-                                top: '294px',
-                                width: '96px',
-                                height: '96px',
+                                left: '525px',
+                                top: '289px',
+                                width: '94px',
+                                height: '94px',
                             }}
                             title={__('Escanear para verificar credencial')}
                         >

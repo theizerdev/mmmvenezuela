@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Pastor;
 use App\Services\CarnetFpdf;
 use App\Services\CarnetService;
+use App\Services\PhotoAiEnhancerService;
 use Codedge\Fpdf\Fpdf\Fpdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -449,6 +450,109 @@ class PastorCarnetController extends Controller
             'message' => 'Fotografía del pastor actualizada con éxito',
             'foto' => $pastor->foto,
             'foto_url' => '/' . 'pastores/' . $filename . '?v=' . time(),
+        ]);
+    }
+
+    /**
+     * Mejora la fotografía del pastor utilizando Inteligencia Artificial (CodeFormer de estudio fotográfico).
+     */
+    public function iaEnhanceFoto(Request $request, int $id, PhotoAiEnhancerService $aiService)
+    {
+        $this->autorizarAccesoCarnets();
+        @set_time_limit(180);
+
+        $validated = $request->validate([
+            'foto' => ['sometimes', 'required', 'string', 'max:11200000'],
+        ]);
+        $pastor = Pastor::findOrFail($id);
+
+        if (array_key_exists('foto', $validated)) {
+            $result = $aiService->enhanceBase64Image($validated['foto']);
+            if ($result['success'] && !empty($result['data_url'])) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Fotografía mejorada con IA.',
+                    'data_url' => $result['data_url'],
+                    'duration_seconds' => $result['duration_seconds'] ?? null,
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'] ?? 'Error al procesar la fotografía con IA.',
+            ], 422);
+        }
+
+        $result = $aiService->enhancePastor($pastor);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'] ?? 'Error al procesar la fotografía con IA.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+            'foto' => $result['foto'],
+            'foto_url' => $result['foto_url'],
+            'duration_seconds' => $result['duration_seconds'] ?? null,
+        ]);
+    }
+
+    /**
+     * Mejora masiva de fotografías con IA para los pastores seleccionados.
+     */
+    public function bulkIaEnhance(Request $request, PhotoAiEnhancerService $aiService)
+    {
+        $this->autorizarAccesoCarnets();
+        @set_time_limit(600); // 10 minutos para lotes
+
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:pastores,id',
+        ]);
+
+        $pastores = Pastor::whereIn('id', $validated['ids'])
+            ->whereNotNull('foto')
+            ->where('foto', '!=', '')
+            ->get();
+
+        if ($pastores->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Ninguno de los pastores seleccionados tiene una fotografía asignada.',
+            ], 422);
+        }
+
+        $succeeded = [];
+        $failed = [];
+
+        foreach ($pastores as $pastor) {
+            $res = $aiService->enhancePastor($pastor);
+            if ($res['success']) {
+                $succeeded[] = [
+                    'id' => $pastor->id,
+                    'nombre' => $pastor->nombres . ' ' . $pastor->apellidos,
+                    'foto_url' => $res['foto_url'],
+                ];
+            } else {
+                $failed[] = [
+                    'id' => $pastor->id,
+                    'nombre' => $pastor->nombres . ' ' . $pastor->apellidos,
+                    'error' => $res['error'] ?? 'Error desconocido',
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'total' => $pastores->count(),
+            'succeeded_count' => count($succeeded),
+            'failed_count' => count($failed),
+            'succeeded' => $succeeded,
+            'failed' => $failed,
         ]);
     }
 

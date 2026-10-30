@@ -9,10 +9,10 @@ use BaconQrCode\Encoder\Encoder;
 class CarnetService
 {
     /**
-     * Ancho y Alto de la tarjeta oficial de pastorado en milímetros (9 cm x 5.5 cm)
+     * Ancho y Alto de la tarjeta oficial de pastorado en milímetros (8.5 cm x 5.4 cm)
      */
-    public const ANCHO_MM = 90.0;
-    public const ALTO_MM = 55.0;
+    public const ANCHO_MM = 85.0;
+    public const ALTO_MM = 54.0;
 
     /**
      * Obtiene la ruta física en disco de la plantilla frontal (personalizada o por defecto)
@@ -162,13 +162,13 @@ class CarnetService
         $fpdf->SetMargins(0, 0, 0);
 
         // Geometría calibrada simétrica para Hoja Carta (215.9 x 279.4 mm)
-        // 2 columnas x 4 filas = 8 tarjetas oficiales (90 x 55 mm) por pliego
-        $posX = 15.0;
-        $posY = 21.0;
-        $ancho = self::ANCHO_MM; // 90.0 mm
-        $alto = self::ALTO_MM;   // 55.0 mm
-        $gapX = 5.9; // Margen lateral simétrico exacto de 15.0 mm: 15.0 + 90.0 + 5.9 + 90.0 + 15.0 = 215.9 mm
-        $gapY = 5.8; // Margen vertical simétrico exacto de 21.0 mm: 21.0 + 4*55.0 + 3*5.8 + 21.0 = 279.4 mm
+        // 2 columnas x 4 filas = 8 tarjetas oficiales (85 x 54 mm) por pliego
+        $posX = 17.0;
+        $posY = 20.0;
+        $ancho = self::ANCHO_MM; // 85.0 mm
+        $alto = self::ALTO_MM;   // 54.0 mm
+        $gapX = 11.9; // Margen lateral simétrico exacto de 17.0 mm: 17.0 + 85.0 + 11.9 + 85.0 + 17.0 = 215.9 mm
+        $gapY = 7.8;  // Margen vertical simétrico exacto de 20.0 mm: 20.0 + 4*54.0 + 3*7.8 + 20.0 = 279.4 mm
 
         $grupos = array_chunk($coleccion, 8);
 
@@ -235,7 +235,7 @@ class CarnetService
     }
 
     /**
-     * Dibujar Cara Frontal a página completa (85.6 x 53.9 mm)
+     * Dibujar Cara Frontal a página completa (85.0 x 54.0 mm)
      */
     public function dibujarCaraFrontal(CarnetFpdf $pdf, Pastor $pastor): void
     {
@@ -244,7 +244,7 @@ class CarnetService
     }
 
     /**
-     * Dibujar Cara Trasera a página completa (85.6 x 53.9 mm)
+     * Dibujar Cara Trasera a página completa (85.0 x 54.0 mm)
      */
     public function dibujarCaraTrasera(CarnetFpdf $pdf, Pastor $pastor): void
     {
@@ -260,15 +260,15 @@ class CarnetService
         $frenteImg = self::getRutaPlantillaFrente();
 
         if (file_exists($frenteImg)) {
-            // 1. Fondo Oficial en Alta Resolución (300 DPI - 90.0mm x 55.0mm)
+            // 1. Fondo Oficial en Alta Resolución (300 DPI - 85.0mm x 54.0mm)
             $pdf->Image($frenteImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
-            // 2. Foto del Pastor Tipo Carnet Calibrada (Alineada exactamente al marco oficial: 6.52mm x 14.72mm, 24.72mm x 35.71mm)
+            // 2. Foto del Pastor Tipo Carnet Calibrada (Alineada exactamente al marco oficial: 6.16mm x 14.45mm, 23.35mm x 35.06mm)
             $fotoPath = $this->prepararFotoParaCarnet($pastor) ?: $this->obtenerRutaFotoPastor($pastor);
-            $fotoX = $x + 6.52;
-            $fotoY = $y + 14.72;
-            $fotoW = 24.72;
-            $fotoH = 35.71;
+            $fotoX = $x + 6.16;
+            $fotoY = $y + 14.45;
+            $fotoW = 23.35;
+            $fotoH = 35.06;
 
             // Sin borde exterior artificial (el marco plateado de la plantilla ya lo contiene)
             if ($fotoPath && file_exists($fotoPath)) {
@@ -276,15 +276,15 @@ class CarnetService
             } else {
                 // Dejar ver el fondo plateado nativo de la plantilla con iniciales sutiles
                 $pdf->SetTextColor(148, 163, 184); // Slate 400
-                $pdf->SetFont('Helvetica', 'B', 16);
+                $pdf->SetFont('Helvetica', 'B', 15);
                 $pdf->SetXY($fotoX, $fotoY + ($fotoH - 6) / 2);
                 $iniciales = mb_strtoupper(mb_substr($pastor->nombres ?? '', 0, 1) . mb_substr($pastor->apellidos ?? '', 0, 1), 'UTF-8') ?: 'P';
                 $pdf->Cell($fotoW, 6, $iniciales, 0, 0, 'C');
             }
 
             // Contenedor Derecho Calibrado con las Zonas de la Identidad Oficial
-            $contX = $x + 31.9;
-            $contW = 53.8;
+            $contX = $x + 30.13;
+            $contW = 50.81;
 
             // 3. Bloque 1: Identificación Titular (Debajo de la franja PASTOR - Cocogoose Bold)
             $nombreCompleto = $this->obtenerNombreCarnet($pastor, true);
@@ -292,31 +292,31 @@ class CarnetService
             $pdf->SetTextColor(0, 0, 0); // Pure Black #000000
 
             $nombreLen = mb_strlen($nombreCompleto, 'UTF-8');
-            $fontSize = ($nombreLen > 28) ? 8.0 : (($nombreLen > 22) ? 9.0 : 10.2);
+            $fontSize = ($nombreLen > 28) ? 7.5 : (($nombreLen > 22) ? 8.5 : 9.6);
             $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $fontSize);
             $textWidth = $pdf->GetStringWidth($nombreIso);
 
             if ($textWidth > $contW - 2) {
-                $fontSize = max(6.4, round($fontSize * ($contW - 2) / $textWidth, 2));
+                $fontSize = max(6.0, round($fontSize * ($contW - 2) / $textWidth, 2));
                 $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $fontSize);
             }
 
-            $pdf->SetXY($contX, $y + 25.8);
-            $pdf->Cell($contW, 3.8, $nombreIso, 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 25.33);
+            $pdf->Cell($contW, 3.6, $nombreIso, 0, 1, 'C');
 
             // 4. Documento de Identidad (Aribau Grotesk Regular / Helvetica Regular)
-            $pdf->SetFont('Helvetica', '', 5.8);
+            $pdf->SetFont('Helvetica', '', 5.5);
             $pdf->SetTextColor(15, 23, 42); // Slate 900
             $docFormatted = 'C.I. ' . $this->formatearDocumento($pastor->documento);
-            $pdf->SetXY($contX, $y + 30.4);
-            $pdf->Cell($contW, 2.2, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 29.85);
+            $pdf->Cell($contW, 2.1, $this->utf8ToPdf($docFormatted), 0, 1, 'C');
 
             // 5. Bloque 2: Grado Ministerial (Titular Cocogoose Bold)
-            $this->setFontWithFallback($pdf, 'Cocogoose', 'B', 6.8);
+            $this->setFontWithFallback($pdf, 'Cocogoose', 'B', 6.4);
             $pdf->SetTextColor(0, 0, 0); // Pure Black
             $nivel = mb_strtoupper($pastor->nivel_ministerial ?: 'MINISTRO ORDENADO', 'UTF-8');
-            $pdf->SetXY($contX, $y + 33.8);
-            $pdf->Cell($contW, 2.8, $this->utf8ToPdf($nivel), 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 33.19);
+            $pdf->Cell($contW, 2.7, $this->utf8ToPdf($nivel), 0, 1, 'C');
 
             // 6. Bloque 3: Lugar de Trabajo (Titular Cocogoose Bold)
             $lugar = $this->obtenerLugarTrabajo($pastor);
@@ -328,17 +328,17 @@ class CarnetService
             $lugarLen = mb_strlen($lugarUpper, 'UTF-8');
 
             $pdf->SetTextColor(0, 0, 0); // Pure Black
-            $lugarFontSize = ($lugarLen > 28) ? 5.0 : (($lugarLen > 20) ? 5.6 : 6.4);
+            $lugarFontSize = ($lugarLen > 28) ? 4.7 : (($lugarLen > 20) ? 5.3 : 6.0);
             $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $lugarFontSize);
             $textWidth = $pdf->GetStringWidth($lugarIso);
 
             if ($textWidth > $contW - 2) {
-                $lugarFontSize = max(4.0, round($lugarFontSize * ($contW - 2) / $textWidth, 2));
+                $lugarFontSize = max(3.8, round($lugarFontSize * ($contW - 2) / $textWidth, 2));
                 $this->setFontWithFallback($pdf, 'Cocogoose', 'B', $lugarFontSize);
             }
 
-            $pdf->SetXY($contX, $y + 41.8);
-            $pdf->Cell($contW, 2.8, $lugarIso, 0, 1, 'C');
+            $pdf->SetXY($contX, $y + 41.04);
+            $pdf->Cell($contW, 2.7, $lugarIso, 0, 1, 'C');
         } else {
             // Fallback en caso de no encontrarse la imagen en disco
             $pdf->SetFillColor(15, 53, 99);
@@ -347,26 +347,26 @@ class CarnetService
             $pdf->SetFillColor(222, 215, 197);
             $pdf->Polygon([
                 $x + 0, $y + self::ALTO_MM,
-                $x + 18, $y + self::ALTO_MM,
-                $x + 46, $y + 0,
-                $x + 32, $y + 0,
+                $x + 17, $y + self::ALTO_MM,
+                $x + 43.4, $y + 0,
+                $x + 30.2, $y + 0,
             ], 'F');
 
             $fotoPath = $this->obtenerRutaFotoPastor($pastor);
-            $fotoX = $x + 5.5;
-            $fotoY = $y + 9;
-            $fotoW = 28;
-            $fotoH = 34;
+            $fotoX = $x + 5.2;
+            $fotoY = $y + 8.8;
+            $fotoW = 26.4;
+            $fotoH = 33.4;
 
             if ($fotoPath && file_exists($fotoPath)) {
                 $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
             }
 
             $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $pdf->SetFont('Helvetica', 'B', 8.0);
             $nombreCompleto = mb_strtoupper($pastor->nombres . ' ' . $pastor->apellidos, 'UTF-8');
-            $pdf->SetXY($x + 40, $y + 15);
-            $pdf->MultiCell(44, 3.8, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'L');
+            $pdf->SetXY($x + 38, $y + 14.5);
+            $pdf->MultiCell(42, 3.6, mb_convert_encoding($nombreCompleto, 'ISO-8859-1', 'UTF-8'), 0, 'L');
         }
     }
 
@@ -378,29 +378,29 @@ class CarnetService
         $atrasImg = self::getRutaPlantillaAtras();
 
         if (file_exists($atrasImg)) {
-            // 1. Fondo Oficial Trasero (300 DPI - 90.0mm x 55.0mm)
+            // 1. Fondo Oficial Trasero (300 DPI - 85.0mm x 54.0mm)
             $pdf->Image($atrasImg, $x, $y, self::ANCHO_MM, self::ALTO_MM);
 
             // 2. Nombre Titular en Mayúsculas (zona libre inferior izquierda)
             $titular = $this->obtenerNombreCarnet($pastor, true);
             $titularLen = mb_strlen($titular, 'UTF-8');
-            $titularFontSize = ($titularLen > 28) ? 7.2 : (($titularLen > 22) ? 7.8 : 8.4);
+            $titularFontSize = ($titularLen > 28) ? 6.8 : (($titularLen > 22) ? 7.4 : 8.0);
             $pdf->SetFont('Helvetica', 'I', $titularFontSize);
             $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetXY($x + 9.0, $y + 42.4);
-            $pdf->Cell(56.0, 3.4, $this->utf8ToPdf($titular), 0, 1, 'L');
+            $pdf->SetXY($x + 8.50, $y + 41.63);
+            $pdf->Cell(52.89, 3.3, $this->utf8ToPdf($titular), 0, 1, 'L');
 
             // 3. Ubicación: Lugar - Zona - Distrito (Mayúsculas)
-            $pdf->SetFont('Helvetica', 'B', 5.0);
+            $pdf->SetFont('Helvetica', 'B', 4.8);
             $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetXY($x + 9.0, $y + 45.4);
+            $pdf->SetXY($x + 8.50, $y + 44.57);
             $lugarReverso = mb_strtoupper($this->obtenerLugarReverso($pastor), 'UTF-8');
-            $pdf->Cell(56.0, 2.4, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
+            $pdf->Cell(52.89, 2.35, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
 
             // 4. Código QR Oficial de Validación (Esquina inferior derecha)
-            $qrX = $x + 67.5;
-            $qrY = $y + 36.8;
-            $qrSize = 11.5;
+            $qrX = $x + 63.75;
+            $qrY = $y + 36.13;
+            $qrSize = 11.0;
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
             $this->dibujarCodigoQR($pdf, $qrX, $qrY, $qrSize, $qrUrl);
         } else {
@@ -409,20 +409,20 @@ class CarnetService
             $pdf->Rect($x, $y, self::ANCHO_MM, self::ALTO_MM, 'F');
             $titular = $this->obtenerNombreCarnet($pastor, true);
             $titularLen = mb_strlen($titular, 'UTF-8');
-            $titularFontSize = ($titularLen > 28) ? 7.2 : (($titularLen > 22) ? 7.8 : 8.4);
+            $titularFontSize = ($titularLen > 28) ? 6.8 : (($titularLen > 22) ? 7.4 : 8.0);
             $pdf->SetFont('Helvetica', 'I', $titularFontSize);
             $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetXY($x + 9.0, $y + 42.4);
-            $pdf->Cell(56.0, 3.4, $this->utf8ToPdf($titular), 0, 1, 'L');
+            $pdf->SetXY($x + 8.50, $y + 41.63);
+            $pdf->Cell(52.89, 3.3, $this->utf8ToPdf($titular), 0, 1, 'L');
 
-            $pdf->SetFont('Helvetica', 'B', 5.0);
+            $pdf->SetFont('Helvetica', 'B', 4.8);
             $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetXY($x + 9.0, $y + 45.4);
+            $pdf->SetXY($x + 8.50, $y + 44.57);
             $lugarReverso = mb_strtoupper($this->obtenerLugarReverso($pastor), 'UTF-8');
-            $pdf->Cell(56.0, 2.4, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
+            $pdf->Cell(52.89, 2.35, $this->utf8ToPdf($lugarReverso), 0, 1, 'L');
 
             $qrUrl = url('/validar-credencial/' . ($pastor->codigo ?: $pastor->id));
-            $this->dibujarCodigoQR($pdf, $x + 67.5, $y + 36.8, 11.5, $qrUrl);
+            $this->dibujarCodigoQR($pdf, $x + 63.75, $y + 36.13, 11.0, $qrUrl);
         }
     }
 
@@ -599,6 +599,10 @@ class CarnetService
 
             // Si la foto ya fue ajustada o guardada a proporción oficial PNG con transparencia, usarla directamente
             $proporcionesAceptadas = [
+                [374, 562],
+                [187, 281],
+                [276, 414],
+                [552, 828],
                 [396, 572],
                 [198, 286],
                 [584, 844],
@@ -613,9 +617,9 @@ class CarnetService
                 }
             }
 
-            // Proporción oficial: 198 de ancho x 286 de alto (396 x 572 en alta resolución 2x para 300 DPI)
-            $targetW = 396;
-            $targetH = 572;
+            // Proporción oficial para 8.5 x 5.4 cm: 187 de ancho x 281 de alto (374 x 562 en alta resolución 2x para 300 DPI)
+            $targetW = 374;
+            $targetH = 562;
             $targetRatio = $targetW / $targetH;
             $origRatio = $origW / $origH;
 
@@ -649,8 +653,8 @@ class CarnetService
                 $targetW, $targetH, $cropW, $cropH
             );
 
-            // Aplicar máscara de esquinas redondeadas oficial (radio 32px en lienzo 396x572)
-            $radius = 32;
+            // Aplicar máscara de esquinas redondeadas oficial (radio 30px en lienzo 374x562)
+            $radius = 30;
             $final = imagecreatetruecolor($targetW, $targetH);
             imagealphablending($final, false);
             imagesavealpha($final, true);

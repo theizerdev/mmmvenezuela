@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::guardarPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:252
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:253
  * @route '/admin/pastores/carnets/guardar-plantilla'
  */
 export const guardarPlantilla = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ guardarPlantilla.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::guardarPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:252
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:253
  * @route '/admin/pastores/carnets/guardar-plantilla'
  */
 guardarPlantilla.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ guardarPlantilla.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::guardarPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:252
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:253
  * @route '/admin/pastores/carnets/guardar-plantilla'
  */
 guardarPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ guardarPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::guardarPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:252
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:253
  * @route '/admin/pastores/carnets/guardar-plantilla'
  */
     const guardarPlantillaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ guardarPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::guardarPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:252
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:253
  * @route '/admin/pastores/carnets/guardar-plantilla'
  */
         guardarPlantillaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -56,7 +56,7 @@ guardarPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
     guardarPlantilla.form = guardarPlantillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:312
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:313
  * @route '/admin/pastores/carnets/restablecer-plantilla'
  */
 export const restablecerPlantilla = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -71,7 +71,7 @@ restablecerPlantilla.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:312
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:313
  * @route '/admin/pastores/carnets/restablecer-plantilla'
  */
 restablecerPlantilla.url = (options?: RouteQueryOptions) => {
@@ -80,7 +80,7 @@ restablecerPlantilla.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:312
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:313
  * @route '/admin/pastores/carnets/restablecer-plantilla'
  */
 restablecerPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -90,7 +90,7 @@ restablecerPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:312
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:313
  * @route '/admin/pastores/carnets/restablecer-plantilla'
  */
     const restablecerPlantillaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -100,7 +100,7 @@ restablecerPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::restablecerPlantilla
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:312
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:313
  * @route '/admin/pastores/carnets/restablecer-plantilla'
  */
         restablecerPlantillaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -111,7 +111,7 @@ restablecerPlantilla.post = (options?: RouteQueryOptions): RouteDefinition<'post
     restablecerPlantilla.form = restablecerPlantillaForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:349
  * @route '/admin/pastores/carnets/fotos-seleccionadas'
  */
 export const fotosSeleccionadas = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -126,7 +126,7 @@ fotosSeleccionadas.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:349
  * @route '/admin/pastores/carnets/fotos-seleccionadas'
  */
 fotosSeleccionadas.url = (options?: RouteQueryOptions) => {
@@ -135,7 +135,7 @@ fotosSeleccionadas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:349
  * @route '/admin/pastores/carnets/fotos-seleccionadas'
  */
 fotosSeleccionadas.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -145,7 +145,7 @@ fotosSeleccionadas.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:349
  * @route '/admin/pastores/carnets/fotos-seleccionadas'
  */
     const fotosSeleccionadasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -155,7 +155,7 @@ fotosSeleccionadas.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::fotosSeleccionadas
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:348
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:349
  * @route '/admin/pastores/carnets/fotos-seleccionadas'
  */
         fotosSeleccionadasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

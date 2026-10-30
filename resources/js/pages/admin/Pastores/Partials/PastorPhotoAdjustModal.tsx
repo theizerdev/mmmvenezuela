@@ -50,6 +50,7 @@ export function PastorPhotoAdjustModal({
     const [tolerance, setTolerance] = useState<number>(25);
     const [targetColor, setTargetColor] = useState<string>('#ffffff');
     const [isProcessingAi, setIsProcessingAi] = useState<boolean>(false);
+    const [isEnhancingAi, setIsEnhancingAi] = useState<boolean>(false);
     const [aiProcessedImage, setAiProcessedImage] = useState<HTMLCanvasElement | null>(null);
     const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -60,11 +61,12 @@ export function PastorPhotoAdjustModal({
 
     const photoUrl = pastor ? getPastorPhotoUrl((pastor as any).foto_url || pastor.foto) : null;
 
-    // Dimensiones exactas del marco oficial de la tarjeta (90x55 mm): 198 x 286 px (escalada x2 para 300 DPI: 396 x 572)
-    const FRAME_W = 198;
-    const FRAME_H = 286;
-    const CANVAS_W = 396;
-    const CANVAS_H = 572;
+    // Dimensiones exactas del marco oficial de la tarjeta (8.5x5.4 cm): 187 x 281 px (escalada x2 para 300 DPI: 374 x 562)
+    const FRAME_W = 187;
+    const FRAME_H = 281;
+    const CANVAS_W = 374;
+    const CANVAS_H = 562;
+    const MAX_CANVAS_SCALE = 4;
 
     useEffect(() => {
         if (!isOpen || !pastor) return;
@@ -168,6 +170,78 @@ export function PastorPhotoAdjustModal({
         }
     };
 
+    // Mejora la imagen encuadrada sin modificar la fotografía guardada hasta confirmarla.
+    const handleEnhanceWithAi = async () => {
+        const canvas = canvasRef.current;
+        if (!pastor || !imageObj || !canvas) {
+            return;
+        }
+
+        try {
+            setIsEnhancingAi(true);
+            toast.info(__('Mejorando la fotografía con IA...'), {
+                description: __('Aumentando resolución, reduciendo ruido y equilibrando la iluminación.'),
+            });
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            let photoDataUrl: string;
+            try {
+                photoDataUrl = canvas.toDataURL('image/png');
+            } catch (error) {
+                console.error('No se pudo preparar la fotografía para IA:', error);
+                toast.error(__('No se pudo preparar la imagen para mejorarla. Vuelve a cargar la foto e inténtalo de nuevo.'));
+
+                return;
+            }
+
+            const payload = { foto: photoDataUrl };
+
+            const response = await fetch(`/admin/pastores/${pastor.id}/ia-enhance`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                const targetSrc = result.data_url || result.foto_url;
+                if (targetSrc) {
+                    const newImg = new Image();
+                    await new Promise<void>((resolve, reject) => {
+                        newImg.onload = () => resolve();
+                        newImg.onerror = () => reject(new Error(__('No se pudo cargar la fotografía mejorada.')));
+                        newImg.src = targetSrc;
+                    });
+                    setImageObj(newImg);
+                    setAiProcessedImage(null);
+                    setBgMode('none');
+                    setScale(1);
+                    setPanX(0);
+                    setPanY(0);
+                    if (result.foto_url) {
+                        onPhotoUpdated(result.foto_url);
+                    }
+                    toast.success(__('Fotografía mejorada con IA. Revisa el resultado y guárdalo para aplicarlo.'));
+                } else {
+                    toast.error(__('El servicio de IA no devolvió una fotografía mejorada.'));
+                }
+
+            } else {
+                toast.error(result.error || __('No se pudo mejorar la imagen con IA'));
+            }
+        } catch (error) {
+            console.error('Error al mejorar con IA:', error);
+            toast.error(error instanceof Error ? error.message : __('Ocurrió un error al procesar con IA'));
+        } finally {
+            setIsEnhancingAi(false);
+        }
+    };
+
     // Renderizado en canvas en tiempo real
     useEffect(() => {
         if (!isOpen || !canvasRef.current || !imageObj) return;
@@ -176,30 +250,39 @@ export function PastorPhotoAdjustModal({
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return;
 
-        canvas.width = CANVAS_W;
-        canvas.height = CANVAS_H;
+        const canvasScale = Math.min(
+            MAX_CANVAS_SCALE,
+            Math.max(1, Math.floor(Math.min(imageObj.width / CANVAS_W, imageObj.height / CANVAS_H))),
+        );
+        canvas.width = CANVAS_W * canvasScale;
+        canvas.height = CANVAS_H * canvasScale;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
-        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Elegir fuente según el modo: si IA está activa y procesada, usar la silueta recortada
         const sourceToDraw = bgMode === 'ai' && aiProcessedImage ? aiProcessedImage : imageObj;
 
         ctx.save();
-        ctx.translate(CANVAS_W / 2 + panX * 2, CANVAS_H / 2 + panY * 2);
+        ctx.translate(
+            canvas.width / 2 + panX * 2 * canvasScale,
+            canvas.height / 2 + panY * 2 * canvasScale,
+        );
         ctx.scale(scale, scale);
 
         // Ajustar imagen para que cubra la relación del marco oficial (object-cover)
         const imgRatio = sourceToDraw.width / sourceToDraw.height;
-        const targetRatio = CANVAS_W / CANVAS_H;
-        let drawW = CANVAS_W;
-        let drawH = CANVAS_H;
+        const targetRatio = canvas.width / canvas.height;
+        let drawW = canvas.width;
+        let drawH = canvas.height;
 
         if (imgRatio > targetRatio) {
-            drawH = CANVAS_H;
-            drawW = CANVAS_H * imgRatio;
+            drawH = canvas.height;
+            drawW = canvas.height * imgRatio;
         } else {
-            drawW = CANVAS_W;
-            drawH = CANVAS_W / imgRatio;
+            drawW = canvas.width;
+            drawH = canvas.width / imgRatio;
         }
 
         ctx.drawImage(sourceToDraw, -drawW / 2, -drawH / 2, drawW, drawH);
@@ -207,7 +290,7 @@ export function PastorPhotoAdjustModal({
 
         // Si se seleccionó eliminación por color (croma clásico)
         if (bgMode === 'color') {
-            const imgData = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
 
             const hex = targetColor.replace('#', '');
@@ -317,24 +400,48 @@ export function PastorPhotoAdjustModal({
                 </DialogHeader>
 
                 <div className="p-4 sm:p-5 space-y-4">
-                    <div className="flex items-center justify-between gap-2">
-                        <label className="cursor-pointer">
-                            <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                onChange={handleFileChange}
-                                className="hidden"
-                            />
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors shadow-xs">
-                                <Upload className="size-3.5" />
-                                <span>{__('Subir Nueva Foto')}</span>
-                            </div>
-                        </label>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <label className="cursor-pointer">
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors shadow-xs">
+                                    <Upload className="size-3.5" />
+                                    <span>{__('Subir Foto')}</span>
+                                </div>
+                            </label>
+
+                            <Button
+                                type="button"
+                                size="sm"
+                                disabled={isEnhancingAi || isSaving || !imageObj}
+                                onClick={handleEnhanceWithAi}
+                                className="h-8 text-xs font-bold gap-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-xs transition-all hover:scale-105 active:scale-95"
+                                title={__('Mejora la resolución, la nitidez, el ruido y la iluminación de la fotografía')}
+                            >
+                                {isEnhancingAi ? (
+                                    <>
+                                        <Loader2 className="size-3.5 animate-spin text-amber-300" />
+                                        <span>{__('Mejorando con IA...')}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="size-3.5 text-amber-300 fill-amber-300" />
+                                        <span>{__('✨ Mejorar foto con IA')}</span>
+                                    </>
+                                )}
+                            </Button>
+                        </div>
 
                         <Button
                             type="button"
                             variant="ghost"
                             size="sm"
+                            disabled={isEnhancingAi || isSaving}
                             onClick={() => {
                                 setScale(1);
                                 setPanX(0);
@@ -349,10 +456,22 @@ export function PastorPhotoAdjustModal({
                         </Button>
                     </div>
 
-                    {/* Canvas de recorte con la proporción y forma exactas del marco oficial: 198 x 286 px */}
+                    {/* Estilos para animación de escaneo vertical y horizontal */}
+                    <style>{`
+                        @keyframes scanLaserX {
+                            0% { left: 4%; }
+                            100% { left: 96%; }
+                        }
+                        @keyframes scanLaserY {
+                            0% { top: 4%; }
+                            100% { top: 96%; }
+                        }
+                    `}</style>
+
+                    {/* Canvas de recorte con la proporción y forma exactas del marco oficial: 187 x 281 px */}
                     <div className="flex flex-col items-center justify-center p-3 bg-muted/40 rounded-xl border border-dashed">
                         <div
-                            className="relative rounded-[16px] overflow-hidden shadow-xl border-[2.5px] border-indigo-500/70 cursor-grab active:cursor-grabbing"
+                            className="relative rounded-[15px] overflow-hidden shadow-xl border-[2.5px] border-indigo-500/70 cursor-grab active:cursor-grabbing"
                             style={{
                                 width: `${FRAME_W}px`,
                                 height: `${FRAME_H}px`,
@@ -378,6 +497,39 @@ export function PastorPhotoAdjustModal({
                                 onMouseLeave={handleMouseUp}
                                 className="w-full h-full block"
                             />
+
+                            {/* Láser de Escaneo de IA en tiempo real (barras horizontal y vertical cruzadas) */}
+                            {isEnhancingAi && (
+                                <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center z-30 pointer-events-none select-none">
+                                    {/* Haz láser vertical que viaja horizontalmente */}
+                                    <div
+                                        className="absolute inset-y-0 w-1 bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_18px_#22d3ee]"
+                                        style={{
+                                            animation: 'scanLaserX 2.2s ease-in-out infinite alternate',
+                                        }}
+                                    />
+                                    {/* Haz láser horizontal que viaja verticalmente */}
+                                    <div
+                                        className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent shadow-[0_0_18px_#e879f9]"
+                                        style={{
+                                            animation: 'scanLaserY 2.2s ease-in-out infinite alternate',
+                                        }}
+                                    />
+
+                                    <div className="size-12 rounded-full bg-indigo-500/30 border border-indigo-400/60 flex items-center justify-center mb-2 shadow-[0_0_25px_rgba(99,102,241,0.6)]">
+                                        <Sparkles className="size-6 text-amber-300 animate-spin-slow" />
+                                    </div>
+                                    <p className="text-xs font-bold text-white drop-shadow-md">
+                                        {__('Mejorando fotografía con IA...')}
+                                    </p>
+                                    <p className="text-[10px] text-cyan-200 mt-1 max-w-[160px] leading-tight font-medium">
+                                        {__('Aumentando resolución y ajustando luz, ruido y nitidez')}
+                                    </p>
+                                    <span className="mt-2 text-[9px] text-fuchsia-200 bg-fuchsia-950/90 px-2 py-0.5 rounded-full border border-fuchsia-500/50">
+                                        {__('IA local')}
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1 font-medium">

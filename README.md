@@ -51,6 +51,9 @@ Sistema Integral Enterprise para la administración centralizada de **Ministros 
   - **Asociación Matrimonial Bidireccional (`conyuge_id`)**: Vincula automáticamente al pastor y a su cónyuge para evitar registros duplicados.
   - Registro completo de Cédula de Identidad, nombres, apellidos, teléfono, correo, fecha de nacimiento, fecha de ordenación y salud.
   - Filtros avanzados por Zonas, Distritos, Estados, Grado Ministerial y Estado Civil.
+- **Centro de Carnetización (`/admin/pastores/carnets`)**:
+  - Mejora individual o por lote con IA local: super-resolución x4, reducción de ruido, enfoque y balance adaptativo de luz.
+  - El editor permite previsualizar la mejora antes de guardar la foto ajustada; la mejora individual y por lote actualiza la fotografía del pastor.
 - **Planilla Oficial en PDF (FPDF)**:
   - Exportación de la planilla oficial de pastor alineada a 190mm.
   - Generación de Código de Barras / QR.
@@ -143,6 +146,10 @@ php artisan migrate --seed
 npm run dev          # Servidor Vite para React
 php artisan serve    # Servidor de Laravel
 ```
+
+### **Mejora de fotografías con IA**
+
+El motor requiere Python con `opencv-python`, `numpy` y `onnxruntime`, y el modelo `realesrgan_x4_photo.onnx` en `storage/app/ai_models/` (también admite `realesr_general_x4.onnx` como alternativa). Para iniciar el servicio local en Windows se necesitan además `fastapi` y `uvicorn`; `start_ai_service.bat` lo inicia y, si no está activo, Laravel ejecuta el motor por CLI.
 
 ---
 

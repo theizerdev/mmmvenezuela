@@ -144,7 +144,7 @@ export default function PastoresCarnetsPage({
         const updateScale = () => {
             if (!viewerContainerRef.current) return;
             const w = viewerContainerRef.current.clientWidth;
-            const s = Math.min(0.92, Math.max(0.45, (w - 36) / 720));
+            const s = Math.min(0.92, Math.max(0.45, (w - 36) / 680));
             setViewerScale(Number(s.toFixed(2)));
         };
         updateScale();
@@ -161,6 +161,9 @@ export default function PastoresCarnetsPage({
     const [isBulkBackgroundModalOpen, setIsBulkBackgroundModalOpen] = useState(false);
     const [isRemovingBackground, setIsRemovingBackground] = useState(false);
     const [backgroundProgress, setBackgroundProgress] = useState({ completed: 0, total: 0 });
+    const [isEnhancingSingleAi, setIsEnhancingSingleAi] = useState(false);
+    const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
+    const [isEnhancingBulkAi, setIsEnhancingBulkAi] = useState(false);
 
     // Sincronizar pastor seleccionado si cambia la lista
     useEffect(() => {
@@ -302,6 +305,112 @@ export default function PastoresCarnetsPage({
             foto_url: newPhotoUrl,
         });
         router.reload({ only: ['pastores'] });
+    };
+
+    // Mejora la foto original del pastor y conserva el resultado en su registro.
+    const handleEnhanceSinglePastorAi = async (pastor: Pastor | null) => {
+        if (!pastor) {
+            return;
+        }
+
+        if (!pastor.foto) {
+            toast.info(__('El pastor no tiene una fotografía registrada para mejorar.'));
+
+            return;
+        }
+
+        try {
+            setIsEnhancingSingleAi(true);
+            toast.info(__('Mejorando la fotografía con IA...'), {
+                description: __('Aumentando resolución, reduciendo ruido y equilibrando la iluminación.'),
+            });
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const response = await fetch(`/admin/pastores/${pastor.id}/ia-enhance`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({}),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                toast.success(__('¡Foto de :name mejorada con IA!', {
+                    name: `${pastor.nombres} ${pastor.apellidos}`,
+                }));
+                handlePhotoUpdated(result.foto_url);
+            } else {
+                toast.error(result.error || __('No se pudo mejorar la fotografía con IA.'));
+            }
+        } catch (error) {
+            console.error('Error al mejorar con IA:', error);
+            toast.error(__('Ocurrió un error al procesar con IA.'));
+        } finally {
+            setIsEnhancingSingleAi(false);
+        }
+    };
+
+    // Procesamiento masivo por lotes con IA de estudio
+    const handleBulkAiEnhancement = async () => {
+        if (selectedIds.length === 0 || isEnhancingBulkAi) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        setIsEnhancingBulkAi(true);
+        toast.info(__('Iniciando mejora con IA para los pastores seleccionados...'));
+
+        try {
+            const response = await fetch('/admin/pastores/bulk-ia-enhance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ ids: selectedIds }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                if (result.succeeded_count > 0) {
+
+                    if (result.failed_count > 0) {
+                        toast.warning(__('Se mejoraron :succeeded fotos; :failed no pudieron procesarse.', {
+                            succeeded: String(result.succeeded_count),
+                            failed: String(result.failed_count),
+                        }), {
+                            description: result.failed?.[0]?.error,
+                        });
+                    } else {
+                        toast.success(__('¡:count fotos mejoradas con IA!', {
+                            count: String(result.succeeded_count),
+                        }));
+                    }
+                } else {
+                    toast.error(__('No se pudo mejorar ninguna fotografía.'), {
+                        description: result.failed?.[0]?.error,
+                    });
+                }
+
+                setIsBulkAiModalOpen(false);
+                if (result.succeeded_count > 0) {
+                    router.reload({ only: ['pastores'] });
+                }
+            } else {
+                toast.error(result.error || __('Error al procesar el lote con IA.'));
+            }
+        } catch (error) {
+            console.error('Error en lote de IA:', error);
+            toast.error(__('Ocurrió un error al procesar el lote con IA.'));
+        } finally {
+            setIsEnhancingBulkAi(false);
+        }
     };
 
     const handleRemoveSelectedBackgrounds = async () => {
@@ -551,6 +660,31 @@ export default function PastoresCarnetsPage({
                                 <Button
                                     type="button"
                                     variant="secondary"
+                                    onClick={() => setIsBulkAiModalOpen(true)}
+                                    disabled={selectedIds.length === 0 || isEnhancingBulkAi}
+                                    className={cn(
+                                        'gap-2 font-semibold shadow-xs transition-all',
+                                        selectedIds.length > 0
+                                            ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 hover:scale-[1.02]'
+                                            : 'bg-white/30 text-white/70 cursor-not-allowed'
+                                    )}
+                                    title={__('Aumenta la resolución y mejora el ruido, el enfoque y la luz en las fotos seleccionadas')}
+                                >
+                                    {isEnhancingBulkAi ? (
+                                        <Loader2 className="size-4 animate-spin text-amber-300" />
+                                    ) : (
+                                        <Sparkles className="size-4 text-amber-300 fill-amber-300" />
+                                    )}
+                                    <span>{__('✨ Mejorar con IA')}</span>
+                                    {selectedIds.length > 0 && (
+                                        <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 h-4 ml-1">
+                                            {selectedIds.length}
+                                        </Badge>
+                                    )}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
                                     onClick={() => setIsPrintModalOpen(true)}
                                     disabled={selectedIds.length === 0}
                                     className={cn(
@@ -788,6 +922,28 @@ export default function PastoresCarnetsPage({
                                         >
                                             <Scissors className="size-3.5 text-emerald-600" />
                                             {__('Ajustar Foto Pastor')}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={isEnhancingSingleAi || !selectedPastor?.foto}
+                                            onClick={() => handleEnhanceSinglePastorAi(selectedPastor)}
+                                            className="gap-2 text-xs font-bold h-9 px-3 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 hover:bg-purple-50/80 dark:hover:bg-purple-950/50 shadow-xs transition-all hover:scale-[1.02] active:scale-95"
+                                            title={__('Aumenta la resolución y mejora la nitidez, el ruido y la iluminación con IA (1 clic)')}
+                                        >
+                                            {isEnhancingSingleAi ? (
+                                                <>
+                                                    <Loader2 className="size-3.5 animate-spin text-purple-600" />
+                                                    <span>{__('Mejorando con IA...')}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="size-3.5 text-amber-500 fill-amber-400" />
+                                                    <span>{__('✨ Mejorar con IA (1 Clic)')}</span>
+                                                </>
+                                            )}
                                         </Button>
 
                                         <Button
@@ -1273,6 +1429,73 @@ export default function PastoresCarnetsPage({
                 </DialogContent>
             </Dialog>
 
+            {/* MODAL PARA MEJORA MASIVA DE FOTOGRAFÍAS */}
+            <Dialog
+                open={isBulkAiModalOpen}
+                onOpenChange={(open) => {
+                    if (!isEnhancingBulkAi) setIsBulkAiModalOpen(open);
+                }}
+            >
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                            <Sparkles className="size-5 text-amber-500 fill-amber-400" />
+                            {__('Mejorar fotos con IA')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {__('Se aumentará la resolución y se mejorará el enfoque, el ruido y la iluminación de las fotos de :count pastores. Los pastores sin foto se omitirán.', {
+                                count: String(selectedIds.length),
+                            })}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {isEnhancingBulkAi && (
+                        <div className="flex flex-col gap-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 p-3.5 text-xs text-purple-900 dark:text-purple-200">
+                            <div className="flex items-center gap-3">
+                                <Loader2 className="size-5 animate-spin text-purple-600 shrink-0" />
+                                <div>
+                                    <p className="font-bold">
+                                        {__('Mejorando fotografías con IA en curso...')}
+                                    </p>
+                                    <p className="text-[11px] text-purple-700/80 dark:text-purple-300/80">
+                                        {__('Esto puede tomar unos segundos por cada foto. Por favor, mantén esta ventana abierta.')}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsBulkAiModalOpen(false)}
+                            disabled={isEnhancingBulkAi}
+                        >
+                            {__('Cancelar')}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleBulkAiEnhancement}
+                            disabled={isEnhancingBulkAi || selectedIds.length === 0}
+                            className="gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 font-semibold"
+                        >
+                            {isEnhancingBulkAi ? (
+                                <>
+                                    <Loader2 className="size-4 animate-spin text-amber-300" />
+                                    {__('Mejorando con IA...')}
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="size-4 text-amber-300 fill-amber-300" />
+                                    {__('Iniciar Mejora con IA')}
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* MODAL DE IMPRESIÓN POR LOTES */}
             <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
                 <DialogContent className="sm:max-w-[540px] max-w-[95vw] p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
@@ -1383,7 +1606,7 @@ export default function PastoresCarnetsPage({
                                         {__('Tarjetas PVC Individuales (Zebra / Evolis)')}
                                     </h4>
                                     <p className="text-[11.5px] text-muted-foreground mt-0.5">
-                                        {__('Formato individual oficial (9.0 × 5.5 cm). Diseñado para tarjetas o credenciales individuales.')}
+                                        {__('Formato individual oficial (8.5 × 5.4 cm). Diseñado para tarjetas o credenciales individuales.')}
                                     </p>
                                 </div>
                             </div>

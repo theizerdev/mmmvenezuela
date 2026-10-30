@@ -15,17 +15,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Exporta la cara frontal o trasera de un carnet a imagen PNG de alta resolución (300 DPI - 1063 x 650 px para 90 x 55 mm)
+ * Exporta la cara frontal o trasera de un carnet a imagen PNG de alta resolución (300 DPI - 1004 x 638 px para 8.5 x 5.4 cm)
  */
 export async function exportPastorCarnetPng(
     pastor: Pastor,
     side: 'front' | 'back' = 'front',
     customTemplateUrl?: string
 ): Promise<void> {
-    // 90 mm x 55 mm a 300 DPI exactos
-    const width = 1063;
-    const height = 650;
-    const scale = width / 720; // Factor de escala respecto a 720x440 (~1.4764)
+    // 8.5 cm x 5.4 cm a 300 DPI exactos (85mm / 25.4 * 300 = 1004, 54mm / 25.4 * 300 = 638)
+    const width = 1004;
+    const height = 638;
+    const scale = width / 680; // Factor de escala respecto a vista de 680x432 (~1.4765)
 
     // Precargar tipografías oficiales de la identidad
     if (typeof document !== 'undefined' && document.fonts) {
@@ -58,12 +58,12 @@ export async function exportPastorCarnetPng(
             ctx.fillRect(0, 0, width, height);
         }
 
-        // 2. Foto del Pastor (Alineada exactamente dentro del marco oficial de la plantilla: x=77, y=174, w=292, h=422, r=24 a 1063x650)
-        const photoX = Math.round(52 * scale);
-        const photoY = Math.round(118 * scale);
-        const photoW = Math.round(198 * scale);
-        const photoH = Math.round(286 * scale);
-        const photoRadius = Math.round(16 * scale);
+        // 2. Foto del Pastor (Alineada exactamente dentro del marco oficial de la plantilla: x=72, y=171, w=276, h=415, r=22 a 1004x638)
+        const photoX = Math.round(49 * scale);
+        const photoY = Math.round(116 * scale);
+        const photoW = Math.round(187 * scale);
+        const photoH = Math.round(281 * scale);
+        const photoRadius = Math.round(15 * scale);
 
         ctx.save();
         ctx.beginPath();
@@ -75,6 +75,8 @@ export async function exportPastorCarnetPng(
         if (photoUrl) {
             try {
                 const photoImg = await loadImage(photoUrl);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 const imgRatio = photoImg.width / photoImg.height;
                 const targetRatio = photoW / photoH;
                 let sW = photoImg.width;
@@ -99,7 +101,7 @@ export async function exportPastorCarnetPng(
 
         if (!photoLoaded) {
             ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
-            ctx.font = `bold ${48 * scale}px Cocogoose, sans-serif`;
+            ctx.font = `bold ${45 * scale}px Cocogoose, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const initials = `${pastor.nombres?.trim()?.[0] || ''}${pastor.apellidos?.trim()?.[0] || ''}`.toUpperCase() || 'P';
@@ -108,8 +110,8 @@ export async function exportPastorCarnetPng(
         ctx.restore();
 
         // 3. Textos Frontales Oficiales (Identidad Visual: Cocogoose Titular + Aribau Grotesk Descripción)
-        const textCenterX = 470 * scale;
-        const textMaxWidth = 430 * scale;
+        const textCenterX = 444 * scale;
+        const textMaxWidth = 406 * scale;
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -119,21 +121,21 @@ export async function exportPastorCarnetPng(
 
         // Bloque 1: Identificación Titular (Debajo de franja PASTOR)
         const nombreCompleto = getPastorCarnetFullName(pastor, true).toUpperCase();
-        const nameFontSize = nombreCompleto.length > 28 ? 17.5 * scale : (nombreCompleto.length > 22 ? 19.5 * scale : 22 * scale);
+        const nameFontSize = nombreCompleto.length > 28 ? 16.5 * scale : (nombreCompleto.length > 22 ? 18.5 * scale : 21 * scale);
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${nameFontSize}px Cocogoose, sans-serif`;
-        ctx.fillText(nombreCompleto, textCenterX, 223 * scale, textMaxWidth);
+        ctx.fillText(nombreCompleto, textCenterX, 218 * scale, textMaxWidth);
 
         // Documento de Identidad (Aribau Grotesk Regular, Negro Carbón)
         ctx.fillStyle = '#0f172a';
-        ctx.font = `normal ${13 * scale}px "Aribau Grotesk", sans-serif`;
-        ctx.fillText(`C.I. ${formatDocumento(pastor.documento).toUpperCase()}`, textCenterX, 253 * scale);
+        ctx.font = `normal ${12.5 * scale}px "Aribau Grotesk", sans-serif`;
+        ctx.fillText(`C.I. ${formatDocumento(pastor.documento).toUpperCase()}`, textCenterX, 248 * scale);
 
         // Bloque 2: Grado Ministerial (Valor ARRIBA de la etiqueta GRADO MINISTERIAL)
         ctx.fillStyle = '#000000';
-        ctx.font = `bold ${15 * scale}px Cocogoose, sans-serif`;
+        ctx.font = `bold ${14.5 * scale}px Cocogoose, sans-serif`;
         const nivel = (pastor.nivel_ministerial || 'MINISTRO ORDENADO').toUpperCase();
-        ctx.fillText(nivel, textCenterX, 283 * scale, textMaxWidth);
+        ctx.fillText(nivel, textCenterX, 278 * scale, textMaxWidth);
 
         // Bloque 3: Lugar de Trabajo (Valor ARRIBA de la etiqueta LUGAR DE TRABAJO)
         let lugarTexto = pastor.estado?.nombre?.trim() || pastor.extension_nombre?.trim() || '';
@@ -154,10 +156,10 @@ export async function exportPastorCarnetPng(
             lugarTexto = lugarTexto.replace(/^iglesia\s+/i, '');
         }
 
-        const lugarFontSize = lugarTexto.length > 28 ? 11 * scale : (lugarTexto.length > 20 ? 12.5 * scale : 14 * scale);
+        const lugarFontSize = lugarTexto.length > 28 ? 10.5 * scale : (lugarTexto.length > 20 ? 12 * scale : 13.5 * scale);
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${lugarFontSize}px Cocogoose, sans-serif`;
-        ctx.fillText(lugarTexto.toUpperCase(), textCenterX, 347 * scale, textMaxWidth);
+        ctx.fillText(lugarTexto.toUpperCase(), textCenterX, 341 * scale, textMaxWidth);
     } else {
         // --- CARA TRASERA (BACK) ---
         const bgUrl = customTemplateUrl || '/image/Credencial-atras.png';
@@ -170,26 +172,26 @@ export async function exportPastorCarnetPng(
         }
 
         // Nombre y Ubicación inferior izquierdo (idéntico a ejemplo.png)
-        const textX = 85 * scale; // ~107px en 1063x650
-        const textY = 352 * scale; // ~512px en 1063x650
+        const textX = 55 * scale;
+        const textY = 346 * scale;
 
         const reversoTitular = getPastorCarnetFullName(pastor, true).toUpperCase();
-        const reversoFontSize = reversoTitular.length > 28 ? 16.5 * scale : (reversoTitular.length > 22 ? 18.5 * scale : 20.5 * scale);
+        const reversoFontSize = reversoTitular.length > 28 ? 15.5 * scale : (reversoTitular.length > 22 ? 17.5 * scale : 19.5 * scale);
         ctx.fillStyle = '#000000';
         ctx.font = `italic bold ${reversoFontSize}px "Aribau Grotesk", sans-serif`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
-        ctx.fillText(reversoTitular, textX, textY, 470 * scale);
+        ctx.fillText(reversoTitular, textX, textY, 444 * scale);
 
         ctx.fillStyle = '#000000';
-        ctx.font = `bold ${11.5 * scale}px "Aribau Grotesk", sans-serif`;
+        ctx.font = `bold ${11 * scale}px "Aribau Grotesk", sans-serif`;
         const reversoLocation = getPastorCarnetReversoLocation(pastor).toUpperCase();
-        ctx.fillText(reversoLocation, textX, textY + (22 * scale), 470 * scale);
+        ctx.fillText(reversoLocation, textX, textY + (22 * scale), 444 * scale);
 
         // Código QR inferior derecho (sin recuadro ni adornos, idéntico a ejemplo.png)
-        const qrSize = 92 * scale; // ~135px en 1063x650
-        const qrX = 556 * scale; // ~806px en 1063x650
-        const qrY = 294 * scale; // ~435px en 1063x650
+        const qrSize = 94 * scale;
+        const qrX = 525 * scale;
+        const qrY = 289 * scale;
 
         const verificationUrl = typeof window !== 'undefined'
             ? `${window.location.origin}/validar-credencial/${encodeURIComponent(pastor.codigo || pastor.documento || pastor.id)}`
