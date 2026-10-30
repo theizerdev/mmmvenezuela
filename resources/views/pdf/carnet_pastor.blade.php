@@ -5,7 +5,7 @@
     <title>Carnet Pastor - {{ $pastor->nombres }} {{ $pastor->apellidos }}</title>
     <style>
         @page {
-            size: 85.6mm 53.9mm;
+            size: 85.0mm 54.0mm;
             margin: 0;
         }
 
@@ -24,8 +24,8 @@
 
         /* --- CARA FRONTAL --- */
         .card-front {
-            width: 85.6mm;
-            height: 53.9mm;
+            width: 85.0mm;
+            height: 54.0mm;
             position: relative;
             background-color: #0f3563;
             overflow: hidden;
@@ -37,8 +37,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 85.6mm;
-            height: 53.9mm;
+            width: 85.0mm;
+            height: 54.0mm;
             z-index: 1;
         }
 
@@ -193,8 +193,8 @@
 
         /* --- CARA TRASERA --- */
         .card-back {
-            width: 85.6mm;
-            height: 53.9mm;
+            width: 85.0mm;
+            height: 54.0mm;
             position: relative;
             background-color: #ffffff;
             overflow: hidden;
@@ -304,8 +304,8 @@
     <!-- ==================== CARA FRONTAL ==================== -->
     <div class="card-front">
         <!-- SVG Franja Diagonal Marfil/Crema (#ded7c5) -->
-        <svg class="diagonal-stripe" viewBox="0 0 85.6 53.9" preserveAspectRatio="none">
-            <polygon points="0,53.9 18,53.9 48,0 33,0" fill="#ded7c5" />
+        <svg class="diagonal-stripe" viewBox="0 0 85.0 54.0" preserveAspectRatio="none">
+            <polygon points="0,54.0 18,54.0 48,0 33,0" fill="#ded7c5" />
         </svg>
 
         <!-- Header Derecho -->

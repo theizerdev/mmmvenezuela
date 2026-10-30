@@ -27,8 +27,8 @@
         }
 
         .card-wrapper {
-            width: 85.6mm;
-            height: 53.9mm;
+            width: 85.0mm;
+            height: 54.0mm;
             float: left;
             margin-right: 5mm;
             margin-bottom: 5mm;
@@ -44,8 +44,8 @@
 
         /* Reutilización de estilos */
         .card-front {
-            width: 85.6mm;
-            height: 53.9mm;
+            width: 85.0mm;
+            height: 54.0mm;
             position: relative;
             background-color: #0f3563;
             overflow: hidden;
@@ -55,8 +55,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 85.6mm;
-            height: 53.9mm;
+            width: 85.0mm;
+            height: 54.0mm;
             z-index: 1;
         }
 
@@ -152,8 +152,8 @@
             @foreach($pageItems as $item)
                 <div class="card-wrapper">
                     <div class="card-front">
-                        <svg class="diagonal-stripe" viewBox="0 0 85.6 53.9" preserveAspectRatio="none">
-                            <polygon points="0,53.9 18,53.9 48,0 33,0" fill="#ded7c5" />
+                        <svg class="diagonal-stripe" viewBox="0 0 85.0 54.0" preserveAspectRatio="none">
+                            <polygon points="0,54.0 18,54.0 48,0 33,0" fill="#ded7c5" />
                         </svg>
 
                         <div class="front-header">
