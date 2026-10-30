@@ -454,7 +454,7 @@ iaEnhance.post = (args: { id: string | number } | [id: string | number ] | strin
     iaEnhance.form = iaEnhanceForm
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:605
  * @route '/admin/pastores/bulk-ia-enhance'
  */
 export const bulkIaEnhance = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -469,7 +469,7 @@ bulkIaEnhance.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:605
  * @route '/admin/pastores/bulk-ia-enhance'
  */
 bulkIaEnhance.url = (options?: RouteQueryOptions) => {
@@ -478,7 +478,7 @@ bulkIaEnhance.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:605
  * @route '/admin/pastores/bulk-ia-enhance'
  */
 bulkIaEnhance.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -488,7 +488,7 @@ bulkIaEnhance.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
     /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:605
  * @route '/admin/pastores/bulk-ia-enhance'
  */
     const bulkIaEnhanceForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -498,7 +498,7 @@ bulkIaEnhance.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
             /**
 * @see \App\Http\Controllers\Admin\PastorCarnetController::bulkIaEnhance
- * @see app/Http/Controllers/Admin/PastorCarnetController.php:604
+ * @see app/Http/Controllers/Admin/PastorCarnetController.php:605
  * @route '/admin/pastores/bulk-ia-enhance'
  */
         bulkIaEnhanceForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

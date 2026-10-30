@@ -358,30 +358,30 @@ def compute_biometric_framing_suggestion(
     # Corrección suave de inclinación si supera 0.8° y es razonable (<= 16°)
     suggested_rot = -roll_deg if 0.8 <= abs(roll_deg) <= 16.0 else 0.0
 
-    # Altura ideal del cuadro de carnet en función del alto facial (el rostro ocupa ~40% de la altura total
+    # Altura ideal del cuadro de carnet en función del alto facial (el rostro ocupa ~40.5% de la altura total
     # para dejar aire sobre el cabello y mostrar cuello/corbata/hombros con porte ministerial)
     ideal_crop_h = bh / 0.405
-    ideal_crop_w = ideal_crop_h * CREDENTIAL_ASPECT
 
-    # Limitar para no hacer zoom excesivo ni salir demasiado
-    min_crop_h = max(120.0, height * 0.32)
-    max_crop_h = height * 1.18
-    crop_h = float(np.clip(ideal_crop_h, min_crop_h, max_crop_h))
-    crop_w = crop_h * CREDENTIAL_ASPECT
-
-    # Posicionar ojos al 39.5% desde el borde superior del carnet
-    target_eye_ratio_y = 0.395
-    crop_x = eye_cx - crop_w * 0.50
-    crop_y = eye_cy - crop_h * target_eye_ratio_y
-
-    # Equivalencia exacta con el canvas React (object-cover sobre 374×562 con panX*2, panY*2)
+    # Equivalencia con object-cover: nunca permitir que crop_h supere la cobertura máxima de la imagen,
+    # para que ui_scale >= 1.0 y el borde inferior del saco/hombros JAMÁS quede cortado flotando arriba.
     img_ratio = width / max(1.0, float(height))
     if img_ratio > CREDENTIAL_ASPECT:
         cover_h_in_src = float(height)
     else:
         cover_h_in_src = float(width) / CREDENTIAL_ASPECT
 
-    ui_scale = float(np.clip(cover_h_in_src / max(1.0, crop_h), 0.65, 2.4))
+    min_crop_h = max(120.0, cover_h_in_src * 0.42)
+    max_crop_h = cover_h_in_src
+    crop_h = float(np.clip(ideal_crop_h, min_crop_h, max_crop_h))
+    crop_w = crop_h * CREDENTIAL_ASPECT
+
+    # Posicionar ojos al 39.5% desde el borde superior del carnet, anclando bordes dentro de la imagen
+    # para no dejar franjas vacías debajo de los hombros ni en los costados.
+    target_eye_ratio_y = 0.395
+    crop_x = float(np.clip(eye_cx - crop_w * 0.50, 0.0, max(0.0, float(width) - crop_w)))
+    crop_y = float(np.clip(eye_cy - crop_h * target_eye_ratio_y, 0.0, max(0.0, float(height) - crop_h)))
+
+    ui_scale = float(np.clip(cover_h_in_src / max(1.0, crop_h), 1.0, 2.4))
 
     # Centro deseado en coordenadas de imagen original:
     desired_cx = crop_x + crop_w * 0.5
@@ -512,7 +512,7 @@ def analyze_photo(bgr: np.ndarray, alpha: np.ndarray | None = None) -> dict[str,
         findings.append({
             "type": "warning",
             "label": "Baja resolución",
-            "detail": f"Dimensiones reducidas ({w}×{h} px). Se activará Súper-Resolución x4 y reconstrucción facial.",
+            "detail": f"Dimensiones reducidas ({w}×{h} px). Se aumentará la resolución y se reconstruirán los detalles del rostro.",
         })
     elif h < 540:
         penalties += 7
@@ -520,7 +520,7 @@ def analyze_photo(bgr: np.ndarray, alpha: np.ndarray | None = None) -> dict[str,
         findings.append({
             "type": "info",
             "label": "Resolución media-baja",
-            "detail": f"Tamaño {w}×{h} px. Se escalará a calidad Master 300+ DPI.",
+            "detail": f"Tamaño {w}×{h} px. Se escalará a calidad de impresión 300+ DPI.",
         })
     else:
         findings.append({
@@ -538,7 +538,7 @@ def analyze_photo(bgr: np.ndarray, alpha: np.ndarray | None = None) -> dict[str,
         findings.append({
             "type": "warning",
             "label": "Desenfoque facial detectado",
-            "detail": "Falta definición en ojos y rasgos. GFPGAN restaurará micro-detalles faciales.",
+            "detail": "Falta definición en ojos y rasgos. Se restaurarán los detalles del rostro.",
         })
     elif lap_var < 130:
         penalties += 8
@@ -554,7 +554,7 @@ def analyze_photo(bgr: np.ndarray, alpha: np.ndarray | None = None) -> dict[str,
         findings.append({
             "type": "warning",
             "label": "Rostro subexpuesto / oscuro",
-            "detail": "Falta luz frontal en el sujeto. Se aplicará Relight de estudio y apertura de sombras.",
+            "detail": "Falta luz frontal en el rostro. Se iluminará y se abrirán las sombras.",
         })
     elif shadow_pct > 22.0:
         penalties += 10
@@ -611,7 +611,7 @@ def analyze_photo(bgr: np.ndarray, alpha: np.ndarray | None = None) -> dict[str,
         rec_denoise = int(round(np.clip(noise_sigma * 6.5, 22, 58)))
         findings.append({
             "type": "info",
-            "label": "Grano ISO o compresión WhatsApp",
+            "label": "Ruido o compresión de imagen",
             "detail": "Se aplicará limpieza selectiva de crominancia y luminancia.",
         })
 
@@ -621,7 +621,7 @@ def analyze_photo(bgr: np.ndarray, alpha: np.ndarray | None = None) -> dict[str,
         findings.append({
             "type": "info",
             "label": "Fondo no uniforme",
-            "detail": "Se recomienda aislamiento de silueta y cabello con IA para lucir el marco oficial.",
+            "detail": "Se recomienda recortar el fondo para lucir mejor en el marco oficial.",
         })
 
     biometric = compute_biometric_framing_suggestion(w, h, face)
@@ -639,7 +639,7 @@ def analyze_photo(bgr: np.ndarray, alpha: np.ndarray | None = None) -> dict[str,
         findings.append({
             "type": "warning",
             "label": "Rostro frontal no detectado con claridad",
-            "detail": "Verifica que el pastor mire de frente. Se aplicará mejora global de estudio.",
+            "detail": "Verifica que el pastor mire de frente. Se aplicará una mejora general.",
         })
 
     quality_score = int(np.clip(100 - penalties, 18, 99))
@@ -736,14 +736,14 @@ def _guided_filter_gray_by_color(guide_bgr: np.ndarray, src_alpha: np.ndarray, r
 
 
 def _infer_rmbg_matte(bgr: np.ndarray) -> np.ndarray | None:
-    """Ejecuta BRIA RMBG-1.4 (1024×1024) para silueta limpia de traje, hombros y accesorios."""
+    """Ejecuta BRIA RMBG-1.4 (1024×1024) con normalización [-1, 1] exacta (mean=0.5, std=0.5)."""
     sess = _get_ort_session("rmbg_1_4.onnx")
     if sess is None:
         return None
 
     h, w = bgr.shape[:2]
     rgb_1024 = cv2.cvtColor(cv2.resize(bgr, (1024, 1024), interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)
-    inp = (rgb_1024.astype(np.float32) / 255.0 - 0.5).transpose(2, 0, 1)[np.newaxis, ...]
+    inp = ((rgb_1024.astype(np.float32) / 255.0 - 0.5) / 0.5).transpose(2, 0, 1)[np.newaxis, ...]
     pred = sess.run(None, {sess.get_inputs()[0].name: inp})[0][0, 0]
 
     p_min, p_max = float(pred.min()), float(pred.max())
@@ -830,8 +830,26 @@ def remove_background_studio(
     gf_radius = max(3, int(round(min(h, w) / 140)))
     alpha = _guided_filter_gray_by_color(bgr, alpha, radius=gf_radius, eps=6e-4)
 
-    # Limpieza de polvo en fondo lejano (< 2.5%) y consolidación del núcleo interior (> 98%)
-    alpha = np.clip((alpha - 0.025) / (0.980 - 0.025), 0.0, 1.0)
+    # Limpieza de polvo en fondo lejano (< 3.5%) y consolidación del núcleo interior (> 97.5%)
+    alpha = np.clip((alpha - 0.035) / (0.975 - 0.035), 0.0, 1.0)
+
+    # Supresión topológica de islas o manchas flotantes desconectadas del retrato principal,
+    # preservando un margen amplio alrededor de la silueta para respetar rizos y hebras finas de cabello.
+    core_bin = (alpha > 0.32).astype(np.uint8)
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(core_bin, connectivity=8)
+    if num_labels > 1:
+        areas = stats[1:, cv2.CC_STAT_AREA]
+        max_area = int(areas.max()) if len(areas) > 0 else 0
+        if max_area > 64:
+            keep_mask = np.zeros((h, w), dtype=np.uint8)
+            for lbl_idx in range(1, num_labels):
+                if stats[lbl_idx, cv2.CC_STAT_AREA] >= max(64, int(max_area * 0.06)):
+                    keep_mask[labels == lbl_idx] = 255
+            halo_pad = max(14, int(round(min(h, w) * 0.048)))
+            k_halo = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * halo_pad + 1, 2 * halo_pad + 1))
+            allowed_zone = cv2.dilate(keep_mask, k_halo).astype(np.float32) / 255.0
+            allowed_zone = cv2.GaussianBlur(allowed_zone, (0, 0), max(3.0, halo_pad * 0.25))
+            alpha = alpha * np.clip(allowed_zone, 0.0, 1.0)
 
     # Ajuste fino de borde (edge_shift: negativo contrae halos, positivo expande)
     if abs(edge_shift) > 0.05:
@@ -1462,8 +1480,8 @@ PRESET_RECIPES: dict[str, dict[str, Any]] = {
     "studio_credential_pro": {
         "auto_pilot": True,
         "remove_bg": True,
-        "bg_type": "transparent",
-        "drop_shadow": 24,
+        "bg_type": "credential_silver",
+        "drop_shadow": 20,
         "auto_frame": True,
         "face_restore": True,
     },
@@ -1584,7 +1602,36 @@ def run_designer_pipeline(
     work_alpha = alpha.copy() if alpha is not None else None
     steps_applied: list[str] = []
 
-    # Paso 1: Remoción neuronal de fondo
+    # Paso 1: Restauración Facial Generativa GFPGAN v1.4
+    if bool(effective.get("face_restore", False)) and float(effective.get("face_strength", 0)) > 1:
+        work_bgr = restore_face_gfpgan(
+            work_bgr,
+            strength=float(effective.get("face_strength", 65)) / 100.0,
+            eye_clarity=float(effective.get("eye_clarity", 25)) / 100.0,
+            face_info=face_info,
+        )
+        steps_applied.append("gfpgan_face_restore")
+
+    # Paso 2: Súper-Resolución Real-ESRGAN x4
+    if bool(effective.get("upscale", False)):
+        work_bgr, work_alpha = upscale_realesrgan(
+            work_bgr,
+            alpha=work_alpha,
+            mode=str(effective.get("upscale_mode", "fast")),
+            target_max_height=1350,
+        )
+        face_info = detect_primary_face(work_bgr)
+        steps_applied.append("realesrgan_upscale")
+
+    # Paso 3: Calibración Fotográfica de Estudio
+    work_bgr = calibrate_studio_grade(work_bgr, effective, face_info=face_info)
+    steps_applied.append("studio_color_calibration")
+
+    # Conservar escena completa mejorada (con fondo original intacto para modo Original / Bokeh / Pincel Restaurar)
+    enhanced_scene_bgr = work_bgr.copy()
+    original_for_bokeh = enhanced_scene_bgr
+
+    # Paso 4: Remoción neuronal de fondo de estudio (sobre rostro/luz ya restaurados para máxima precisión capilar)
     if bool(effective.get("remove_bg", False)):
         work_bgr, work_alpha = remove_background_studio(
             work_bgr,
@@ -1596,32 +1643,7 @@ def run_designer_pipeline(
         )
         steps_applied.append("studio_matting")
 
-    # Paso 2: Restauración Facial Generativa GFPGAN v1.4
-    if bool(effective.get("face_restore", False)) and float(effective.get("face_strength", 0)) > 1:
-        work_bgr = restore_face_gfpgan(
-            work_bgr,
-            strength=float(effective.get("face_strength", 65)) / 100.0,
-            eye_clarity=float(effective.get("eye_clarity", 25)) / 100.0,
-            face_info=face_info,
-        )
-        steps_applied.append("gfpgan_face_restore")
-
-    # Paso 3: Súper-Resolución Real-ESRGAN x4
-    if bool(effective.get("upscale", False)):
-        work_bgr, work_alpha = upscale_realesrgan(
-            work_bgr,
-            alpha=work_alpha,
-            mode=str(effective.get("upscale_mode", "fast")),
-            target_max_height=1350,
-        )
-        face_info = detect_primary_face(work_bgr)
-        steps_applied.append("realesrgan_upscale")
-
-    # Paso 4: Calibración Fotográfica de Estudio
-    work_bgr = calibrate_studio_grade(work_bgr, effective, face_info=face_info)
-    steps_applied.append("studio_color_calibration")
-
-    # Paso 5: Encuadre Biométrico Oficial
+    # Paso 5: Encuadre Biométrico Oficial (cuando se ejecuta en lotes o modo directo)
     if bool(effective.get("auto_frame", False)):
         work_bgr, work_alpha = apply_biometric_alignment_and_crop(
             work_bgr,
@@ -1629,17 +1651,25 @@ def run_designer_pipeline(
             face_info=face_info,
             extra_rotation_deg=float(effective.get("rotation", 0.0)),
         )
-        original_for_bokeh, _ = apply_biometric_alignment_and_crop(
-            original_for_bokeh,
+        enhanced_scene_bgr, _ = apply_biometric_alignment_and_crop(
+            enhanced_scene_bgr,
             alpha=None,
-            face_info=diagnosis.get("face"),
+            face_info=face_info,
             extra_rotation_deg=float(effective.get("rotation", 0.0)),
         )
+        original_for_bokeh = enhanced_scene_bgr
         steps_applied.append("biometric_framing")
+
+    # Si el Estudio Interactivo solicita capas separadas no destructivas (escena completa + recorte RGBA alineado)
+    cutout_data_url: str | None = None
+    return_layers = bool(opts.get("return_layers", False))
+    if return_layers and work_alpha is not None:
+        cutout_png = encode_output_png(work_bgr, work_alpha)
+        cutout_data_url = "data:image/png;base64," + base64.b64encode(cutout_png).decode("utf-8")
 
     # Paso 6: Escenario de Estudio y Sombra 3D
     bg_type = str(effective.get("bg_type", "transparent" if work_alpha is not None else "keep"))
-    if work_alpha is not None and bg_type != "keep":
+    if not return_layers and work_alpha is not None and bg_type != "keep":
         work_bgr, work_alpha = compose_studio_backdrop(
             work_bgr,
             work_alpha,
@@ -1651,17 +1681,23 @@ def run_designer_pipeline(
         )
         steps_applied.append(f"backdrop_{bg_type}")
 
+    final_bgr = enhanced_scene_bgr if (return_layers and cutout_data_url is not None) else work_bgr
+    final_alpha = None if (return_layers and cutout_data_url is not None) else work_alpha
+
     post_diagnosis = analyze_photo(work_bgr, work_alpha)
-    meta = {
+    meta: dict[str, Any] = {
         "duration_seconds": round(time.time() - t0, 2),
         "engine": "MMM-Studio-Agent-2.0",
         "steps_applied": steps_applied,
         "applied_params": effective,
-        "width": int(work_bgr.shape[1]),
-        "height": int(work_bgr.shape[0]),
-        "has_alpha": work_alpha is not None,
+        "width": int(final_bgr.shape[1]),
+        "height": int(final_bgr.shape[0]),
+        "has_alpha": final_alpha is not None or cutout_data_url is not None,
         "before_score": diagnosis["quality_score"],
         "after_score": max(diagnosis["quality_score"], post_diagnosis["quality_score"]),
         "diagnosis": post_diagnosis,
     }
-    return work_bgr, work_alpha, meta
+    if cutout_data_url is not None:
+        meta["cutout_data_url"] = cutout_data_url
+
+    return final_bgr, final_alpha, meta

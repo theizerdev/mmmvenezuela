@@ -161,7 +161,6 @@ export default function PastoresCarnetsPage({
     const [isBulkBackgroundModalOpen, setIsBulkBackgroundModalOpen] = useState(false);
     const [isRemovingBackground, setIsRemovingBackground] = useState(false);
     const [backgroundProgress, setBackgroundProgress] = useState({ completed: 0, total: 0 });
-    const [isEnhancingSingleAi, setIsEnhancingSingleAi] = useState(false);
     const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
     const [isEnhancingBulkAi, setIsEnhancingBulkAi] = useState(false);
     const [bulkAiPreset, setBulkAiPreset] = useState<'studio_credential_pro' | 'auto_agent' | 'cutout_only'>('studio_credential_pro');
@@ -309,54 +308,7 @@ export default function PastoresCarnetsPage({
         router.reload({ only: ['pastores'] });
     };
 
-    // Mejora la foto original del pastor y conserva el resultado en su registro.
-    const handleEnhanceSinglePastorAi = async (pastor: Pastor | null) => {
-        if (!pastor) {
-            return;
-        }
-
-        if (!pastor.foto) {
-            toast.info(__('El pastor no tiene una fotografía registrada para mejorar.'));
-
-            return;
-        }
-
-        try {
-            setIsEnhancingSingleAi(true);
-            toast.info(__('Mejorando la fotografía con IA...'), {
-                description: __('Aumentando resolución, reduciendo ruido y equilibrando la iluminación.'),
-            });
-
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            const response = await fetch(`/admin/pastores/${pastor.id}/ia-enhance`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({}),
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                toast.success(__('¡Foto de :name mejorada con IA!', {
-                    name: `${pastor.nombres} ${pastor.apellidos}`,
-                }));
-                handlePhotoUpdated(result.foto_url);
-            } else {
-                toast.error(result.error || __('No se pudo mejorar la fotografía con IA.'));
-            }
-        } catch (error) {
-            console.error('Error al mejorar con IA:', error);
-            toast.error(__('Ocurrió un error al procesar con IA.'));
-        } finally {
-            setIsEnhancingSingleAi(false);
-        }
-    };
-
-    // Procesamiento masivo por lotes con el Agente Diseñador IA (progreso en tiempo real pastor por pastor)
+    // Procesamiento masivo por lotes con el optimizador fotográfico (progreso en tiempo real pastor por pastor)
     const handleBulkAiEnhancement = async () => {
         if (selectedIds.length === 0 || isEnhancingBulkAi) {
             return;
@@ -440,7 +392,7 @@ export default function PastoresCarnetsPage({
                     );
                 } else {
                     toast.success(
-                        __('¡:count fotografías diseñadas y optimizadas con el Agente IA!', {
+                        __('¡:count fotografías optimizadas con éxito!', {
                             count: String(succeededCount),
                         })
                     );
@@ -454,8 +406,8 @@ export default function PastoresCarnetsPage({
 
             setIsBulkAiModalOpen(false);
         } catch (error) {
-            console.error('Error en lote de IA:', error);
-            toast.error(__('Ocurrió un error al coordinar el lote con el Agente IA.'));
+            console.error('Error en lote de optimización:', error);
+            toast.error(__('Ocurrió un error al coordinar la optimización por lotes.'));
         } finally {
             setIsEnhancingBulkAi(false);
         }
@@ -592,7 +544,7 @@ export default function PastoresCarnetsPage({
             }
 
             if (succeeded > 0) {
-                toast.success(__('Fondo eliminado con IA en :count foto(s).', { count: String(succeeded) }));
+                toast.success(__('Fondo eliminado en :count foto(s).', { count: String(succeeded) }));
                 router.reload({ only: ['pastores'] });
             }
 
@@ -721,7 +673,7 @@ export default function PastoresCarnetsPage({
                                     )}
                                 >
                                     <Sparkles className="size-4" />
-                                    <span>{__('Quitar fondo con IA')}</span>
+                                    <span>{__('Quitar fondo')}</span>
                                     {selectedIds.length > 0 && (
                                         <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 h-4 ml-1">
                                             {selectedIds.length}
@@ -746,7 +698,7 @@ export default function PastoresCarnetsPage({
                                     ) : (
                                         <Sparkles className="size-4 text-amber-300 fill-amber-300" />
                                     )}
-                                    <span>{__('✨ Mejorar con IA')}</span>
+                                    <span>{__('Optimizar fotos')}</span>
                                     {selectedIds.length > 0 && (
                                         <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 h-4 ml-1">
                                             {selectedIds.length}
@@ -895,7 +847,7 @@ export default function PastoresCarnetsPage({
 
                             <CardContent
                                 ref={viewerContainerRef}
-                                className="p-4 sm:p-6 bg-slate-950/15 flex flex-col items-center justify-center min-h-[380px] sm:min-h-[460px] overflow-visible w-full select-none"
+                                className="p-4 sm:p-6 bg-slate-100/70 dark:bg-slate-950/30 flex flex-col items-center justify-center min-h-[380px] sm:min-h-[460px] overflow-visible w-full select-none"
                             >
                                 {selectedPastor ? (
                                     viewMode === 'flip' ? (
@@ -989,32 +941,10 @@ export default function PastoresCarnetsPage({
                                             size="sm"
                                             onClick={() => setIsPhotoModalOpen(true)}
                                             className="gap-2 text-xs font-bold h-9 px-3 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50/60"
-                                            title={__('Abrir MMM Studio AI: Agente Diseñador, recorte de cabello HD, calibración y encuadre biométrico')}
+                                            title={__('Abrir el Estudio Fotográfico: optimizar, recortar fondo, calibrar luz y encuadrar')}
                                         >
                                             <Scissors className="size-3.5 text-emerald-600" />
-                                            {__('Estudio IA de Foto')}
-                                        </Button>
-
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={isEnhancingSingleAi || !selectedPastor?.foto}
-                                            onClick={() => handleEnhanceSinglePastorAi(selectedPastor)}
-                                            className="gap-2 text-xs font-bold h-9 px-3 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 hover:bg-purple-50/80 dark:hover:bg-purple-950/50 shadow-xs transition-all hover:scale-[1.02] active:scale-95"
-                                            title={__('Aumenta la resolución y mejora la nitidez, el ruido y la iluminación con IA (1 clic)')}
-                                        >
-                                            {isEnhancingSingleAi ? (
-                                                <>
-                                                    <Loader2 className="size-3.5 animate-spin text-purple-600" />
-                                                    <span>{__('Mejorando con IA...')}</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Sparkles className="size-3.5 text-amber-500 fill-amber-400" />
-                                                    <span>{__('✨ Mejorar con IA (1 Clic)')}</span>
-                                                </>
-                                            )}
+                                            {__('Editar Foto')}
                                         </Button>
 
                                         <Button
@@ -1429,7 +1359,7 @@ export default function PastoresCarnetsPage({
                 onRestored={handleTemplateRestored}
             />
 
-            {/* ESTUDIO DISEÑADOR FOTOGRÁFICO PROPIO (MMM STUDIO AI) */}
+            {/* ESTUDIO FOTOGRÁFICO PROFESIONAL */}
             <PastorPhotoAdjustModal
                 isOpen={isPhotoModalOpen}
                 onClose={() => setIsPhotoModalOpen(false)}
@@ -1452,7 +1382,7 @@ export default function PastoresCarnetsPage({
                             {__('Quitar fondo de fotos seleccionadas')}
                         </DialogTitle>
                         <DialogDescription>
-                            {__('Se procesarán con IA las fotos de los :count obreros seleccionados. Los obreros sin foto se omitirán. El procesamiento se realiza en este dispositivo.', {
+                            {__('Se procesarán automáticamente las fotos de los :count obreros seleccionados. Los obreros sin foto se omitirán. El procesamiento se realiza en este dispositivo.', {
                                 count: String(selectedIds.length),
                             })}
                         </DialogDescription>
@@ -1501,7 +1431,7 @@ export default function PastoresCarnetsPage({
                 </DialogContent>
             </Dialog>
 
-            {/* MODAL DEL AGENTE DISEÑADOR IA POR LOTES */}
+            {/* MODAL DE OPTIMIZACIÓN DE FOTOS POR LOTES */}
             <Dialog
                 open={isBulkAiModalOpen}
                 onOpenChange={(open) => {
@@ -1512,7 +1442,7 @@ export default function PastoresCarnetsPage({
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                             <Sparkles className="size-5 text-amber-500 fill-amber-400" />
-                            {__('Agente Diseñador IA por Lotes')}
+                            {__('Optimizar Fotos por Lotes')}
                         </DialogTitle>
                         <DialogDescription>
                             {__('Selecciona el flujo de diseño automático que se aplicará a los :count pastores seleccionados (los registros sin foto se omitirán).', {
@@ -1525,18 +1455,18 @@ export default function PastoresCarnetsPage({
                         {[
                             {
                                 id: 'studio_credential_pro' as const,
-                                title: __('✨ Estudio Credencial Completo (Recomendado)'),
-                                desc: __('Remueve fondo con detalle en cabello + restaura rostro (GFPGAN) + equilibra sombras/color + encuadre biométrico oficial y sombra 3D.'),
+                                title: __('Credencial completa (Recomendado)'),
+                                desc: __('Restaura el rostro, recorta el fondo con detalle en el cabello, equilibra luz y color y encuadra al formato oficial.'),
                             },
                             {
                                 id: 'auto_agent' as const,
-                                title: __('💎 Restauración Facial + Luz y Nitidez (Conservar Fondo)'),
-                                desc: __('Audita cada foto y restaura ojos/piel, corrige subexposición, balance de blancos y ruido sin recortar el fondo.'),
+                                title: __('Retoque de rostro, luz y nitidez (conserva el fondo)'),
+                                desc: __('Analiza cada foto y mejora ojos y piel, corrige exposición, balance de blancos y ruido sin recortar el fondo.'),
                             },
                             {
                                 id: 'cutout_only' as const,
-                                title: __('✂️ Solo Recorte de Silueta y Cabello HD + Anti-Halos'),
-                                desc: __('Aísla al pastor con RMBG-1.4 + MODNet y descontamina bordes de color manteniendo tonos originales.'),
+                                title: __('Solo recorte de fondo (alta precisión)'),
+                                desc: __('Aísla al pastor con detalle en el cabello y limpia los bordes conservando los tonos originales.'),
                             },
                         ].map((item) => (
                             <div
@@ -1612,12 +1542,12 @@ export default function PastoresCarnetsPage({
                             {isEnhancingBulkAi ? (
                                 <>
                                     <Loader2 className="size-4 animate-spin text-amber-300" />
-                                    {__('Diseñando con IA...')}
+                                    {__('Optimizando...')}
                                 </>
                             ) : (
                                 <>
                                     <Sparkles className="size-4 text-amber-300 fill-amber-300" />
-                                    {__('Ejecutar Agente Diseñador')}
+                                    {__('Optimizar fotos')}
                                 </>
                             )}
                         </Button>

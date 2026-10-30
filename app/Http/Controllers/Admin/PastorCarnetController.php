@@ -466,7 +466,7 @@ class PastorCarnetController extends Controller
         }
 
         $allowed = [
-            'preset', 'auto_pilot', 'remove_bg', 'matting_mode', 'defringe',
+            'preset', 'auto_pilot', 'return_layers', 'remove_bg', 'matting_mode', 'defringe',
             'edge_feather', 'edge_shift', 'face_restore', 'face_strength',
             'eye_clarity', 'skin_smooth', 'upscale', 'upscale_mode',
             'auto_frame', 'rotation', 'exposure', 'brightness', 'contrast',
@@ -562,6 +562,7 @@ class PastorCarnetController extends Controller
                     'success' => true,
                     'message' => 'Fotografía optimizada por el Agente Diseñador IA.',
                     'data_url' => $result['data_url'],
+                    'cutout_data_url' => $result['cutout_data_url'] ?? null,
                     'duration_seconds' => $result['duration_seconds'] ?? null,
                     'steps_applied' => $result['steps_applied'] ?? [],
                     'applied_params' => $result['applied_params'] ?? null,

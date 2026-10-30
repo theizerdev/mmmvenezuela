@@ -120,15 +120,15 @@ export const DEFAULT_STUDIO_ADJUSTMENTS: StudioAdjustments = {
     flipX: false,
 
     bgMode: 'original',
-    backdropPreset: 'transparent',
+    backdropPreset: 'credential_silver',
     customBgColor: '#ffffff',
     customBgSecondary: '#cbd5e1',
-    dropShadow: 22,
+    dropShadow: 20,
     rimLight: 0,
     vignette: 0,
     edgeFeather: 1.2,
     edgeShift: 0,
-    defringe: 65,
+    defringe: 0,
     chromaColor: '#ffffff',
     chromaTolerance: 24,
 
@@ -276,54 +276,54 @@ export interface BackdropOption {
 
 export const STUDIO_BACKDROP_OPTIONS: BackdropOption[] = [
     {
-        id: 'transparent',
-        label: 'Transparente (Marco Oficial)',
-        previewCss:
-            'repeating-conic-gradient(#cbd5e1 0% 25%, #f8fafc 0% 50%) 50% / 12px 12px',
-    },
-    {
         id: 'credential_silver',
-        label: 'Plateado Credencial',
+        label: 'Plata Oficial',
         previewCss: 'linear-gradient(180deg, #cfd7e1 0%, #dbe1e8 45%, #c2cbd5 100%)',
     },
     {
         id: 'studio_white',
-        label: 'Blanco Puro Estudio',
+        label: 'Blanco Estudio',
         previewCss: 'radial-gradient(circle at 50% 38%, #ffffff 0%, #eceff3 100%)',
     },
     {
         id: 'pearl_gray',
-        label: 'Gris Perla Ejecutivo',
+        label: 'Gris Perla',
         previewCss: 'radial-gradient(circle at 50% 38%, #f8fafc 0%, #cbd5e1 100%)',
     },
     {
         id: 'passport_sky',
-        label: 'Celeste Documento',
+        label: 'Celeste Carnet',
         previewCss: 'radial-gradient(circle at 50% 38%, #e2f4fe 0%, #b2d8f5 100%)',
     },
     {
         id: 'mmm_blue',
-        label: 'Azul Institucional',
+        label: 'Azul MMM',
         previewCss: 'radial-gradient(circle at 50% 38%, #1d4ed8 0%, #0f172a 100%)',
     },
     {
         id: 'warm_ivory',
-        label: 'Marfil Editorial',
+        label: 'Marfil Cálido',
         previewCss: 'radial-gradient(circle at 50% 38%, #fcfaf8 0%, #e5dfd5 100%)',
     },
     {
         id: 'bokeh',
-        label: 'Bokeh Retrato DSLR',
+        label: 'Bokeh Retrato',
         previewCss: 'linear-gradient(135deg, #64748b 0%, #94a3b8 50%, #475569 100%)',
     },
     {
+        id: 'transparent',
+        label: 'Sin Fondo PNG',
+        previewCss:
+            'repeating-conic-gradient(#cbd5e1 0% 25%, #ffffff 0% 50%) 50% / 10px 10px',
+    },
+    {
         id: 'custom_solid',
-        label: 'Color Sólido',
+        label: 'Color Libre',
         previewCss: 'linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%)',
     },
     {
         id: 'custom_gradient',
-        label: 'Degradado Propio',
+        label: 'Degradado',
         previewCss: 'linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%)',
     },
 ];

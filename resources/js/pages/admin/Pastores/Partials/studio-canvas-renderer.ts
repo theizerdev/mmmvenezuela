@@ -501,27 +501,29 @@ export function renderStudioComposite(params: {
             (targetCtx) => drawTransformedSource(targetCtx, originalImage),
         );
 
-        // 2.1 Luz de Recorte / Rim Light de Estudio detrás de los hombros y cabeza
+        const offscreenShift = w + 256;
+
+        // 2.1 Luz de Recorte / Rim Light de Estudio detrás de los hombros y cabeza (solo halo, sin duplicar alfa del sujeto)
         if (adjustments.rimLight > 0) {
             ctx.save();
             const rimAlpha = (adjustments.rimLight / 100) * 0.65;
             ctx.shadowColor = `rgba(255, 255, 255, ${rimAlpha.toFixed(2)})`;
             ctx.shadowBlur = Math.round(14 * scaleFactor);
-            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetX = offscreenShift;
             ctx.shadowOffsetY = Math.round(-2 * scaleFactor);
-            ctx.drawImage(subjectCanvas, 0, 0);
+            ctx.drawImage(subjectCanvas, -offscreenShift, 0);
             ctx.restore();
         }
 
-        // 2.2 Sombra de Contacto 3D de Estudio detrás del pastor
+        // 2.2 Sombra de Contacto 3D de Estudio detrás del pastor (solo sombra pura, sin sobre-opacar bordes de cabello)
         if (adjustments.dropShadow > 0) {
             ctx.save();
-            const shOpacity = (adjustments.dropShadow / 100) * 0.52;
+            const shOpacity = (adjustments.dropShadow / 100) * 0.45;
             ctx.shadowColor = `rgba(15, 23, 42, ${shOpacity.toFixed(2)})`;
             ctx.shadowBlur = Math.round(18 * scaleFactor);
-            ctx.shadowOffsetX = Math.round(6 * scaleFactor);
+            ctx.shadowOffsetX = offscreenShift + Math.round(6 * scaleFactor);
             ctx.shadowOffsetY = Math.round(8 * scaleFactor);
-            ctx.drawImage(subjectCanvas, 0, 0);
+            ctx.drawImage(subjectCanvas, -offscreenShift, 0);
             ctx.restore();
         }
     }
