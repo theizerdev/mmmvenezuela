@@ -6,7 +6,6 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
     Upload,
     ZoomIn,
@@ -16,13 +15,10 @@ import {
     Save,
     RotateCcw,
     RotateCw,
-    Sparkles,
     Loader2,
-    Check,
     Undo2,
     Redo2,
     Sun,
-    SlidersHorizontal,
     Wand2,
     Eye,
     Eraser,
@@ -36,6 +32,10 @@ import {
     Info,
     Layers,
     X,
+    ChevronDown,
+    Camera,
+    Frame,
+    SlidersHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -73,13 +73,30 @@ interface PastorPhotoAdjustModalProps {
     templateFrontUrl?: string;
 }
 
-type StudioTab = 'agent' | 'cutout' | 'light' | 'biometric';
+type StudioTab = 'optimize' | 'background' | 'light' | 'framing';
 
 interface HistorySnapshot {
     adjustments: StudioAdjustments;
     activeImageSrc: string;
     cutoutDataUrl: string | null;
 }
+
+const FRAME_RATIO = STUDIO_FRAME_W / STUDIO_FRAME_H;
+
+/** Valores neutros de luz y color (para restablecer la sección completa). */
+const NEUTRAL_LIGHT_VALUES: Partial<StudioAdjustments> = {
+    exposure: 0,
+    brightness: 0,
+    contrast: 0,
+    shadows: 0,
+    highlights: 0,
+    temperature: 0,
+    tint: 0,
+    vibrance: 0,
+    saturation: 0,
+    clarity: 0,
+    sharpness: 0,
+};
 
 function loadHtmlImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -95,6 +112,10 @@ function loadHtmlImage(src: string): Promise<HTMLImageElement> {
         img.src = src;
     });
 }
+
+// =============================================================================
+// COMPONENTES DE INTERFAZ REUTILIZABLES DEL ESTUDIO
+// =============================================================================
 
 interface StudioSliderProps {
     label: string;
@@ -119,56 +140,52 @@ function StudioSlider({
     defaultValue = 0,
     onChange,
     onCommit,
-    accentClass = 'accent-indigo-600 dark:accent-indigo-500',
+    accentClass = 'accent-indigo-600',
 }: StudioSliderProps) {
     const isModified = Math.abs(value - defaultValue) > 0.01;
     const formatted =
         step < 1 ? value.toFixed(1) : `${value > 0 && min < 0 ? '+' : ''}${Math.round(value)}`;
 
+    const reset = () => {
+        onChange(defaultValue);
+        onCommit?.();
+    };
+
     return (
-        <div className="space-y-1">
-            <div className="flex items-center justify-between text-[11px]">
-                <button
-                    type="button"
-                    onDoubleClick={() => {
-                        onChange(defaultValue);
-                        onCommit?.();
-                    }}
-                    title="Doble clic para restablecer este control"
+        <div className="group/slider space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+                <span
+                    onDoubleClick={reset}
+                    title="Doble clic para restablecer"
                     className={cn(
-                        'font-medium transition-colors text-left',
-                        isModified
-                            ? 'text-indigo-600 dark:text-indigo-300 font-semibold'
-                            : 'text-foreground/85',
+                        'select-none truncate',
+                        isModified ? 'font-semibold text-foreground' : 'text-muted-foreground',
                     )}
                 >
                     {label}
-                </button>
-                <div className="flex items-center gap-1.5">
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                    {isModified && (
+                        <button
+                            type="button"
+                            onClick={reset}
+                            className="opacity-0 group-hover/slider:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                            title="Restablecer"
+                        >
+                            <RotateCcw className="size-3" />
+                        </button>
+                    )}
                     <span
                         className={cn(
-                            'font-mono text-[10.5px] px-1.5 py-0.5 rounded',
+                            'min-w-[38px] text-right font-mono text-[11px] tabular-nums',
                             isModified
-                                ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-200 font-bold'
+                                ? 'text-indigo-600 dark:text-indigo-400 font-semibold'
                                 : 'text-muted-foreground',
                         )}
                     >
                         {formatted}
                         {unit}
                     </span>
-                    {isModified && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                onChange(defaultValue);
-                                onCommit?.();
-                            }}
-                            className="text-[10px] text-muted-foreground hover:text-foreground"
-                            title="Restablecer"
-                        >
-                            ↺
-                        </button>
-                    )}
                 </div>
             </div>
             <input
@@ -180,14 +197,150 @@ function StudioSlider({
                 onChange={(e) => onChange(parseFloat(e.target.value))}
                 onMouseUp={onCommit}
                 onTouchEnd={onCommit}
+                onKeyUp={onCommit}
                 className={cn(
-                    'w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer',
+                    'w-full h-1.5 bg-muted rounded-full cursor-pointer',
                     accentClass,
                 )}
             />
         </div>
     );
 }
+
+interface PanelSectionProps {
+    title: string;
+    icon?: React.ComponentType<{ className?: string }>;
+    description?: string;
+    action?: React.ReactNode;
+    collapsible?: boolean;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+}
+
+function PanelSection({
+    title,
+    icon: Icon,
+    description,
+    action,
+    collapsible = false,
+    defaultOpen = true,
+    children,
+}: PanelSectionProps) {
+    const [open, setOpen] = useState<boolean>(defaultOpen);
+    const isOpen = !collapsible || open;
+
+    return (
+        <section className="rounded-xl border border-border bg-background">
+            <div
+                className={cn(
+                    'flex items-center justify-between gap-2 px-3.5 py-2.5',
+                    collapsible && 'cursor-pointer select-none hover:bg-muted/40 rounded-xl',
+                )}
+                onClick={collapsible ? () => setOpen((v) => !v) : undefined}
+            >
+                <div className="flex items-center gap-2 min-w-0">
+                    {Icon && <Icon className="size-4 text-muted-foreground shrink-0" />}
+                    <div className="min-w-0">
+                        <h4 className="text-[13px] font-semibold text-foreground leading-tight">
+                            {title}
+                        </h4>
+                        {description && (
+                            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                                {description}
+                            </p>
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
+                    {collapsible && (
+                        <ChevronDown
+                            className={cn(
+                                'size-4 text-muted-foreground transition-transform',
+                                isOpen && 'rotate-180',
+                            )}
+                        />
+                    )}
+                </div>
+            </div>
+            {isOpen && <div className="px-3.5 pb-3.5 pt-0.5 space-y-3">{children}</div>}
+        </section>
+    );
+}
+
+interface ToggleRowProps {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+}
+
+function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={() => onChange(!checked)}
+            className="w-full flex items-center justify-between gap-3 text-left"
+        >
+            <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground">{label}</p>
+                {description && (
+                    <p className="text-[11px] text-muted-foreground leading-snug">{description}</p>
+                )}
+            </div>
+            <span
+                className={cn(
+                    'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
+                    checked ? 'bg-indigo-600' : 'bg-muted-foreground/30',
+                )}
+            >
+                <span
+                    className={cn(
+                        'inline-block size-4 rounded-full bg-white shadow-sm transition-transform',
+                        checked ? 'translate-x-[18px]' : 'translate-x-0.5',
+                    )}
+                />
+            </span>
+        </button>
+    );
+}
+
+interface ToolbarButtonProps {
+    onClick: () => void;
+    title: string;
+    active?: boolean;
+    disabled?: boolean;
+    label?: string;
+    icon: React.ComponentType<{ className?: string }>;
+}
+
+function ToolbarButton({ onClick, title, active, disabled, label, icon: Icon }: ToolbarButtonProps) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            title={title}
+            aria-pressed={active}
+            className={cn(
+                'inline-flex items-center gap-1.5 h-8 rounded-md text-xs font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none',
+                label ? 'px-2.5' : 'w-8 justify-center',
+                active
+                    ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/70',
+            )}
+        >
+            <Icon className="size-4" />
+            {label && <span className="hidden xl:inline">{label}</span>}
+        </button>
+    );
+}
+
+// =============================================================================
+// ESTUDIO FOTOGRÁFICO PROFESIONAL (PANTALLA COMPLETA)
+// =============================================================================
 
 export function PastorPhotoAdjustModal({
     pastor,
@@ -198,7 +351,7 @@ export function PastorPhotoAdjustModal({
 }: PastorPhotoAdjustModalProps) {
     const { __ } = useTranslate();
 
-    const [activeTab, setActiveTab] = useState<StudioTab>('agent');
+    const [activeTab, setActiveTab] = useState<StudioTab>('optimize');
     const [adj, setAdj] = useState<StudioAdjustments>({ ...DEFAULT_STUDIO_ADJUSTMENTS });
     const adjRef = useRef<StudioAdjustments>(adj);
     adjRef.current = adj;
@@ -210,7 +363,7 @@ export function PastorPhotoAdjustModal({
     const [cutoutCanvas, setCutoutCanvas] = useState<HTMLCanvasElement | null>(null);
     const [cutoutDataUrl, setCutoutDataUrl] = useState<string | null>(null);
 
-    // Pincel Mágico (Borrar / Restaurar bordes como Canva Pro / Picsart)
+    // Pincel de retoque (Borrar / Restaurar bordes)
     const [brushMode, setBrushMode] = useState<BrushToolMode>('none');
     const [brushSize, setBrushSize] = useState<number>(22);
     const [brushSoftness, setBrushSoftness] = useState<number>(65);
@@ -219,7 +372,7 @@ export function PastorPhotoAdjustModal({
     const [cursorPreview, setCursorPreview] = useState<{ x: number; y: number } | null>(null);
     const brushMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    // Diagnóstico del Agente Diseñador Python
+    // Diagnóstico de calidad y procesamiento
     const [diagnosis, setDiagnosis] = useState<AgentDiagnosis | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [isRunningNeural, setIsRunningNeural] = useState<boolean>(false);
@@ -238,6 +391,9 @@ export function PastorPhotoAdjustModal({
     const [history, setHistory] = useState<HistorySnapshot[]>([]);
     const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
+    // Tamaño de visualización adaptable a la pantalla (render interno siempre 748 x 1124 HD)
+    const [displaySize, setDisplaySize] = useState<{ w: number; h: number }>({ w: 266, h: 399 });
+
     const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const beforeCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const stageViewportRef = useRef<HTMLDivElement | null>(null);
@@ -247,10 +403,29 @@ export function PastorPhotoAdjustModal({
     const analyzeAbortRef = useRef<AbortController | null>(null);
 
     const photoUrl = pastor ? getPastorPhotoUrl((pastor as any).foto_url || pastor.foto) : null;
+    const isBusy = isRunningNeural || isRemovingBg || isSaving;
 
-    // Escala de visualización cómoda en el estudio (266 x 399 px en pantalla, renderizado interno 748 x 1124 HD)
-    const DISPLAY_W = Math.round(STUDIO_FRAME_W * 1.42);
-    const DISPLAY_H = Math.round(STUDIO_FRAME_H * 1.42);
+    // Ajuste responsivo del lienzo al espacio disponible del escenario
+    useEffect(() => {
+        if (!isOpen) return;
+        const el = stageViewportRef.current;
+        if (!el) return;
+
+        const update = () => {
+            const rect = el.getBoundingClientRect();
+            const availH = Math.max(320, rect.height - 24);
+            const availW = Math.max(220, rect.width - 32);
+            let h = Math.min(availH, availW / FRAME_RATIO, 860);
+            h = Math.max(300, h);
+            const w = h * FRAME_RATIO;
+            setDisplaySize({ w: Math.round(w), h: Math.round(h) });
+        };
+
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [isOpen, pastor?.id]);
 
     const initBrushMaskForImage = useCallback((img: HTMLImageElement) => {
         const mask = document.createElement('canvas');
@@ -356,7 +531,7 @@ export function PastorPhotoAdjustModal({
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [isOpen, handleUndo, handleRedo]);
 
-    // Ejecutar auditoría del Agente Diseñador Python sobre la imagen
+    // Análisis de calidad de la fotografía (motor local)
     const runAgentDiagnosis = useCallback(
         async (dataUri?: string) => {
             if (!pastor) return;
@@ -396,7 +571,7 @@ export function PastorPhotoAdjustModal({
                 }
             } catch (err: any) {
                 if (err?.name !== 'AbortError') {
-                    console.debug('Diagnóstico IA omitido:', err);
+                    console.debug('Análisis de calidad omitido:', err);
                 }
             } finally {
                 if (!controller.signal.aborted) {
@@ -411,7 +586,7 @@ export function PastorPhotoAdjustModal({
     useEffect(() => {
         if (!isOpen || !pastor) return;
 
-        setActiveTab('agent');
+        setActiveTab('optimize');
         setBrushMode('none');
         setShowCompareSplit(false);
         setComparePosition(50);
@@ -518,13 +693,14 @@ export function PastorPhotoAdjustModal({
                 setBrushMode('none');
                 initBrushMaskForImage(img);
                 pushHistory(freshAdj, dataUrl, null);
-                toast.info(__('Fotografía cargada en el Estudio. Analizando con Agente IA...'));
+                toast.info(__('Fotografía cargada. Analizando calidad...'));
                 void runAgentDiagnosis(dataUrl);
             } catch {
                 toast.error(__('No se pudo leer el archivo de imagen seleccionado.'));
             }
         };
         reader.readAsDataURL(file);
+        e.target.value = '';
     };
 
     // Extraer DataURL limpio de la imagen de trabajo actual
@@ -547,7 +723,7 @@ export function PastorPhotoAdjustModal({
     }, [workingImg, workingImgSrc]);
 
     // =========================================================================
-    // ACCIÓN 1: AUTO-DISEÑADOR MÁGICO 1-CLIC & MOTOR NEURONAL PYTHON
+    // ACCIÓN 1: OPTIMIZAR FOTO (1 CLIC) Y RETOQUE AVANZADO
     // =========================================================================
     const handleRunNeuralDesigner = async (mode: 'auto_magic' | 'custom_neural') => {
         if (!pastor || !workingImg) return;
@@ -556,8 +732,8 @@ export function PastorPhotoAdjustModal({
             setIsRunningNeural(true);
             setNeuralStatusText(
                 mode === 'auto_magic'
-                    ? __('Ejecutando receta adaptativa: restauración facial, recorte de cabello y luz de estudio...')
-                    : __('Ejecutando redes neuronales GFPGAN / Real-ESRGAN y calibración profunda...'),
+                    ? __('Restaurando rostro, ajustando la luz y recortando el fondo...')
+                    : __('Aplicando retoque avanzado con tus parámetros...'),
             );
 
             const currentAdj = adjRef.current;
@@ -620,12 +796,12 @@ export function PastorPhotoAdjustModal({
 
             const result = await response.json();
             if (!response.ok || !result.success) {
-                throw new Error(result.error || __('No se pudo procesar con el Agente Diseñador.'));
+                throw new Error(result.error || __('No se pudo optimizar la fotografía.'));
             }
 
             const outSrc: string = result.data_url || result.foto_url;
             if (!outSrc) {
-                throw new Error(__('El Agente IA no devolvió imagen resultante.'));
+                throw new Error(__('El optimizador no devolvió una imagen.'));
             }
 
             const processedSceneImg = await loadHtmlImage(outSrc);
@@ -640,7 +816,7 @@ export function PastorPhotoAdjustModal({
 
             const nextAdj: StudioAdjustments = {
                 ...latestAdj,
-                defringe: 0, // El motor Python ya aplicó descontaminación precisa en el recorte
+                defringe: 0, // El motor local ya aplicó descontaminación precisa en el recorte
                 exposure: mode === 'auto_magic' ? 0 : latestAdj.exposure,
                 brightness: mode === 'auto_magic' ? 0 : latestAdj.brightness,
                 contrast: mode === 'auto_magic' ? 0 : latestAdj.contrast,
@@ -689,12 +865,12 @@ export function PastorPhotoAdjustModal({
                     ? ` (${__('Calidad')}: ${result.before_score} → ${result.after_score}/100)`
                     : '';
 
-            toast.success(__('¡Diseño IA completado con éxito!') + scoreMsg, {
-                description: __('Puedes elegir el color de fondo abajo o deslizar para comparar el Antes y Después.'),
+            toast.success(__('¡Foto optimizada!') + scoreMsg, {
+                description: __('Elige un fondo o desliza la barra para comparar el antes y después.'),
             });
         } catch (err: any) {
-            console.error('Error en Agente Diseñador:', err);
-            toast.error(err?.message || __('Error al ejecutar el Agente Diseñador IA.'));
+            console.error('Error al optimizar la fotografía:', err);
+            toast.error(err?.message || __('No se pudo optimizar la fotografía.'));
         } finally {
             setIsRunningNeural(false);
             setNeuralStatusText('');
@@ -702,7 +878,7 @@ export function PastorPhotoAdjustModal({
     };
 
     // =========================================================================
-    // ACCIÓN 2: REMOCIÓN DE FONDO DE ESTUDIO HD (CABELLO + ANTI-HALOS)
+    // ACCIÓN 2: RECORTE DE FONDO DE ALTA PRECISIÓN (CABELLO + BORDES LIMPIOS)
     // =========================================================================
     const handleStudioRemoveBackground = async (targetBackdrop?: StudioBackdropPreset) => {
         if (!pastor || !workingImg) return;
@@ -717,7 +893,7 @@ export function PastorPhotoAdjustModal({
             let cutCanvas: HTMLCanvasElement | null = null;
             let cutUrl: string | null = null;
 
-            // 1. Motor Python de Estudio (RMBG-1.4 [-1,1] + MODNet cabello + Guided Filter + Defringe)
+            // 1. Motor local del servidor (recorte de alta precisión con limpieza de bordes)
             if (sourceDataUrl) {
                 try {
                     const resp = await fetch(`/admin/pastores/${pastor.id}/ia-remove-bg`, {
@@ -748,11 +924,11 @@ export function PastorPhotoAdjustModal({
                         cutUrl = data.data_url;
                     }
                 } catch (serverErr) {
-                    console.warn('Motor Python no disponible para recorte, usando MediaPipe Wasm:', serverErr);
+                    console.warn('Motor del servidor no disponible para recorte, usando el navegador:', serverErr);
                 }
             }
 
-            // 2. Respaldo en navegador (MediaPipe Selfie Segmentation)
+            // 2. Respaldo en el navegador
             if (!cutCanvas) {
                 const segData = await removeBackgroundWithAi(
                     workingImg,
@@ -778,10 +954,10 @@ export function PastorPhotoAdjustModal({
             };
             setAdj(nextAdj);
             pushHistory(nextAdj, workingImgSrc, cutUrl);
-            toast.success(__('Fondo removido con precisión de estudio (cabello y bordes limpios).'));
+            toast.success(__('Fondo recortado con precisión (cabello y bordes limpios).'));
         } catch (error) {
-            console.error('Error al remover fondo:', error);
-            toast.error(__('No se pudo remover el fondo con IA. Se activó el modo Croma manual.'));
+            console.error('Error al recortar fondo:', error);
+            toast.error(__('No se pudo recortar el fondo automáticamente. Se activó el modo por color.'));
             setAdj((prev) => ({
                 ...prev,
                 bgMode: 'chroma',
@@ -817,20 +993,20 @@ export function PastorPhotoAdjustModal({
     };
 
     // =========================================================================
-    // ACCIÓN 3: APLICAR CALIBRACIÓN ÓPTIMA O BIOMETRÍA EN 1 CLIC (60FPS INSTANTÁNEO)
+    // ACCIÓN 3: CALIBRACIÓN AUTOMÁTICA Y ENCUADRE OFICIAL (INSTANTÁNEO)
     // =========================================================================
     const handleApplyRecommendedGrading = () => {
         if (!diagnosis?.recommended_params) {
-            toast.info(__('Aplicando perfil equilibrado de Estudio Ejecutivo.'));
+            toast.info(__('Perfil Estudio Ejecutivo aplicado.'));
             const execPreset = STUDIO_COLOR_PRESETS[1].values;
-            const next = { ...adj, ...execPreset };
+            const next = { ...adjRef.current, ...execPreset };
             setAdj(next);
             pushHistory(next, workingImgSrc, cutoutDataUrl);
             return;
         }
         const r = diagnosis.recommended_params;
         const next: StudioAdjustments = {
-            ...adj,
+            ...adjRef.current,
             exposure: Number(r.exposure ?? 0),
             brightness: Number(r.brightness ?? 0),
             contrast: Number(r.contrast ?? 8),
@@ -845,12 +1021,18 @@ export function PastorPhotoAdjustModal({
         };
         setAdj(next);
         pushHistory(next, workingImgSrc, cutoutDataUrl);
-        toast.success(__('Luz, balance de blancos y nitidez calibrados según diagnóstico IA.'));
+        toast.success(__('Luz, color y nitidez calibrados automáticamente.'));
+    };
+
+    const handleResetLight = () => {
+        const next = { ...adjRef.current, ...NEUTRAL_LIGHT_VALUES };
+        setAdj(next);
+        pushHistory(next, workingImgSrc, cutoutDataUrl);
     };
 
     const handleApplyBiometricFraming = () => {
         if (!diagnosis?.biometric?.available) {
-            const next = { ...adj, scale: 1.18, panX: 0, panY: 0, rotation: 0 };
+            const next = { ...adjRef.current, scale: 1.18, panX: 0, panY: 0, rotation: 0 };
             setAdj(next);
             pushHistory(next, workingImgSrc, cutoutDataUrl);
             toast.info(__('Encuadre estándar de credencial aplicado.'));
@@ -861,7 +1043,7 @@ export function PastorPhotoAdjustModal({
         const safeScale = Math.max(1.0, b.ui_scale);
         const minPanY = -140.5 * Math.max(0, safeScale - 1);
         const next: StudioAdjustments = {
-            ...adj,
+            ...adjRef.current,
             rotation: b.rotation_deg,
             scale: safeScale,
             panX: b.ui_pan_x,
@@ -869,7 +1051,43 @@ export function PastorPhotoAdjustModal({
         };
         setAdj(next);
         pushHistory(next, workingImgSrc, cutoutDataUrl);
-        toast.success(__('Ojos nivelados y encuadre biométrico oficial calibrado.'));
+        toast.success(__('Ojos nivelados y encuadre oficial aplicado.'));
+    };
+
+    const handleResetGeometry = () => {
+        const next = {
+            ...adjRef.current,
+            scale: 1,
+            panX: 0,
+            panY: 0,
+            rotation: 0,
+            flipX: false,
+        };
+        setAdj(next);
+        pushHistory(next, workingImgSrc, cutoutDataUrl);
+    };
+
+    const handleToggleFlip = () => {
+        const next = { ...adjRef.current, flipX: !adjRef.current.flipX };
+        setAdj(next);
+        pushHistory(next, workingImgSrc, cutoutDataUrl);
+    };
+
+    const handleRotate90 = () => {
+        const next = {
+            ...adjRef.current,
+            rotation: ((adjRef.current.rotation + 90 + 180) % 360) - 180,
+        };
+        setAdj(next);
+        pushHistory(next, workingImgSrc, cutoutDataUrl);
+    };
+
+    const applyScale = (s: number) => {
+        const nextScale = Math.max(0.55, Math.min(2.6, Number(s.toFixed(3))));
+        setAdj((prev) => {
+            const minPanY = nextScale >= 1 ? -140.5 * (nextScale - 1) : prev.panY;
+            return { ...prev, scale: nextScale, panY: Math.max(minPanY, prev.panY) };
+        });
     };
 
     // =========================================================================
@@ -935,10 +1153,11 @@ export function PastorPhotoAdjustModal({
         adj,
         showCompareSplit,
         showLiveCardPreview,
+        displaySize,
     ]);
 
     // =========================================================================
-    // INTERACCIÓN EN LIENZO: ARRASTRE, RUEDA DE ZOOM Y PINCEL MÁGICO
+    // INTERACCIÓN EN LIENZO: ARRASTRE, RUEDA DE ZOOM Y PINCEL DE RETOQUE
     // =========================================================================
     const paintBrushStrokeAtClient = (clientX: number, clientY: number) => {
         if (brushMode === 'none' || !mainCanvasRef.current || !workingImg || !brushMaskCanvasRef.current) {
@@ -1018,12 +1237,12 @@ export function PastorPhotoAdjustModal({
         lastPointerRef.current = { x: e.clientX, y: e.clientY };
 
         setAdj((prev) => {
-            const rawPanY = prev.panY + dy * (STUDIO_FRAME_H / DISPLAY_H);
+            const rawPanY = prev.panY + dy * (STUDIO_FRAME_H / displaySize.h);
             // Evitar que al arrastrar hacia arriba con zoom >= 100% se despegue el borde inferior del saco
             const minPanY = prev.scale >= 1 ? -140.5 * (prev.scale - 1) : -180;
             return {
                 ...prev,
-                panX: prev.panX + dx * (STUDIO_FRAME_W / DISPLAY_W),
+                panX: prev.panX + dx * (STUDIO_FRAME_W / displaySize.w),
                 panY: Math.max(minPanY, rawPanY),
             };
         });
@@ -1056,7 +1275,7 @@ export function PastorPhotoAdjustModal({
         if (workingImg) {
             initBrushMaskForImage(workingImg);
             setBrushRenderTick((t) => t + 1);
-            toast.info(__('Trazos manuales del pincel restablecidos.'));
+            toast.info(__('Trazos del pincel restablecidos.'));
         }
     };
 
@@ -1077,7 +1296,7 @@ export function PastorPhotoAdjustModal({
     };
 
     // =========================================================================
-    // GUARDAR FOTOGRAFÍA MASTER HD EN LA CREDENCIAL DEL PASTOR (100% WYSIWYG)
+    // GUARDAR FOTOGRAFÍA HD EN LA CREDENCIAL DEL PASTOR (100% WYSIWYG)
     // =========================================================================
     const handleSavePhoto = async () => {
         if (!pastor || !mainCanvasRef.current || !workingImg) return;
@@ -1114,9 +1333,7 @@ export function PastorPhotoAdjustModal({
 
             const result = await response.json();
             if (response.ok && result.success) {
-                toast.success(
-                    result.message || __('Fotografía de estudio guardada en la credencial.'),
-                );
+                toast.success(result.message || __('Fotografía guardada en la credencial.'));
                 onPhotoUpdated(result.foto_url);
                 onClose();
             } else {
@@ -1132,16 +1349,6 @@ export function PastorPhotoAdjustModal({
 
     if (!pastor) return null;
 
-    const scoreValue = diagnosis?.quality_score ?? null;
-    const scoreColor =
-        scoreValue === null
-            ? 'text-muted-foreground border-border bg-muted/40'
-            : scoreValue >= 85
-              ? 'text-emerald-700 dark:text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
-              : scoreValue >= 68
-                ? 'text-indigo-700 dark:text-cyan-300 border-indigo-500/40 bg-indigo-500/10'
-                : 'text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/10';
-
     const updateAdj = <K extends keyof StudioAdjustments>(key: K, val: StudioAdjustments[K]) => {
         setAdj((prev) => ({ ...prev, [key]: val }));
     };
@@ -1152,423 +1359,271 @@ export function PastorPhotoAdjustModal({
 
     const pastorFullName = getPastorCarnetFullName(pastor, true);
 
+    const scoreValue = diagnosis?.quality_score ?? null;
+    const scoreTone =
+        scoreValue === null
+            ? { text: 'text-muted-foreground', stroke: 'stroke-muted-foreground/40' }
+            : scoreValue >= 85
+              ? { text: 'text-emerald-600 dark:text-emerald-400', stroke: 'stroke-emerald-500' }
+              : scoreValue >= 68
+                ? { text: 'text-indigo-600 dark:text-indigo-400', stroke: 'stroke-indigo-500' }
+                : { text: 'text-amber-600 dark:text-amber-400', stroke: 'stroke-amber-500' };
+    const scoreCircumference = 2 * Math.PI * 22;
+
     const activeBackdropLabel =
         adj.bgMode === 'original' && !hasBrushStrokes
             ? __('Original')
-            : STUDIO_BACKDROP_OPTIONS.find((o) => o.id === adj.backdropPreset)?.label ||
-              __('Estudio');
+            : adj.bgMode === 'chroma'
+              ? `${__('Por color')} · ${STUDIO_BACKDROP_OPTIONS.find((o) => o.id === adj.backdropPreset)?.label || ''}`
+              : STUDIO_BACKDROP_OPTIONS.find((o) => o.id === adj.backdropPreset)?.label ||
+                __('Estudio');
+
+    const tabs: Array<{ id: StudioTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+        { id: 'optimize', label: __('Optimizar'), icon: Wand2 },
+        { id: 'background', label: __('Fondo'), icon: Layers },
+        { id: 'light', label: __('Luz y color'), icon: Sun },
+        { id: 'framing', label: __('Encuadre'), icon: Frame },
+    ];
+
+    // ---------------------------------------------------------------------
+    // Bloque reutilizable: Calidad de la foto
+    // ---------------------------------------------------------------------
+    const qualityBlock = (
+        <div className="space-y-3">
+            <div className="flex items-center gap-3">
+                <div className="relative size-14 shrink-0">
+                    <svg viewBox="0 0 52 52" className="size-14 -rotate-90">
+                        <circle cx="26" cy="26" r="22" className="fill-none stroke-muted" strokeWidth="5" />
+                        <circle
+                            cx="26"
+                            cy="26"
+                            r="22"
+                            className={cn('fill-none transition-all duration-700', scoreTone.stroke)}
+                            strokeWidth="5"
+                            strokeLinecap="round"
+                            strokeDasharray={scoreCircumference}
+                            strokeDashoffset={
+                                scoreCircumference * (1 - Math.min(100, Math.max(0, scoreValue ?? 0)) / 100)
+                            }
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        {isAnalyzing ? (
+                            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                        ) : (
+                            <span className={cn('text-sm font-bold tabular-nums', scoreTone.text)}>
+                                {scoreValue ?? '—'}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">
+                        {isAnalyzing
+                            ? __('Analizando...')
+                            : diagnosis?.grade || __('Sin analizar')}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                        {diagnosis
+                            ? `${diagnosis.dimensions.width}×${diagnosis.dimensions.height}px · ${__('Nitidez')} ${diagnosis.metrics.sharpness}%`
+                            : __('Rostro, luz, ruido y fondo')}
+                    </p>
+                </div>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isAnalyzing || !workingImg}
+                    onClick={() => runAgentDiagnosis(getWorkingImageDataUrl() || undefined)}
+                    className="h-7 px-2 text-[11px] text-muted-foreground"
+                    title={__('Volver a analizar')}
+                >
+                    <RotateCw className="size-3.5" />
+                </Button>
+            </div>
+
+            {diagnosis?.findings && diagnosis.findings.length > 0 && (
+                <ul className="space-y-2">
+                    {diagnosis.findings.map((f, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[11.5px] leading-snug">
+                            {f.type === 'warning' ? (
+                                <AlertTriangle className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
+                            ) : f.type === 'ok' ? (
+                                <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            ) : (
+                                <Info className="size-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                            )}
+                            <div className="min-w-0">
+                                <p className="font-medium text-foreground">{f.label}</p>
+                                <p className="text-muted-foreground">{f.detail}</p>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
 
     return (
         <Dialog
             open={isOpen}
             onOpenChange={(open) => !open && !isRunningNeural && !isSaving && onClose()}
         >
-            <DialogContent className="sm:max-w-[1160px] max-w-[98vw] h-[93vh] max-h-[880px] p-0 gap-0 overflow-hidden bg-background text-foreground border border-border shadow-2xl rounded-2xl flex flex-col [&>button]:hidden">
-                {/* ==================== BARRA SUPERIOR ADAPTABLE AL TEMA ==================== */}
-                <div className="px-4 py-2.5 border-b border-border bg-card flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <DialogContent className="top-0 left-0 translate-x-0 translate-y-0 w-screen max-w-none sm:max-w-none h-[100dvh] max-h-none rounded-none border-0 p-0 gap-0 overflow-hidden bg-background text-foreground flex flex-col data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 [&>button]:hidden">
+                {/* ==================== BARRA SUPERIOR ==================== */}
+                <header className="h-14 shrink-0 border-b border-border bg-card px-3 sm:px-4 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="size-9 rounded-xl bg-gradient-to-br from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center shrink-0 shadow-sm">
-                            <Sparkles className="size-4 text-amber-200 fill-amber-200" />
+                        <div className="size-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                            <Camera className="size-4.5" />
                         </div>
                         <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <DialogTitle className="text-sm font-bold text-foreground tracking-tight truncate">
-                                    MMM Studio AI — {__('Agente Diseñador Fotográfico')}
-                                </DialogTitle>
-                                <Badge
-                                    variant="outline"
-                                    className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 text-[10px] px-1.5 py-0 h-4 font-semibold"
-                                >
-                                    PRO LOCAL
-                                </Badge>
-                            </div>
-                            <DialogDescription className="text-[11px] text-muted-foreground truncate">
-                                {pastor.nombres} {pastor.apellidos} •{' '}
-                                {formatDocumento(pastor.documento)}
+                            <DialogTitle className="text-sm font-semibold text-foreground leading-tight truncate">
+                                {__('Estudio Fotográfico')}
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground truncate">
+                                {pastor.nombres} {pastor.apellidos} · {formatDocumento(pastor.documento)}
                             </DialogDescription>
                         </div>
                     </div>
 
-                    {/* Acciones Globales Superiores */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        <label className="cursor-pointer">
+                    {/* Herramientas de vista (centro) */}
+                    <div className="hidden md:flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+                        <ToolbarButton
+                            onClick={handleUndo}
+                            disabled={historyIndex <= 0 || isBusy}
+                            title={__('Deshacer (Ctrl+Z)')}
+                            icon={Undo2}
+                        />
+                        <ToolbarButton
+                            onClick={handleRedo}
+                            disabled={historyIndex >= history.length - 1 || isBusy}
+                            title={__('Rehacer (Ctrl+Y)')}
+                            icon={Redo2}
+                        />
+                        <div className="w-px h-5 bg-border mx-1" />
+                        <ToolbarButton
+                            onClick={() => setShowBiometricGuides((v) => !v)}
+                            active={showBiometricGuides}
+                            title={__('Guías de encuadre (ojos, cabeza y hombros)')}
+                            label={__('Guías')}
+                            icon={Crosshair}
+                        />
+                        <ToolbarButton
+                            onClick={() => setShowCompareSplit((v) => !v)}
+                            active={showCompareSplit}
+                            disabled={!initialOriginalImg}
+                            title={__('Comparar antes y después')}
+                            label={__('Comparar')}
+                            icon={Columns2}
+                        />
+                        <ToolbarButton
+                            onClick={() => setShowLiveCardPreview((v) => !v)}
+                            active={showLiveCardPreview}
+                            title={__('Vista previa en la credencial')}
+                            label={__('Credencial')}
+                            icon={IdCard}
+                        />
+                    </div>
+
+                    {/* Acciones (derecha) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <label
+                            className={cn(
+                                'cursor-pointer',
+                                isBusy && 'pointer-events-none opacity-50',
+                            )}
+                            title={__('Subir otra fotografía')}
+                        >
                             <input
                                 type="file"
                                 accept="image/png,image/jpeg,image/webp"
                                 onChange={handleFileChange}
                                 className="hidden"
                             />
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 border border-border text-secondary-foreground font-semibold text-xs transition-colors">
-                                <Upload className="size-3.5 text-indigo-600 dark:text-cyan-400" />
-                                <span>{__('Subir Foto')}</span>
-                            </div>
+                            <span className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border bg-background hover:bg-muted text-xs font-medium transition-colors">
+                                <Upload className="size-4" />
+                                <span className="hidden sm:inline">{__('Subir foto')}</span>
+                            </span>
                         </label>
-
-                        <div className="flex items-center bg-muted/60 border border-border rounded-lg p-0.5">
-                            <button
-                                type="button"
-                                onClick={handleUndo}
-                                disabled={historyIndex <= 0 || isRunningNeural}
-                                title={__('Deshacer (Ctrl+Z)')}
-                                className="p-1.5 rounded-md text-foreground/80 hover:bg-background disabled:opacity-35 transition-colors"
-                            >
-                                <Undo2 className="size-3.5" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleRedo}
-                                disabled={historyIndex >= history.length - 1 || isRunningNeural}
-                                title={__('Rehacer (Ctrl+Y)')}
-                                className="p-1.5 rounded-md text-foreground/80 hover:bg-background disabled:opacity-35 transition-colors"
-                            >
-                                <Redo2 className="size-3.5" />
-                            </button>
-                        </div>
-
-                        <button
+                        <Button
                             type="button"
-                            onClick={() => setShowBiometricGuides((v) => !v)}
-                            className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors',
-                                showBiometricGuides
-                                    ? 'bg-indigo-500/12 border-indigo-500/40 text-indigo-700 dark:text-cyan-200 font-semibold'
-                                    : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground',
-                            )}
-                            title={__('Mostrar u ocultar guías biométricas de ojos, cabeza y hombros')}
-                        >
-                            <Crosshair className="size-3.5" />
-                            <span className="hidden md:inline">{__('Guías')}</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowCompareSplit((v) => !v)}
-                            disabled={!initialOriginalImg}
-                            className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors',
-                                showCompareSplit
-                                    ? 'bg-amber-500/15 border-amber-500/50 text-amber-800 dark:text-amber-200 font-semibold'
-                                    : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground',
-                            )}
-                            title={__('Comparador interactivo Antes / Después')}
-                        >
-                            <Columns2 className="size-3.5" />
-                            <span>{__('Antes / Después')}</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowLiveCardPreview((v) => !v)}
-                            className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors',
-                                showLiveCardPreview
-                                    ? 'bg-indigo-500/12 border-indigo-500/40 text-indigo-700 dark:text-indigo-200 font-semibold'
-                                    : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground',
-                            )}
-                            title={__('Mostrar vista en vivo sobre la credencial oficial')}
-                        >
-                            <IdCard className="size-3.5" />
-                            <span className="hidden lg:inline">{__('Vista Carnet')}</span>
-                        </button>
-
-                        <button
-                            type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={handleResetAll}
-                            disabled={isRunningNeural || isSaving}
-                            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            disabled={isBusy}
+                            className="size-9 text-muted-foreground"
                             title={__('Restablecer todo al original')}
                         >
-                            <RotateCcw className="size-3.5" />
-                        </button>
-
-                        <button
+                            <RotateCcw className="size-4" />
+                        </Button>
+                        <div className="hidden sm:block w-px h-6 bg-border mx-1" />
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={onClose}
                             disabled={isRunningNeural || isSaving}
-                            className="inline-flex items-center justify-center size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors ml-1"
+                            className="hidden sm:inline-flex h-9 text-xs"
+                        >
+                            {__('Cancelar')}
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleSavePhoto}
+                            disabled={isBusy || !workingImg}
+                            className="h-9 px-4 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                        >
+                            {isSaving ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Save className="size-4" />
+                            )}
+                            <span className="hidden sm:inline">
+                                {isSaving ? __('Guardando...') : __('Guardar en credencial')}
+                            </span>
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            disabled={isRunningNeural || isSaving}
+                            className="size-9 text-muted-foreground"
+                            title={__('Cerrar')}
                         >
                             <X className="size-4" />
-                        </button>
+                        </Button>
                     </div>
-                </div>
+                </header>
 
-                {/* ==================== CUERPO PRINCIPAL DE 2 ZONAS ==================== */}
-                <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-                    {/* -------- ZONA IZQUIERDA (7 cols): ESCENARIO INTERACTIVO + BARRA DE FONDOS + VISTA CARNET -------- */}
-                    <div
-                        ref={stageViewportRef}
-                        className="lg:col-span-7 flex flex-col justify-between bg-slate-100/85 dark:bg-slate-950/80 border-b lg:border-b-0 lg:border-r border-border p-3 sm:p-4 overflow-y-auto"
-                    >
-                        <style>{`
-                            @keyframes studioLaserY {
-                                0% { top: 3%; }
-                                100% { top: 96%; }
-                            }
-                            @keyframes studioLaserX {
-                                0% { left: 4%; }
-                                100% { left: 96%; }
-                            }
-                        `}</style>
-
-                        {/* Escenario Central: Lienzo Retrato + Vista Previa del Carnet */}
-                        <div className="flex-1 flex flex-col xl:flex-row items-center justify-center gap-5 py-1">
-                            {/* Contenedor del Lienzo Oficial 187:281 (100% WYSIWYG con la imagen que se guarda) */}
-                            <div className="flex flex-col items-center">
-                                <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5 text-[11px]">
-                                    <span className="px-2 py-0.5 rounded-full bg-card border border-border font-mono text-[10px] text-muted-foreground shadow-2xs">
-                                        {STUDIO_MASTER_W}×{STUDIO_MASTER_H}px HD
-                                    </span>
-                                    <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-[10px] font-semibold text-indigo-700 dark:text-indigo-200">
-                                        {__('Fondo a guardar')}: {activeBackdropLabel}
-                                    </span>
-                                    {brushMode !== 'none' && (
-                                        <span
-                                            className={cn(
-                                                'px-2 py-0.5 rounded-full font-bold text-[10px] border',
-                                                brushMode === 'erase'
-                                                    ? 'bg-rose-500/15 text-rose-700 dark:text-rose-200 border-rose-500/40'
-                                                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 border-emerald-500/40',
-                                            )}
-                                        >
-                                            {brushMode === 'erase'
-                                                ? __('🖌️ Borrando')
-                                                : __('🖌️ Restaurando')}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Damero real de transparencia detrás del canvas: jamás un color falso no exportable */}
-                                <div
-                                    className={cn(
-                                        'relative rounded-[21px] overflow-hidden shadow-xl ring-2 ring-indigo-500/55 select-none',
-                                        'bg-[repeating-conic-gradient(#cbd5e1_0%_25%,#ffffff_0%_50%)] dark:bg-[repeating-conic-gradient(#334155_0%_25%,#1e293b_0%_50%)] bg-[length:14px_14px]',
-                                        brushMode !== 'none'
-                                            ? 'cursor-none'
-                                            : 'cursor-grab active:cursor-grabbing',
-                                    )}
-                                    style={{
-                                        width: `${DISPLAY_W}px`,
-                                        height: `${DISPLAY_H}px`,
-                                    }}
-                                    onMouseLeave={() => {
-                                        handleCanvasPointerUp();
-                                        setCursorPreview(null);
-                                    }}
-                                >
-                                    {/* Lienzo Principal (100% idéntico píxel a píxel a lo que se exporta y guarda) */}
-                                    <canvas
-                                        ref={mainCanvasRef}
-                                        onMouseDown={handleCanvasPointerDown}
-                                        onMouseMove={handleCanvasPointerMove}
-                                        onMouseUp={handleCanvasPointerUp}
-                                        onWheel={handleCanvasWheel}
-                                        className="w-full h-full block"
-                                    />
-
-                                    {/* Capa Comparador "Antes" recortada dinámicamente */}
-                                    {showCompareSplit && initialOriginalImg && (
-                                        <>
-                                            <div
-                                                className="absolute inset-0 pointer-events-none overflow-hidden"
-                                                style={{
-                                                    clipPath: `inset(0 ${100 - comparePosition}% 0 0)`,
-                                                }}
-                                            >
-                                                <canvas
-                                                    ref={beforeCanvasRef}
-                                                    className="w-full h-full block"
-                                                />
-                                                <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-slate-900/80 text-[9.5px] font-bold uppercase tracking-wider text-white border border-white/20">
-                                                    {__('Antes')}
-                                                </span>
-                                            </div>
-                                            <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded bg-indigo-600/95 text-[9.5px] font-bold uppercase tracking-wider text-white shadow-sm pointer-events-none">
-                                                {__('Estudio IA')}
-                                            </span>
-                                            <div
-                                                onMouseDown={(e) => {
-                                                    e.stopPropagation();
-                                                    isDraggingCompareRef.current = true;
-                                                    const onMove = (ev: MouseEvent) => {
-                                                        if (!isDraggingCompareRef.current || !mainCanvasRef.current) return;
-                                                        const r = mainCanvasRef.current.getBoundingClientRect();
-                                                        const pct = ((ev.clientX - r.left) / r.width) * 100;
-                                                        setComparePosition(Math.max(4, Math.min(96, pct)));
-                                                    };
-                                                    const onUp = () => {
-                                                        isDraggingCompareRef.current = false;
-                                                        window.removeEventListener('mousemove', onMove);
-                                                        window.removeEventListener('mouseup', onUp);
-                                                    };
-                                                    window.addEventListener('mousemove', onMove);
-                                                    window.addEventListener('mouseup', onUp);
-                                                }}
-                                                className="absolute inset-y-0 w-5 -ml-2.5 cursor-ew-resize z-20 flex items-center justify-center"
-                                                style={{ left: `${comparePosition}%` }}
-                                            >
-                                                <div className="h-full w-[2px] bg-white shadow-[0_0_8px_rgba(0,0,0,0.45)]" />
-                                                <div className="absolute size-6 rounded-full bg-white text-slate-900 shadow-lg flex items-center justify-center text-[10px] font-black border border-indigo-500">
-                                                    ↔
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* Guías Biométricas Oficiales de Carnet */}
-                                    {showBiometricGuides && !isRunningNeural && (
-                                        <div className="absolute inset-0 pointer-events-none z-10">
-                                            <div className="absolute inset-y-0 left-1/2 w-[1px] border-l border-dashed border-cyan-500/60" />
-                                            <div
-                                                className="absolute inset-x-4 h-[1px] border-t border-dotted border-cyan-500/50"
-                                                style={{ top: '11%' }}
-                                            />
-                                            <div
-                                                className="absolute inset-x-0 flex items-center"
-                                                style={{ top: '39.5%' }}
-                                            >
-                                                <div className="w-full h-[1px] bg-cyan-500/75 shadow-[0_0_4px_rgba(6,182,212,0.5)]" />
-                                                <span className="absolute right-1.5 -top-3.5 text-[8.5px] font-bold uppercase tracking-wider text-white bg-slate-900/75 px-1 rounded">
-                                                    Ojos
-                                                </span>
-                                            </div>
-                                            <div
-                                                className="absolute left-1/2 -translate-x-1/2 rounded-full border border-dashed border-indigo-500/45"
-                                                style={{
-                                                    top: '13%',
-                                                    width: '56%',
-                                                    height: '46%',
-                                                }}
-                                            />
-                                            <div
-                                                className="absolute inset-x-3 h-[1px] border-t border-dotted border-cyan-500/50"
-                                                style={{ top: '78%' }}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Cursor Circular en Vivo del Pincel Mágico */}
-                                    {brushMode !== 'none' && cursorPreview && (
-                                        <div
-                                            className={cn(
-                                                'pointer-events-none absolute rounded-full border-2 z-20 -translate-x-1/2 -translate-y-1/2',
-                                                brushMode === 'erase'
-                                                    ? 'border-rose-500 bg-rose-500/15'
-                                                    : 'border-emerald-500 bg-emerald-500/15',
-                                            )}
-                                            style={{
-                                                left: `${cursorPreview.x}px`,
-                                                top: `${cursorPreview.y}px`,
-                                                width: `${brushSize}px`,
-                                                height: `${brushSize}px`,
-                                            }}
-                                        />
-                                    )}
-
-                                    {/* Superposición de Procesamiento Neuronal */}
-                                    {(isRunningNeural || isRemovingBg) && (
-                                        <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[3px] flex flex-col items-center justify-center p-4 text-center z-30 select-none">
-                                            <div
-                                                className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_18px_#22d3ee]"
-                                                style={{
-                                                    animation:
-                                                        'studioLaserY 2.1s ease-in-out infinite alternate',
-                                                }}
-                                            />
-                                            <div
-                                                className="absolute inset-y-0 w-1 bg-gradient-to-b from-transparent via-indigo-400 to-transparent shadow-[0_0_18px_#818cf8]"
-                                                style={{
-                                                    animation:
-                                                        'studioLaserX 2.1s ease-in-out infinite alternate',
-                                                }}
-                                            />
-                                            <div className="size-12 rounded-2xl bg-indigo-500/25 border border-indigo-400/50 flex items-center justify-center mb-2.5 shadow-lg">
-                                                <Loader2 className="size-6 text-amber-300 animate-spin" />
-                                            </div>
-                                            <p className="text-xs font-bold text-white">
-                                                {isRemovingBg
-                                                    ? __('Aislando silueta y hebras de cabello...')
-                                                    : __('Agente Diseñador Procesando...')}
-                                            </p>
-                                            <p className="text-[10.5px] text-indigo-100 mt-1 leading-snug max-w-[205px]">
-                                                {neuralStatusText ||
-                                                    __('RMBG-1.4 + MODNet + Anti-Halos HD')}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Selector Rápido de Fondo (1-Clic desde cualquier pestaña, 100% WYSIWYG) */}
-                                <div className="mt-2.5 px-2.5 py-1.5 rounded-xl bg-card border border-border shadow-xs flex items-center gap-1.5 flex-wrap justify-center">
-                                    <span className="text-[10px] font-semibold text-muted-foreground mr-0.5">
-                                        {__('Fondo')}:
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleSelectQuickBackdrop('keep_original')}
-                                        title={__('Conservar fondo original de la foto')}
-                                        className={cn(
-                                            'px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all',
-                                            adj.bgMode === 'original'
-                                                ? 'border-indigo-600 bg-indigo-600 text-white'
-                                                : 'border-border bg-muted/50 text-muted-foreground hover:text-foreground',
-                                        )}
-                                    >
-                                        {__('Original')}
-                                    </button>
-                                    {(
-                                        [
-                                            'credential_silver',
-                                            'studio_white',
-                                            'pearl_gray',
-                                            'passport_sky',
-                                            'mmm_blue',
-                                            'bokeh',
-                                            'transparent',
-                                        ] as StudioBackdropPreset[]
-                                    ).map((presetId) => {
-                                        const opt = STUDIO_BACKDROP_OPTIONS.find(
-                                            (o) => o.id === presetId,
-                                        );
-                                        if (!opt) return null;
-                                        const isSelected =
-                                            adj.bgMode !== 'original' &&
-                                            adj.backdropPreset === presetId;
-                                        return (
-                                            <button
-                                                key={presetId}
-                                                type="button"
-                                                disabled={isRemovingBg || isRunningNeural}
-                                                onClick={() => handleSelectQuickBackdrop(presetId)}
-                                                title={opt.label}
-                                                className={cn(
-                                                    'size-5 rounded-full border transition-transform hover:scale-110',
-                                                    isSelected
-                                                        ? 'ring-2 ring-indigo-600 ring-offset-1 ring-offset-background border-indigo-600 scale-110'
-                                                        : 'border-slate-400/60 dark:border-slate-600',
-                                                )}
-                                                style={{ background: opt.previewCss }}
-                                            />
-                                        );
-                                    })}
-                                </div>
+                {/* ==================== CUERPO: 3 ZONAS ==================== */}
+                <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+                    {/* -------- PANEL IZQUIERDO: CALIDAD + VISTA EN CREDENCIAL -------- */}
+                    <aside className="order-3 lg:order-1 lg:w-[300px] shrink-0 border-t lg:border-t-0 lg:border-r border-border bg-card lg:overflow-y-auto">
+                        <div className="p-4 space-y-5">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                                    {__('Calidad de la foto')}
+                                </p>
+                                {qualityBlock}
                             </div>
 
-                            {/* Vista Previa en Vivo Integrada sobre la Credencial Oficial MMM */}
                             {showLiveCardPreview && (
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[10.5px] font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
-                                        <Eye className="size-3 text-indigo-600 dark:text-indigo-400" />
-                                        {__('Así se verá en la Credencial Oficial')}
-                                    </span>
+                                <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                                        <Eye className="size-3.5" />
+                                        {__('Vista en la credencial')}
+                                    </p>
                                     <div
-                                        className="relative overflow-hidden rounded-xl border border-border shadow-lg bg-white"
-                                        style={{ width: '299px', height: '190px' }}
+                                        className="relative overflow-hidden rounded-lg border border-border shadow-sm bg-white mx-auto"
+                                        style={{ width: '268px', height: '171px' }}
                                     >
                                         <div
                                             style={{
                                                 width: '680px',
                                                 height: '432px',
-                                                transform: 'scale(0.44)',
+                                                transform: 'scale(0.395)',
                                                 transformOrigin: 'top left',
                                                 backgroundImage: `url('${templateFrontUrl}')`,
                                                 backgroundSize: '100% 100%',
@@ -1599,8 +1654,7 @@ export function PastorPhotoAdjustModal({
                                                 <span
                                                     className="font-bold uppercase tracking-tight text-black whitespace-nowrap leading-none text-[18px]"
                                                     style={{
-                                                        fontFamily:
-                                                            "'Cocogoose', 'COCOGOOSE', sans-serif",
+                                                        fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif",
                                                     }}
                                                 >
                                                     {pastorFullName}
@@ -1615,335 +1669,450 @@ export function PastorPhotoAdjustModal({
                                                 <span
                                                     className="text-[14px] font-bold uppercase tracking-wide text-black whitespace-nowrap leading-none"
                                                     style={{
-                                                        fontFamily:
-                                                            "'Cocogoose', 'COCOGOOSE', sans-serif",
+                                                        fontFamily: "'Cocogoose', 'COCOGOOSE', sans-serif",
                                                     }}
                                                 >
-                                                    {(
-                                                        pastor.nivel_ministerial ||
-                                                        'MINISTRO ORDENADO'
-                                                    ).toUpperCase()}
+                                                    {(pastor.nivel_ministerial || 'MINISTRO ORDENADO').toUpperCase()}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground mt-1.5 text-center max-w-[260px]">
-                                        {__(
-                                            'Simulación exacta a escala real (300+ DPI) sobre la plantilla activa.',
-                                        )}
+                                    <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                                        {__('Simulación a escala real sobre la plantilla activa.')}
                                     </p>
                                 </div>
                             )}
-                        </div>
 
-                        {/* Barra Flotante Inferior de Geometría Rápida */}
-                        <div className="mt-2 p-2.5 rounded-xl bg-card border border-border shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const s = Math.max(0.55, Number((adj.scale - 0.1).toFixed(2)));
-                                        const minPanY = s >= 1 ? -140.5 * (s - 1) : adj.panY;
-                                        setAdj((prev) => ({
-                                            ...prev,
-                                            scale: s,
-                                            panY: Math.max(minPanY, prev.panY),
-                                        }));
-                                    }}
-                                    className="p-1 rounded bg-muted hover:bg-muted/80 text-foreground"
-                                >
-                                    <ZoomOut className="size-3.5" />
-                                </button>
-                                <input
-                                    type="range"
-                                    min="0.55"
-                                    max="2.6"
-                                    step="0.02"
-                                    value={adj.scale}
-                                    onChange={(e) => {
-                                        const s = parseFloat(e.target.value);
-                                        const minPanY = s >= 1 ? -140.5 * (s - 1) : adj.panY;
-                                        setAdj((prev) => ({
-                                            ...prev,
-                                            scale: s,
-                                            panY: Math.max(minPanY, prev.panY),
-                                        }));
-                                    }}
-                                    onMouseUp={commitAdjHistory}
-                                    className="w-28 sm:w-36 accent-indigo-600 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const s = Math.min(2.6, Number((adj.scale + 0.1).toFixed(2)));
-                                        updateAdj('scale', s);
-                                    }}
-                                    className="p-1 rounded bg-muted hover:bg-muted/80 text-foreground"
-                                >
-                                    <ZoomIn className="size-3.5" />
-                                </button>
-                                <span className="font-mono text-[11px] text-foreground/80 w-11">
-                                    {Math.round(adj.scale * 100)}%
-                                </span>
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                                    {__('Resumen')}
+                                </p>
+                                <dl className="rounded-lg border border-border divide-y divide-border text-xs">
+                                    {[
+                                        [__('Fondo'), activeBackdropLabel],
+                                        [__('Zoom'), `${Math.round(adj.scale * 100)}%`],
+                                        [__('Ángulo'), `${adj.rotation.toFixed(1)}°`],
+                                        [__('Espejo'), adj.flipX ? __('Sí') : __('No')],
+                                        [__('Retoques de pincel'), hasBrushStrokes ? __('Sí') : __('No')],
+                                        [__('Salida'), `${STUDIO_MASTER_W}×${STUDIO_MASTER_H}px PNG`],
+                                    ].map(([k, v]) => (
+                                        <div key={k} className="flex items-center justify-between gap-2 px-3 py-2">
+                                            <dt className="text-muted-foreground">{k}</dt>
+                                            <dd className="font-medium text-foreground text-right truncate">{v}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
                             </div>
+                        </div>
+                    </aside>
 
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                <button
-                                    type="button"
-                                    onClick={handleApplyBiometricFraming}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/12 hover:bg-indigo-500/20 border border-indigo-500/35 text-indigo-700 dark:text-indigo-200 text-[11px] font-semibold transition-colors"
-                                    title={__('Centrar rostro y nivelar línea de los ojos con IA')}
-                                >
-                                    <Crosshair className="size-3 text-indigo-600 dark:text-cyan-300" />
-                                    <span>{__('Auto-Encuadre IA')}</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const next = { ...adj, flipX: !adj.flipX };
-                                        setAdj(next);
-                                        pushHistory(next, workingImgSrc, cutoutDataUrl);
-                                    }}
+                    {/* -------- ESCENARIO CENTRAL: LIENZO -------- */}
+                    <main className="order-1 lg:order-2 flex-1 min-w-0 flex flex-col bg-muted/50 dark:bg-muted/20">
+                        {/* Barra de estado superior del escenario */}
+                        <div className="shrink-0 flex flex-wrap items-center justify-center gap-2 px-4 pt-3">
+                            <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-background border border-border text-[11px] text-muted-foreground">
+                                <span className="size-1.5 rounded-full bg-emerald-500" />
+                                {__('Fondo a guardar')}:{' '}
+                                <strong className="font-semibold text-foreground">{activeBackdropLabel}</strong>
+                            </span>
+                            {brushMode !== 'none' && (
+                                <span
                                     className={cn(
-                                        'p-1.5 rounded-lg border transition-colors',
-                                        adj.flipX
-                                            ? 'bg-indigo-600 border-indigo-600 text-white'
-                                            : 'bg-muted/60 border-border text-foreground/80 hover:bg-muted',
+                                        'inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold border',
+                                        brushMode === 'erase'
+                                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
                                     )}
-                                    title={__('Voltear horizontalmente (Espejo)')}
                                 >
-                                    <FlipHorizontal2 className="size-3.5" />
-                                </button>
+                                    {brushMode === 'erase' ? (
+                                        <Eraser className="size-3.5" />
+                                    ) : (
+                                        <Paintbrush className="size-3.5" />
+                                    )}
+                                    {brushMode === 'erase' ? __('Pincel: borrando') : __('Pincel: restaurando')}
+                                    <button
+                                        type="button"
+                                        onClick={() => setBrushMode('none')}
+                                        className="ml-0.5 opacity-70 hover:opacity-100"
+                                        title={__('Salir del pincel')}
+                                    >
+                                        <X className="size-3" />
+                                    </button>
+                                </span>
+                            )}
+                        </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const next = {
-                                            ...adj,
-                                            rotation: ((adj.rotation + 90 + 180) % 360) - 180,
-                                        };
-                                        setAdj(next);
-                                        pushHistory(next, workingImgSrc, cutoutDataUrl);
-                                    }}
-                                    className="p-1.5 rounded-lg bg-muted/60 border border-border hover:bg-muted text-foreground/80"
-                                    title={__('Girar 90°')}
-                                >
-                                    <RotateCw className="size-3.5" />
-                                </button>
+                        {/* Área del lienzo (se adapta al espacio disponible) */}
+                        <div
+                            ref={stageViewportRef}
+                            className="flex-1 min-h-[440px] lg:min-h-0 flex items-center justify-center p-3"
+                        >
+                            <style>{`
+                                @keyframes studioLaserY {
+                                    0% { top: 3%; }
+                                    100% { top: 96%; }
+                                }
+                            `}</style>
+
+                            {/* Damero real de transparencia detrás del canvas: jamás un color falso no exportable */}
+                            <div
+                                className={cn(
+                                    'relative rounded-[18px] overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10 select-none',
+                                    'bg-[repeating-conic-gradient(#e2e8f0_0%_25%,#ffffff_0%_50%)] dark:bg-[repeating-conic-gradient(#334155_0%_25%,#1e293b_0%_50%)] bg-[length:16px_16px]',
+                                    brushMode !== 'none'
+                                        ? 'cursor-none'
+                                        : 'cursor-grab active:cursor-grabbing',
+                                )}
+                                style={{
+                                    width: `${displaySize.w}px`,
+                                    height: `${displaySize.h}px`,
+                                }}
+                                onMouseLeave={() => {
+                                    handleCanvasPointerUp();
+                                    setCursorPreview(null);
+                                }}
+                            >
+                                {/* Lienzo Principal (idéntico píxel a píxel a lo que se guarda) */}
+                                <canvas
+                                    ref={mainCanvasRef}
+                                    onMouseDown={handleCanvasPointerDown}
+                                    onMouseMove={handleCanvasPointerMove}
+                                    onMouseUp={handleCanvasPointerUp}
+                                    onWheel={handleCanvasWheel}
+                                    className="w-full h-full block"
+                                />
+
+                                {!workingImg && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground bg-background/80">
+                                        <Camera className="size-8 opacity-50" />
+                                        <p className="text-xs">{__('Sube una fotografía para comenzar')}</p>
+                                    </div>
+                                )}
+
+                                {/* Comparador "Antes / Después" */}
+                                {showCompareSplit && initialOriginalImg && (
+                                    <>
+                                        <div
+                                            className="absolute inset-0 pointer-events-none overflow-hidden"
+                                            style={{ clipPath: `inset(0 ${100 - comparePosition}% 0 0)` }}
+                                        >
+                                            <canvas ref={beforeCanvasRef} className="w-full h-full block" />
+                                            <span className="absolute top-3 left-3 px-2 py-0.5 rounded-md bg-black/60 text-[10px] font-semibold uppercase tracking-wider text-white">
+                                                {__('Antes')}
+                                            </span>
+                                        </div>
+                                        <span className="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-black/60 text-[10px] font-semibold uppercase tracking-wider text-white pointer-events-none">
+                                            {__('Después')}
+                                        </span>
+                                        <div
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                isDraggingCompareRef.current = true;
+                                                const onMove = (ev: MouseEvent) => {
+                                                    if (!isDraggingCompareRef.current || !mainCanvasRef.current) return;
+                                                    const r = mainCanvasRef.current.getBoundingClientRect();
+                                                    const pct = ((ev.clientX - r.left) / r.width) * 100;
+                                                    setComparePosition(Math.max(4, Math.min(96, pct)));
+                                                };
+                                                const onUp = () => {
+                                                    isDraggingCompareRef.current = false;
+                                                    window.removeEventListener('mousemove', onMove);
+                                                    window.removeEventListener('mouseup', onUp);
+                                                };
+                                                window.addEventListener('mousemove', onMove);
+                                                window.addEventListener('mouseup', onUp);
+                                            }}
+                                            className="absolute inset-y-0 w-6 -ml-3 cursor-ew-resize z-20 flex items-center justify-center"
+                                            style={{ left: `${comparePosition}%` }}
+                                        >
+                                            <div className="h-full w-[2px] bg-white shadow-[0_0_6px_rgba(0,0,0,0.4)]" />
+                                            <div className="absolute size-7 rounded-full bg-white text-slate-900 shadow-lg flex items-center justify-center">
+                                                <Columns2 className="size-3.5" />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Guías de encuadre oficial */}
+                                {showBiometricGuides && !isRunningNeural && workingImg && (
+                                    <div className="absolute inset-0 pointer-events-none z-10">
+                                        <div className="absolute inset-y-0 left-1/2 w-px border-l border-dashed border-cyan-500/50" />
+                                        <div
+                                            className="absolute inset-x-4 h-px border-t border-dotted border-cyan-500/45"
+                                            style={{ top: '11%' }}
+                                        />
+                                        <div className="absolute inset-x-0 flex items-center" style={{ top: '39.5%' }}>
+                                            <div className="w-full h-px bg-cyan-500/70" />
+                                            <span className="absolute right-2 -top-4 text-[9px] font-semibold uppercase tracking-wider text-white bg-black/55 px-1.5 rounded">
+                                                {__('Ojos')}
+                                            </span>
+                                        </div>
+                                        <div
+                                            className="absolute left-1/2 -translate-x-1/2 rounded-full border border-dashed border-indigo-500/40"
+                                            style={{ top: '13%', width: '56%', height: '46%' }}
+                                        />
+                                        <div
+                                            className="absolute inset-x-3 h-px border-t border-dotted border-cyan-500/45"
+                                            style={{ top: '78%' }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Cursor circular del pincel */}
+                                {brushMode !== 'none' && cursorPreview && (
+                                    <div
+                                        className={cn(
+                                            'pointer-events-none absolute rounded-full border-2 z-20 -translate-x-1/2 -translate-y-1/2',
+                                            brushMode === 'erase'
+                                                ? 'border-rose-500 bg-rose-500/15'
+                                                : 'border-emerald-500 bg-emerald-500/15',
+                                        )}
+                                        style={{
+                                            left: `${cursorPreview.x}px`,
+                                            top: `${cursorPreview.y}px`,
+                                            width: `${brushSize}px`,
+                                            height: `${brushSize}px`,
+                                        }}
+                                    />
+                                )}
+
+                                {/* Superposición de procesamiento */}
+                                {(isRunningNeural || isRemovingBg) && (
+                                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center z-30 select-none">
+                                        <div
+                                            className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-white/80 to-transparent"
+                                            style={{ animation: 'studioLaserY 2s ease-in-out infinite alternate' }}
+                                        />
+                                        <Loader2 className="size-7 text-white animate-spin mb-3" />
+                                        <p className="text-sm font-semibold text-white">
+                                            {isRemovingBg ? __('Recortando fondo...') : __('Optimizando fotografía...')}
+                                        </p>
+                                        <p className="text-xs text-white/75 mt-1 leading-snug max-w-[220px]">
+                                            {neuralStatusText || __('Esto puede tardar unos segundos.')}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* -------- ZONA DERECHA (5 cols): DOCK DEL AGENTE DISEÑADOR ADAPTABLE AL TEMA -------- */}
-                    <div className="lg:col-span-5 flex flex-col min-h-0 bg-card text-card-foreground">
-                        {/* Pestañas de Herramientas */}
-                        <div className="grid grid-cols-4 gap-1 p-2 border-b border-border bg-muted/45 shrink-0">
-                            {[
-                                {
-                                    id: 'agent' as StudioTab,
-                                    label: __('Agente IA'),
-                                    icon: Sparkles,
-                                },
-                                {
-                                    id: 'cutout' as StudioTab,
-                                    label: __('Fondo & Pincel'),
-                                    icon: Scissors,
-                                },
-                                {
-                                    id: 'light' as StudioTab,
-                                    label: __('Luz & Color'),
-                                    icon: Sun,
-                                },
-                                {
-                                    id: 'biometric' as StudioTab,
-                                    label: __('Encuadre'),
-                                    icon: SlidersHorizontal,
-                                },
-                            ].map((t) => {
-                                const Icon = t.icon;
-                                const active = activeTab === t.id;
-                                return (
+                        {/* Barra inferior: fondos rápidos + geometría */}
+                        <div className="shrink-0 px-3 pb-3">
+                            <div className="mx-auto max-w-[760px] rounded-xl border border-border bg-background shadow-sm px-3 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                                {/* Fondos rápidos */}
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] font-medium text-muted-foreground mr-1">
+                                        {__('Fondo')}
+                                    </span>
                                     <button
-                                        key={t.id}
                                         type="button"
-                                        onClick={() => {
-                                            setActiveTab(t.id);
-                                            if (t.id !== 'cutout' && brushMode !== 'none') {
-                                                setBrushMode('none');
-                                            }
-                                        }}
+                                        onClick={() => handleSelectQuickBackdrop('keep_original')}
+                                        disabled={isBusy}
+                                        title={__('Conservar el fondo original de la foto')}
                                         className={cn(
-                                            'flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-semibold transition-all',
-                                            active
-                                                ? 'bg-indigo-600 text-white shadow-sm'
-                                                : 'text-muted-foreground hover:text-foreground hover:bg-background/80',
+                                            'h-6 px-2 rounded-md text-[10.5px] font-semibold border transition-colors',
+                                            adj.bgMode === 'original'
+                                                ? 'border-indigo-600 bg-indigo-600 text-white'
+                                                : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted',
                                         )}
                                     >
-                                        <Icon
-                                            className={cn(
-                                                'size-3.5 shrink-0',
-                                                active && t.id === 'agent' && 'text-amber-300',
-                                            )}
-                                        />
-                                        <span className="truncate">{t.label}</span>
+                                        {__('Original')}
                                     </button>
-                                );
-                            })}
+                                    {(
+                                        [
+                                            'credential_silver',
+                                            'studio_white',
+                                            'pearl_gray',
+                                            'passport_sky',
+                                            'mmm_blue',
+                                            'bokeh',
+                                            'transparent',
+                                        ] as StudioBackdropPreset[]
+                                    ).map((presetId) => {
+                                        const opt = STUDIO_BACKDROP_OPTIONS.find((o) => o.id === presetId);
+                                        if (!opt) return null;
+                                        const isSelected =
+                                            adj.bgMode !== 'original' && adj.backdropPreset === presetId;
+                                        return (
+                                            <button
+                                                key={presetId}
+                                                type="button"
+                                                disabled={isBusy}
+                                                onClick={() => handleSelectQuickBackdrop(presetId)}
+                                                title={opt.label}
+                                                className={cn(
+                                                    'size-6 rounded-full border transition-transform hover:scale-110 disabled:opacity-50',
+                                                    isSelected
+                                                        ? 'ring-2 ring-indigo-600 ring-offset-2 ring-offset-background border-transparent'
+                                                        : 'border-border',
+                                                )}
+                                                style={{ background: opt.previewCss }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Geometría rápida */}
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => applyScale(adj.scale - 0.1)}
+                                        className="size-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                                        title={__('Alejar')}
+                                    >
+                                        <ZoomOut className="size-4" />
+                                    </button>
+                                    <input
+                                        type="range"
+                                        min="0.55"
+                                        max="2.6"
+                                        step="0.02"
+                                        value={adj.scale}
+                                        onChange={(e) => applyScale(parseFloat(e.target.value))}
+                                        onMouseUp={commitAdjHistory}
+                                        onTouchEnd={commitAdjHistory}
+                                        className="w-24 sm:w-28 accent-indigo-600 h-1.5 bg-muted rounded-full cursor-pointer"
+                                        aria-label={__('Zoom')}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => applyScale(adj.scale + 0.1)}
+                                        className="size-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                                        title={__('Acercar')}
+                                    >
+                                        <ZoomIn className="size-4" />
+                                    </button>
+                                    <span className="w-10 text-center font-mono text-[11px] tabular-nums text-muted-foreground">
+                                        {Math.round(adj.scale * 100)}%
+                                    </span>
+                                    <div className="w-px h-5 bg-border mx-1" />
+                                    <button
+                                        type="button"
+                                        onClick={handleApplyBiometricFraming}
+                                        className="h-7 px-2 inline-flex items-center gap-1.5 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                                        title={__('Centrar rostro y nivelar ojos automáticamente')}
+                                    >
+                                        <Crosshair className="size-4" />
+                                        <span className="hidden sm:inline">{__('Auto-encuadrar')}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleToggleFlip}
+                                        className={cn(
+                                            'size-7 inline-flex items-center justify-center rounded-md transition-colors',
+                                            adj.flipX
+                                                ? 'bg-indigo-600 text-white'
+                                                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                                        )}
+                                        title={__('Voltear horizontalmente (espejo)')}
+                                    >
+                                        <FlipHorizontal2 className="size-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleRotate90}
+                                        className="size-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                                        title={__('Girar 90°')}
+                                    >
+                                        <RotateCw className="size-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Vista/Herramientas en pantallas pequeñas */}
+                            <div className="md:hidden mt-2 flex items-center justify-center gap-0.5 rounded-lg bg-muted p-0.5 w-fit mx-auto">
+                                <ToolbarButton onClick={handleUndo} disabled={historyIndex <= 0 || isBusy} title={__('Deshacer')} icon={Undo2} />
+                                <ToolbarButton onClick={handleRedo} disabled={historyIndex >= history.length - 1 || isBusy} title={__('Rehacer')} icon={Redo2} />
+                                <ToolbarButton onClick={() => setShowBiometricGuides((v) => !v)} active={showBiometricGuides} title={__('Guías')} icon={Crosshair} />
+                                <ToolbarButton onClick={() => setShowCompareSplit((v) => !v)} active={showCompareSplit} disabled={!initialOriginalImg} title={__('Comparar')} icon={Columns2} />
+                                <ToolbarButton onClick={() => setShowLiveCardPreview((v) => !v)} active={showLiveCardPreview} title={__('Credencial')} icon={IdCard} />
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* -------- PANEL DERECHO: HERRAMIENTAS -------- */}
+                    <aside className="order-2 lg:order-3 lg:w-[380px] xl:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card flex flex-col lg:min-h-0">
+                        {/* Pestañas */}
+                        <div className="shrink-0 p-2 border-b border-border">
+                            <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+                                {tabs.map((t) => {
+                                    const Icon = t.icon;
+                                    const active = activeTab === t.id;
+                                    return (
+                                        <button
+                                            key={t.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveTab(t.id);
+                                                if (t.id !== 'background' && brushMode !== 'none') {
+                                                    setBrushMode('none');
+                                                }
+                                            }}
+                                            className={cn(
+                                                'flex flex-col items-center justify-center gap-1 py-1.5 rounded-md text-[11px] font-medium transition-all',
+                                                active
+                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    : 'text-muted-foreground hover:text-foreground',
+                                            )}
+                                        >
+                                            <Icon className={cn('size-4', active && 'text-indigo-600 dark:text-indigo-400')} />
+                                            <span className="truncate">{t.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
-                        {/* Contenido Desplazable de la Pestaña Activa */}
-                        <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
-                            {/* ================= PESTAÑA 1: AGENTE IA & RESTAURACIÓN ================= */}
-                            {activeTab === 'agent' && (
-                                <div className="space-y-4">
-                                    {/* Tarjeta de Diagnóstico Fotográfico Inteligente */}
-                                    <div className="p-3 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-2.5">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2.5">
-                                                <div
-                                                    className={cn(
-                                                        'size-11 rounded-xl border flex flex-col items-center justify-center shrink-0',
-                                                        scoreColor,
-                                                    )}
-                                                >
-                                                    {isAnalyzing ? (
-                                                        <Loader2 className="size-4 animate-spin text-indigo-600 dark:text-indigo-400" />
-                                                    ) : (
-                                                        <>
-                                                            <span className="text-sm font-black leading-none">
-                                                                {scoreValue ?? '--'}
-                                                            </span>
-                                                            <span className="text-[8px] uppercase opacity-75">
-                                                                /100
-                                                            </span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                                                        {isAnalyzing
-                                                            ? __('Auditando fotografía con IA...')
-                                                            : `${__('Diagnóstico')}: ${diagnosis?.grade || __('Listo')}`}
-                                                    </p>
-                                                    <p className="text-[10.5px] text-muted-foreground">
-                                                        {diagnosis
-                                                            ? `${diagnosis.dimensions.width}×${diagnosis.dimensions.height}px • Nitidez ${diagnosis.metrics.sharpness}%`
-                                                            : __(
-                                                                  'Inspección de rostro, iluminación, ruido y fondo',
-                                                              )}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                disabled={isAnalyzing || !workingImg}
-                                                onClick={() =>
-                                                    runAgentDiagnosis(
-                                                        getWorkingImageDataUrl() || undefined,
-                                                    )
-                                                }
-                                                className="h-7 px-2 text-[10.5px]"
-                                            >
-                                                {__('Re-auditar')}
-                                            </Button>
+                        {/* Contenido de la pestaña activa */}
+                        <div className="flex-1 lg:overflow-y-auto p-3 space-y-3">
+                            {/* ================= OPTIMIZAR ================= */}
+                            {activeTab === 'optimize' && (
+                                <>
+                                    <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] p-4 space-y-3">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-foreground">
+                                                {__('Optimizar foto')}
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                                {__(
+                                                    'Restaura el rostro, equilibra la luz y el color, limpia el ruido, recorta el fondo y nivela los ojos automáticamente.',
+                                                )}
+                                            </p>
                                         </div>
-
-                                        {diagnosis?.findings && diagnosis.findings.length > 0 && (
-                                            <div className="space-y-1.5 pt-2 border-t border-border max-h-28 overflow-y-auto pr-1">
-                                                {diagnosis.findings.map((f, i) => (
-                                                    <div
-                                                        key={i}
-                                                        className="flex items-start gap-2 text-[10.5px] leading-snug"
-                                                    >
-                                                        {f.type === 'warning' ? (
-                                                            <AlertTriangle className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
-                                                        ) : f.type === 'ok' ? (
-                                                            <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                                                        ) : (
-                                                            <Info className="size-3.5 text-indigo-600 dark:text-cyan-400 shrink-0 mt-0.5" />
-                                                        )}
-                                                        <div>
-                                                            <span className="font-semibold text-foreground">
-                                                                {f.label}:
-                                                            </span>{' '}
-                                                            <span className="text-muted-foreground">
-                                                                {f.detail}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <Button
+                                            type="button"
+                                            onClick={() => handleRunNeuralDesigner('auto_magic')}
+                                            disabled={isBusy || !workingImg}
+                                            className="w-full h-10 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                        >
+                                            {isRunningNeural ? (
+                                                <Loader2 className="size-4 animate-spin" />
+                                            ) : (
+                                                <Wand2 className="size-4" />
+                                            )}
+                                            {isRunningNeural ? __('Optimizando...') : __('Optimizar foto')}
+                                        </Button>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            {__('Al terminar podrás comparar el antes y después y elegir el fondo.')}
+                                        </p>
                                     </div>
 
-                                    {/* BOTÓN ESTRELLA: AUTO-DISEÑADOR MÁGICO 1-CLIC */}
-                                    <button
-                                        type="button"
-                                        disabled={isRunningNeural || isSaving || !workingImg}
-                                        onClick={() => handleRunNeuralDesigner('auto_magic')}
-                                        className="w-full p-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 hover:from-indigo-500 hover:via-purple-500 hover:to-cyan-500 disabled:opacity-50 text-left shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.01] active:scale-[0.99] group"
+                                    <PanelSection
+                                        title={__('Retoque avanzado')}
+                                        icon={SlidersHorizontal}
+                                        description={__('Controla cada paso de la optimización.')}
+                                        collapsible
+                                        defaultOpen={false}
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="size-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                                                    {isRunningNeural ? (
-                                                        <Loader2 className="size-5 text-amber-300 animate-spin" />
-                                                    ) : (
-                                                        <Wand2 className="size-5 text-amber-300" />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-extrabold text-white tracking-wide">
-                                                        {__('✨ Auto-Diseñador Mágico IA (1 Clic)')}
-                                                    </p>
-                                                    <p className="text-[10.5px] text-indigo-100 leading-tight mt-0.5">
-                                                        {__(
-                                                            'Restaura rostro (GFPGAN), remueve fondo sin halos, equilibra luz y alinea ojos.',
-                                                        )}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </button>
-
-                                    {/* Controles Minuciosos del Motor Neuronal Propio */}
-                                    <div className="p-3.5 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-foreground">
-                                                {__('Ajuste Fino del Motor Neuronal')}
-                                            </span>
-                                            <Badge
-                                                variant="outline"
-                                                className="text-[9.5px] border-purple-500/40 text-purple-700 dark:text-purple-300 bg-purple-500/10"
-                                            >
-                                                GFPGAN v1.4 + ESRGAN
-                                            </Badge>
-                                        </div>
-
-                                        <label className="flex items-center justify-between text-xs cursor-pointer">
-                                            <span className="text-foreground/90 font-medium">
-                                                {__('Restauración Facial Generativa')}
-                                            </span>
-                                            <input
-                                                type="checkbox"
-                                                checked={adj.faceRestore}
-                                                onChange={(e) =>
-                                                    updateAdj('faceRestore', e.target.checked)
-                                                }
-                                                className="accent-indigo-600 size-4 rounded"
-                                            />
-                                        </label>
-
+                                        <ToggleRow
+                                            label={__('Restaurar detalles del rostro')}
+                                            description={__('Ojos, piel y rasgos más definidos.')}
+                                            checked={adj.faceRestore}
+                                            onChange={(v) => updateAdj('faceRestore', v)}
+                                        />
                                         {adj.faceRestore && (
-                                            <div className="space-y-2.5 pl-2.5 border-l-2 border-indigo-500/40">
+                                            <div className="space-y-3 pl-3 border-l-2 border-indigo-500/30">
                                                 <StudioSlider
-                                                    label={__(
-                                                        'Intensidad / Fidelidad Facial (Identidad segura)',
-                                                    )}
+                                                    label={__('Intensidad (conserva la identidad)')}
                                                     value={adj.faceStrength}
                                                     min={15}
                                                     max={95}
@@ -1952,7 +2121,7 @@ export function PastorPhotoAdjustModal({
                                                     onChange={(v) => updateAdj('faceStrength', v)}
                                                 />
                                                 <StudioSlider
-                                                    label={__('Claridad de Ojos, Iris y Monturas')}
+                                                    label={__('Claridad de ojos')}
                                                     value={adj.eyeClarity}
                                                     min={0}
                                                     max={80}
@@ -1961,9 +2130,7 @@ export function PastorPhotoAdjustModal({
                                                     onChange={(v) => updateAdj('eyeClarity', v)}
                                                 />
                                                 <StudioSlider
-                                                    label={__(
-                                                        'Piel Natural (Separación de Frecuencias)',
-                                                    )}
+                                                    label={__('Suavizado natural de piel')}
                                                     value={adj.skinSmooth}
                                                     min={0}
                                                     max={75}
@@ -1973,9 +2140,8 @@ export function PastorPhotoAdjustModal({
                                                 />
                                             </div>
                                         )}
-
                                         <StudioSlider
-                                            label={__('Limpieza de Ruido ISO / WhatsApp')}
+                                            label={__('Reducción de ruido')}
                                             value={adj.denoise}
                                             min={0}
                                             max={75}
@@ -1983,148 +2149,101 @@ export function PastorPhotoAdjustModal({
                                             unit="%"
                                             onChange={(v) => updateAdj('denoise', v)}
                                         />
-
-                                        <div className="pt-2 border-t border-border space-y-2">
-                                            <label className="flex items-center justify-between text-xs cursor-pointer">
-                                                <span className="text-foreground/90">
-                                                    {__('Súper-Resolución Real-ESRGAN x4')}
-                                                </span>
-                                                <input
-                                                    type="checkbox"
+                                        <div className="pt-1 space-y-3 border-t border-border">
+                                            <div className="pt-2">
+                                                <ToggleRow
+                                                    label={__('Aumentar resolución (x4)')}
+                                                    description={__('Recomendado para fotos pequeñas o de WhatsApp.')}
                                                     checked={adj.upscale}
-                                                    onChange={(e) =>
-                                                        updateAdj('upscale', e.target.checked)
-                                                    }
-                                                    className="accent-indigo-600 size-4 rounded"
+                                                    onChange={(v) => updateAdj('upscale', v)}
                                                 />
-                                            </label>
-
-                                            <label className="flex items-center justify-between text-xs cursor-pointer">
-                                                <span className="text-foreground/90">
-                                                    {__(
-                                                        'Aislar Fondo HD durante el procesado IA',
-                                                    )}
-                                                </span>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={adj.neuralRemoveBg}
-                                                    onChange={(e) =>
-                                                        updateAdj(
-                                                            'neuralRemoveBg',
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                    className="accent-indigo-600 size-4 rounded"
-                                                />
-                                            </label>
+                                            </div>
+                                            <ToggleRow
+                                                label={__('Recortar fondo al optimizar')}
+                                                checked={adj.neuralRemoveBg}
+                                                onChange={(v) => updateAdj('neuralRemoveBg', v)}
+                                            />
                                         </div>
-
                                         <Button
                                             type="button"
-                                            variant="secondary"
+                                            variant="outline"
                                             size="sm"
-                                            disabled={isRunningNeural || !workingImg}
+                                            disabled={isBusy || !workingImg}
                                             onClick={() => handleRunNeuralDesigner('custom_neural')}
-                                            className="w-full h-8 text-xs font-bold border border-border hover:bg-indigo-600 hover:text-white transition-colors gap-1.5"
+                                            className="w-full h-9 text-xs font-semibold gap-1.5"
                                         >
-                                            <Sparkles className="size-3.5 text-amber-500" />
-                                            {__('Ejecutar Motor Neuronal con estos Parámetros')}
+                                            <SlidersHorizontal className="size-3.5" />
+                                            {__('Aplicar retoque avanzado')}
                                         </Button>
+                                    </PanelSection>
+
+                                    {/* Calidad en pantallas pequeñas (en escritorio está en el panel izquierdo) */}
+                                    <div className="lg:hidden">
+                                        <PanelSection title={__('Calidad de la foto')}>{qualityBlock}</PanelSection>
                                     </div>
-                                </div>
+                                </>
                             )}
 
-                            {/* ================= PESTAÑA 2: FONDO, BORDES & PINCEL MÁGICO ================= */}
-                            {activeTab === 'cutout' && (
-                                <div className="space-y-4">
-                                    {/* Selector de Modo de Recorte */}
-                                    <div className="p-3 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="text-xs font-bold text-foreground">
-                                                {__('Aislamiento de Sujeto')}
-                                            </span>
-                                            <div className="flex bg-muted p-0.5 rounded-lg border border-border text-[10.5px]">
-                                                {(
-                                                    [
-                                                        ['original', __('Original')],
-                                                        ['ai_cutout', __('IA Studio HD')],
-                                                        ['chroma', __('Croma Color')],
-                                                    ] as const
-                                                ).map(([modeKey, label]) => (
-                                                    <button
-                                                        key={modeKey}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (
-                                                                modeKey === 'ai_cutout' &&
-                                                                !cutoutCanvas
-                                                            ) {
-                                                                void handleStudioRemoveBackground();
-                                                            } else {
-                                                                const next = {
-                                                                    ...adjRef.current,
-                                                                    bgMode: modeKey,
-                                                                };
-                                                                setAdj(next);
-                                                                pushHistory(
-                                                                    next,
-                                                                    workingImgSrc,
-                                                                    cutoutDataUrl,
-                                                                );
-                                                            }
-                                                        }}
-                                                        className={cn(
-                                                            'px-2 py-1 rounded-md font-semibold transition-colors',
-                                                            adj.bgMode === modeKey
-                                                                ? 'bg-indigo-600 text-white shadow-2xs'
-                                                                : 'text-muted-foreground hover:text-foreground',
-                                                        )}
-                                                    >
-                                                        {label}
-                                                    </button>
-                                                ))}
-                                            </div>
+                            {/* ================= FONDO ================= */}
+                            {activeTab === 'background' && (
+                                <>
+                                    <PanelSection title={__('Recorte del fondo')} icon={Scissors}>
+                                        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 text-[11px]">
+                                            {(
+                                                [
+                                                    ['original', __('Original')],
+                                                    ['ai_cutout', __('Recortado')],
+                                                    ['chroma', __('Por color')],
+                                                ] as const
+                                            ).map(([modeKey, label]) => (
+                                                <button
+                                                    key={modeKey}
+                                                    type="button"
+                                                    disabled={isBusy}
+                                                    onClick={() => {
+                                                        if (modeKey === 'ai_cutout' && !cutoutCanvas) {
+                                                            void handleStudioRemoveBackground();
+                                                        } else {
+                                                            const next = { ...adjRef.current, bgMode: modeKey };
+                                                            setAdj(next);
+                                                            pushHistory(next, workingImgSrc, cutoutDataUrl);
+                                                        }
+                                                    }}
+                                                    className={cn(
+                                                        'py-1.5 rounded-md font-medium transition-colors',
+                                                        adj.bgMode === modeKey
+                                                            ? 'bg-background text-foreground shadow-sm'
+                                                            : 'text-muted-foreground hover:text-foreground',
+                                                    )}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
                                         </div>
 
                                         <Button
                                             type="button"
                                             size="sm"
-                                            disabled={isRemovingBg || !workingImg}
+                                            disabled={isBusy || !workingImg}
                                             onClick={() => handleStudioRemoveBackground()}
-                                            className="w-full h-9 text-xs font-bold gap-2 bg-indigo-600 hover:bg-indigo-500 text-white"
+                                            className="w-full h-9 text-xs font-semibold gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
                                         >
                                             {isRemovingBg ? (
-                                                <>
-                                                    <Loader2 className="size-3.5 animate-spin" />
-                                                    <span>
-                                                        {__(
-                                                            'Recortando hebras de cabello con IA...',
-                                                        )}
-                                                    </span>
-                                                </>
+                                                <Loader2 className="size-3.5 animate-spin" />
                                             ) : (
-                                                <>
-                                                    <Scissors className="size-3.5 text-amber-300" />
-                                                    <span>
-                                                        {cutoutCanvas
-                                                            ? __(
-                                                                  'Recalcular Recorte IA de Alta Precisión',
-                                                              )
-                                                            : __(
-                                                                  'Remover Fondo HD (RMBG-1.4 + MODNet)',
-                                                              )}
-                                                    </span>
-                                                </>
+                                                <Scissors className="size-3.5" />
                                             )}
+                                            {isRemovingBg
+                                                ? __('Recortando...')
+                                                : cutoutCanvas
+                                                  ? __('Volver a recortar')
+                                                  : __('Quitar fondo')}
                                         </Button>
 
-                                        {/* Controles de Refinamiento de Bordes y Anti-Halos */}
                                         {adj.bgMode === 'ai_cutout' && (
-                                            <div className="space-y-2.5 pt-2 border-t border-border">
+                                            <div className="space-y-3 pt-1">
                                                 <StudioSlider
-                                                    label={__(
-                                                        'Refinamiento Extra Anti-Halos (Defringe)',
-                                                    )}
+                                                    label={__('Limpieza extra de bordes')}
                                                     value={adj.defringe}
                                                     min={0}
                                                     max={100}
@@ -2134,9 +2253,7 @@ export function PastorPhotoAdjustModal({
                                                     onCommit={commitAdjHistory}
                                                 />
                                                 <StudioSlider
-                                                    label={__(
-                                                        'Ajuste de Contorno (Contraer / Expandir)',
-                                                    )}
+                                                    label={__('Contorno (contraer / expandir)')}
                                                     value={adj.edgeShift}
                                                     min={-3}
                                                     max={3}
@@ -2149,163 +2266,65 @@ export function PastorPhotoAdjustModal({
                                             </div>
                                         )}
 
-                                        {/* Controles de Croma Clásico */}
                                         {adj.bgMode === 'chroma' && (
-                                            <div className="space-y-2.5 pt-2 border-t border-border">
+                                            <div className="space-y-3 pt-1">
                                                 <div className="flex items-center justify-between text-xs">
-                                                    <span className="text-foreground/90">
-                                                        {__('Color a eliminar:')}
-                                                    </span>
+                                                    <span className="text-muted-foreground">{__('Color a eliminar')}</span>
                                                     <input
                                                         type="color"
                                                         value={adj.chromaColor}
-                                                        onChange={(e) =>
-                                                            updateAdj('chromaColor', e.target.value)
-                                                        }
-                                                        className="size-6 rounded cursor-pointer bg-transparent border border-border"
+                                                        onChange={(e) => updateAdj('chromaColor', e.target.value)}
+                                                        className="h-7 w-10 rounded cursor-pointer bg-transparent border border-border"
                                                     />
                                                 </div>
                                                 <StudioSlider
-                                                    label={__('Tolerancia de Croma')}
+                                                    label={__('Tolerancia')}
                                                     value={adj.chromaTolerance}
                                                     min={5}
                                                     max={65}
                                                     defaultValue={24}
                                                     unit="%"
-                                                    onChange={(v) =>
-                                                        updateAdj('chromaTolerance', v)
-                                                    }
+                                                    onChange={(v) => updateAdj('chromaTolerance', v)}
                                                     onCommit={commitAdjHistory}
                                                 />
                                             </div>
                                         )}
-                                    </div>
+                                    </PanelSection>
 
-                                    {/* Pincel Mágico Manual (Borrar / Restaurar como Canva Pro) */}
-                                    <div className="p-3 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-2.5">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                                                <Paintbrush className="size-3.5 text-indigo-600 dark:text-cyan-400" />
-                                                {__('Pincel Mágico de Bordes')}
-                                            </span>
-                                            {hasBrushStrokes && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleClearBrushStrokes}
-                                                    className="text-[10.5px] text-rose-600 dark:text-rose-400 hover:underline font-semibold"
-                                                >
-                                                    {__('Limpiar trazos')}
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <div className="grid grid-cols-3 gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => setBrushMode('none')}
-                                                className={cn(
-                                                    'py-1.5 px-2 rounded-lg text-[11px] font-semibold border flex items-center justify-center gap-1 transition-colors',
-                                                    brushMode === 'none'
-                                                        ? 'bg-foreground text-background border-foreground'
-                                                        : 'bg-background border-border text-muted-foreground hover:text-foreground',
-                                                )}
-                                            >
-                                                <Move className="size-3" />
-                                                {__('Mover')}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setBrushMode('erase')}
-                                                className={cn(
-                                                    'py-1.5 px-2 rounded-lg text-[11px] font-semibold border flex items-center justify-center gap-1 transition-colors',
-                                                    brushMode === 'erase'
-                                                        ? 'bg-rose-600 border-rose-600 text-white'
-                                                        : 'bg-background border-border text-muted-foreground hover:text-rose-600',
-                                                )}
-                                            >
-                                                <Eraser className="size-3" />
-                                                {__('Borrar')}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setBrushMode('restore')}
-                                                className={cn(
-                                                    'py-1.5 px-2 rounded-lg text-[11px] font-semibold border flex items-center justify-center gap-1 transition-colors',
-                                                    brushMode === 'restore'
-                                                        ? 'bg-emerald-600 border-emerald-600 text-white'
-                                                        : 'bg-background border-border text-muted-foreground hover:text-emerald-600',
-                                                )}
-                                            >
-                                                <Paintbrush className="size-3" />
-                                                {__('Restaurar')}
-                                            </button>
-                                        </div>
-
-                                        {brushMode !== 'none' && (
-                                            <div className="space-y-2 pt-1">
-                                                <StudioSlider
-                                                    label={__('Tamaño del Pincel')}
-                                                    value={brushSize}
-                                                    min={6}
-                                                    max={72}
-                                                    defaultValue={22}
-                                                    unit="px"
-                                                    onChange={setBrushSize}
-                                                />
-                                                <StudioSlider
-                                                    label={__('Suavidad del Borde')}
-                                                    value={brushSoftness}
-                                                    min={0}
-                                                    max={95}
-                                                    defaultValue={65}
-                                                    unit="%"
-                                                    onChange={setBrushSoftness}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Galería de Fondos de Estudio y Sombra 3D */}
-                                    <div className="p-3 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-3">
-                                        <div>
-                                            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                                                <Layers className="size-3.5 text-indigo-600 dark:text-indigo-400" />
-                                                {__('Escenarios de Estudio & Sombra 3D')}
-                                            </span>
-                                            <p className="text-[10.5px] text-muted-foreground mt-0.5">
-                                                {__(
-                                                    'El fondo seleccionado se integra exactamente igual al guardar la foto.',
-                                                )}
-                                            </p>
-                                        </div>
-
+                                    <PanelSection
+                                        title={__('Color de fondo')}
+                                        icon={Layers}
+                                        description={__('Se guarda exactamente como lo ves.')}
+                                    >
                                         <div className="grid grid-cols-5 gap-2">
                                             {STUDIO_BACKDROP_OPTIONS.map((opt) => {
                                                 const selected =
-                                                    adj.backdropPreset === opt.id &&
-                                                    adj.bgMode !== 'original';
+                                                    adj.backdropPreset === opt.id && adj.bgMode !== 'original';
                                                 return (
                                                     <button
                                                         key={opt.id}
                                                         type="button"
-                                                        disabled={isRemovingBg || isRunningNeural}
-                                                        onClick={() =>
-                                                            handleSelectQuickBackdrop(opt.id)
-                                                        }
+                                                        disabled={isBusy}
+                                                        onClick={() => handleSelectQuickBackdrop(opt.id)}
                                                         title={opt.label}
-                                                        className={cn(
-                                                            'group flex flex-col items-center gap-1 p-1 rounded-lg border transition-all',
-                                                            selected
-                                                                ? 'border-indigo-600 bg-indigo-500/12 ring-1 ring-indigo-600'
-                                                                : 'border-border bg-background/60 hover:border-indigo-400',
-                                                        )}
+                                                        className="group flex flex-col items-center gap-1 disabled:opacity-50"
                                                     >
                                                         <div
-                                                            className="w-full h-7 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs"
+                                                            className={cn(
+                                                                'w-full aspect-square rounded-lg border transition-all',
+                                                                selected
+                                                                    ? 'ring-2 ring-indigo-600 ring-offset-2 ring-offset-background border-transparent'
+                                                                    : 'border-border group-hover:border-indigo-400',
+                                                            )}
                                                             style={{ background: opt.previewCss }}
                                                         />
-                                                        <span className="text-[9px] text-foreground/85 font-medium truncate w-full text-center">
-                                                            {opt.label.split(' ')[0]}
+                                                        <span
+                                                            className={cn(
+                                                                'text-[10px] leading-tight text-center line-clamp-2',
+                                                                selected ? 'text-foreground font-semibold' : 'text-muted-foreground',
+                                                            )}
+                                                        >
+                                                            {opt.label}
                                                         </span>
                                                     </button>
                                                 );
@@ -2315,151 +2334,211 @@ export function PastorPhotoAdjustModal({
                                         {(adj.backdropPreset === 'custom_solid' ||
                                             adj.backdropPreset === 'custom_gradient') && (
                                             <div className="flex items-center justify-between gap-2 pt-1 text-xs">
-                                                <span className="text-muted-foreground text-[11px]">
-                                                    {__('Color(es) de fondo:')}
-                                                </span>
+                                                <span className="text-muted-foreground">{__('Colores personalizados')}</span>
                                                 <div className="flex items-center gap-2">
                                                     <input
                                                         type="color"
                                                         value={adj.customBgColor}
-                                                        onChange={(e) =>
-                                                            updateAdj(
-                                                                'customBgColor',
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        className="size-6 rounded cursor-pointer bg-transparent border border-border"
+                                                        onChange={(e) => updateAdj('customBgColor', e.target.value)}
+                                                        onBlur={commitAdjHistory}
+                                                        className="h-7 w-10 rounded cursor-pointer bg-transparent border border-border"
                                                     />
                                                     {adj.backdropPreset === 'custom_gradient' && (
                                                         <input
                                                             type="color"
                                                             value={adj.customBgSecondary}
-                                                            onChange={(e) =>
-                                                                updateAdj(
-                                                                    'customBgSecondary',
-                                                                    e.target.value,
-                                                                )
-                                                            }
-                                                            className="size-6 rounded cursor-pointer bg-transparent border border-border"
+                                                            onChange={(e) => updateAdj('customBgSecondary', e.target.value)}
+                                                            onBlur={commitAdjHistory}
+                                                            className="h-7 w-10 rounded cursor-pointer bg-transparent border border-border"
                                                         />
                                                     )}
                                                 </div>
                                             </div>
                                         )}
+                                    </PanelSection>
 
-                                        <div className="space-y-2.5 pt-2 border-t border-border">
-                                            <StudioSlider
-                                                label={__('Sombra de Contacto 3D (Drop Shadow)')}
-                                                value={adj.dropShadow}
-                                                min={0}
-                                                max={80}
-                                                defaultValue={20}
-                                                unit="%"
-                                                onChange={(v) => updateAdj('dropShadow', v)}
-                                                onCommit={commitAdjHistory}
-                                            />
-                                            <StudioSlider
-                                                label={__('Luz de Recorte en Hombros (Rim Light)')}
-                                                value={adj.rimLight}
-                                                min={0}
-                                                max={65}
-                                                defaultValue={0}
-                                                unit="%"
-                                                onChange={(v) => updateAdj('rimLight', v)}
-                                                onCommit={commitAdjHistory}
-                                            />
-                                            <StudioSlider
-                                                label={__('Viñeta Suave de Estudio')}
-                                                value={adj.vignette}
-                                                min={0}
-                                                max={50}
-                                                defaultValue={0}
-                                                unit="%"
-                                                onChange={(v) => updateAdj('vignette', v)}
-                                                onCommit={commitAdjHistory}
-                                            />
+                                    <PanelSection
+                                        title={__('Efectos de estudio')}
+                                        icon={Sun}
+                                        collapsible
+                                        defaultOpen={false}
+                                    >
+                                        <StudioSlider
+                                            label={__('Sombra de contacto')}
+                                            value={adj.dropShadow}
+                                            min={0}
+                                            max={80}
+                                            defaultValue={20}
+                                            unit="%"
+                                            onChange={(v) => updateAdj('dropShadow', v)}
+                                            onCommit={commitAdjHistory}
+                                        />
+                                        <StudioSlider
+                                            label={__('Luz de contorno')}
+                                            value={adj.rimLight}
+                                            min={0}
+                                            max={65}
+                                            defaultValue={0}
+                                            unit="%"
+                                            onChange={(v) => updateAdj('rimLight', v)}
+                                            onCommit={commitAdjHistory}
+                                        />
+                                        <StudioSlider
+                                            label={__('Viñeta suave')}
+                                            value={adj.vignette}
+                                            min={0}
+                                            max={50}
+                                            defaultValue={0}
+                                            unit="%"
+                                            onChange={(v) => updateAdj('vignette', v)}
+                                            onCommit={commitAdjHistory}
+                                        />
+                                    </PanelSection>
+
+                                    <PanelSection
+                                        title={__('Pincel de retoque')}
+                                        icon={Paintbrush}
+                                        description={__('Corrige a mano zonas del recorte.')}
+                                        collapsible
+                                        defaultOpen={brushMode !== 'none'}
+                                        action={
+                                            hasBrushStrokes ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearBrushStrokes}
+                                                    className="text-[11px] font-medium text-rose-600 dark:text-rose-400 hover:underline"
+                                                >
+                                                    {__('Limpiar')}
+                                                </button>
+                                            ) : undefined
+                                        }
+                                    >
+                                        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+                                            {(
+                                                [
+                                                    ['none', __('Mover'), Move, ''],
+                                                    ['erase', __('Borrar'), Eraser, 'text-rose-600 dark:text-rose-400'],
+                                                    ['restore', __('Restaurar'), Paintbrush, 'text-emerald-600 dark:text-emerald-400'],
+                                                ] as const
+                                            ).map(([modeKey, label, Icon, activeColor]) => (
+                                                <button
+                                                    key={modeKey}
+                                                    type="button"
+                                                    onClick={() => setBrushMode(modeKey)}
+                                                    className={cn(
+                                                        'py-1.5 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
+                                                        brushMode === modeKey
+                                                            ? cn('bg-background shadow-sm text-foreground', activeColor)
+                                                            : 'text-muted-foreground hover:text-foreground',
+                                                    )}
+                                                >
+                                                    <Icon className="size-3.5" />
+                                                    {label}
+                                                </button>
+                                            ))}
                                         </div>
-                                    </div>
-                                </div>
+                                        {brushMode !== 'none' && (
+                                            <div className="space-y-3">
+                                                <StudioSlider
+                                                    label={__('Tamaño')}
+                                                    value={brushSize}
+                                                    min={6}
+                                                    max={72}
+                                                    defaultValue={22}
+                                                    unit="px"
+                                                    onChange={setBrushSize}
+                                                />
+                                                <StudioSlider
+                                                    label={__('Suavidad del borde')}
+                                                    value={brushSoftness}
+                                                    min={0}
+                                                    max={95}
+                                                    defaultValue={65}
+                                                    unit="%"
+                                                    onChange={setBrushSoftness}
+                                                />
+                                            </div>
+                                        )}
+                                    </PanelSection>
+                                </>
                             )}
 
-                            {/* ================= PESTAÑA 3: CALIBRACIÓN DE LUZ Y COLOR (60 FPS) ================= */}
+                            {/* ================= LUZ Y COLOR ================= */}
                             {activeTab === 'light' && (
-                                <div className="space-y-4">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={handleApplyRecommendedGrading}
-                                        className="w-full h-8 text-xs font-bold gap-1.5 bg-amber-500/12 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/40"
-                                    >
-                                        <Wand2 className="size-3.5 text-amber-600 dark:text-amber-300" />
-                                        {__('🪄 Auto-Calibrar Luz y Color según Diagnóstico IA')}
-                                    </Button>
-
-                                    {/* Preajustes de Estudio en 1 Clic */}
-                                    <div className="grid grid-cols-3 gap-1.5">
-                                        {STUDIO_COLOR_PRESETS.map((preset) => (
-                                            <button
-                                                key={preset.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    const next = {
-                                                        ...adjRef.current,
-                                                        ...preset.values,
-                                                    };
-                                                    setAdj(next);
-                                                    pushHistory(
-                                                        next,
-                                                        workingImgSrc,
-                                                        cutoutDataUrl,
-                                                    );
-                                                }}
-                                                className="p-2 rounded-lg bg-muted/40 hover:bg-muted border border-border text-left transition-colors"
-                                            >
-                                                <p className="text-[10.5px] font-bold text-foreground truncate">
-                                                    {preset.name}
-                                                </p>
-                                                {preset.badge && (
-                                                    <span className="text-[9px] text-indigo-600 dark:text-indigo-400 font-semibold">
-                                                        {preset.badge}
-                                                    </span>
-                                                )}
-                                            </button>
-                                        ))}
+                                <>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={handleApplyRecommendedGrading}
+                                            disabled={!workingImg}
+                                            className="h-9 text-xs font-semibold gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+                                        >
+                                            <Wand2 className="size-3.5" />
+                                            {__('Calibrar automático')}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={handleResetLight}
+                                            className="h-9 text-xs font-medium gap-1.5"
+                                        >
+                                            <RotateCcw className="size-3.5" />
+                                            {__('Restablecer')}
+                                        </Button>
                                     </div>
 
-                                    {/* Iluminación */}
-                                    <div className="p-3 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-2.5">
-                                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 block">
-                                            {__('Iluminación de Estudio')}
-                                        </span>
+                                    <PanelSection title={__('Estilos')} icon={Sun}>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            {STUDIO_COLOR_PRESETS.map((preset) => (
+                                                <button
+                                                    key={preset.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const next = { ...adjRef.current, ...preset.values };
+                                                        setAdj(next);
+                                                        pushHistory(next, workingImgSrc, cutoutDataUrl);
+                                                    }}
+                                                    className="px-2.5 py-2 rounded-lg border border-border bg-background hover:bg-muted hover:border-indigo-400 text-left transition-colors"
+                                                >
+                                                    <p className="text-[11.5px] font-medium text-foreground truncate">
+                                                        {preset.name}
+                                                    </p>
+                                                    {preset.badge && (
+                                                        <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
+                                                            {preset.badge}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </PanelSection>
+
+                                    <PanelSection title={__('Iluminación')} collapsible defaultOpen>
                                         <StudioSlider
-                                            label={__('Exposición EV')}
+                                            label={__('Exposición')}
                                             value={adj.exposure}
                                             min={-50}
                                             max={50}
                                             onChange={(v) => updateAdj('exposure', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-amber-500"
                                         />
                                         <StudioSlider
-                                            label={__('Sombras / Luz de Relleno (Relight)')}
+                                            label={__('Sombras')}
                                             value={adj.shadows}
                                             min={-60}
                                             max={60}
                                             onChange={(v) => updateAdj('shadows', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-amber-500"
                                         />
                                         <StudioSlider
-                                            label={__('Altas Luces (Anti-Brillo Frente/Gafas)')}
+                                            label={__('Altas luces (brillos)')}
                                             value={adj.highlights}
                                             min={-60}
                                             max={60}
                                             onChange={(v) => updateAdj('highlights', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-amber-500"
                                         />
                                         <StudioSlider
                                             label={__('Brillo')}
@@ -2468,69 +2547,55 @@ export function PastorPhotoAdjustModal({
                                             max={50}
                                             onChange={(v) => updateAdj('brightness', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-amber-500"
                                         />
                                         <StudioSlider
-                                            label={__('Contraste Dinámico')}
+                                            label={__('Contraste')}
                                             value={adj.contrast}
                                             min={-50}
                                             max={50}
                                             onChange={(v) => updateAdj('contrast', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-amber-500"
                                         />
-                                    </div>
+                                    </PanelSection>
 
-                                    {/* Balance de Color */}
-                                    <div className="p-3 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-2.5">
-                                        <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 block">
-                                            {__('Balance de Blancos & Tono de Piel')}
-                                        </span>
+                                    <PanelSection title={__('Color')} collapsible defaultOpen>
                                         <StudioSlider
-                                            label={__('Temperatura (Frío ↔ Cálido)')}
+                                            label={__('Temperatura (frío ↔ cálido)')}
                                             value={adj.temperature}
                                             min={-60}
                                             max={60}
                                             onChange={(v) => updateAdj('temperature', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-cyan-600"
                                         />
                                         <StudioSlider
-                                            label={__('Matiz (Verde ↔ Magenta)')}
+                                            label={__('Matiz (verde ↔ magenta)')}
                                             value={adj.tint}
                                             min={-50}
                                             max={50}
                                             onChange={(v) => updateAdj('tint', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-fuchsia-600"
                                         />
                                         <StudioSlider
-                                            label={__('Vibrancia Inteligente (Piel protegida)')}
+                                            label={__('Intensidad (protege la piel)')}
                                             value={adj.vibrance}
                                             min={-50}
                                             max={60}
                                             onChange={(v) => updateAdj('vibrance', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-emerald-600"
                                         />
                                         <StudioSlider
-                                            label={__('Saturación Global')}
+                                            label={__('Saturación')}
                                             value={adj.saturation}
                                             min={-60}
                                             max={60}
                                             onChange={(v) => updateAdj('saturation', v)}
                                             onCommit={commitAdjHistory}
-                                            accentClass="accent-emerald-600"
                                         />
-                                    </div>
+                                    </PanelSection>
 
-                                    {/* Detalle Óptico */}
-                                    <div className="p-3 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-2.5">
-                                        <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 block">
-                                            {__('Definición y Óptica')}
-                                        </span>
+                                    <PanelSection title={__('Detalle')} collapsible defaultOpen={false}>
                                         <StudioSlider
-                                            label={__('Claridad (Presencia en Traje y Rasgos)')}
+                                            label={__('Claridad')}
                                             value={adj.clarity}
                                             min={-30}
                                             max={60}
@@ -2538,47 +2603,46 @@ export function PastorPhotoAdjustModal({
                                             onCommit={commitAdjHistory}
                                         />
                                         <StudioSlider
-                                            label={__('Nitidez Fina sin Halos')}
+                                            label={__('Nitidez')}
                                             value={adj.sharpness}
                                             min={0}
                                             max={60}
                                             onChange={(v) => updateAdj('sharpness', v)}
                                             onCommit={commitAdjHistory}
                                         />
-                                    </div>
-                                </div>
+                                    </PanelSection>
+                                </>
                             )}
 
-                            {/* ================= PESTAÑA 4: BIOMETRÍA Y ENCUADRE FINO ================= */}
-                            {activeTab === 'biometric' && (
-                                <div className="space-y-4">
-                                    <div className="p-3.5 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-3">
-                                        <span className="text-xs font-bold text-foreground block">
-                                            {__('Alineación Biométrica Oficial MMM')}
-                                        </span>
-                                        <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                            {__(
-                                                'Detecta la línea interpupilar mediante 5 puntos faciales para nivelar cualquier inclinación de cabeza y situar los ojos al 39.5% sin cortar los hombros.',
-                                            )}
-                                        </p>
+                            {/* ================= ENCUADRE ================= */}
+                            {activeTab === 'framing' && (
+                                <>
+                                    <div className="rounded-xl border border-border bg-background p-4 space-y-3">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-foreground">
+                                                {__('Encuadre oficial')}
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                                {__(
+                                                    'Nivela la inclinación de la cabeza y ubica los ojos a la altura oficial sin cortar los hombros.',
+                                                )}
+                                            </p>
+                                        </div>
                                         <Button
                                             type="button"
                                             size="sm"
                                             onClick={handleApplyBiometricFraming}
-                                            className="w-full h-9 text-xs font-bold gap-2 bg-indigo-600 hover:bg-indigo-500 text-white"
+                                            disabled={!workingImg}
+                                            className="w-full h-9 text-xs font-semibold gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
                                         >
-                                            <Crosshair className="size-4 text-cyan-200" />
-                                            {__('🎯 Alinear Ojos y Encuadrar Automáticamente')}
+                                            <Crosshair className="size-4" />
+                                            {__('Alinear ojos y encuadrar')}
                                         </Button>
                                     </div>
 
-                                    <div className="p-3.5 rounded-xl bg-muted/35 dark:bg-slate-900/60 border border-border space-y-3">
-                                        <span className="text-xs font-bold text-foreground block">
-                                            {__('Geometría de Precisión')}
-                                        </span>
-
+                                    <PanelSection title={__('Ajuste manual')} icon={Move}>
                                         <StudioSlider
-                                            label={__('Nivelación / Ángulo Fino')}
+                                            label={__('Ángulo')}
                                             value={adj.rotation}
                                             min={-20}
                                             max={20}
@@ -2588,9 +2652,8 @@ export function PastorPhotoAdjustModal({
                                             onChange={(v) => updateAdj('rotation', v)}
                                             onCommit={commitAdjHistory}
                                         />
-
                                         <StudioSlider
-                                            label={__('Escala / Zoom')}
+                                            label={__('Zoom')}
                                             value={Math.round(adj.scale * 100)}
                                             min={55}
                                             max={260}
@@ -2600,95 +2663,54 @@ export function PastorPhotoAdjustModal({
                                             onChange={(v) => updateAdj('scale', v / 100)}
                                             onCommit={commitAdjHistory}
                                         />
-
-                                        <div className="grid grid-cols-3 gap-1.5 pt-1">
+                                        <div className="grid grid-cols-3 gap-1.5">
                                             {[
-                                                { label: '100% Base', val: 1.0 },
-                                                { label: '120% Oficial', val: 1.2 },
-                                                { label: '138% Retrato', val: 1.38 },
+                                                { label: '100%', hint: __('Base'), val: 1.0 },
+                                                { label: '120%', hint: __('Oficial'), val: 1.2 },
+                                                { label: '138%', hint: __('Retrato'), val: 1.38 },
                                             ].map((p) => (
                                                 <button
                                                     key={p.label}
                                                     type="button"
                                                     onClick={() => {
-                                                        const next = {
-                                                            ...adjRef.current,
-                                                            scale: p.val,
-                                                        };
+                                                        const next = { ...adjRef.current, scale: p.val };
                                                         setAdj(next);
-                                                        pushHistory(
-                                                            next,
-                                                            workingImgSrc,
-                                                            cutoutDataUrl,
-                                                        );
+                                                        pushHistory(next, workingImgSrc, cutoutDataUrl);
                                                     }}
-                                                    className="py-1.5 px-2 rounded-lg bg-background hover:bg-muted border border-border text-[10.5px] font-semibold text-foreground/85"
+                                                    className={cn(
+                                                        'py-1.5 rounded-lg border text-center transition-colors',
+                                                        Math.abs(adj.scale - p.val) < 0.005
+                                                            ? 'border-indigo-600 bg-indigo-500/10'
+                                                            : 'border-border bg-background hover:bg-muted',
+                                                    )}
                                                 >
-                                                    {p.label}
+                                                    <p className="text-[11.5px] font-semibold text-foreground">{p.label}</p>
+                                                    <p className="text-[10px] text-muted-foreground">{p.hint}</p>
                                                 </button>
                                             ))}
                                         </div>
-
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                const next = {
-                                                    ...adjRef.current,
-                                                    scale: 1,
-                                                    panX: 0,
-                                                    panY: 0,
-                                                    rotation: 0,
-                                                    flipX: false,
-                                                };
-                                                setAdj(next);
-                                                pushHistory(next, workingImgSrc, cutoutDataUrl);
-                                            }}
-                                            className="w-full h-8 text-xs"
-                                        >
-                                            {__('Centrar posición y ángulo a 0°')}
-                                        </Button>
-                                    </div>
-                                </div>
+                                        <div className="grid grid-cols-3 gap-1.5 pt-1">
+                                            <Button type="button" variant="outline" size="sm" onClick={handleToggleFlip} className="h-8 text-[11px] gap-1">
+                                                <FlipHorizontal2 className="size-3.5" />
+                                                {__('Espejo')}
+                                            </Button>
+                                            <Button type="button" variant="outline" size="sm" onClick={handleRotate90} className="h-8 text-[11px] gap-1">
+                                                <RotateCw className="size-3.5" />
+                                                90°
+                                            </Button>
+                                            <Button type="button" variant="outline" size="sm" onClick={handleResetGeometry} className="h-8 text-[11px] gap-1">
+                                                <RotateCcw className="size-3.5" />
+                                                {__('Centrar')}
+                                            </Button>
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            {__('Consejo: arrastra la foto para moverla y usa la rueda del ratón para el zoom.')}
+                                        </p>
+                                    </PanelSection>
+                                </>
                             )}
                         </div>
-
-                        {/* Pie de Confirmación del Estudio */}
-                        <div className="p-3 border-t border-border bg-card flex items-center justify-between gap-2 shrink-0">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={onClose}
-                                disabled={isSaving || isRunningNeural}
-                                className="text-xs text-muted-foreground hover:text-foreground h-9 px-3"
-                            >
-                                {__('Cancelar')}
-                            </Button>
-
-                            <Button
-                                type="button"
-                                size="sm"
-                                onClick={handleSavePhoto}
-                                disabled={isSaving || isRunningNeural || !workingImg}
-                                className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs h-9 px-5 shadow-md shadow-emerald-600/20"
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <Loader2 className="size-3.5 animate-spin" />
-                                        <span>{__('Exportando Master HD...')}</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="size-3.5" />
-                                        <Check className="size-3.5 -ml-1" />
-                                        <span>{__('Guardar en Credencial Oficial')}</span>
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
+                    </aside>
                 </div>
             </DialogContent>
         </Dialog>
