@@ -339,6 +339,21 @@ function ToolbarButton({ onClick, title, active, disabled, label, icon: Icon }: 
 }
 
 // =============================================================================
+// HELPER PARA PROCESAR RESPUESTAS JSON DE FORMA SEGURA (EVITA SyntaxError ANTE ERRORES HTML)
+// =============================================================================
+async function safeParseJson(response: Response): Promise<any> {
+    const rawText = await response.text();
+    try {
+        return JSON.parse(rawText);
+    } catch {
+        if (!response.ok) {
+            throw new Error(`Error en el servidor (${response.status}: ${response.statusText || 'Fallo de conexión'}).`);
+        }
+        throw new Error('El servidor devolvió una respuesta no válida.');
+    }
+}
+
+// =============================================================================
 // ESTUDIO FOTOGRÁFICO PROFESIONAL (PANTALLA COMPLETA)
 // =============================================================================
 
@@ -554,7 +569,7 @@ export function PastorPhotoAdjustModal({
                     signal: controller.signal,
                 });
 
-                const result = await response.json();
+                const result = await safeParseJson(response);
                 if (response.ok && result.success) {
                     setDiagnosis(result as AgentDiagnosis);
                     const rec = result.recommended_params || {};
@@ -794,7 +809,7 @@ export function PastorPhotoAdjustModal({
                 body: JSON.stringify(payload),
             });
 
-            const result = await response.json();
+            const result = await safeParseJson(response);
             if (!response.ok || !result.success) {
                 throw new Error(result.error || __('No se pudo optimizar la fotografía.'));
             }
@@ -914,7 +929,7 @@ export function PastorPhotoAdjustModal({
                         }),
                     });
 
-                    const data = await resp.json();
+                    const data = await safeParseJson(resp);
                     if (resp.ok && data.success && data.data_url) {
                         const cutImg = await loadHtmlImage(data.data_url);
                         cutCanvas = document.createElement('canvas');
@@ -1331,7 +1346,7 @@ export function PastorPhotoAdjustModal({
                 body: JSON.stringify({ foto: dataUrl }),
             });
 
-            const result = await response.json();
+            const result = await safeParseJson(response);
             if (response.ok && result.success) {
                 toast.success(result.message || __('Fotografía guardada en la credencial.'));
                 onPhotoUpdated(result.foto_url);
