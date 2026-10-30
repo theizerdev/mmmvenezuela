@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'photo_studio' => [
+        'url' => env('PHOTO_STUDIO_API_URL', 'http://127.0.0.1:8001'),
+        'python_path' => env('PYTHON_BINARY'),
+    ],
+
 ];

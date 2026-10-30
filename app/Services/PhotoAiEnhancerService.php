@@ -9,15 +9,36 @@ use Symfony\Component\Process\Process;
 
 class PhotoAiEnhancerService
 {
+    public const DEFAULT_API_URL = 'http://127.0.0.1:8001';
     public const API_URL = 'http://127.0.0.1:8001';
 
     /**
-     * Comprueba si el microservicio local de FastAPI (MMM Studio AI) está activo.
+     * Obtiene la URL configurada del microservicio del Agente Diseñador.
+     * Permite apuntar a un servidor remoto (ej: http://169.58.168.213:8001) o local.
+     */
+    public function getApiUrl(): string
+    {
+        $url = config('services.photo_studio.url') ?: env('PHOTO_STUDIO_API_URL') ?: self::DEFAULT_API_URL;
+        return rtrim($url, '/');
+    }
+
+    /**
+     * Determina si la URL configurada apunta a un host remoto o externo.
+     */
+    public function isRemoteApi(): bool
+    {
+        $host = parse_url($this->getApiUrl(), PHP_URL_HOST);
+        return !empty($host) && !in_array(strtolower($host), ['127.0.0.1', 'localhost', '0.0.0.0', '::1'], true);
+    }
+
+    /**
+     * Comprueba si el microservicio FastAPI (MMM Studio AI) está activo.
      */
     public function isApiServerRunning(): bool
     {
         try {
-            $resp = Http::timeout(0.6)->get(self::API_URL . '/health');
+            $timeout = $this->isRemoteApi() ? 3.0 : 0.8;
+            $resp = Http::timeout($timeout)->get($this->getApiUrl() . '/health');
             return $resp->successful() && in_array($resp->json('status'), ['ready', 'degraded'], true);
         } catch (\Throwable) {
             return false;
@@ -27,11 +48,18 @@ class PhotoAiEnhancerService
     /**
      * Intenta levantar automáticamente en segundo plano el microservicio FastAPI local
      * si aún no está en ejecución, para mantener las redes neuronales precargadas en RAM.
+     * Si la API es remota (ej: en 169.58.168.213), solo verifica la conexión HTTP.
      */
     public function ensureApiServerRunning(): bool
     {
         if ($this->isApiServerRunning()) {
             return true;
+        }
+
+        // Si la URL apunta a un servidor remoto, no se puede ejecutar un proceso en la máquina remota
+        if ($this->isRemoteApi()) {
+            Log::warning('El microservicio remoto en ' . $this->getApiUrl() . ' no se encuentra accesible.');
+            return false;
         }
 
         $scriptsDir = base_path('app/Scripts');
@@ -44,13 +72,13 @@ class PhotoAiEnhancerService
             $python = $this->getPythonBinary();
             if (PHP_OS_FAMILY === 'Windows') {
                 $cmd = sprintf(
-                    'start "" /B "%s" -m uvicorn ai_server:app --host 127.0.0.1 --port 8001 --log-level warning',
+                    'start "" /B "%s" -m uvicorn ai_server:app --host 0.0.0.0 --port 8001 --log-level warning',
                     $python
                 );
                 @pclose(@popen('cd /d "' . $scriptsDir . '" && ' . $cmd, 'r'));
             } else {
                 $cmd = sprintf(
-                    'cd %s && nohup %s -m uvicorn ai_server:app --host 127.0.0.1 --port 8001 --log-level warning > /dev/null 2>&1 &',
+                    'cd %s && nohup %s -m uvicorn ai_server:app --host 0.0.0.0 --port 8001 --log-level warning > /dev/null 2>&1 &',
                     escapeshellarg($scriptsDir),
                     escapeshellarg($python)
                 );
@@ -215,7 +243,18 @@ class PhotoAiEnhancerService
 
         if ($this->ensureApiServerRunning()) {
             try {
-                $resp = Http::timeout(20)->post(self::API_URL . '/analyze', [
+                if ($this->isRemoteApi()) {
+                    $inputBytes = @file_get_contents($sourcePath);
+                    if ($inputBytes !== false) {
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mime = finfo_buffer($finfo, $inputBytes) ?: 'image/jpeg';
+                        finfo_close($finfo);
+                        $dataUri = 'data:' . $mime . ';base64,' . base64_encode($inputBytes);
+                        return $this->analyzeBase64Image($dataUri);
+                    }
+                }
+
+                $resp = Http::timeout(20)->post($this->getApiUrl() . '/analyze', [
                     'input_path' => $sourcePath,
                 ]);
                 if ($resp->successful() && $resp->json('success')) {
@@ -241,7 +280,7 @@ class PhotoAiEnhancerService
 
         if ($this->ensureApiServerRunning()) {
             try {
-                $resp = Http::timeout(25)->post(self::API_URL . '/analyze', [
+                $resp = Http::timeout(25)->post($this->getApiUrl() . '/analyze', [
                     'data_url' => $dataUri,
                 ]);
                 if ($resp->successful() && $resp->json('success')) {
@@ -269,7 +308,7 @@ class PhotoAiEnhancerService
 
         if ($this->ensureApiServerRunning()) {
             try {
-                $resp = Http::timeout(60)->post(self::API_URL . '/remove-background', [
+                $resp = Http::timeout(60)->post($this->getApiUrl() . '/remove-background', [
                     'data_url' => $dataUri,
                     'mode' => $options['mode'] ?? 'ensemble',
                     'defringe' => (float) ($options['defringe'] ?? 65),
@@ -306,6 +345,25 @@ class PhotoAiEnhancerService
     {
         if ($this->ensureApiServerRunning()) {
             try {
+                if ($this->isRemoteApi()) {
+                    $inputBytes = @file_get_contents($inputPath);
+                    if ($inputBytes !== false) {
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mime = finfo_buffer($finfo, $inputBytes) ?: 'image/jpeg';
+                        finfo_close($finfo);
+                        $dataUri = 'data:' . $mime . ';base64,' . base64_encode($inputBytes);
+
+                        $b64Result = $this->enhanceBase64Image($dataUri, $options);
+                        if (($b64Result['success'] ?? false) && !empty($b64Result['data_url'])) {
+                            $decoded = $this->decodeAndValidateDataUri($b64Result['data_url']);
+                            if ($decoded['valid']) {
+                                file_put_contents($outputPath, $decoded['bytes']);
+                                return $b64Result;
+                            }
+                        }
+                    }
+                }
+
                 $payload = [
                     'input_path' => $inputPath,
                     'output_path' => $outputPath,
@@ -314,7 +372,7 @@ class PhotoAiEnhancerService
                     $payload['options'] = $options;
                 }
 
-                $response = Http::timeout(90)->post(self::API_URL . '/enhance-file', $payload);
+                $response = Http::timeout(90)->post($this->getApiUrl() . '/enhance-file', $payload);
                 if ($response->successful() && $response->json('success')) {
                     return $response->json();
                 }
@@ -418,7 +476,7 @@ class PhotoAiEnhancerService
                     $payload['options'] = $options;
                 }
 
-                $response = Http::timeout(90)->post(self::API_URL . $endpoint, $payload);
+                $response = Http::timeout(90)->post($this->getApiUrl() . $endpoint, $payload);
                 if ($response->successful() && $response->json('success')) {
                     return $response->json();
                 }

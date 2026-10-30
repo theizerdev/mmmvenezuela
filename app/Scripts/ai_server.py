@@ -35,7 +35,7 @@ async def lifespan(_app: FastAPI):
     print("[MMM Studio AI] Precargando redes neuronales ONNX en memoria RAM...")
     loaded = preload_studio_models()
     print(f"[MMM Studio AI] Modelos activos: {loaded}")
-    print("[MMM Studio AI] Agente Diseñador listo en http://127.0.0.1:8001")
+    print("[MMM Studio AI] Agente Diseñador listo en http://0.0.0.0:8001 (escuchando local y red)")
     yield
 
 
@@ -210,4 +210,4 @@ def enhance_base64_endpoint(req: Base64EnhanceRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("ai_server:app", host="127.0.0.1", port=8001, reload=False, log_level="warning")
+    uvicorn.run("ai_server:app", host="0.0.0.0", port=8001, reload=False, log_level="warning")
