@@ -87,6 +87,8 @@ def health_check():
         "status": "ready" if caps["ready"] else "degraded",
         "engine": get_model_name(),
         "models": caps["models"],
+        "models_dir": caps.get("models_dir"),
+        "models_dir_exists": caps.get("models_dir_exists"),
         "timestamp": time.time(),
     }
 

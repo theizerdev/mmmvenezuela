@@ -45,9 +45,21 @@ except Exception:
     pass
 
 
-MODEL_DIR = os.path.abspath(
+# Directorio de modelos ONNX (con soporte de variable de entorno y carpetas alternativas)
+_default_model_dir = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "storage", "app", "ai_models")
 )
+MODEL_DIR = os.getenv("AI_MODELS_DIR", _default_model_dir)
+if not os.path.isdir(MODEL_DIR):
+    for candidate in [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "ai_models")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "ai_models")),
+        "/var/www/mmmvenezuela/storage/app/ai_models",
+        "/var/www/html/storage/app/ai_models",
+    ]:
+        if os.path.isdir(candidate):
+            MODEL_DIR = candidate
+            break
 
 # Proporción oficial del marco fotográfico en la credencial MMM (85×54mm):
 # Vista UI: 187×281 px | Alta resolución 2x: 374×562 px | Master Studio 4x: 748×1124 px
@@ -123,6 +135,8 @@ def get_available_capabilities() -> dict[str, Any]:
     }
     return {
         "engine_version": "MMM-Studio-Agent-2.0",
+        "models_dir": MODEL_DIR,
+        "models_dir_exists": os.path.isdir(MODEL_DIR),
         "models": files,
         "ready": any(files.values()),
     }
