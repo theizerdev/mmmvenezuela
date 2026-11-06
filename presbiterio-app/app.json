@@ -68,6 +68,12 @@
           ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ed7c89b4-be4b-4008-beee-8b5e1cd53a9a"
+      }
+    },
+    "owner": "theizerdev"
   }
 }
