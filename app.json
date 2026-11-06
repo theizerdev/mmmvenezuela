@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "5025a575-3996-4b23-ba03-a57027319078"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.theizerdev.mmmvenezuela",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}
