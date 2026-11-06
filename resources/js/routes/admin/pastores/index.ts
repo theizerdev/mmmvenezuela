@@ -723,7 +723,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-export const edit = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const edit = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
@@ -738,7 +738,7 @@ edit.definition = {
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-edit.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+edit.url = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastore: args }
     }
@@ -771,7 +771,7 @@ edit.url = (args: { pastore: number | { id: number } } | [pastore: number | { id
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-edit.get = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+edit.get = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
@@ -780,7 +780,7 @@ edit.get = (args: { pastore: number | { id: number } } | [pastore: number | { id
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+edit.head = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: edit.url(args, options),
     method: 'head',
 })
@@ -790,7 +790,7 @@ edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { i
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-    const editForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const editForm = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: edit.url(args, options),
         method: 'get',
     })
@@ -800,7 +800,7 @@ edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { i
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-        editForm.get = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.get = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, options),
             method: 'get',
         })
@@ -809,7 +809,7 @@ edit.head = (args: { pastore: number | { id: number } } | [pastore: number | { i
  * @see app/Http/Controllers/Admin/PastorController.php:286
  * @route '/admin/pastores/{pastore}/edit'
  */
-        editForm.head = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.head = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -1171,7 +1171,7 @@ bulkCarnetPdf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-export const update = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -1186,7 +1186,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-update.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastore: args }
     }
@@ -1219,7 +1219,7 @@ update.url = (args: { pastore: number | { id: number } } | [pastore: number | { 
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-update.put = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -1229,7 +1229,7 @@ update.put = (args: { pastore: number | { id: number } } | [pastore: number | { 
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-    const updateForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -1244,7 +1244,7 @@ update.put = (args: { pastore: number | { id: number } } | [pastore: number | { 
  * @see app/Http/Controllers/Admin/PastorController.php:323
  * @route '/admin/pastores/{pastore}'
  */
-        updateForm.put = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -1260,7 +1260,7 @@ update.put = (args: { pastore: number | { id: number } } | [pastore: number | { 
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-export const toggleStatus = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const toggleStatus = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -1275,7 +1275,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-toggleStatus.url = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pastore: args }
     }
@@ -1308,7 +1308,7 @@ toggleStatus.url = (args: { pastore: number | { id: number } } | [pastore: numbe
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+toggleStatus.post = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -1318,7 +1318,7 @@ toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: numb
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-    const toggleStatusForm = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, options),
         method: 'post',
     })
@@ -1328,7 +1328,7 @@ toggleStatus.post = (args: { pastore: number | { id: number } } | [pastore: numb
  * @see app/Http/Controllers/Admin/PastorController.php:451
  * @route '/admin/pastores/{pastore}/toggle-status'
  */
-        toggleStatusForm.post = (args: { pastore: number | { id: number } } | [pastore: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.post = (args: { pastore: string | number | { id: string | number } } | [pastore: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, options),
             method: 'post',
         })

@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/PaisController.php:98
  * @route '/admin/paises/{pais}'
  */
-export const update = (args: { pais: number | { id: number } } | [pais: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { pais: string | number | { id: string | number } } | [pais: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -152,7 +152,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/PaisController.php:98
  * @route '/admin/paises/{pais}'
  */
-update.url = (args: { pais: number | { id: number } } | [pais: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { pais: string | number | { id: string | number } } | [pais: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pais: args }
     }
@@ -185,7 +185,7 @@ update.url = (args: { pais: number | { id: number } } | [pais: number | { id: nu
  * @see app/Http/Controllers/Admin/PaisController.php:98
  * @route '/admin/paises/{pais}'
  */
-update.put = (args: { pais: number | { id: number } } | [pais: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { pais: string | number | { id: string | number } } | [pais: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -195,7 +195,7 @@ update.put = (args: { pais: number | { id: number } } | [pais: number | { id: nu
  * @see app/Http/Controllers/Admin/PaisController.php:98
  * @route '/admin/paises/{pais}'
  */
-    const updateForm = (args: { pais: number | { id: number } } | [pais: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { pais: string | number | { id: string | number } } | [pais: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -210,7 +210,7 @@ update.put = (args: { pais: number | { id: number } } | [pais: number | { id: nu
  * @see app/Http/Controllers/Admin/PaisController.php:98
  * @route '/admin/paises/{pais}'
  */
-        updateForm.put = (args: { pais: number | { id: number } } | [pais: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { pais: string | number | { id: string | number } } | [pais: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',

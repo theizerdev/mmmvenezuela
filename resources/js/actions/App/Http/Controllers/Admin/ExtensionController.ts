@@ -314,8 +314,9 @@ index68f345384922fd4e579b0e04466e9be7.head = (options?: RouteQueryOptions): Rout
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\ExtensionController::index, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `index['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `index['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const index = {
     '/admin/extensiones': index22bde03ec5e9600d4babd82036a88ef5,
@@ -481,8 +482,9 @@ createf47dfe3f80828a572db4b90c76599d65.head = (options?: RouteQueryOptions): Rou
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\ExtensionController::create, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `create['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `create['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const create = {
     '/admin/extensiones/create': create825bdf247914fb5ed0530a47eab30511,
@@ -1080,8 +1082,9 @@ destroy701656ab12be2e00223aee05ffa10d40.post = (options?: RouteQueryOptions): Ro
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\ExtensionController::destroy, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `destroy['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `destroy['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const destroy = {
     '/admin/extensiones/{extension}': destroy440bff085c236091f7c075229bd9e9c7,

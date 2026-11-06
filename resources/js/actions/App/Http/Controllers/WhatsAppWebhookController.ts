@@ -112,8 +112,9 @@ handleIncoming3f204d7f18794e3b88fcf7e5812dd1f0.post = (options?: RouteQueryOptio
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\WhatsAppWebhookController::handleIncoming, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `handleIncoming['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `handleIncoming['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const handleIncoming = {
     '/webhooks/whatsapp': handleIncoming6670e009b0babe822b08baf5c39cf33a,

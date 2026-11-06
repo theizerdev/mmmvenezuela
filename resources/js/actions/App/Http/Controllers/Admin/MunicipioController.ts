@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/MunicipioController.php:115
  * @route '/admin/municipios/{municipio}'
  */
-export const update = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -152,7 +152,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/MunicipioController.php:115
  * @route '/admin/municipios/{municipio}'
  */
-update.url = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { municipio: args }
     }
@@ -185,7 +185,7 @@ update.url = (args: { municipio: number | { id: number } } | [municipio: number 
  * @see app/Http/Controllers/Admin/MunicipioController.php:115
  * @route '/admin/municipios/{municipio}'
  */
-update.put = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -195,7 +195,7 @@ update.put = (args: { municipio: number | { id: number } } | [municipio: number 
  * @see app/Http/Controllers/Admin/MunicipioController.php:115
  * @route '/admin/municipios/{municipio}'
  */
-    const updateForm = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -210,7 +210,7 @@ update.put = (args: { municipio: number | { id: number } } | [municipio: number 
  * @see app/Http/Controllers/Admin/MunicipioController.php:115
  * @route '/admin/municipios/{municipio}'
  */
-        updateForm.put = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -226,7 +226,7 @@ update.put = (args: { municipio: number | { id: number } } | [municipio: number 
  * @see app/Http/Controllers/Admin/MunicipioController.php:138
  * @route '/admin/municipios/{municipio}/toggle-status'
  */
-export const toggleStatus = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const toggleStatus = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -241,7 +241,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/MunicipioController.php:138
  * @route '/admin/municipios/{municipio}/toggle-status'
  */
-toggleStatus.url = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { municipio: args }
     }
@@ -274,7 +274,7 @@ toggleStatus.url = (args: { municipio: number | { id: number } } | [municipio: n
  * @see app/Http/Controllers/Admin/MunicipioController.php:138
  * @route '/admin/municipios/{municipio}/toggle-status'
  */
-toggleStatus.post = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+toggleStatus.post = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -284,7 +284,7 @@ toggleStatus.post = (args: { municipio: number | { id: number } } | [municipio: 
  * @see app/Http/Controllers/Admin/MunicipioController.php:138
  * @route '/admin/municipios/{municipio}/toggle-status'
  */
-    const toggleStatusForm = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, options),
         method: 'post',
     })
@@ -294,7 +294,7 @@ toggleStatus.post = (args: { municipio: number | { id: number } } | [municipio: 
  * @see app/Http/Controllers/Admin/MunicipioController.php:138
  * @route '/admin/municipios/{municipio}/toggle-status'
  */
-        toggleStatusForm.post = (args: { municipio: number | { id: number } } | [municipio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.post = (args: { municipio: string | number | { id: string | number } } | [municipio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, options),
             method: 'post',
         })

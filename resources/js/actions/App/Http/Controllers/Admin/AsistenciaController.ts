@@ -196,8 +196,9 @@ scanner7b96cc10e3ee0d3adca0340068715b9b.head = (args: { actividad: string | numb
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\AsistenciaController::scanner, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `scanner['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `scanner['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const scanner = {
     '/admin/actividades/{actividad}/escanear': scanner54c63c9eae9aa2719ef0ca57e75d2ddb,
@@ -317,8 +318,9 @@ registrarfa6699d26865f666949ba8a11f59e3fe.post = (options?: RouteQueryOptions): 
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\AsistenciaController::registrar, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `registrar['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `registrar['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const registrar = {
     '/admin/actividades/asistencias/registrar': registrarced1926607ac828774fabc913273fe0c,
@@ -438,8 +440,9 @@ enrolarRostrof70604ef4d31408f12dbfccad6a369e0.post = (options?: RouteQueryOption
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\AsistenciaController::enrolarRostro, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `enrolarRostro['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `enrolarRostro['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const enrolarRostro = {
     '/admin/actividades/asistencias/enrolar-rostro': enrolarRostroc7c61b7bbaddad4748d0230bad92dfd0,
@@ -605,8 +608,9 @@ buscarPastoresa65fc48ae153fe1c4567f9cfa38f3ebd.head = (options?: RouteQueryOptio
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\AsistenciaController::buscarPastores, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `buscarPastores['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `buscarPastores['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const buscarPastores = {
     '/admin/actividades/asistencias/buscar-pastores': buscarPastores0efce1fc19105db9dd749ad1d9b68072,
@@ -784,8 +788,9 @@ revertird0e3a5eb593cdaa2cf81734eb2805318.delete = (args: { asistencia: string | 
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\AsistenciaController::revertir, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `revertir['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `revertir['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const revertir = {
     '/admin/actividades/asistencias/{asistencia}/revertir': revertir7388346d9d7b4ed0741ace909f8ea2ab,

@@ -10,9 +10,9 @@ const RedirectControllerc044b687b594c076c7abd363832b3d34 = (options?: RouteQuery
 })
 
 RedirectControllerc044b687b594c076c7abd363832b3d34.definition = {
-    methods: ["get","head","post","put","patch","delete","options"],
+    methods: ["get","head","post","put","patch","delete","options","query"],
     url: '/registro-pastor',
-} satisfies RouteDefinition<["get","head","post","put","patch","delete","options"]>
+} satisfies RouteDefinition<["get","head","post","put","patch","delete","options","query"]>
 
 /**
 * @see \Illuminate\Routing\RedirectController::__invoke
@@ -85,6 +85,15 @@ RedirectControllerc044b687b594c076c7abd363832b3d34.delete = (options?: RouteQuer
 RedirectControllerc044b687b594c076c7abd363832b3d34.options = (options?: RouteQueryOptions): RouteDefinition<'options'> => ({
     url: RedirectControllerc044b687b594c076c7abd363832b3d34.url(options),
     method: 'options',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/registro-pastor'
+ */
+RedirectControllerc044b687b594c076c7abd363832b3d34.query = (options?: RouteQueryOptions): RouteDefinition<'query'> => ({
+    url: RedirectControllerc044b687b594c076c7abd363832b3d34.url(options),
+    method: 'query',
 })
 
     /**
@@ -185,6 +194,20 @@ RedirectControllerc044b687b594c076c7abd363832b3d34.options = (options?: RouteQue
                     }),
             method: 'get',
         })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/registro-pastor'
+ */
+        RedirectControllerc044b687b594c076c7abd363832b3d34Form.query = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: RedirectControllerc044b687b594c076c7abd363832b3d34.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'QUERY',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
     
     RedirectControllerc044b687b594c076c7abd363832b3d34.form = RedirectControllerc044b687b594c076c7abd363832b3d34Form
     /**
@@ -198,9 +221,9 @@ const RedirectController4b87d2df7e3aa853f6720faea796e36c = (options?: RouteQuery
 })
 
 RedirectController4b87d2df7e3aa853f6720faea796e36c.definition = {
-    methods: ["get","head","post","put","patch","delete","options"],
+    methods: ["get","head","post","put","patch","delete","options","query"],
     url: '/settings',
-} satisfies RouteDefinition<["get","head","post","put","patch","delete","options"]>
+} satisfies RouteDefinition<["get","head","post","put","patch","delete","options","query"]>
 
 /**
 * @see \Illuminate\Routing\RedirectController::__invoke
@@ -273,6 +296,15 @@ RedirectController4b87d2df7e3aa853f6720faea796e36c.delete = (options?: RouteQuer
 RedirectController4b87d2df7e3aa853f6720faea796e36c.options = (options?: RouteQueryOptions): RouteDefinition<'options'> => ({
     url: RedirectController4b87d2df7e3aa853f6720faea796e36c.url(options),
     method: 'options',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/settings'
+ */
+RedirectController4b87d2df7e3aa853f6720faea796e36c.query = (options?: RouteQueryOptions): RouteDefinition<'query'> => ({
+    url: RedirectController4b87d2df7e3aa853f6720faea796e36c.url(options),
+    method: 'query',
 })
 
     /**
@@ -373,13 +405,28 @@ RedirectController4b87d2df7e3aa853f6720faea796e36c.options = (options?: RouteQue
                     }),
             method: 'get',
         })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/settings'
+ */
+        RedirectController4b87d2df7e3aa853f6720faea796e36cForm.query = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: RedirectController4b87d2df7e3aa853f6720faea796e36c.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'QUERY',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
     
     RedirectController4b87d2df7e3aa853f6720faea796e36c.form = RedirectController4b87d2df7e3aa853f6720faea796e36cForm
 
 /**
 * Multiple routes resolve to \Illuminate\Routing\RedirectController::RedirectController, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `RedirectController['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `RedirectController['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 const RedirectController = {
     '/registro-pastor': RedirectControllerc044b687b594c076c7abd363832b3d34,

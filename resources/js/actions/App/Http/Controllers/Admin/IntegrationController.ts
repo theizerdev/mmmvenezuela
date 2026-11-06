@@ -236,8 +236,9 @@ whatsappDocsebbd1c16ecbdef581a00afd294d7eb4d.head = (options?: RouteQueryOptions
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\IntegrationController::whatsappDocs, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `whatsappDocs['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `whatsappDocs['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const whatsappDocs = {
     '/docs': whatsappDocs09f19fee25de3507901aa68cef1f226a,

@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/EstadoController.php:98
  * @route '/admin/estados/{estado}'
  */
-export const update = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -152,7 +152,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/EstadoController.php:98
  * @route '/admin/estados/{estado}'
  */
-update.url = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { estado: args }
     }
@@ -185,7 +185,7 @@ update.url = (args: { estado: number | { id: number } } | [estado: number | { id
  * @see app/Http/Controllers/Admin/EstadoController.php:98
  * @route '/admin/estados/{estado}'
  */
-update.put = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -195,7 +195,7 @@ update.put = (args: { estado: number | { id: number } } | [estado: number | { id
  * @see app/Http/Controllers/Admin/EstadoController.php:98
  * @route '/admin/estados/{estado}'
  */
-    const updateForm = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -210,7 +210,7 @@ update.put = (args: { estado: number | { id: number } } | [estado: number | { id
  * @see app/Http/Controllers/Admin/EstadoController.php:98
  * @route '/admin/estados/{estado}'
  */
-        updateForm.put = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -226,7 +226,7 @@ update.put = (args: { estado: number | { id: number } } | [estado: number | { id
  * @see app/Http/Controllers/Admin/EstadoController.php:129
  * @route '/admin/estados/{estado}/toggle-status'
  */
-export const toggleStatus = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const toggleStatus = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -241,7 +241,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/EstadoController.php:129
  * @route '/admin/estados/{estado}/toggle-status'
  */
-toggleStatus.url = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { estado: args }
     }
@@ -274,7 +274,7 @@ toggleStatus.url = (args: { estado: number | { id: number } } | [estado: number 
  * @see app/Http/Controllers/Admin/EstadoController.php:129
  * @route '/admin/estados/{estado}/toggle-status'
  */
-toggleStatus.post = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+toggleStatus.post = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: toggleStatus.url(args, options),
     method: 'post',
 })
@@ -284,7 +284,7 @@ toggleStatus.post = (args: { estado: number | { id: number } } | [estado: number
  * @see app/Http/Controllers/Admin/EstadoController.php:129
  * @route '/admin/estados/{estado}/toggle-status'
  */
-    const toggleStatusForm = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, options),
         method: 'post',
     })
@@ -294,7 +294,7 @@ toggleStatus.post = (args: { estado: number | { id: number } } | [estado: number
  * @see app/Http/Controllers/Admin/EstadoController.php:129
  * @route '/admin/estados/{estado}/toggle-status'
  */
-        toggleStatusForm.post = (args: { estado: number | { id: number } } | [estado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.post = (args: { estado: string | number | { id: string | number } } | [estado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, options),
             method: 'post',
         })

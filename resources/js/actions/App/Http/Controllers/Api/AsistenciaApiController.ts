@@ -158,8 +158,9 @@ actividadesActivas175e1e355129cd11241e81ef04618141.head = (options?: RouteQueryO
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Api\AsistenciaApiController::actividadesActivas, so this export is a
-* dictionary keyed by URI rather than a callable. Call a specific route with `actividadesActivas['<uri>'](...)`,
-* or import the route by name from your generated `routes/` directory.
+* dictionary keyed by URI rather than a callable, with the verbs prefixed where two routes share a URI.
+* Call a specific route with `actividadesActivas['<key>'](...)`, or import the route by name from your
+* generated `routes/` directory.
 */
 export const actividadesActivas = {
     '/api/v1/actividades/activas': actividadesActivas37b9e386598124b350fadd70582bc201,
