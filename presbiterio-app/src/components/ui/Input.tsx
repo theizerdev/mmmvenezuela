@@ -15,6 +15,7 @@ import { radius, fonts, noOutline, useTheme } from './theme';
 
 export interface InputProps extends TextInputProps {
   label?: string;
+  labelRight?: React.ReactNode;
   hint?: string;
   error?: string;
   invalid?: boolean;
@@ -31,6 +32,7 @@ export const Input = forwardRef<any, InputProps>(
   (
     {
       label,
+      labelRight,
       hint,
       error,
       invalid,
@@ -83,10 +85,28 @@ export const Input = forwardRef<any, InputProps>(
 
     return (
       <View style={[styles.fieldContainer, containerStyle]}>
-        {label && (
+        {(label || labelRight) && (
           <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: ui.foreground }]}>{label}</Text>
-            {hint && <Text style={[styles.hint, { color: ui.mutedForeground }]}>{hint}</Text>}
+            {label ? (
+              <Text
+                style={[styles.label, { color: ui.foreground }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {label}
+              </Text>
+            ) : (
+              <View />
+            )}
+            {labelRight ?? (hint ? (
+              <Text
+                style={[styles.hint, { color: ui.mutedForeground }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {hint}
+              </Text>
+            ) : null)}
           </View>
         )}
 
@@ -173,34 +193,34 @@ Input.displayName = 'Input';
 const styles = StyleSheet.create({
   fieldContainer: {
     width: '100%',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   label: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontSize: 11.5,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
   hint: {
-    fontSize: 11,
+    fontSize: 10.5,
   },
   wrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 46,
-    borderWidth: 1.5,
-    borderRadius: radius.lg,
-    paddingHorizontal: 12,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: 11,
   },
   wrapperMultiline: {
-    height: 110,
+    height: 90,
     alignItems: 'flex-start',
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   iconSlot: {
     flexShrink: 0,
@@ -210,7 +230,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
-    fontSize: 14,
+    fontSize: 13.5,
     paddingVertical: 0,
   },
   inputMultiline: {
@@ -218,15 +238,15 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   revealBtn: {
-    padding: 6,
-    borderRadius: radius.md,
+    padding: 4,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,
   },
   errorText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 3,
   },
 });

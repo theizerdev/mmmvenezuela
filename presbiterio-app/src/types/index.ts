@@ -1,3 +1,20 @@
+export interface PastorConsulta {
+  id?: number;
+  codigo?: string;
+  nombres?: string;
+  apellidos?: string;
+  nombre_completo: string;
+  documento: string;
+  email?: string | null;
+  foto?: string | null;
+  zona?: string | null;
+  distrito?: string | null;
+  cargo_nacional?: string | null;
+  usuario?: string;
+  user_name?: string | null;
+  tiene_usuario_activo?: boolean;
+}
+
 export interface User {
   id: number;
   name: string;

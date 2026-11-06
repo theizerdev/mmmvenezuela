@@ -93,6 +93,7 @@ export const Badge: React.FC<BadgeProps> = ({
       ) : (
         <Text
           numberOfLines={1}
+          ellipsizeMode="tail"
           style={[
             styles.text,
             {

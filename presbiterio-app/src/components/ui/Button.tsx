@@ -126,6 +126,7 @@ export const Button: React.FC<ButtonProps> = ({
                 variant === 'link' && state.hovered && { textDecorationLine: 'underline' },
               ]}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {Array.isArray(children) ? children.join('') : children}
             </Text>

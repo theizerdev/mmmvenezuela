@@ -98,8 +98,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
         setUser((prev) => (prev ? { ...prev, expo_push_token: token } : null));
       }
-    } catch (e) {
-      console.warn('Error registrando push token:', e);
+    } catch (e: any) {
+      // En Expo Go (Android SDK >= 53), las notificaciones push remotas no están soportadas
+      // en la app de pruebas Expo Go. Funcionan automáticamente en builds reales/APK.
+      const isExpoGoPushWarning =
+        e?.message?.includes('SDK 53') ||
+        e?.message?.includes('Expo Go') ||
+        e?.message?.includes('remote notifications');
+      if (!isExpoGoPushWarning) {
+        console.warn('Error registrando push token:', e);
+      }
     }
   }, []);
 

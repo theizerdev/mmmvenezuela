@@ -25,6 +25,7 @@ Route::prefix('v1')->group(function () {
     // 2. AUTENTICACIÓN PARA LIDERAZGO (PRESBÍTEROS Y SUPERVISORES)
     // ----------------------------------------------------------------------
     Route::post('/auth/login', [PresbiterioApiController::class, 'login']);
+    Route::get('/auth/consultar-usuario', [PresbiterioApiController::class, 'consultarUsuarioPorCedula']);
 
     // ----------------------------------------------------------------------
     // 3. RUTAS PROTEGIDAS CON SANCTUM (DASHBOARDS EJECUTIVOS Y PUSH TOKENS)

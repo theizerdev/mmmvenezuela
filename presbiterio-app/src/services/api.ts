@@ -4,6 +4,7 @@ import {
   PresbiteroDashboardData,
   SupervisorDashboardData,
   Actividad,
+  PastorConsulta,
 } from '../types';
 
 export const DEFAULT_API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://mmmvenezuela.test').replace(/\/+$/, '');
@@ -69,6 +70,8 @@ class ApiService {
   }
 
   async login(usuario: string, password: string): Promise<AuthResponse> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const resp = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
         method: 'POST',
@@ -78,6 +81,7 @@ class ApiService {
           usuario: usuario,
           password: password,
         }),
+        signal: controller.signal,
       });
       const data = await resp.json();
       if (data.success && data.token) {
@@ -85,7 +89,12 @@ class ApiService {
       }
       return data;
     } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        return { success: false, message: 'Tiempo de espera agotado al conectar con el servidor.' };
+      }
       return { success: false, message: e.message || 'Error de conexión con el servidor nacional' };
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -176,6 +185,89 @@ class ApiService {
       return { success: json.success ?? true, data: json.actividades || json.data || [] };
     } catch {
       return { success: false, data: [] };
+    }
+  }
+
+  async consultarUsuarioPorCedula(cedula: string): Promise<{
+    success: boolean;
+    es_pastor_sin_acceso?: boolean;
+    pastor?: PastorConsulta;
+    message?: string;
+  }> {
+    const clean = encodeURIComponent(cedula.trim());
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      // 1. Intento con endpoint específico de consulta de usuario
+      let resp = await fetch(`${this.baseUrl}/api/v1/auth/consultar-usuario?cedula=${clean}&_t=${Date.now()}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+
+      // 2. Si la ruta no existe (404), fallback transparente a /pastores/buscar
+      if (resp.status === 404) {
+        resp = await fetch(`${this.baseUrl}/api/v1/pastores/buscar?cedula=${clean}&_t=${Date.now()}`, {
+          method: 'GET',
+          headers: this.getHeaders(),
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+      }
+
+      const json = await resp.json();
+
+      if (!resp.ok || !json.success) {
+        return {
+          success: false,
+          es_pastor_sin_acceso: json.es_pastor_sin_acceso ?? false,
+          pastor: json.pastor,
+          message: json.message || 'No se encontró ningún pastor con esa cédula.',
+        };
+      }
+
+      const raw = json.pastor || json.data;
+      if (!raw) {
+        return {
+          success: false,
+          message: 'No se encontraron datos del pastor.',
+        };
+      }
+
+      const usuarioFinal =
+        raw.usuario ||
+        (raw.email ? raw.email.split('@')[0] : `V-${String(raw.documento).replace(/\D/g, '')}`);
+
+      const pastorData: PastorConsulta = {
+        id: raw.id,
+        codigo: raw.codigo,
+        nombres: raw.nombres || '',
+        apellidos: raw.apellidos || '',
+        nombre_completo: raw.nombre_completo || `${raw.nombres || ''} ${raw.apellidos || ''}`.trim(),
+        documento: raw.documento || cedula,
+        email: raw.email || null,
+        foto: this.resolveImageUrl(raw.foto),
+        zona: raw.zona ? (String(raw.zona).toLowerCase().includes('zona') ? String(raw.zona) : `Zona ${raw.zona}`) : null,
+        distrito: raw.distrito ? (String(raw.distrito).toLowerCase().includes('distrito') ? String(raw.distrito) : `Distrito ${raw.distrito}`) : null,
+        cargo_nacional: raw.cargo_nacional || 'Pastor',
+        usuario: usuarioFinal,
+        user_name: raw.user_name || raw.nombre_completo,
+        tiene_usuario_activo: raw.tiene_usuario_activo ?? true,
+      };
+
+      return {
+        success: true,
+        pastor: pastorData,
+      };
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        return { success: false, message: 'Tiempo de espera agotado al consultar la cédula.' };
+      }
+      return { success: false, message: e.message || 'Error de conexión al consultar el pastor.' };
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

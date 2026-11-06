@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,36 +8,114 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Animated,
+  Easing,
   useWindowDimensions,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import {
-  ShieldCheck,
   Lock,
   User as UserIcon,
-  Fingerprint,
   KeyRound,
   Sun,
   Moon,
   Smartphone,
-  ChevronRight,
-  ArrowLeft,
-  UserCheck,
+  ArrowRight,
+  Fingerprint,
+  RefreshCw,
+  Shield,
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Alert } from '../components/ui/Alert';
 import { radius } from '../components/ui/theme';
+import { AmbientBackground } from '../components/login/AmbientBackground';
+import { BiometricHero } from '../components/login/BiometricHero';
+import { ForgotUserModal } from '../components/login/ForgotUserModal';
+import { api } from '../services/api';
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
 }
 
+// Proporción del logo institucional (1210x774)
+const LOGO_RATIO = 1210 / 774;
+const ND = Platform.OS !== 'web';
+
+type ServerStatus = 'checking' | 'online' | 'blocked' | 'offline';
+
+/** Traduce errores técnicos del servidor/red a mensajes comprensibles para el usuario. */
+function friendlyError(raw?: string | null): string {
+  const m = (raw || '').toLowerCase();
+  if (!m) return 'No se pudo iniciar sesión. Intente de nuevo.';
+  if (m.includes('imunify') || m.includes('bot-protection') || m.includes('access denied')) {
+    return 'El servidor bloqueó la conexión por seguridad. Contacte al soporte técnico.';
+  }
+  if (m.includes('tiempo de espera') || m.includes('timeout') || m.includes('aborted')) {
+    return 'El servidor tardó demasiado en responder. Intente de nuevo.';
+  }
+  if (m.includes('json') || m.includes('unexpected')) {
+    return 'El servidor respondió de forma inesperada. Intente nuevamente en unos minutos.';
+  }
+  if (
+    m.includes('network request failed') ||
+    m.includes('failed to fetch') ||
+    m.includes('conexión') ||
+    m.includes('conexion')
+  ) {
+    return 'No se pudo conectar con el servidor. Revise su conexión a internet.';
+  }
+  if (m.includes('credenciales') || m.includes('invalid') || m.includes('incorrect')) {
+    return 'Usuario o contraseña incorrectos. Verifíquelos e intente de nuevo.';
+  }
+  return raw as string;
+}
+
+function haptic(kind: 'select' | 'success' | 'error') {
+  if (Platform.OS === 'web') return;
+  try {
+    if (kind === 'select') Haptics.selectionAsync();
+    else
+      Haptics.notificationAsync(
+        kind === 'success'
+          ? Haptics.NotificationFeedbackType.Success
+          : Haptics.NotificationFeedbackType.Error
+      );
+  } catch {
+    // Ignorado: el dispositivo puede no soportar vibración háptica
+  }
+}
+
+/** Punto del PIN con pequeño "pop" al llenarse. */
+const PinDot: React.FC<{ filled: boolean; color: string; border: string }> = ({
+  filled,
+  color,
+  border,
+}) => {
+  const s = useRef(new Animated.Value(filled ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.spring(s, { toValue: filled ? 1 : 0, useNativeDriver: ND, friction: 5, tension: 160 }).start();
+  }, [filled, s]);
+  const scale = s.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] });
+  return (
+    <Animated.View
+      style={[
+        styles.pinDot,
+        {
+          borderColor: filled ? color : border,
+          backgroundColor: filled ? color : 'transparent',
+          transform: [{ scale }],
+        },
+      ]}
+    />
+  );
+};
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const { ui, resolvedTheme, themeMode, setThemeMode } = useTheme();
   const {
     login,
@@ -55,15 +133,99 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   const isDark = resolvedTheme === 'dark';
 
-  // Si tiene PIN o Huella guardada, empezar por defecto en modo Acceso Rápido
+  // Pantallas bajas o móviles: escala compacta para evitar scroll
+  const compact = height < 740;
+  const logoWidth = compact ? 112 : 132;
+  const logoHeight = Math.round(logoWidth / LOGO_RATIO);
+
+  const showBiometrics = biometricsAvailable && biometricsEnabled;
   const hasQuickAccess = hasPinConfigured || (biometricsEnabled && !!savedUserLogin);
+
   const [useQuickAccessMode, setUseQuickAccessMode] = useState<boolean>(hasQuickAccess);
+  // Con huella disponible, la huella es la acción principal y el teclado PIN queda oculto
+  const [pinVisible, setPinVisible] = useState<boolean>(!showBiometrics);
 
   const [usuario, setUsuario] = useState(savedUserLogin || '');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [serverStatus, setServerStatus] = useState<ServerStatus>('checking');
+  const [forgotUserModalVisible, setForgotUserModalVisible] = useState<boolean>(false);
+
+  const passwordRef = useRef<any>(null);
+
+  // ---- Animaciones -------------------------------------------------------
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const footAnim = useRef(new Animated.Value(0)).current;
+  const modeAnim = useRef(new Animated.Value(1)).current;
+  const shake = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const timing = (v: Animated.Value) =>
+      Animated.timing(v, {
+        toValue: 1,
+        duration: 480,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: ND,
+      });
+    Animated.stagger(100, [timing(logoAnim), timing(cardAnim), timing(footAnim)]).start();
+  }, [logoAnim, cardAnim, footAnim]);
+
+  // Transición suave al cambiar entre PIN/huella y usuario/contraseña
+  useEffect(() => {
+    modeAnim.setValue(0);
+    Animated.timing(modeAnim, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: ND,
+    }).start();
+  }, [useQuickAccessMode, pinVisible, modeAnim]);
+
+  const runShake = useCallback(() => {
+    shake.setValue(0);
+    Animated.sequence(
+      [8, -8, 6, -6, 3, 0].map((v) =>
+        Animated.timing(shake, { toValue: v, duration: 45, useNativeDriver: ND })
+      )
+    ).start();
+  }, [shake]);
+
+  const fail = useCallback(
+    (msg?: string | null) => {
+      setErrorMessage(friendlyError(msg));
+      runShake();
+      haptic('error');
+    },
+    [runShake]
+  );
+
+  // ---- Estado del servidor ----------------------------------------------
+  const checkServer = useCallback(async () => {
+    setServerStatus('checking');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    try {
+      await api.init();
+      const resp = await fetch(`${api.getBaseUrl()}/api/v1/actividades?_t=${Date.now()}`, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      const contentType = resp.headers.get('content-type') || '';
+      setServerStatus(resp.ok && contentType.includes('json') ? 'online' : 'blocked');
+    } catch {
+      setServerStatus('offline');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkServer();
+  }, [checkServer]);
 
   // Sincronizar estado inicial si cambia
   useEffect(() => {
@@ -72,10 +234,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     }
   }, [hasQuickAccess]);
 
-  // Manejar Login por Usuario/Contraseña
+  useEffect(() => {
+    setPinVisible(!showBiometrics);
+  }, [showBiometrics]);
+
+  // ---- Acciones ----------------------------------------------------------
   const handleLogin = async () => {
+    if (loading) return;
     if (!usuario.trim() || !password.trim()) {
-      setErrorMessage('Por favor ingrese su usuario y contraseña institucional.');
+      fail('Por favor ingrese su usuario y contraseña institucional.');
       return;
     }
 
@@ -86,17 +253,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setLoading(false);
 
     if (res.success) {
+      haptic('success');
       onLoginSuccess?.();
     } else {
-      setErrorMessage(res.message || 'Credenciales incorrectas. Verifique su usuario o contraseña.');
+      fail(res.message || 'Credenciales incorrectas.');
     }
   };
 
-  // Manejar Login con PIN
   const handlePinLogin = async (pinToTry?: string) => {
     const pinVal = pinToTry || pin;
     if (pinVal.length < 4) {
-      setErrorMessage('Por favor ingrese su PIN de acceso de 4 a 6 dígitos.');
+      fail('Por favor ingrese su PIN de acceso de 4 dígitos.');
       return;
     }
 
@@ -107,37 +274,41 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setLoading(false);
 
     if (res.success) {
+      haptic('success');
       onLoginSuccess?.();
     } else {
-      setErrorMessage(res.message || 'PIN incorrecto.');
+      fail(res.message || 'PIN incorrecto.');
       setPin('');
     }
   };
 
-  // Manejar Biometría (Huella / Face ID)
   const handleBiometricAuth = async () => {
+    if (loading) return;
     setErrorMessage(null);
     setLoading(true);
     const res = await loginWithBiometrics();
     setLoading(false);
 
     if (res.success) {
+      haptic('success');
       onLoginSuccess?.();
     } else {
-      setErrorMessage(res.message || 'Verificación biométrica no superada.');
+      fail(res.message || 'Verificación biométrica no superada.');
     }
   };
 
   const handlePinDigit = (digit: string) => {
-    if (pin.length >= 6) return;
+    if (pin.length >= 6 || loading) return;
+    haptic('select');
     const nextPin = pin + digit;
     setPin(nextPin);
-    if (nextPin.length >= 4 && (hasPinConfigured && nextPin.length === 4)) {
+    if (hasPinConfigured && nextPin.length === 4) {
       handlePinLogin(nextPin);
     }
   };
 
   const handlePinBackspace = () => {
+    haptic('select');
     setPin((prev) => prev.slice(0, -1));
   };
 
@@ -147,351 +318,493 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     else setThemeMode('system');
   };
 
+  const biometricName = /Windows/i.test(platformAuthName) ? 'Windows Hello' : biometricType;
+  const biometricLabel = `INGRESAR CON ${biometricName.toUpperCase()}`;
+
+  // ---- Presentación Shadcn UI -------------------------------------------
+  const cardBg = isDark ? '#111216' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.10)';
+
+  const statusColor =
+    serverStatus === 'online' ? ui.success : serverStatus === 'checking' ? ui.warning : ui.destructive;
+  const statusText =
+    serverStatus === 'online'
+      ? 'Servidor conectado'
+      : serverStatus === 'checking'
+        ? 'Verificando servidor…'
+        : serverStatus === 'blocked'
+          ? 'Servidor sin respuesta válida'
+          : 'Sin conexión con el servidor';
+
+  const fadeUp = (v: Animated.Value, dist: number) => ({
+    opacity: v,
+    transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [dist, 0] }) }],
+  });
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: ui.background }]}
     >
+      <AmbientBackground />
+
       <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { minHeight: '100%', justifyContent: 'center' },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* CONTENEDOR RESPONSIVE CENTRADO */}
-        <View style={[styles.responsiveWrapper, { maxWidth: Math.min(width - 32, 440) }]}>
-          {/* HEADER TOP CON CAMBIO DE TEMA */}
-          <View style={styles.topBar}>
-            <Badge variant="outline" size="sm">
-              MMM VENEZUELA • OFICIAL
-            </Badge>
-
-            <TouchableOpacity
-              style={[
-                styles.themeBtn,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                  borderColor: ui.border,
-                },
-              ]}
-              onPress={cycleTheme}
-              accessibilityLabel="Cambiar tema"
-            >
-              {themeMode === 'system' ? (
-                <Smartphone size={15} color={ui.brand} />
-              ) : isDark ? (
-                <Moon size={15} color="#38bdf8" />
-              ) : (
-                <Sun size={15} color="#f59e0b" />
-              )}
-              <Text style={[styles.themeBtnText, { color: ui.foreground }]}>
-                {themeMode === 'system' ? 'Auto' : isDark ? 'Oscuro' : 'Claro'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* LOGO INSTITUCIONAL Y TÍTULOS */}
-          <View style={styles.brandingBox}>
+        <View style={[styles.responsiveWrapper, { maxWidth: Math.min(width - 24, 390) }]}>
+          {/* LOGO INSTITUCIONAL COMPACTO */}
+          <Animated.View
+            style={[
+              styles.logoBox,
+              compact && { marginBottom: 8 },
+              {
+                opacity: logoAnim,
+                transform: [
+                  { scale: logoAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
+                ],
+              },
+            ]}
+          >
             <Image
               source={
                 isDark
                   ? require('../../assets/logo_light.png')
                   : require('../../assets/logo_color.png')
               }
-              style={styles.logoImage}
+              style={{ width: logoWidth, height: logoHeight }}
               resizeMode="contain"
+              accessibilityLabel="Movimiento Misionero Mundial"
             />
-            <Text style={[styles.churchSub, { color: ui.mutedForeground }]}>
-              IGLESIA CRISTIANA PENTECOSTÉS DE VENEZUELA
-            </Text>
-            <Text style={[styles.churchTitle, { color: ui.foreground }]}>
-              MOVIMIENTO MISIONERO MUNDIAL
-            </Text>
-            <View style={styles.badgesRow}>
-              <Badge variant="brand" size="md">
-                PORTAL EJECUTIVO
-              </Badge>
-              <Badge variant="secondary" size="md">
-                ZONAS & SUPERVISIÓN
-              </Badge>
-            </View>
-          </View>
+          </Animated.View>
 
-          {/* ============================================================== */}
-          {/* MODO A: ACCESO RÁPIDO (PIN / BIOMETRÍA)                        */}
-          {/* ============================================================== */}
-          {useQuickAccessMode ? (
-            <Card style={[styles.card, { borderColor: ui.border }]}>
-              <CardHeader style={{ alignItems: 'center' }}>
-                <View
-                  style={[
-                    styles.avatarBadge,
-                    { backgroundColor: ui.brandSoft, borderColor: ui.brand },
-                  ]}
-                >
-                  <UserCheck size={28} color={ui.brand} />
-                </View>
-                <CardTitle style={{ marginTop: 10, textAlign: 'center' }}>
-                  {savedUserName ? `¡Paz de Dios!` : 'Acceso Rápido'}
-                </CardTitle>
-                <CardDescription style={{ textAlign: 'center', marginTop: 2 }}>
-                  {savedUserName ? (
-                    <Text style={{ fontWeight: '700', color: ui.foreground }}>
-                      {savedUserName}
+          {/* CARD SHADCN / RADIX */}
+          <Animated.View
+            style={[
+              styles.card,
+              { backgroundColor: cardBg, borderColor: cardBorder },
+              {
+                opacity: cardAnim,
+                transform: [
+                  { translateX: shake },
+                  {
+                    translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }),
+                  },
+                ],
+              },
+            ]}
+          >
+            {/* Línea sutil de acento de marca */}
+            <View style={[styles.accentBar, { backgroundColor: ui.brand }]} />
+
+            {/* Cambio de tema discreto */}
+            <TouchableOpacity
+              style={[
+                styles.themeBtn,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                  borderColor: ui.border,
+                },
+              ]}
+              onPress={cycleTheme}
+              accessibilityRole="button"
+              accessibilityLabel="Cambiar tema"
+              hitSlop={6}
+            >
+              {themeMode === 'system' ? (
+                <Smartphone size={13} color={ui.brand} />
+              ) : isDark ? (
+                <Moon size={13} color="#38bdf8" />
+              ) : (
+                <Sun size={13} color="#f59e0b" />
+              )}
+            </TouchableOpacity>
+
+            <Animated.View style={fadeUp(modeAnim, 8)}>
+              {useQuickAccessMode ? (
+                /* ======================================================== */
+                /* MODO A: ACCESO RÁPIDO (HUELLA / PIN)                     */
+                /* ======================================================== */
+                <View>
+                  <View style={styles.headingBox}>
+                    <Text
+                      style={[styles.title, { color: ui.foreground }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {savedUserName ? '¡Paz de Dios!' : 'Acceso Rápido'}
                     </Text>
-                  ) : (
-                    'Desbloquee con su PIN o sensor biométrico'
-                  )}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent style={styles.cardContent}>
-                {errorMessage && (
-                  <Alert
-                    variant="destructive"
-                    title="Error de Acceso"
-                    description={errorMessage}
-                    style={{ marginBottom: 14 }}
-                  />
-                )}
-
-                {/* VISUALIZADOR DE PIN */}
-                {hasPinConfigured && (
-                  <View style={styles.pinSection}>
-                    <Text style={[styles.pinPromptText, { color: ui.mutedForeground }]}>
-                      Ingrese su PIN de 4 dígitos
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={[
+                        styles.subtitle,
+                        savedUserName
+                          ? { color: ui.brand, fontWeight: '600' }
+                          : { color: ui.mutedForeground },
+                      ]}
+                    >
+                      {savedUserName || 'Desbloquee con su huella o PIN institucional'}
                     </Text>
-
-                    <View style={styles.pinDotsRow}>
-                      {[0, 1, 2, 3].map((idx) => {
-                        const filled = pin.length > idx;
-                        return (
-                          <View
-                            key={idx}
-                            style={[
-                              styles.pinDot,
-                              {
-                                borderColor: filled ? ui.brand : ui.border,
-                                backgroundColor: filled ? ui.brand : 'transparent',
-                              },
-                            ]}
-                          />
-                        );
-                      })}
-                    </View>
-
-                    {/* TECLADO NUMÉRICO RÁPIDO */}
-                    <View style={styles.keypadGrid}>
-                      {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-                        <TouchableOpacity
-                          key={digit}
-                          style={[
-                            styles.keypadKey,
-                            { backgroundColor: ui.muted, borderColor: ui.border },
-                          ]}
-                          onPress={() => handlePinDigit(digit)}
-                          disabled={loading}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.keypadKeyText, { color: ui.foreground }]}>
-                            {digit}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-
-                      {/* TECLA BIOMÉTRICA O VACÍA */}
-                      {biometricsAvailable && biometricsEnabled ? (
-                        <TouchableOpacity
-                          style={[
-                            styles.keypadKey,
-                            { backgroundColor: ui.brandSoft, borderColor: ui.brand },
-                          ]}
-                          onPress={handleBiometricAuth}
-                          disabled={loading}
-                          activeOpacity={0.7}
-                        >
-                          <Fingerprint size={24} color={ui.brand} />
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={styles.keypadKeyEmpty} />
-                      )}
-
-                      <TouchableOpacity
-                        style={[
-                          styles.keypadKey,
-                          { backgroundColor: ui.muted, borderColor: ui.border },
-                        ]}
-                        onPress={() => handlePinDigit('0')}
-                        disabled={loading}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.keypadKeyText, { color: ui.foreground }]}>0</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.keypadKey,
-                          { backgroundColor: ui.muted, borderColor: ui.border },
-                        ]}
-                        onPress={handlePinBackspace}
-                        disabled={loading || pin.length === 0}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.keypadKeyText, { color: ui.mutedForeground }]}>⌫</Text>
-                      </TouchableOpacity>
-                    </View>
                   </View>
-                )}
 
-                {/* BOTÓN WINDOWS HELLO / BIOMÉTRICO DIRECTO */}
-                {biometricsAvailable && biometricsEnabled && (
-                  <Button
-                    variant={hasPinConfigured ? 'outline' : 'brand'}
-                    onPress={handleBiometricAuth}
-                    loading={loading}
-                    fullWidth
-                    style={{ marginTop: 12, marginBottom: 4 }}
-                  >
-                    {/Windows/i.test(platformAuthName)
-                      ? 'INGRESAR CON WINDOWS HELLO'
-                      : `INGRESAR CON ${biometricType.toUpperCase()}`}
-                  </Button>
-                )}
+                  {errorMessage && (
+                    <Alert
+                      variant="destructive"
+                      title="No se pudo ingresar"
+                      description={errorMessage}
+                      style={{ marginBottom: 10 }}
+                    />
+                  )}
 
-                {/* ALTERNATIVAS DE INGRESO */}
-                <View style={styles.switchRow}>
-                  <TouchableOpacity
-                    style={styles.switchBtn}
-                    onPress={() => {
-                      setErrorMessage(null);
-                      setUseQuickAccessMode(false);
-                    }}
-                  >
-                    <Text style={[styles.switchBtnText, { color: ui.brand }]}>
-                      Ingresar con usuario y contraseña
-                    </Text>
-                  </TouchableOpacity>
+                  {/* HUELLA COMO ACCIÓN PRINCIPAL */}
+                  {showBiometrics && !pinVisible && (
+                    <BiometricHero
+                      caption={`Toque para ingresar con ${biometricName}`}
+                      onPress={handleBiometricAuth}
+                      loading={loading}
+                    />
+                  )}
 
-                  <TouchableOpacity
-                    style={[styles.switchBtn, { marginTop: 6 }]}
-                    onPress={async () => {
-                      await clearSavedAccount();
-                      setUseQuickAccessMode(false);
-                      setUsuario('');
-                      setPassword('');
-                      setPin('');
-                    }}
-                  >
-                    <Text style={[styles.switchSubText, { color: ui.mutedForeground }]}>
-                      Cambiar de cuenta institucional
-                    </Text>
-                  </TouchableOpacity>
+                  {/* PIN + TECLADO COMPACTO */}
+                  {hasPinConfigured && pinVisible && (
+                    <View style={styles.pinSection}>
+                      <View style={styles.pinDotsRow}>
+                        {[0, 1, 2, 3].map((idx) => (
+                          <PinDot
+                            key={idx}
+                            filled={pin.length > idx}
+                            color={ui.brand}
+                            border={ui.border}
+                          />
+                        ))}
+                      </View>
+
+                      <View style={styles.keypadGrid}>
+                        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                          <TouchableOpacity
+                            key={digit}
+                            style={[
+                              styles.keypadKey,
+                              { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : ui.muted, borderColor: ui.border },
+                            ]}
+                            onPress={() => handlePinDigit(digit)}
+                            disabled={loading}
+                            activeOpacity={0.6}
+                          >
+                            <Text style={[styles.keypadKeyText, { color: ui.foreground }]}>
+                              {digit}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+
+                        {showBiometrics ? (
+                          <TouchableOpacity
+                            style={[
+                              styles.keypadKey,
+                              { backgroundColor: ui.brandSoft, borderColor: ui.brand },
+                            ]}
+                            onPress={handleBiometricAuth}
+                            disabled={loading}
+                            activeOpacity={0.6}
+                            accessibilityLabel={biometricLabel}
+                          >
+                            <Fingerprint size={20} color={ui.brand} />
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.keypadKeyEmpty} />
+                        )}
+
+                        <TouchableOpacity
+                          style={[
+                            styles.keypadKey,
+                            { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : ui.muted, borderColor: ui.border },
+                          ]}
+                          onPress={() => handlePinDigit('0')}
+                          disabled={loading}
+                          activeOpacity={0.6}
+                        >
+                          <Text style={[styles.keypadKeyText, { color: ui.foreground }]}>0</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.keypadKey,
+                            { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : ui.muted, borderColor: ui.border },
+                          ]}
+                          onPress={handlePinBackspace}
+                          disabled={loading || pin.length === 0}
+                          activeOpacity={0.6}
+                          accessibilityLabel="Borrar"
+                        >
+                          <Text style={[styles.keypadKeyText, { color: ui.mutedForeground }]}>⌫</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Alternar huella ⇄ PIN */}
+                  {showBiometrics && hasPinConfigured && (
+                    <TouchableOpacity
+                      style={styles.linkBtn}
+                      onPress={() => {
+                        setErrorMessage(null);
+                        setPin('');
+                        setPinVisible((v) => !v);
+                      }}
+                    >
+                      <View style={styles.linkInner}>
+                        {pinVisible ? (
+                          <Fingerprint size={13} color={ui.brand} />
+                        ) : (
+                          <KeyRound size={13} color={ui.brand} />
+                        )}
+                        <Text
+                          style={[styles.linkText, { color: ui.brand }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {pinVisible ? `Usar ${biometricName}` : 'Usar PIN'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.switchRow}>
+                    <TouchableOpacity
+                      style={styles.linkBtn}
+                      onPress={() => {
+                        setErrorMessage(null);
+                        setUseQuickAccessMode(false);
+                      }}
+                    >
+                      <Text
+                        style={[styles.linkText, { color: ui.foreground }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        Ingresar con usuario y contraseña
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.linkBtn}
+                      onPress={async () => {
+                        await clearSavedAccount();
+                        setUseQuickAccessMode(false);
+                        setUsuario('');
+                        setPassword('');
+                        setPin('');
+                      }}
+                    >
+                      <Text
+                        style={[styles.linkSubText, { color: ui.mutedForeground }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        Cambiar de cuenta institucional
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </CardContent>
-            </Card>
-          ) : (
-            /* ============================================================== */
-            /* MODO B: CREDENCIALES (USUARIO / CONTRASEÑA)                    */
-            /* ============================================================== */
-            <Card style={[styles.card, { borderColor: ui.border }]}>
-              <CardHeader>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <ShieldCheck size={20} color={ui.brand} />
-                  <CardTitle>Iniciar Sesión</CardTitle>
-                </View>
-                <CardDescription>
-                  Credenciales de administración web para Presbíteros y Supervisión.
-                </CardDescription>
-              </CardHeader>
+              ) : (
+                /* ======================================================== */
+                /* MODO B: CREDENCIALES (USUARIO / CONTRASEÑA)              */
+                /* ======================================================== */
+                <View>
+                  <View style={styles.headingBox}>
+                    <Text
+                      style={[styles.title, { color: ui.foreground }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      Iniciar Sesión
+                    </Text>
+                    <Text
+                      style={[styles.subtitle, { color: ui.mutedForeground }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      Portal ejecutivo de Presbíteros y Supervisión
+                    </Text>
+                    <Badge
+                      variant="brand"
+                      size="sm"
+                      icon={<Shield size={10} color={ui.brand} />}
+                      style={{ marginTop: 2 }}
+                    >
+                      ACCESO EJECUTIVO
+                    </Badge>
+                  </View>
 
-              <CardContent style={styles.cardContent}>
-                {errorMessage && (
-                  <Alert
-                    variant="destructive"
-                    title="Error de Acceso"
-                    description={errorMessage}
-                    style={{ marginBottom: 14 }}
+                  {errorMessage && (
+                    <Alert
+                      variant="destructive"
+                      title="No se pudo ingresar"
+                      description={errorMessage}
+                      style={{ marginBottom: 10 }}
+                    />
+                  )}
+
+                  <Input
+                    label="USUARIO O CÉDULA"
+                    placeholder="Ej. mpaez o V-12345678"
+                    value={usuario}
+                    onChangeText={(t) => {
+                      setUsuario(t);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    blurOnSubmit={false}
+                    leftIcon={<UserIcon size={16} color={ui.mutedForeground} />}
                   />
-                )}
 
-                {/* CAMPO USUARIO O CÉDULA */}
-                <Input
-                  label="USUARIO O CÉDULA"
-                  placeholder="Ej. mpaez o V-12345678"
-                  value={usuario}
-                  onChangeText={setUsuario}
-                  autoCapitalize="none"
-                  leftIcon={<UserIcon size={18} color={ui.mutedForeground} />}
-                />
-
-                {/* CAMPO CONTRASEÑA */}
-                <Input
-                  label="CONTRASEÑA"
-                  placeholder="••••••••••••"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  revealable
-                  autoCapitalize="none"
-                  leftIcon={<Lock size={18} color={ui.mutedForeground} />}
-                />
-
-                {/* BOTÓN LOGIN */}
-                <Button
-                  variant="brand"
-                  onPress={handleLogin}
-                  loading={loading}
-                  fullWidth
-                  style={{ marginTop: 8 }}
-                >
-                  INGRESAR AL PANEL
-                </Button>
-
-                {/* ACCESO CON WINDOWS HELLO O BIOMETRÍA DIRECTA */}
-                {biometricsAvailable && biometricsEnabled && (
-                  <Button
-                    variant="outline"
-                    onPress={handleBiometricAuth}
-                    loading={loading}
-                    fullWidth
-                    style={{ marginTop: 8 }}
-                  >
-                    {/Windows/i.test(platformAuthName)
-                      ? 'INGRESAR CON WINDOWS HELLO'
-                      : `INGRESAR CON ${biometricType.toUpperCase()}`}
-                  </Button>
-                )}
-
-                {/* REGRESAR A ACCESO RÁPIDO SI EXISTE */}
-                {hasQuickAccess && (
-                  <TouchableOpacity
-                    style={[styles.quickReturnBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
-                    onPress={() => {
-                      setErrorMessage(null);
-                      setUseQuickAccessMode(true);
+                  {/* CONTRASEÑA CON "¿OLVIDASTE TU USUARIO?" INTEGRADO EN LA CABECERA DEL INPUT */}
+                  <Input
+                    ref={passwordRef}
+                    label="CONTRASEÑA"
+                    labelRight={
+                      <TouchableOpacity
+                        onPress={() => {
+                          setErrorMessage(null);
+                          setForgotUserModalVisible(true);
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Consultar o recuperar usuario con cédula"
+                      >
+                        <Text
+                          style={[styles.forgotUserText, { color: ui.brand }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          ¿Olvidaste tu usuario?
+                        </Text>
+                      </TouchableOpacity>
+                    }
+                    placeholder="••••••••••••"
+                    value={password}
+                    onChangeText={(t) => {
+                      setPassword(t);
+                      if (errorMessage) setErrorMessage(null);
                     }}
-                  >
-                    <KeyRound size={16} color={ui.brand} />
-                    <Text style={[styles.quickReturnText, { color: ui.foreground }]}>
-                      Volver al Acceso Rápido (PIN / Huella)
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                    secureTextEntry
+                    revealable
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="go"
+                    onSubmitEditing={handleLogin}
+                    leftIcon={<Lock size={16} color={ui.mutedForeground} />}
+                  />
 
-          {/* NOTA DE SEGURIDAD / AVISO INSTITUCIONAL */}
-          <View style={styles.securityBox}>
-            <Text style={[styles.securityText, { color: ui.subtle }]}>
-              🔒 Aplicación ejecutiva de uso reservado para Presbíteros y Supervisión Nacional. No
-              contiene escáner para preservar la integridad del padrón ministerial.
+                  {/* BOTÓN PRIMARIO SHADCN */}
+                  <Button
+                    variant="brand"
+                    size="default"
+                    fullWidth
+                    onPress={handleLogin}
+                    loading={loading}
+                    rightIcon={<ArrowRight size={15} color={isDark ? '#000000' : '#FFFFFF'} />}
+                    style={{ marginTop: 2 }}
+                  >
+                    INGRESAR AL PANEL
+                  </Button>
+
+                  {/* BIOMETRÍA OPCIONAL */}
+                  {showBiometrics && (
+                    <Button
+                      variant="outline"
+                      size="default"
+                      fullWidth
+                      onPress={handleBiometricAuth}
+                      disabled={loading}
+                      leftIcon={<Fingerprint size={16} color={ui.brand} />}
+                      style={{ marginTop: 8 }}
+                    >
+                      {biometricLabel}
+                    </Button>
+                  )}
+
+                  {hasQuickAccess && (
+                    <TouchableOpacity
+                      style={[styles.linkBtn, { marginTop: 6 }]}
+                      onPress={() => {
+                        setErrorMessage(null);
+                        setUseQuickAccessMode(true);
+                      }}
+                    >
+                      <View style={styles.linkInner}>
+                        <KeyRound size={13} color={ui.brand} />
+                        <Text
+                          style={[styles.linkText, { color: ui.brand }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          Volver al acceso rápido
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </Animated.View>
+          </Animated.View>
+
+          {/* PIE DE PÁGINA: ESTADO DEL SERVIDOR + AVISO HERMÉTICO */}
+          <Animated.View style={[styles.footer, fadeUp(footAnim, 10)]}>
+            <TouchableOpacity
+              style={[
+                styles.statusChip,
+                {
+                  borderColor: ui.border,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                },
+              ]}
+              onPress={checkServer}
+              disabled={serverStatus === 'checking'}
+              accessibilityLabel={`${statusText}. Toque para reintentar`}
+            >
+              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+              <Text
+                style={[styles.statusText, { color: ui.mutedForeground }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {statusText}
+              </Text>
+              {serverStatus !== 'online' && serverStatus !== 'checking' && (
+                <RefreshCw size={10} color={ui.mutedForeground} />
+              )}
+            </TouchableOpacity>
+
+            <Text
+              style={[styles.securityText, { color: ui.mutedForeground }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              🔒 Uso exclusivo: Presbíteros y Supervisión Nacional
             </Text>
-          </View>
+          </Animated.View>
         </View>
       </ScrollView>
+
+      {/* MODAL CONSULTA DE USUARIO POR CÉDULA */}
+      <ForgotUserModal
+        visible={forgotUserModalVisible}
+        onClose={() => setForgotUserModalVisible(false)}
+        onSelectUser={(u) => {
+          setUsuario(u);
+          setTimeout(() => {
+            passwordRef.current?.focus();
+          }, 250);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -501,158 +814,166 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: 24,
+    flexGrow: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 12,
   },
   responsiveWrapper: {
     width: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
-  topBar: {
-    flexDirection: 'row',
+  logoBox: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  themeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 30,
-    paddingHorizontal: 10,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    gap: 6,
-  },
-  themeBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  brandingBox: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoImage: {
-    width: 64,
-    height: 64,
-    marginBottom: 10,
-  },
-  churchSub: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-  churchTitle: {
-    fontFamily: 'CocogooseBold',
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: -0.3,
-    marginTop: 3,
-    textAlign: 'center',
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
+    marginBottom: 12,
   },
   card: {
     borderRadius: radius.xl,
-    padding: 6,
     borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
-  cardContent: {
-    paddingTop: 8,
+  accentBar: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    width: 44,
+    height: 2,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
   },
-  avatarBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 1.5,
+  themeBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 26,
+    height: 26,
+    borderRadius: radius.full,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 2,
+  },
+  headingBox: {
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 3,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    textAlign: 'center',
+  },
+  forgotUserText: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
   pinSection: {
     alignItems: 'center',
-    marginVertical: 10,
-  },
-  pinPromptText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 4,
   },
   pinDotsRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 12,
   },
   pinDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
   },
   keypadGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    width: 250,
-    gap: 12,
+    width: 216,
+    gap: 8,
   },
   keypadKey: {
-    width: 66,
-    height: 52,
-    borderRadius: radius.lg,
+    width: 62,
+    height: 38,
+    borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   keypadKeyEmpty: {
-    width: 66,
-    height: 52,
+    width: 62,
+    height: 38,
   },
   keypadKeyText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(128,128,128,0.25)',
+    marginTop: 6,
+    marginBottom: 2,
   },
   switchRow: {
     alignItems: 'center',
-    marginTop: 18,
   },
-  switchBtn: {
-    paddingVertical: 4,
+  linkBtn: {
+    alignItems: 'center',
+    paddingVertical: 5,
   },
-  switchBtnText: {
-    fontSize: 12.5,
-    fontWeight: '700',
+  linkInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
-  switchSubText: {
+  linkText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  linkSubText: {
     fontSize: 11,
     fontWeight: '500',
   },
-  quickReturnBtn: {
+  footer: {
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 6,
+  },
+  statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    height: 42,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginTop: 12,
-    gap: 8,
-  },
-  quickReturnText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-  },
-  securityBox: {
-    marginTop: 20,
+    gap: 6,
     paddingHorizontal: 8,
-    alignItems: 'center',
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '500',
   },
   securityText: {
-    fontSize: 10.5,
-    lineHeight: 15,
+    fontSize: 9.5,
+    lineHeight: 13,
     textAlign: 'center',
   },
 });

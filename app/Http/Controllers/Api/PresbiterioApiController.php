@@ -42,11 +42,60 @@ class PresbiterioApiController extends Controller
             ->orWhere('telefono', $login)
             ->first();
 
+        // Búsqueda por cédula del pastor si no se encontró por usuario/email directo
+        if (!$user) {
+            $cleanDoc = str_replace(['.', '-', ' '], '', $login);
+            $soloNumeros = preg_replace('/\D/', '', $login);
+
+            $pastor = Pastor::withoutGlobalScope('multitenancy')
+                ->where(function ($q) use ($login, $cleanDoc, $soloNumeros) {
+                    $q->where('documento', $login)
+                      ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanDoc]);
+                    if (!empty($soloNumeros)) {
+                        $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
+                          ->orWhere('documento', 'like', "%{$soloNumeros}%");
+                    }
+                })
+                ->first();
+
+            if ($pastor) {
+                if ($pastor->user_id) {
+                    $user = User::find($pastor->user_id);
+                }
+                if (!$user && $pastor->email) {
+                    $user = User::where('email', $pastor->email)->first();
+                }
+                if (!$user && !empty($pastor->telefono_tlf)) {
+                    $user = User::where('telefono', $pastor->telefono_tlf)->first();
+                }
+                if (!$user && !empty($pastor->zona)) {
+                    $user = User::where('zona', trim($pastor->zona))->first();
+                }
+            }
+        }
+
         if (!$user || !Hash::check($password, $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Credenciales inválidas. Verifique su usuario y contraseña.',
             ], 401);
+        }
+
+        $rolesAutorizados = [
+            'Presbitero', 'Presbítero', 'presbitero',
+            'Supervisor Nacional', 'supervisor-nacional',
+            'Super Administrador', 'super-admin',
+            'Administrador', 'administrador',
+            'Oficial Nacional', 'oficial-nacional',
+            'Junta Nacional', 'junta-nacional',
+            'Secretaria Nacional', 'secretaria-nacional',
+        ];
+
+        if (!$user->hasAnyRole($rolesAutorizados)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Acceso denegado. Esta aplicación es de uso exclusivo para Presbíteros, Supervisores, Oficiales Nacionales y Administradores.',
+            ], 403);
         }
 
         // Actualizar push token si fue enviado
@@ -79,6 +128,141 @@ class PresbiterioApiController extends Controller
                 'es_supervisor' => $esSupervisor,
                 'push_notificaciones_activas' => (bool) $user->push_notificaciones_activas,
                 'push_modo_silencioso' => (bool) $user->push_modo_silencioso,
+            ],
+        ]);
+    }
+
+    /**
+     * Consulta pública de datos de pastor y su usuario institucional a partir de la cédula.
+     */
+    public function consultarUsuarioPorCedula(Request $request): JsonResponse
+    {
+        $cedula = trim($request->input('cedula') ?? $request->input('q') ?? '');
+        if (empty($cedula)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Por favor ingrese el número de cédula para consultar.',
+            ], 422);
+        }
+
+        $cleanClave = str_replace(['.', '-', ' '], '', $cedula);
+        $soloNumeros = preg_replace('/\D/', '', $cedula);
+
+        $pastor = Pastor::withoutGlobalScope('multitenancy')
+            ->with(['estado', 'municipioModel'])
+            ->where(function ($q) use ($cedula, $cleanClave, $soloNumeros) {
+                $q->where('documento', $cedula)
+                  ->orWhere('codigo', $cedula)
+                  ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave]);
+                if (!empty($soloNumeros)) {
+                    $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
+                      ->orWhere('documento', 'like', "%{$soloNumeros}%");
+                }
+            })
+            ->first();
+
+        if (!$pastor) {
+            return response()->json([
+                'success' => false,
+                'message' => "No se encontró ningún pastor u obrero registrado con el documento: {$cedula}",
+            ], 404);
+        }
+
+        // Buscar el usuario institucional correspondiente
+        $user = null;
+        if ($pastor->user_id) {
+            $user = User::find($pastor->user_id);
+        }
+        if (!$user && $pastor->email) {
+            $user = User::where('email', $pastor->email)->first();
+        }
+        if (!$user && !empty($pastor->telefono_tlf)) {
+            $user = User::where('telefono', $pastor->telefono_tlf)->first();
+        }
+        if (!$user && !empty($pastor->zona)) {
+            $cleanZona = trim($pastor->zona);
+            $user = User::where('zona', $cleanZona)->first();
+        }
+
+        // VALIDACIÓN ESTRICTA: Solo para Presbíteros, Supervisores, Directiva y Oficiales Nacionales
+        $rolesAutorizados = [
+            'Presbitero', 'Presbítero', 'presbitero',
+            'Supervisor Nacional', 'supervisor-nacional',
+            'Super Administrador', 'super-admin',
+            'Administrador', 'administrador',
+            'Oficial Nacional', 'oficial-nacional',
+            'Junta Nacional', 'junta-nacional',
+            'Secretaria Nacional', 'secretaria-nacional',
+        ];
+
+        $tieneAcceso = false;
+        $cargoOficial = $pastor->cargo_nacional;
+
+        if ($user) {
+            foreach ($rolesAutorizados as $rol) {
+                if ($user->hasRole($rol)) {
+                    $tieneAcceso = true;
+                    $cargoOficial = $rol;
+                    break;
+                }
+            }
+        }
+
+        if (!$tieneAcceso && !empty($pastor->cargo_nacional)) {
+            $cargoLower = mb_strtolower(trim($pastor->cargo_nacional));
+            if (
+                str_contains($cargoLower, 'presbitero') ||
+                str_contains($cargoLower, 'presbítero') ||
+                str_contains($cargoLower, 'supervisor') ||
+                str_contains($cargoLower, 'junta') ||
+                str_contains($cargoLower, 'oficial') ||
+                str_contains($cargoLower, 'administrador')
+            ) {
+                $tieneAcceso = true;
+                $cargoOficial = $pastor->cargo_nacional;
+            }
+        }
+
+        if (!$tieneAcceso) {
+            return response()->json([
+                'success' => false,
+                'es_pastor_sin_acceso' => true,
+                'message' => "El documento {$pastor->documento} pertenece al pastor {$pastor->nombres} {$pastor->apellidos}, pero no posee rol de Presbítero, Supervisor ni Oficial Nacional. Esta aplicación es de uso exclusivo para Presbiterio y Supervisión.",
+                'pastor' => [
+                    'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
+                    'documento' => $pastor->documento,
+                    'cargo_nacional' => $pastor->cargo_nacional ?: 'Pastor',
+                    'zona' => $pastor->zona,
+                ],
+            ], 403);
+        }
+
+        $usuario = $user?->username
+            ?? $user?->email
+            ?? ($pastor->email ? explode('@', $pastor->email)[0] : 'V-' . ($soloNumeros ?: $pastor->documento));
+
+        $fotoUrl = $pastor->foto_url;
+        if ($fotoUrl && !str_starts_with($fotoUrl, 'http')) {
+            $fotoUrl = url($fotoUrl);
+        }
+
+        return response()->json([
+            'success' => true,
+            'pastor' => [
+                'id' => $pastor->id,
+                'codigo' => $pastor->codigo,
+                'nombres' => $pastor->nombres,
+                'apellidos' => $pastor->apellidos,
+                'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
+                'documento' => $pastor->documento,
+                'email' => $pastor->email ?? $user?->email,
+                'foto' => $fotoUrl,
+                'zona' => $pastor->zona,
+                'distrito' => $pastor->distrito,
+                'cargo_nacional' => $cargoOficial ?? ($pastor->cargo_nacional ?? 'Presbítero'),
+                'usuario' => $usuario,
+                'user_name' => $user?->name ?? "{$pastor->nombres} {$pastor->apellidos}",
+                'tiene_usuario_activo' => (bool) $user,
             ],
         ]);
     }

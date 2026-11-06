@@ -418,6 +418,7 @@ class AsistenciaApiController extends Controller
             'apellidos' => $pastor->apellidos,
             'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
             'documento' => $pastor->documento,
+            'email' => $pastor->email,
             'foto' => $pastor->foto_url ? (str_starts_with($pastor->foto_url, 'http') ? $pastor->foto_url : url($pastor->foto_url)) : null,
             'nivel_ministerial' => $pastor->nivel_ministerial ?? 'Obrero',
             'cargo_nacional' => $pastor->cargo_nacional,
