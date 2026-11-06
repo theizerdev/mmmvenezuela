@@ -6,11 +6,9 @@ import {
   Smartphone,
   Settings2,
   ShieldCheck,
-  Fingerprint,
   KeyRound,
   Bell,
   BellOff,
-  LogOut,
   Palette,
   CloudOff,
 } from 'lucide-react-native';
@@ -30,7 +28,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  actividad,
   onOpenServerConfig,
   serverOnline = true,
 }) => {
@@ -39,7 +36,6 @@ export const Header: React.FC<HeaderProps> = ({
     user,
     logout,
     toggleModoSilencioso,
-    biometricsAvailable,
     biometricsEnabled,
     hasPinConfigured,
     platformAuthName,
@@ -54,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <View style={[styles.container, { backgroundColor: ui.card, borderBottomColor: ui.border }]}>
       <View style={styles.responsiveInner}>
-        {/* 1. BARRA SUPERIOR INSTITUCIONAL OFICIAL MMM */}
+        {/* 1. BARRA SUPERIOR INSTITUCIONAL COMPACTA SHADCN */}
         <View style={styles.brandingRow}>
           <View style={styles.brandLeft}>
             <Image
@@ -67,25 +63,37 @@ export const Header: React.FC<HeaderProps> = ({
               resizeMode="contain"
             />
             <View style={styles.brandTextCol}>
-              <Text numberOfLines={1} style={[styles.churchSub, { color: ui.mutedForeground }]}>
-                IGLESIA CRISTIANA PENTECOSTÉS VENEZUELA
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.churchSub, { color: ui.mutedForeground }]}
+              >
+                MMM VENEZUELA • PRESBITERIO
               </Text>
-              <Text numberOfLines={1} style={[styles.churchTitle, { color: ui.foreground }]}>
-                MOVIMIENTO MISIONERO MUNDIAL
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.churchTitle, { color: ui.foreground }]}
+              >
+                Movimiento Misionero Mundial
               </Text>
             </View>
           </View>
 
           {/* ACCIONES SUPERIORES */}
           <View style={styles.actionsRow}>
-            {/* BADGE DE USUARIO / PERFIL */}
             {user && (
               <TouchableOpacity
                 style={[styles.userBadgeBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
                 onPress={() => setUserProfileDialogOpen(true)}
+                activeOpacity={0.7}
               >
-                <ShieldCheck size={14} color={ui.brand} />
-                <Text style={[styles.userBadgeText, { color: ui.foreground }]} numberOfLines={1}>
+                <ShieldCheck size={13} color={ui.brand} />
+                <Text
+                  style={[styles.userBadgeText, { color: ui.foreground }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {user.es_supervisor ? 'Supervisor' : `Zona ${user.zona}`}
                 </Text>
               </TouchableOpacity>
@@ -96,13 +104,14 @@ export const Header: React.FC<HeaderProps> = ({
               style={[styles.actionIconBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
               onPress={() => setThemeDialogOpen(true)}
               accessibilityLabel="Cambiar tema"
+              activeOpacity={0.7}
             >
               {themeMode === 'system' ? (
-                <Smartphone size={16} color={ui.brand} />
+                <Smartphone size={14} color={ui.brand} />
               ) : isDark ? (
-                <Moon size={16} color="#38bdf8" />
+                <Moon size={14} color="#38bdf8" />
               ) : (
-                <Sun size={16} color="#f59e0b" />
+                <Sun size={14} color="#f59e0b" />
               )}
             </TouchableOpacity>
 
@@ -112,11 +121,12 @@ export const Header: React.FC<HeaderProps> = ({
                 style={[styles.actionIconBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
                 onPress={onOpenServerConfig}
                 accessibilityLabel="Configurar servidor"
+                activeOpacity={0.7}
               >
                 {serverOnline ? (
-                  <Settings2 size={16} color={ui.mutedForeground} />
+                  <Settings2 size={14} color={ui.mutedForeground} />
                 ) : (
-                  <CloudOff size={16} color={ui.destructive} />
+                  <CloudOff size={14} color={ui.destructive} />
                 )}
               </TouchableOpacity>
             )}
@@ -128,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
       <Dialog open={themeDialogOpen} onOpenChange={setThemeDialogOpen}>
         <DialogHeader>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Palette size={20} color={ui.brand} />
+            <Palette size={18} color={ui.brand} />
             <DialogTitle>Tema Visual</DialogTitle>
           </View>
           <DialogDescription>Personalice la apariencia del panel ejecutivo:</DialogDescription>
@@ -148,16 +158,24 @@ export const Header: React.FC<HeaderProps> = ({
               setThemeDialogOpen(false);
             }}
           >
-            <Moon size={18} color="#38bdf8" />
+            <Moon size={16} color="#38bdf8" />
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.optionTitle, { color: ui.foreground }]}>
-                Tema Oscuro (Sentinela HUD)
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.optionTitle, { color: ui.foreground }]}
+              >
+                Tema Oscuro
               </Text>
-              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
-                Fondo Zinc-950 de alta concentración
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.optionSub, { color: ui.mutedForeground }]}
+              >
+                Fondo oscuro de alto contraste
               </Text>
             </View>
-            {themeMode === 'dark' && <Badge variant="brand">ACTIVO</Badge>}
+            {themeMode === 'dark' && <Badge variant="brand" size="sm">ACTIVO</Badge>}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -173,14 +191,24 @@ export const Header: React.FC<HeaderProps> = ({
               setThemeDialogOpen(false);
             }}
           >
-            <Sun size={18} color="#f59e0b" />
+            <Sun size={16} color="#f59e0b" />
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.optionTitle, { color: ui.foreground }]}>Tema Claro</Text>
-              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
-                Fondo Slate limpio y logotipo a color
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.optionTitle, { color: ui.foreground }]}
+              >
+                Tema Claro
+              </Text>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.optionSub, { color: ui.mutedForeground }]}
+              >
+                Fondo claro limpio e institucional
               </Text>
             </View>
-            {themeMode === 'light' && <Badge variant="brand">ACTIVO</Badge>}
+            {themeMode === 'light' && <Badge variant="brand" size="sm">ACTIVO</Badge>}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -196,16 +224,24 @@ export const Header: React.FC<HeaderProps> = ({
               setThemeDialogOpen(false);
             }}
           >
-            <Smartphone size={18} color={ui.brand} />
+            <Smartphone size={16} color={ui.brand} />
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.optionTitle, { color: ui.foreground }]}>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.optionTitle, { color: ui.foreground }]}
+              >
                 Automático (Sistema)
               </Text>
-              <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.optionSub, { color: ui.mutedForeground }]}
+              >
                 Sigue la apariencia del dispositivo
               </Text>
             </View>
-            {themeMode === 'system' && <Badge variant="brand">ACTIVO</Badge>}
+            {themeMode === 'system' && <Badge variant="brand" size="sm">ACTIVO</Badge>}
           </TouchableOpacity>
         </View>
       </Dialog>
@@ -215,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({
         <Dialog open={userProfileDialogOpen} onOpenChange={setUserProfileDialogOpen}>
           <DialogHeader>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <ShieldCheck size={20} color={ui.brand} />
+              <ShieldCheck size={18} color={ui.brand} />
               <DialogTitle>Sesión de Liderazgo</DialogTitle>
             </View>
             <DialogDescription>
@@ -226,18 +262,30 @@ export const Header: React.FC<HeaderProps> = ({
           <View style={styles.dialogOptionsList}>
             {/* CARD DE DATOS */}
             <View style={[styles.profileCard, { backgroundColor: ui.muted, borderColor: ui.border }]}>
-              <Text style={[styles.profileName, { color: ui.foreground }]}>{user.name}</Text>
-              <Text style={[styles.profileEmail, { color: ui.mutedForeground }]}>{user.email}</Text>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.profileName, { color: ui.foreground }]}
+              >
+                {user.name}
+              </Text>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.profileEmail, { color: ui.mutedForeground }]}
+              >
+                {user.email}
+              </Text>
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
                 {user.es_supervisor ? (
-                  <Badge variant="brand">SUPERVISOR NACIONAL</Badge>
+                  <Badge variant="brand" size="sm">SUPERVISOR NACIONAL</Badge>
                 ) : (
-                  <Badge variant="brand">PRESBÍTERO ZONA {user.zona}</Badge>
+                  <Badge variant="brand" size="sm">PRESBÍTERO ZONA {user.zona}</Badge>
                 )}
               </View>
             </View>
 
-            {/* OPCIÓN CONFIGURAR LLAVE DE ACCESO RÁPIDO (PIN / HUELLA / WINDOWS HELLO) */}
+            {/* OPCIÓN CONFIGURAR LLAVE DE ACCESO RÁPIDO */}
             <TouchableOpacity
               style={[styles.prefRow, { backgroundColor: ui.muted, borderColor: ui.border }]}
               onPress={() => {
@@ -245,30 +293,32 @@ export const Header: React.FC<HeaderProps> = ({
                 setQuickAccessModalOpen(true);
               }}
             >
-              <KeyRound size={20} color={ui.brand} />
+              <KeyRound size={18} color={ui.brand} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={[styles.optionTitle, { color: ui.foreground }]}>
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[styles.optionTitle, { color: ui.foreground }]}
+                >
                   {/Windows/i.test(platformAuthName)
                     ? 'Windows Hello / Llave de Acceso'
                     : 'Llave de Acceso del Dispositivo'}
                 </Text>
-                <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[styles.optionSub, { color: ui.mutedForeground }]}
+                >
                   {hasPinConfigured && biometricsEnabled
-                    ? 'PIN y ' +
-                      (/Windows/i.test(platformAuthName)
-                        ? 'Windows Hello activos'
-                        : 'Biometría activos')
+                    ? 'PIN y Biometría activos'
                     : biometricsEnabled
-                    ? /Windows/i.test(platformAuthName)
-                      ? 'Windows Hello activo'
-                      : 'Sensor biométrico activo'
+                    ? 'Sensor biométrico activo'
                     : hasPinConfigured
                     ? 'PIN numérico configurado'
-                    : 'Configurar ' +
-                      (/Windows/i.test(platformAuthName) ? 'Windows Hello' : 'acceso rápido')}
+                    : 'Configurar acceso rápido'}
                 </Text>
               </View>
-              <Badge variant={hasPinConfigured || biometricsEnabled ? 'success' : 'outline'}>
+              <Badge variant={hasPinConfigured || biometricsEnabled ? 'success' : 'outline'} size="sm">
                 {hasPinConfigured || biometricsEnabled ? 'ACTIVO' : 'AJUSTAR'}
               </Badge>
             </TouchableOpacity>
@@ -279,19 +329,27 @@ export const Header: React.FC<HeaderProps> = ({
               onPress={toggleModoSilencioso}
             >
               {user.push_modo_silencioso ? (
-                <BellOff size={20} color={ui.warning} />
+                <BellOff size={18} color={ui.warning} />
               ) : (
-                <Bell size={20} color={ui.success} />
+                <Bell size={18} color={ui.success} />
               )}
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={[styles.optionTitle, { color: ui.foreground }]}>
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[styles.optionTitle, { color: ui.foreground }]}
+                >
                   Modo Silencioso / Plenaria
                 </Text>
-                <Text style={[styles.optionSub, { color: ui.mutedForeground }]}>
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[styles.optionSub, { color: ui.mutedForeground }]}
+                >
                   {user.push_modo_silencioso ? 'Sonido pausado' : 'Alertas audibles activas'}
                 </Text>
               </View>
-              <Badge variant={user.push_modo_silencioso ? 'warning' : 'success'}>
+              <Badge variant={user.push_modo_silencioso ? 'warning' : 'success'} size="sm">
                 {user.push_modo_silencioso ? 'SILENCIADO' : 'SONIDO'}
               </Badge>
             </TouchableOpacity>
@@ -299,11 +357,13 @@ export const Header: React.FC<HeaderProps> = ({
             {/* CERRAR SESIÓN */}
             <Button
               variant="destructive"
+              size="default"
+              fullWidth
               onPress={async () => {
                 setUserProfileDialogOpen(false);
                 await logout();
               }}
-              style={{ marginTop: 8 }}
+              style={{ marginTop: 4 }}
             >
               Cerrar Sesión
             </Button>
@@ -322,8 +382,8 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
   },
   responsiveInner: {
@@ -341,92 +401,95 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 8,
+    minWidth: 0,
   },
   logo: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     marginRight: 8,
   },
   brandTextCol: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
   },
   churchSub: {
     fontSize: 8.5,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   churchTitle: {
-    fontFamily: 'CocogooseBold',
     fontSize: 12.5,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: -0.2,
     marginTop: 1,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   userBadgeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 32,
-    paddingHorizontal: 10,
+    height: 30,
+    paddingHorizontal: 8,
     borderRadius: radius.md,
     borderWidth: 1,
-    gap: 5,
+    gap: 4,
+    maxWidth: 115,
   },
   userBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   actionIconBtn: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dialogOptionsList: {
-    gap: 10,
-    marginTop: 14,
+    gap: 8,
+    marginTop: 12,
   },
   themeOptionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
+    padding: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
   },
   optionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '600',
   },
   optionSub: {
     fontSize: 11,
     marginTop: 1,
   },
   profileCard: {
-    padding: 12,
-    borderRadius: radius.lg,
+    padding: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
   },
   profileName: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   profileEmail: {
-    fontSize: 12,
+    fontSize: 11.5,
     marginTop: 1,
   },
   prefRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: radius.lg,
+    padding: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
   },
 });

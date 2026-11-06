@@ -30,7 +30,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
   onSelectSesion,
   loading = false,
 }) => {
-  const { ui, resolvedTheme } = useTheme();
+  const { ui } = useTheme();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
@@ -45,47 +45,64 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
             },
           ]}
           onPress={() => setDialogOpen(true)}
-          activeOpacity={0.8}
+          activeOpacity={0.75}
         >
-        {/* ICONO CALENDARIO */}
-        <View style={[styles.iconBox, { backgroundColor: ui.brandSoft }]}>
-          <Calendar size={18} color={ui.brand} />
-        </View>
+          {/* ICONO CALENDARIO */}
+          <View style={[styles.iconBox, { backgroundColor: ui.brandSoft }]}>
+            <Calendar size={16} color={ui.brand} />
+          </View>
 
-        {/* DATOS DE LA ACTIVIDAD */}
-        <View style={styles.textContainer}>
-          <View style={styles.labelRow}>
-            <View style={[styles.liveDot, { backgroundColor: ui.success }]} />
-            <Text style={[styles.microLabel, { color: ui.mutedForeground }]}>
-              ACTIVIDAD NACIONAL SELECCIONADA
+          {/* DATOS DE LA ACTIVIDAD */}
+          <View style={styles.textContainer}>
+            <View style={styles.labelRow}>
+              <View style={[styles.liveDot, { backgroundColor: ui.success }]} />
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.microLabel, { color: ui.mutedForeground }]}
+              >
+                ACTIVIDAD EN CURSO
+              </Text>
+            </View>
+
+            <Text
+              style={[styles.activityName, { color: ui.foreground }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {actividadActual?.nombre || (loading ? 'Cargando actividad...' : 'Sin actividad activa')}
+            </Text>
+
+            <Text
+              style={[styles.sesionSubtitle, { color: ui.mutedForeground }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {sesionActual ? sesionActual.nombre : 'Sesión General'}
+              {actividadActual?.lugar ? ` • ${actividadActual.lugar}` : ''}
             </Text>
           </View>
 
-          <Text style={[styles.activityName, { color: ui.foreground }]} numberOfLines={1}>
-            {actividadActual?.nombre || (loading ? 'Cargando actividad...' : 'Sin actividad activa')}
-          </Text>
+          {/* CONTADOR DE PRESENTES */}
+          <View style={styles.rightGroup}>
+            <View
+              style={[
+                styles.attendeesBadge,
+                { backgroundColor: ui.successSoft, borderColor: 'rgba(34, 197, 94, 0.3)' },
+              ]}
+            >
+              <Users size={11} color={ui.success} style={{ marginRight: 3 }} />
+              <Text style={[styles.attendeesCount, { color: ui.foreground }]}>
+                {actividadActual?.total_presentes ?? 0}
+              </Text>
+              <Text style={[styles.attendeesLabel, { color: ui.success }]}>
+                PRES.
+              </Text>
+            </View>
 
-          <Text style={[styles.sesionSubtitle, { color: ui.mutedForeground }]} numberOfLines={1}>
-            {sesionActual ? `• ${sesionActual.nombre}` : 'Sesión General'}
-            {actividadActual?.lugar ? ` (${actividadActual.lugar})` : ''}
-          </Text>
-        </View>
-
-        {/* CONTADOR DE PRESENTES */}
-        <View style={styles.rightGroup}>
-          <View style={[styles.attendeesBadge, { backgroundColor: ui.successSoft, borderColor: ui.border }]}>
-            <Users size={12} color={ui.success} style={{ marginRight: 3 }} />
-            <Text style={[styles.attendeesCount, { color: ui.foreground }]}>
-              {actividadActual?.total_presentes ?? 0}
-            </Text>
-            <Text style={[styles.attendeesLabel, { color: ui.success }]}>
-              PRESENTES
-            </Text>
+            <ChevronRight size={15} color={ui.mutedForeground} />
           </View>
-
-          <ChevronRight size={16} color={ui.mutedForeground} />
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
       </View>
 
       {/* MODAL DIALOG */}
@@ -97,7 +114,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollView style={{ maxHeight: 380, marginTop: 10 }}>
+        <ScrollView style={{ maxHeight: 360, marginTop: 10 }}>
           {actividades.map((item, index) => {
             const isSelected = item.id === actividadActual?.id;
             return (
@@ -118,24 +135,36 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                     setDialogOpen(false);
                   }}
                 >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.activityItemTitle, { color: ui.foreground }]}>
+                  <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={[styles.activityItemTitle, { color: ui.foreground }]}
+                    >
                       {item.nombre}
                     </Text>
                     <View style={styles.activityItemSubRow}>
-                      <MapPin size={12} color={ui.mutedForeground} />
-                      <Text style={[styles.activityItemDate, { color: ui.mutedForeground }]}>
+                      <MapPin size={11} color={ui.mutedForeground} />
+                      <Text
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        style={[styles.activityItemDate, { color: ui.mutedForeground }]}
+                      >
                         {item.lugar || 'Sede Nacional MMM'} • {item.fecha}
                       </Text>
                     </View>
                   </View>
-                  {isSelected && <Badge variant="brand">SELECCIONADO</Badge>}
+                  {isSelected && <Badge variant="brand" size="sm">ACTIVO</Badge>}
                 </TouchableOpacity>
 
                 {/* SESIONES */}
                 {isSelected && item.sesiones && item.sesiones.length > 0 && (
                   <View style={[styles.sessionsBox, { borderTopColor: ui.border }]}>
-                    <Text style={[styles.sessionsHeader, { color: ui.mutedForeground }]}>
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={[styles.sessionsHeader, { color: ui.mutedForeground }]}
+                    >
                       BLOQUES DE ACTIVIDAD:
                     </Text>
                     <View style={styles.sessionsGrid}>
@@ -157,17 +186,21 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                             }}
                           >
                             <Text
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
                               style={[
                                 styles.sessionChipText,
                                 {
                                   color: isSesSelected ? ui.brand : ui.foreground,
-                                  fontWeight: isSesSelected ? '800' : '600',
+                                  fontWeight: isSesSelected ? '700' : '500',
                                 },
                               ]}
                             >
                               {ses.nombre}
                             </Text>
-                            {isSesSelected && <Check size={12} color={ui.brand} style={{ marginLeft: 4 }} />}
+                            {isSesSelected && (
+                              <Check size={11} color={ui.brand} style={{ marginLeft: 4 }} />
+                            )}
                           </TouchableOpacity>
                         );
                       })}
@@ -185,8 +218,8 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderBottomWidth: 1,
   },
   responsiveInner: {
@@ -197,109 +230,109 @@ const styles = StyleSheet.create({
   selectorBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   iconBox: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 9,
+    flexShrink: 0,
   },
   textContainer: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
   },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 5,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginRight: 4,
   },
   microLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.6,
+    fontSize: 8.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   activityName: {
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 17,
+    fontSize: 12.5,
+    fontWeight: '600',
+    lineHeight: 16,
   },
   sesionSubtitle: {
-    fontSize: 11,
+    fontSize: 10.5,
     marginTop: 1,
   },
   rightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginLeft: 6,
+    gap: 6,
+    marginLeft: 8,
+    flexShrink: 0,
   },
   attendeesBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3.5,
     borderRadius: radius.md,
     borderWidth: 1,
   },
   attendeesCount: {
-    fontSize: 13,
-    fontWeight: '800',
-    marginRight: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    marginRight: 3,
   },
   attendeesLabel: {
     fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   activityItemCard: {
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    marginBottom: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    marginBottom: 8,
     overflow: 'hidden',
   },
   activityItemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
+    padding: 10,
   },
   activityItemTitle: {
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   activityItemSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 3,
+    marginTop: 2,
   },
   activityItemDate: {
+    flex: 1,
     fontSize: 11,
   },
   sessionsBox: {
     borderTopWidth: 1,
-    padding: 10,
+    padding: 8,
   },
   sessionsHeader: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     marginBottom: 6,
   },
   sessionsGrid: {
@@ -312,7 +345,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
   },
   sessionChipText: {

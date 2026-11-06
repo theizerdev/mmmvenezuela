@@ -35,39 +35,66 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   sparklineColor,
   style,
 }) => {
-  const { ui, resolvedTheme } = useTheme();
+  const { ui } = useTheme();
   const isCritical = percent >= 90;
   const isWarning = percent >= 75 && percent < 90;
 
-  const defaultBadgeVariant: BadgeVariant = isCritical ? 'destructive' : isWarning ? 'warning' : 'outline';
+  const defaultBadgeVariant: BadgeVariant = isCritical
+    ? 'destructive'
+    : isWarning
+    ? 'warning'
+    : 'outline';
   const defaultBadgeLabel = isCritical ? 'CRÍTICO' : isWarning ? 'ALTO' : 'ÓPTIMO';
 
   const badgeVariant = customBadgeVariant || defaultBadgeVariant;
   const badgeLabel = customBadgeLabel || defaultBadgeLabel;
 
+  const indicatorColor =
+    badgeVariant === 'success'
+      ? ui.success
+      : badgeVariant === 'warning'
+      ? ui.warning
+      : badgeVariant === 'destructive'
+      ? ui.destructive
+      : ui.brand;
+
   return (
     <Card style={[styles.card, style]}>
-      {/* HEADER DE LA TARJETA */}
+      {/* HEADER COMPACTO */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={[styles.iconBox, { backgroundColor: ui.muted, borderColor: ui.border }]}>
-            <MdiIcon name={iconName} size={15} color={ui.brand} />
+            <MdiIcon name={iconName} size={13} color={ui.brand} />
           </View>
-          <Text style={[styles.title, { color: ui.mutedForeground }]} numberOfLines={1}>
+          <Text
+            style={[styles.title, { color: ui.mutedForeground }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {title}
           </Text>
         </View>
-        <Badge variant={badgeVariant} size="sm">
-          {badgeLabel}
-        </Badge>
+        {badgeLabel ? (
+          <Badge variant={badgeVariant} size="sm">
+            {badgeLabel}
+          </Badge>
+        ) : null}
       </View>
 
       {/* VALOR PRINCIPAL Y PORCENTAJE */}
       <View style={styles.valueRow}>
-        <Text style={[styles.value, { color: ui.foreground }]} numberOfLines={1}>
+        <Text
+          style={[styles.value, { color: ui.foreground }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {value}
         </Text>
-        <Text style={[styles.percentText, { color: ui.mutedForeground }]} numberOfLines={1}>
+        <Text
+          style={[styles.percentText, { color: ui.mutedForeground }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {percentLabel || `${Math.round(percent)}%`}
         </Text>
       </View>
@@ -75,19 +102,24 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       {/* BARRA DE PROGRESO */}
       <Progress
         value={Math.max(percent, type === 'net' ? 6 : 0)}
-        height={5}
-        style={{ marginVertical: 8 }}
+        indicatorColor={indicatorColor}
+        height={4}
+        style={{ marginVertical: 6 }}
       />
 
-      {/* SUBTEXTO */}
-      <Text style={[styles.subtext, { color: ui.subtle }]} numberOfLines={2} ellipsizeMode="tail">
+      {/* SUBTEXTO CON PUNTOS SUSPENSIVOS */}
+      <Text
+        style={[styles.subtext, { color: ui.mutedForeground }]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {subtext}
       </Text>
 
       {sparklineData && sparklineData.length > 1 && (
         <Sparkline
           data={sparklineData}
-          color={sparklineColor || (isCritical ? ui.destructive : isWarning ? ui.warning : ui.brand)}
+          color={sparklineColor || indicatorColor}
           label="Historial (15 min)"
         />
       )}
@@ -97,36 +129,36 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    padding: 14,
-    borderRadius: radius.xl,
+    padding: 11,
+    borderRadius: radius.lg,
     justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   titleRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     minWidth: 0,
   },
   iconBox: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.md,
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   title: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.4,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
     flexShrink: 1,
   },
@@ -134,20 +166,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    marginTop: 10,
-    gap: 6,
+    marginTop: 6,
+    gap: 4,
   },
   value: {
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.4,
   },
   percentText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
   },
   subtext: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '500',
   },
 });

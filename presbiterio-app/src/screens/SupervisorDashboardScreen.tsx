@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,14 +13,9 @@ import {
 import {
   Globe2,
   ChevronRight,
-  TrendingUp,
-  MapPin,
-  Heart,
-  Users,
   Search,
-  ShieldCheck,
-  Phone,
   FilterX,
+  RefreshCw,
 } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
@@ -28,10 +23,8 @@ import {
   Actividad,
   Sesion,
   SupervisorDashboardData,
-  ZonaResumen,
 } from '../types';
 import { MetricCard } from '../components/MetricCard';
-import { SupervisorApexChart } from '../components/SupervisorApexChart';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Progress } from '../components/ui/Progress';
@@ -51,8 +44,6 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
   const { ui } = useTheme();
 
   const isDesktop = width >= 992;
-  const isTablet = width >= 600 && width < 992;
-  const isMobile = width < 600;
 
   const [data, setData] = useState<SupervisorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +68,7 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
 
   useEffect(() => {
     cargarDashboard();
-    const interval = setInterval(cargarDashboard, 15000); // 15s auto-refresh
+    const interval = setInterval(cargarDashboard, 15000);
     return () => clearInterval(interval);
   }, [cargarDashboard]);
 
@@ -85,6 +76,41 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
     setRefreshing(true);
     cargarDashboard();
   };
+
+  const metricas = data?.metricas_nacionales || {
+    total_padron: 0,
+    total_presentes: 0,
+    total_pendientes: 0,
+    porcentaje_asistencia: 0,
+    total_con_conyuge: 0,
+    total_zonas: 0,
+  };
+
+  const zonas = useMemo(() => data?.zonas || [], [data?.zonas]);
+  const countOptimas = useMemo(() => zonas.filter((z) => z.porcentaje >= 70).length, [zonas]);
+  const countRegulares = useMemo(
+    () => zonas.filter((z) => z.porcentaje >= 40 && z.porcentaje < 70).length,
+    [zonas]
+  );
+  const countCriticas = useMemo(() => zonas.filter((z) => z.porcentaje < 40).length, [zonas]);
+
+  const zonasFiltradas = useMemo(() => {
+    return zonas.filter((z) => {
+      const query = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !query ||
+        z.nombre_zona.toLowerCase().includes(query) ||
+        z.presbitero_nombre.toLowerCase().includes(query) ||
+        String(z.zona) === query;
+
+      if (!matchesSearch) return false;
+
+      if (filterSemaforo === 'optimo') return z.porcentaje >= 70;
+      if (filterSemaforo === 'regular') return z.porcentaje >= 40 && z.porcentaje < 70;
+      if (filterSemaforo === 'critico') return z.porcentaje < 40;
+      return true;
+    });
+  }, [zonas, searchQuery, filterSemaforo]);
 
   if (selectedZona) {
     return (
@@ -97,100 +123,109 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
     );
   }
 
-  const metricas = data?.metricas_nacionales || {
-    total_padron: 0,
-    total_presentes: 0,
-    total_pendientes: 0,
-    porcentaje_asistencia: 0,
-    total_con_conyuge: 0,
-    total_zonas: 0,
-  };
-
-  const zonasFiltradas = (data?.zonas || []).filter((z) => {
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !query ||
-      z.nombre_zona.toLowerCase().includes(query) ||
-      z.presbitero_nombre.toLowerCase().includes(query) ||
-      String(z.zona) === query;
-
-    if (!matchesSearch) return false;
-
-    if (filterSemaforo === 'optimo') return z.porcentaje >= 70;
-    if (filterSemaforo === 'regular') return z.porcentaje >= 40 && z.porcentaje < 70;
-    if (filterSemaforo === 'critico') return z.porcentaje < 40;
-    return true;
-  });
-
   const getMetricCardStyle = () => {
     if (isDesktop) return styles.metricDesktop;
-    if (isTablet) return styles.metricTablet;
-    return styles.metricMobile;
+    return styles.metricCompactGrid;
   };
 
   if (loading && !data) {
     return (
       <View style={[styles.centerLoading, { backgroundColor: ui.background }]}>
-        <ActivityIndicator size="large" color={ui.brand} />
-        <Text style={[styles.loadingText, { color: ui.mutedForeground }]}>
-          Consolidando telemetría de las 41 zonas pastorales de Venezuela...
+        <ActivityIndicator size="small" color={ui.brand} />
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[styles.loadingText, { color: ui.mutedForeground }]}
+        >
+          Cargando supervisión nacional (41 zonas)...
         </Text>
       </View>
     );
   }
+
+  const filterTabs: Array<{
+    key: 'todas' | 'optimo' | 'regular' | 'critico';
+    label: string;
+    count: number;
+    dotColor?: string;
+  }> = [
+    { key: 'todas', label: 'Todas', count: zonas.length || 41 },
+    { key: 'optimo', label: 'Óptimas', count: countOptimas, dotColor: ui.success },
+    { key: 'regular', label: 'Regular', count: countRegulares, dotColor: ui.warning },
+    { key: 'critico', label: 'Bajas', count: countCriticas, dotColor: ui.destructive },
+  ];
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: ui.background }]}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.responsiveInner}>
-        {/* CABECERA SUPERVISOR NACIONAL */}
+        {/* CABECERA COMPACTA SUPERVISOR NACIONAL */}
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Globe2 size={18} color={ui.brand} />
-                <Text numberOfLines={1} style={[styles.title, { color: ui.foreground }]}>
-                  SUPERVISIÓN NACIONAL VENEZUELA
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Globe2 size={15} color={ui.brand} />
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[styles.title, { color: ui.foreground }]}
+                >
+                  SUPERVISIÓN NACIONAL
                 </Text>
               </View>
-              <Text numberOfLines={1} style={[styles.subtitle, { color: ui.mutedForeground }]}>
-                Monitoreo centralizado en tiempo real • 41 Zonas Convocadas
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.subtitle, { color: ui.mutedForeground }]}
+              >
+                Monitoreo en tiempo real • {zonas.length || 41} Zonas Eclesiásticas
               </Text>
             </View>
 
-            <Badge
-              variant="brand"
-              size="sm"
-              icon={<View style={[styles.livePulseDot, { backgroundColor: ui.brand }]} />}
-              style={styles.headerBadge}
-            >
-              EN VIVO
-            </Badge>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity
+                style={[styles.refreshBtn, { backgroundColor: ui.muted, borderColor: ui.border }]}
+                onPress={onRefresh}
+                disabled={refreshing}
+                accessibilityLabel="Actualizar datos"
+              >
+                <RefreshCw size={13} color={ui.foreground} />
+              </TouchableOpacity>
+
+              <Badge
+                variant="brand"
+                size="sm"
+                icon={<View style={[styles.livePulseDot, { backgroundColor: ui.brand }]} />}
+              >
+                EN VIVO
+              </Badge>
+            </View>
           </View>
         </Card>
 
-        {/* MÉTRICAS NACIONALES CONSOLIDADAS (CADA UNA POR SEPARADO EN MÓVIL, RESPONSIVE EN DESKTOP) */}
+        {/* MÉTRICAS NACIONALES EN CUADRÍCULA COMPACTA 2x2 (4x1 EN DESKTOP) */}
         <View style={styles.metricsContainer}>
           <MetricCard
             title="PADRÓN"
             value={String(metricas.total_padron)}
             percent={100}
-            subtext="41 Zonas Eclesiásticas Oficiales"
+            subtext="41 Zonas Oficiales"
             iconName="account-group"
-            badgeLabel="41 ZONAS"
+            badgeLabel="TOTAL"
             badgeVariant="secondary"
             style={getMetricCardStyle()}
           />
 
           <MetricCard
-            title="ASISTENCIA"
+            title="PRESENTES"
             value={String(metricas.total_presentes)}
             percent={metricas.porcentaje_asistencia}
-            subtext={`${metricas.porcentaje_asistencia}% concurrencia nacional`}
-            iconName="chart-timeline-variant"
+            subtext={`${metricas.porcentaje_asistencia}% asistencia nacional`}
+            iconName="check-decagram"
             badgeLabel={
               metricas.porcentaje_asistencia >= 70
                 ? 'ÓPTIMO'
@@ -216,22 +251,22 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
                 ? (metricas.total_pendientes / metricas.total_padron) * 100
                 : 0
             }
-            subtext="Obreros en camino o ausentes"
+            subtext="Obreros por llegar"
             iconName="clock-alert-outline"
-            badgeLabel="POR LLEGAR"
+            badgeLabel="AUSENTES"
             badgeVariant="warning"
             style={getMetricCardStyle()}
           />
 
           <MetricCard
-            title="CON CÓNYUGE"
+            title="CÓNYUGES"
             value={String(metricas.total_con_conyuge)}
             percent={
               metricas.total_presentes > 0
                 ? (metricas.total_con_conyuge / metricas.total_presentes) * 100
                 : 0
             }
-            subtext="Acompañando la obra pastoral"
+            subtext="Acompañando en sala"
             iconName="heart"
             badgeLabel="PAREJAS"
             badgeVariant="brand"
@@ -239,118 +274,175 @@ export const SupervisorDashboardScreen: React.FC<SupervisorDashboardScreenProps>
           />
         </View>
 
-        {/* RADAR EJECUTIVO NACIONAL - APEXCHART AVANZADO DE LAS 41 ZONAS */}
-        {data && (
-          <SupervisorApexChart
-            data={data}
-            selectedFilter={filterSemaforo}
-            onSelectFilter={setFilterSemaforo}
-            onSelectZona={(zonaId) => setSelectedZona(zonaId)}
-          />
-        )}
+        {/* CONTROL SEGMENTADO SHADCN POR SEMÁFORO (1 FILA HORIZONTAL) */}
+        <View style={[styles.segmentedBar, { backgroundColor: ui.muted, borderColor: ui.border }]}>
+          {filterTabs.map((tab) => {
+            const active = filterSemaforo === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[
+                  styles.segmentItem,
+                  active && [
+                    styles.segmentItemActive,
+                    { backgroundColor: ui.card, borderColor: ui.border },
+                  ],
+                ]}
+                onPress={() => setFilterSemaforo(tab.key)}
+                activeOpacity={0.75}
+              >
+                {tab.dotColor ? (
+                  <View style={[styles.segmentDot, { backgroundColor: tab.dotColor }]} />
+                ) : null}
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[
+                    styles.segmentText,
+                    {
+                      color: active ? ui.foreground : ui.mutedForeground,
+                      fontWeight: active ? '700' : '500',
+                    },
+                  ]}
+                >
+                  {tab.label} ({tab.count})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-        {/* BUSCADOR DE ZONA */}
+        {/* BUSCADOR DE ZONA SHADCN */}
         <View style={[styles.searchBox, { backgroundColor: ui.card, borderColor: ui.border }]}>
-          <Search size={16} color={ui.mutedForeground} style={{ marginRight: 8 }} />
+          <Search size={15} color={ui.mutedForeground} style={{ marginRight: 8 }} />
           <TextInput
             style={[styles.searchInput, { color: ui.foreground }]}
-            placeholder="Filtrar por número de zona o nombre del presbítero..."
+            placeholder="Filtrar por zona o nombre del presbítero..."
             placeholderTextColor={ui.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
-              <FilterX size={16} color={ui.mutedForeground} />
+              <FilterX size={15} color={ui.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* LISTADO DE LAS 41 ZONAS */}
+        {/* CABECERA DEL LISTADO DE ZONAS */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: ui.foreground }]}>
-            ESTADO POR PRESBITERIO ({zonasFiltradas.length} de {data?.zonas?.length || 41} ZONAS)
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[styles.sectionTitle, { color: ui.mutedForeground }]}
+          >
+            PRESBITERIOS ({zonasFiltradas.length} DE {zonas.length || 41} ZONAS)
           </Text>
 
           {filterSemaforo !== 'todas' && (
             <TouchableOpacity
               onPress={() => setFilterSemaforo('todas')}
-              style={[styles.clearFilterPill, { backgroundColor: ui.muted }]}
+              style={[styles.clearFilterPill, { backgroundColor: ui.muted, borderColor: ui.border }]}
             >
-              <Text style={[styles.clearFilterText, { color: ui.brand }]}>
-                Ver Todas ({data?.zonas?.length || 41})
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.clearFilterText, { color: ui.brand }]}
+              >
+                Mostrar todas
               </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={styles.zonasGrid}>
-          {zonasFiltradas.map((z, index) => {
-            const badgeVariant =
-              z.porcentaje >= 70 ? 'success' : z.porcentaje >= 40 ? 'warning' : 'destructive';
-            const badgeLabel =
-              z.porcentaje >= 70 ? 'ÓPTIMO' : z.porcentaje >= 40 ? 'REGULAR' : 'BAJO';
+        {/* LISTADO DE LAS 41 ZONAS */}
+        {zonasFiltradas.length === 0 ? (
+          <Card style={styles.emptyCard}>
+            <Text style={[styles.emptyText, { color: ui.mutedForeground }]}>
+              No se encontraron zonas con el filtro seleccionado.
+            </Text>
+          </Card>
+        ) : (
+          <View style={styles.zonasGrid}>
+            {zonasFiltradas.map((z, index) => {
+              const isOptimo = z.porcentaje >= 70;
+              const isRegular = z.porcentaje >= 40 && z.porcentaje < 70;
+              const badgeVariant = isOptimo ? 'success' : isRegular ? 'warning' : 'destructive';
+              const badgeLabel = isOptimo ? 'ÓPTIMO' : isRegular ? 'REGULAR' : 'BAJO';
+              const barColor = isOptimo ? ui.success : isRegular ? ui.warning : ui.destructive;
+              const totalPadron = z.total_padron || z.padron || 0;
 
-            return (
-              <TouchableOpacity
-                key={`zona-${z.zona ?? index}`}
-                style={[
-                  styles.zonaCard,
-                  isDesktop ? styles.zonaCardWide : styles.zonaCardMobile,
-                  { backgroundColor: ui.card, borderColor: ui.border },
-                ]}
-                onPress={() => setSelectedZona(z.zona)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.zonaHeaderRow}>
-                  {/* ÍNDICE Y NOMBRE */}
-                  <View style={styles.zonaTitleCol}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Badge variant="outline" size="sm">
-                        {`#${z.zona}`}
-                      </Badge>
-                      <Text style={[styles.zonaNombre, { color: ui.foreground }]}>
-                        {z.nombre_zona.toUpperCase()}
+              return (
+                <TouchableOpacity
+                  key={`zona-${z.zona ?? index}`}
+                  style={[
+                    styles.zonaCard,
+                    isDesktop ? styles.zonaCardWide : styles.zonaCardMobile,
+                    { backgroundColor: ui.card, borderColor: ui.border },
+                  ]}
+                  onPress={() => setSelectedZona(z.zona)}
+                  activeOpacity={0.75}
+                >
+                  <View style={styles.zonaHeaderRow}>
+                    <View style={styles.zonaTitleCol}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Badge variant="outline" size="sm">
+                          {`#${z.zona}`}
+                        </Badge>
+                        <Text
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                          style={[styles.zonaNombre, { color: ui.foreground }]}
+                        >
+                          {z.nombre_zona.toUpperCase()}
+                        </Text>
+                      </View>
+                      <Text
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        style={[styles.presbiteroNombre, { color: ui.mutedForeground }]}
+                      >
+                        Presbítero:{' '}
+                        <Text style={{ color: ui.foreground, fontWeight: '600' }}>
+                          {z.presbitero_nombre}
+                        </Text>
                       </Text>
                     </View>
-                    <Text style={[styles.presbiteroNombre, { color: ui.mutedForeground }]}>
-                      Presbítero:{' '}
+
+                    <Badge variant={badgeVariant} size="sm">
+                      {`${z.porcentaje}% • ${badgeLabel}`}
+                    </Badge>
+                  </View>
+
+                  {/* BARRA DE PROGRESO CON COLOR DE SEMÁFORO REAL */}
+                  <View style={{ marginVertical: 7 }}>
+                    <Progress value={z.porcentaje} indicatorColor={barColor} height={5} />
+                  </View>
+
+                  {/* DETALLES DE AUDITORÍA */}
+                  <View style={styles.zonaFooterRow}>
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={[styles.footerStat, { color: ui.mutedForeground }]}
+                    >
+                      Presentes:{' '}
                       <Text style={{ color: ui.foreground, fontWeight: '700' }}>
-                        {z.presbitero_nombre}
+                        {z.presentes}/{totalPadron}
                       </Text>
+                      {z.con_conyuge > 0 ? ` • ${z.con_conyuge} cónyuges` : ''}
                     </Text>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                      <Text style={[styles.auditLink, { color: ui.brand }]}>Auditar</Text>
+                      <ChevronRight size={13} color={ui.brand} />
+                    </View>
                   </View>
-
-                  {/* SEMÁFORO BADGE */}
-                  <Badge variant={badgeVariant} size="sm">
-                    {badgeLabel}
-                  </Badge>
-                </View>
-
-                {/* BARRA DE PROGRESO */}
-                <View style={{ marginVertical: 8 }}>
-                  <Progress value={z.porcentaje} height={5} />
-                </View>
-
-                {/* DETALLES DE AUDITORÍA */}
-                <View style={styles.zonaFooterRow}>
-                  <Text style={[styles.footerStat, { color: ui.mutedForeground }]}>
-                    Presentes:{' '}
-                    <Text style={{ color: ui.foreground, fontWeight: '700' }}>
-                      {z.presentes}/{z.total_padron || z.padron}
-                    </Text>{' '}
-                    ({z.porcentaje}%)
-                  </Text>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Text style={[styles.auditLink, { color: ui.brand }]}>Auditar Zona</Text>
-                    <ChevronRight size={14} color={ui.brand} />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -361,8 +453,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 14,
-    paddingBottom: 40,
+    padding: 12,
+    paddingBottom: 32,
   },
   responsiveInner: {
     width: '100%',
@@ -373,16 +465,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   loadingText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
   },
   headerCard: {
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: radius.xl,
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: radius.lg,
   },
   headerRow: {
     flexDirection: 'row',
@@ -390,85 +482,127 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  livePulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  refreshBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerBadge: {
-    flexShrink: 0,
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
+  livePulseDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   title: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    flexShrink: 1,
   },
   subtitle: {
-    fontSize: 11.5,
+    fontSize: 10.5,
     marginTop: 2,
   },
   metricsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 10,
   },
   metricDesktop: {
     flex: 1,
-    minWidth: 220,
+    minWidth: 210,
   },
-  metricTablet: {
+  metricCompactGrid: {
     width: '48.5%',
     flexGrow: 1,
   },
-  metricMobile: {
-    width: '100%',
+  segmentedBar: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    marginBottom: 10,
+    gap: 3,
+  },
+  segmentItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    gap: 4,
+    minWidth: 0,
+  },
+  segmentItemActive: {
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  segmentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    flexShrink: 0,
+  },
+  segmentText: {
+    fontSize: 10.5,
+    flexShrink: 1,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: radius.lg,
-    paddingHorizontal: 14,
-    height: 44,
-    marginBottom: 14,
+    borderRadius: radius.md,
+    paddingHorizontal: 11,
+    height: 38,
+    marginBottom: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12.5,
     height: '100%',
+    paddingVertical: 0,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
+    flex: 1,
   },
   clearFilterPill: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: radius.full,
+    borderWidth: 1,
   },
   clearFilterText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '600',
   },
   zonasGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   zonaCard: {
-    padding: 14,
-    borderRadius: radius.xl,
+    padding: 12,
+    borderRadius: radius.lg,
     borderWidth: 1,
   },
   zonaCardWide: {
@@ -480,32 +614,45 @@ const styles = StyleSheet.create({
   },
   zonaHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
   },
   zonaTitleCol: {
     flex: 1,
+    minWidth: 0,
   },
   zonaNombre: {
-    fontSize: 13.5,
-    fontWeight: '800',
+    fontSize: 12.5,
+    fontWeight: '700',
+    flexShrink: 1,
   },
   presbiteroNombre: {
-    fontSize: 11.5,
+    fontSize: 11,
     marginTop: 2,
   },
   zonaFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 2,
+    gap: 8,
   },
   footerStat: {
-    fontSize: 11.5,
+    flex: 1,
+    fontSize: 11,
   },
   auditLink: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  emptyCard: {
+    padding: 20,
+    alignItems: 'center',
+    borderRadius: radius.lg,
+  },
+  emptyText: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
