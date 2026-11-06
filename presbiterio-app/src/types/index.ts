@@ -31,7 +31,11 @@ export interface Sesion {
 export interface Actividad {
   id: number;
   nombre: string;
-  fecha: string;
+  fecha?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  tipo?: string;
+  estado?: string;
   lugar?: string;
   activa: boolean;
   total_presentes?: number;
@@ -83,6 +87,7 @@ export interface ZonaResumen {
   presbitero_nombre: string;
   presbitero_telefono?: string | null;
   total_padron: number;
+  padron?: number;
   presentes: number;
   porcentaje: number;
   con_conyuge: number;

@@ -624,7 +624,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.2,
     flexShrink: 1,
-    whiteSpace: 'nowrap' as any,
   },
   presbiteroSub: {
     fontSize: 12,

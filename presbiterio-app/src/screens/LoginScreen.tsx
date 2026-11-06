@@ -224,7 +224,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           {/* ============================================================== */}
           {useQuickAccessMode ? (
             <Card style={[styles.card, { borderColor: ui.border }]}>
-              <CardHeader style={{ alignItems: 'center', textAlign: 'center' }}>
+              <CardHeader style={{ alignItems: 'center' }}>
                 <View
                   style={[
                     styles.avatarBadge,

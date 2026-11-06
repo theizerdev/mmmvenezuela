@@ -15,7 +15,7 @@ export const ApexChart: React.FC<ApexChartProps> = ({
   type = 'bar',
   height = 320,
 }) => {
-  const containerRef = useRef<View | null>(null);
+  const containerRef = useRef<any>(null);
   const chartInstance = useRef<ApexCharts | null>(null);
 
   useEffect(() => {

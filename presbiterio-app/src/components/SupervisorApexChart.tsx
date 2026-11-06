@@ -196,7 +196,7 @@ export const SupervisorApexChart: React.FC<SupervisorApexChartProps> = ({
       },
       {
         name: 'Por Llegar (Faltantes)',
-        data: zonas.map((z) => Math.max(0, (z.total_padron || z.padron) - z.presentes)),
+        data: zonas.map((z) => Math.max(0, ((z.total_padron || z.padron) ?? 0) - z.presentes)),
       },
     ];
   }, [zonas]);
