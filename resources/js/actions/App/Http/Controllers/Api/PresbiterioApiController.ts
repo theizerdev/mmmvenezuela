@@ -55,8 +55,86 @@ login.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     
     login.form = loginForm
 /**
+* @see \App\Http\Controllers\Api\PresbiterioApiController::consultarUsuarioPorCedula
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @route '/api/v1/auth/consultar-usuario'
+ */
+export const consultarUsuarioPorCedula = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: consultarUsuarioPorCedula.url(options),
+    method: 'get',
+})
+
+consultarUsuarioPorCedula.definition = {
+    methods: ["get","head"],
+    url: '/api/v1/auth/consultar-usuario',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\PresbiterioApiController::consultarUsuarioPorCedula
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @route '/api/v1/auth/consultar-usuario'
+ */
+consultarUsuarioPorCedula.url = (options?: RouteQueryOptions) => {
+    return consultarUsuarioPorCedula.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\PresbiterioApiController::consultarUsuarioPorCedula
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @route '/api/v1/auth/consultar-usuario'
+ */
+consultarUsuarioPorCedula.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: consultarUsuarioPorCedula.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\PresbiterioApiController::consultarUsuarioPorCedula
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @route '/api/v1/auth/consultar-usuario'
+ */
+consultarUsuarioPorCedula.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: consultarUsuarioPorCedula.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\PresbiterioApiController::consultarUsuarioPorCedula
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @route '/api/v1/auth/consultar-usuario'
+ */
+    const consultarUsuarioPorCedulaForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: consultarUsuarioPorCedula.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\PresbiterioApiController::consultarUsuarioPorCedula
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @route '/api/v1/auth/consultar-usuario'
+ */
+        consultarUsuarioPorCedulaForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: consultarUsuarioPorCedula.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\PresbiterioApiController::consultarUsuarioPorCedula
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @route '/api/v1/auth/consultar-usuario'
+ */
+        consultarUsuarioPorCedulaForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: consultarUsuarioPorCedula.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    consultarUsuarioPorCedula.form = consultarUsuarioPorCedulaForm
+/**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::logout
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:89
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:273
  * @route '/api/v1/auth/logout'
  */
 export const logout = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -71,7 +149,7 @@ logout.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::logout
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:89
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:273
  * @route '/api/v1/auth/logout'
  */
 logout.url = (options?: RouteQueryOptions) => {
@@ -80,7 +158,7 @@ logout.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::logout
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:89
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:273
  * @route '/api/v1/auth/logout'
  */
 logout.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -90,7 +168,7 @@ logout.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::logout
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:89
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:273
  * @route '/api/v1/auth/logout'
  */
     const logoutForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -100,7 +178,7 @@ logout.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::logout
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:89
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:273
  * @route '/api/v1/auth/logout'
  */
         logoutForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -111,7 +189,7 @@ logout.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     logout.form = logoutForm
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::updatePushSettings
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:105
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:289
  * @route '/api/v1/auth/push-settings'
  */
 export const updatePushSettings = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -126,7 +204,7 @@ updatePushSettings.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::updatePushSettings
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:105
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:289
  * @route '/api/v1/auth/push-settings'
  */
 updatePushSettings.url = (options?: RouteQueryOptions) => {
@@ -135,7 +213,7 @@ updatePushSettings.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::updatePushSettings
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:105
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:289
  * @route '/api/v1/auth/push-settings'
  */
 updatePushSettings.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -145,7 +223,7 @@ updatePushSettings.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
 
     /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::updatePushSettings
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:105
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:289
  * @route '/api/v1/auth/push-settings'
  */
     const updatePushSettingsForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -155,7 +233,7 @@ updatePushSettings.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
 
             /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::updatePushSettings
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:105
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:289
  * @route '/api/v1/auth/push-settings'
  */
         updatePushSettingsForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -166,7 +244,7 @@ updatePushSettings.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
     updatePushSettings.form = updatePushSettingsForm
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::presbiteroDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:322
  * @route '/api/v1/presbitero/dashboard'
  */
 export const presbiteroDashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -181,7 +259,7 @@ presbiteroDashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::presbiteroDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:322
  * @route '/api/v1/presbitero/dashboard'
  */
 presbiteroDashboard.url = (options?: RouteQueryOptions) => {
@@ -190,7 +268,7 @@ presbiteroDashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::presbiteroDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:322
  * @route '/api/v1/presbitero/dashboard'
  */
 presbiteroDashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -199,7 +277,7 @@ presbiteroDashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
 })
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::presbiteroDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:322
  * @route '/api/v1/presbitero/dashboard'
  */
 presbiteroDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -209,7 +287,7 @@ presbiteroDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
     /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::presbiteroDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:322
  * @route '/api/v1/presbitero/dashboard'
  */
     const presbiteroDashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -219,7 +297,7 @@ presbiteroDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
             /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::presbiteroDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:322
  * @route '/api/v1/presbitero/dashboard'
  */
         presbiteroDashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -228,7 +306,7 @@ presbiteroDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
             /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::presbiteroDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:138
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:322
  * @route '/api/v1/presbitero/dashboard'
  */
         presbiteroDashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -244,7 +322,7 @@ presbiteroDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     presbiteroDashboard.form = presbiteroDashboardForm
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::supervisorDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:359
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:543
  * @route '/api/v1/supervisor/dashboard'
  */
 export const supervisorDashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -259,7 +337,7 @@ supervisorDashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::supervisorDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:359
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:543
  * @route '/api/v1/supervisor/dashboard'
  */
 supervisorDashboard.url = (options?: RouteQueryOptions) => {
@@ -268,7 +346,7 @@ supervisorDashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::supervisorDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:359
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:543
  * @route '/api/v1/supervisor/dashboard'
  */
 supervisorDashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -277,7 +355,7 @@ supervisorDashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
 })
 /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::supervisorDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:359
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:543
  * @route '/api/v1/supervisor/dashboard'
  */
 supervisorDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -287,7 +365,7 @@ supervisorDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
     /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::supervisorDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:359
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:543
  * @route '/api/v1/supervisor/dashboard'
  */
     const supervisorDashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -297,7 +375,7 @@ supervisorDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
             /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::supervisorDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:359
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:543
  * @route '/api/v1/supervisor/dashboard'
  */
         supervisorDashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -306,7 +384,7 @@ supervisorDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
             /**
 * @see \App\Http\Controllers\Api\PresbiterioApiController::supervisorDashboard
- * @see app/Http/Controllers/Api/PresbiterioApiController.php:359
+ * @see app/Http/Controllers/Api/PresbiterioApiController.php:543
  * @route '/api/v1/supervisor/dashboard'
  */
         supervisorDashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -320,6 +398,6 @@ supervisorDashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
     
     supervisorDashboard.form = supervisorDashboardForm
-const PresbiterioApiController = { login, logout, updatePushSettings, presbiteroDashboard, supervisorDashboard }
+const PresbiterioApiController = { login, consultarUsuarioPorCedula, logout, updatePushSettings, presbiteroDashboard, supervisorDashboard }
 
 export default PresbiterioApiController
