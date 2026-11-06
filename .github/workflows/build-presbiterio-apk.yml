@@ -1,0 +1,86 @@
+name: Compilar APK Android (Presbiterio MMM)
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'URL del Servidor Backend (API)'
+        required: true
+        default: 'https://saprcoe.mmmvenezuela.org'
+        type: string
+  push:
+    branches:
+      - dev
+      - main
+      - master
+    paths:
+      - 'presbiterio-app/**'
+      - '.github/workflows/build-presbiterio-apk.yml'
+
+jobs:
+  build-apk:
+    name: Generar APK Instalable (Sin EAS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: presbiterio-app
+
+    env:
+      EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url || 'https://saprcoe.mmmvenezuela.org' }}
+      NODE_ENV: production
+
+    steps:
+      - name: 1. Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: 2. Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 3. Configurar Java JDK 17 (requerido por Android Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 4. Configurar Android SDK y caché de Gradle
+        uses: android-actions/setup-android@v3
+
+      - name: 5. Habilitar caché de Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 6. Instalar dependencias del proyecto
+        run: npm install --legacy-peer-deps
+
+      - name: 7. Preparar configuración nativa Android (limpiar baseUrl web)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const appJson = JSON.parse(fs.readFileSync("app.json", "utf8"));
+            if (appJson.expo && appJson.expo.experiments) {
+              delete appJson.expo.experiments.baseUrl;
+            }
+            fs.writeFileSync("app.json", JSON.stringify(appJson, null, 2));
+          '
+
+      - name: 8. Generar proyecto nativo Android (Expo Prebuild)
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: 9. Compilar APK de Producción (Gradle Release)
+        working-directory: presbiterio-app/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease -x lint -x test --build-cache
+
+      - name: 10. Renombrar APK final
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk ./Presbiterio-MMM-Venezuela.apk
+
+      - name: 11. Subir APK listo para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: Presbiterio-MMM-Venezuela-APK
+          path: presbiterio-app/Presbiterio-MMM-Venezuela.apk
+          retention-days: 30
+          if-no-files-found: error

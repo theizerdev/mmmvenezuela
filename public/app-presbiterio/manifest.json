@@ -1,0 +1,26 @@
+{
+  "id": "/app-presbiterio/",
+  "name": "Presbiterio & Supervisión MMM Venezuela",
+  "short_name": "Presbiterio MMM",
+  "description": "Portal Ejecutivo de Presbíteros y Supervisión Nacional - Movimiento Misionero Mundial",
+  "start_url": "/app-presbiterio/",
+  "scope": "/app-presbiterio/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "icons": [
+    {
+      "src": "/app-presbiterio/apple-touch-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-presbiterio/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

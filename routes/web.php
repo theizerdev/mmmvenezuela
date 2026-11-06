@@ -96,6 +96,15 @@ Route::post('/api/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookCont
 Route::get('/docs', [\App\Http\Controllers\Admin\IntegrationController::class, 'whatsappDocs'])->name('docs.whatsapp');
 Route::get('/docs/whatsapp', [\App\Http\Controllers\Admin\IntegrationController::class, 'whatsappDocs']);
 
+// App Móvil Instalable (PWA iOS / Android) para Presbíteros y Supervisión Nacional
+Route::get('/app-presbiterio/{any?}', function (?string $any = null) {
+    $indexPath = public_path('app-presbiterio/index.html');
+    if (file_exists($indexPath)) {
+        return response()->file($indexPath, ['Content-Type' => 'text/html; charset=UTF-8']);
+    }
+    abort(404, 'La aplicación de Presbiterio no ha sido compilada aún.');
+})->where('any', '^(?!_expo|assets|manifest\.json|apple-touch-icon\.png|icon-512\.png|favicon\.ico).*$')->name('app.presbiterio');
+
 
 
 

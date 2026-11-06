@@ -7,7 +7,17 @@ import {
   PastorConsulta,
 } from '../types';
 
-export const DEFAULT_API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://mmmvenezuela.test').replace(/\/+$/, '');
+function resolveDefaultApiUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return window.location.origin.replace(/\/+$/, '');
+    }
+  }
+  return (process.env.EXPO_PUBLIC_API_URL || 'https://saprcoe.mmmvenezuela.org').replace(/\/+$/, '');
+}
+
+export const DEFAULT_API_URL = resolveDefaultApiUrl();
 const STORAGE_KEY_API_URL = '@mmm_presbiterio_api_url';
 const STORAGE_KEY_AUTH_TOKEN = '@mmm_presbiterio_auth_token';
 

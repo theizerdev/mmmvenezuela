@@ -43,7 +43,14 @@
       "backgroundColor": "#090d16"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Presbiterio MMM",
+      "shortName": "Presbiterio",
+      "backgroundColor": "#090d16",
+      "themeColor": "#090d16"
+    },
+    "experiments": {
+      "baseUrl": "/app-presbiterio"
     },
     "plugins": [
       [

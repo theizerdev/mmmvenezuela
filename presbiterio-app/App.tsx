@@ -17,6 +17,7 @@ import { Header } from './src/components/Header';
 import { ActivitySelector } from './src/components/ActivitySelector';
 import { ServerConfigModal } from './src/components/ServerConfigModal';
 import { SetupQuickAccessModal } from './src/components/SetupQuickAccessModal';
+import { IosInstallBanner } from './src/components/IosInstallBanner';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { PresbiteroDashboardScreen } from './src/screens/PresbiteroDashboardScreen';
 import { SupervisorDashboardScreen } from './src/screens/SupervisorDashboardScreen';
@@ -109,6 +110,7 @@ function MainApp() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: ui.background }]}>
         <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
         <LoginScreen onLoginSuccess={cargarActividades} />
+        <IosInstallBanner />
       </SafeAreaView>
     );
   }
@@ -176,6 +178,8 @@ function MainApp() {
         onClose={() => setShouldShowQuickAccessSetup(false)}
         isInitialSetup
       />
+
+      <IosInstallBanner />
     </SafeAreaView>
   );
 }
