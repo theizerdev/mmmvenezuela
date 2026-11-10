@@ -106,7 +106,8 @@ class AsistenciaController extends Controller
             'nombre_acompanante' => 'nullable|string|max:255',
             'kit_entregado' => 'nullable|boolean',
             'comida_entregada' => 'nullable|boolean',
-            'metodo' => 'nullable|string|in:qr_carnet,cedula,manual',
+            'metodo' => 'nullable|string|in:qr_carnet,cedula,manual,facial',
+            'dispositivo' => 'nullable|string|max:150',
             'observaciones' => 'nullable|string',
         ]);
 
@@ -117,15 +118,22 @@ class AsistenciaController extends Controller
         $cleanClave = str_replace(['.', '-', ' '], '', $clave);
         $soloNumeros = preg_replace('/\D/', '', $clave);
 
-        $pastor = Pastor::with(['estado', 'municipioModel', 'iglesiasPrincipales'])
-            ->where('codigo', $clave)
-            ->orWhere('documento', $clave)
-            ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave])
-            ->when(!empty($soloNumeros), function ($q) use ($soloNumeros) {
-                $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
-                  ->orWhere('documento', 'like', "%{$soloNumeros}%");
+        $pastor = Pastor::withoutGlobalScopes()
+            ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+            ->where(function ($q) use ($clave, $cleanClave, $soloNumeros) {
+                $q->where('codigo', $clave)
+                    ->orWhere('documento', $clave)
+                    ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave]);
+
+                if (!empty($soloNumeros)) {
+                    $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
+                      ->orWhere('documento', 'like', "%{$soloNumeros}%");
+                }
+
+                if (is_numeric($clave)) {
+                    $q->orWhere('id', (int) $clave);
+                }
             })
-            ->orWhere('id', is_numeric($clave) ? (int)$clave : 0)
             ->first();
 
         if (!$pastor) {
@@ -137,20 +145,64 @@ class AsistenciaController extends Controller
             ], 404);
         }
 
-        $actividadId = $request->input('actividad_id');
+        $actividadId = (int) $request->input('actividad_id');
         $sesionId = $request->input('actividad_sesion_id');
+        $asistioConConyuge = (bool) $request->input('asistio_con_conyuge', false);
+        $dispositivo = trim((string) $request->input('dispositivo', 'Terminal Web (Escáner)'));
+        $metodo = $request->input('metodo', 'qr_carnet');
 
-        // Verificar si ya existe registro de asistencia para este pastor en esta actividad o sesión
-        $queryExistente = Asistencia::where('actividad_id', $actividadId)
-            ->where('pastor_id', $pastor->id);
+        // Verificación atómica contra duplicados y registro en transacción
+        $resultado = DB::transaction(function () use (
+            $actividadId,
+            $sesionId,
+            $pastor,
+            $metodo,
+            $dispositivo,
+            $asistioConConyuge,
+            $request
+        ) {
+            $queryExistente = Asistencia::withoutGlobalScopes()
+                ->where('actividad_id', $actividadId)
+                ->where('pastor_id', $pastor->id);
 
-        if ($sesionId) {
-            $queryExistente->where('actividad_sesion_id', $sesionId);
-        }
+            if ($sesionId) {
+                $queryExistente->where('actividad_sesion_id', $sesionId);
+            } else {
+                $queryExistente->whereNull('actividad_sesion_id');
+            }
 
-        $asistenciaExistente = $queryExistente->first();
+            $asistenciaExistente = $queryExistente->lockForUpdate()->first();
 
-        if ($asistenciaExistente) {
+            if ($asistenciaExistente) {
+                return [
+                    'duplicado' => true,
+                    'asistencia' => $asistenciaExistente,
+                ];
+            }
+
+            $asistencia = Asistencia::create([
+                'actividad_id' => $actividadId,
+                'actividad_sesion_id' => $sesionId,
+                'pastor_id' => $pastor->id,
+                'fecha_registro' => now(),
+                'metodo' => $metodo,
+                'dispositivo' => $dispositivo ?: 'Terminal Web (Escáner)',
+                'asistio_con_conyuge' => $asistioConConyuge,
+                'nombre_acompanante' => $request->input('nombre_acompanante', $pastor->nombre_conyuge),
+                'kit_entregado' => (bool) $request->input('kit_entregado', false),
+                'comida_entregada' => (bool) $request->input('comida_entregada', false),
+                'observaciones' => $request->input('observaciones'),
+                'registrado_por_user_id' => auth()->id(),
+            ]);
+
+            return [
+                'duplicado' => false,
+                'asistencia' => $asistencia,
+            ];
+        });
+
+        if ($resultado['duplicado']) {
+            $asistenciaExistente = $resultado['asistencia'];
             return response()->json([
                 'success' => false,
                 'ya_registrado' => true,
@@ -160,22 +212,7 @@ class AsistenciaController extends Controller
             ], 200);
         }
 
-        $asistioConConyuge = (bool) $request->input('asistio_con_conyuge', false);
-
-        // Crear nuevo registro de asistencia del pastor escaneado
-        $asistencia = Asistencia::create([
-            'actividad_id' => $actividadId,
-            'actividad_sesion_id' => $sesionId,
-            'pastor_id' => $pastor->id,
-            'fecha_registro' => now(),
-            'metodo' => $request->input('metodo', 'qr_carnet'),
-            'asistio_con_conyuge' => $asistioConConyuge,
-            'nombre_acompanante' => $request->input('nombre_acompanante', $pastor->nombre_conyuge),
-            'kit_entregado' => (bool) $request->input('kit_entregado', false),
-            'comida_entregada' => (bool) $request->input('comida_entregada', false),
-            'observaciones' => $request->input('observaciones'),
-            'registrado_por_user_id' => auth()->id(),
-        ]);
+        $asistencia = $resultado['asistencia'];
 
         $asistenciasList = [
             [
@@ -222,6 +259,7 @@ class AsistenciaController extends Controller
                     [
                         'fecha_registro' => now(),
                         'metodo' => $request->input('metodo', 'qr_carnet'),
+                        'dispositivo' => $dispositivo ?: 'Terminal Web (Escáner)',
                         'asistio_con_conyuge' => true,
                         'nombre_acompanante' => "{$pastor->nombres} {$pastor->apellidos}",
                         'kit_entregado' => (bool) $request->input('kit_entregado', false),
@@ -435,16 +473,22 @@ class AsistenciaController extends Controller
         }
 
         $clean = str_replace(['.', '-', ' '], '', $term);
+        $soloNumeros = preg_replace('/\D/', '', $term);
 
-        $pastores = Pastor::where('status', true)
-            ->where(function ($q) use ($term, $clean) {
+        $pastores = Pastor::withoutGlobalScopes()
+            ->where('status', true)
+            ->where(function ($q) use ($term, $clean, $soloNumeros) {
                 $q->where('nombres', 'like', "%{$term}%")
                   ->orWhere('apellidos', 'like', "%{$term}%")
                   ->orWhere('codigo', 'like', "%{$term}%")
                   ->orWhere('documento', 'like', "%{$term}%")
-                  ->orWhereRaw("REPLACE(REPLACE(documento, '.', ''), '-', '') LIKE ?", ["%{$clean}%"]);
+                  ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') LIKE ?", ["%{$clean}%"]);
+
+                if (!empty($soloNumeros) && strlen($soloNumeros) >= 4) {
+                    $q->orWhere('documento', 'like', "%{$soloNumeros}%");
+                }
             })
-            ->limit(15)
+            ->limit(20)
             ->get(['id', 'codigo', 'nombres', 'apellidos', 'documento', 'foto', 'nivel_ministerial', 'zona', 'nombre_conyuge'])
             ->map(fn ($p) => [
                 'id' => $p->id,

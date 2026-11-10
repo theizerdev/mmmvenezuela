@@ -53,6 +53,22 @@ export interface AsistenciaPrevia {
   comida_entregada: boolean;
 }
 
+export interface DeviceHistoryItem {
+  id: string;
+  pastor_id: number;
+  nombre_completo: string;
+  documento: string;
+  codigo: string;
+  foto: string | null;
+  zona: string | null;
+  extension_nombre: string;
+  sesion: string;
+  hora: string;
+  asistio_con_conyuge: boolean;
+  estado: 'sincronizado' | 'en_cola_offline';
+  fecha_iso: string;
+}
+
 export interface UltimoEscaneo {
   id: number | string;
   pastor_id: number;

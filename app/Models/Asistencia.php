@@ -18,6 +18,7 @@ class Asistencia extends Model
         'pastor_id',
         'fecha_registro',
         'metodo',
+        'dispositivo',
         'asistio_con_conyuge',
         'nombre_acompanante',
         'comida_entregada',

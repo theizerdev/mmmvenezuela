@@ -490,6 +490,11 @@ export default function AdminSaasLayout({
                                     href: '/admin/actividades',
                                     permission: 'actividades.view',
                                 },
+                                {
+                                    title: 'Escanear Asistencia',
+                                    href: '/admin/actividades/1/escanear',
+                                    permission: 'actividades.view',
+                                },
                             ].filter(item => hasPermission(item.permission) || hasPermission('pastores.view') || true);
 
                             return (

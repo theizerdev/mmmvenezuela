@@ -32,12 +32,14 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
 }) => {
   const { colors, isDark } = useTheme();
   const [url, setUrl] = useState<string>(api.getBaseUrl());
+  const [deviceName, setDeviceName] = useState<string>(api.getDeviceName());
   const [testing, setTesting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
 
   useEffect(() => {
     if (visible) {
       setUrl(api.getBaseUrl());
+      setDeviceName(api.getDeviceName());
       setTestResult(null);
     }
   }, [visible]);
@@ -53,6 +55,9 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
   const handleSave = async () => {
     if (!url.trim()) return;
     await api.setBaseUrl(url);
+    if (deviceName.trim()) {
+      await api.setDeviceName(deviceName.trim());
+    }
     onSaved();
     onClose();
   };
@@ -125,6 +130,34 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
               testResult === 'success' && { borderColor: colors.success },
               testResult === 'error' && { borderColor: colors.danger },
             ]}
+          />
+
+          {/* NOMBRE DE ESTA TERMINAL / DISPOSITIVO */}
+          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>
+            NOMBRE DE ESTE DISPOSITIVO / TERMINAL:
+          </Text>
+          <View style={styles.presetRow}>
+            {['Puerta #1', 'Puerta #2', 'Entrada Lateral', 'Mesa Pastores'].map((preset) => (
+              <Pressable
+                key={preset}
+                style={[
+                  styles.presetChip,
+                  {
+                    borderColor: deviceName === preset ? colors.primary : colors.cardBorder,
+                    backgroundColor: isDark ? colors.cardDeep : '#f8fafc',
+                  },
+                ]}
+                onPress={() => setDeviceName(preset)}
+              >
+                <Text style={[styles.presetText, { color: colors.text }]}>{preset}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Input
+            value={deviceName}
+            onChangeText={setDeviceName}
+            placeholder="Ej: Terminal Puerta #1"
+            style={{ marginTop: 6 }}
           />
 
           {/* MENSAJES DE ESTADO DEL TEST */}

@@ -360,6 +360,7 @@ export default function ActividadesEscanear({
                         codigo_qr: codigoLimpio,
                         asistio_con_conyuge: asistioConConyuge,
                         metodo: metodo,
+                        dispositivo: 'Terminal Web (Escáner)',
                     }),
                 });
 

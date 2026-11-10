@@ -237,6 +237,7 @@ class AsistenciaApiController extends Controller
             'kit_entregado' => 'nullable|boolean',
             'comida_entregada' => 'nullable|boolean',
             'metodo' => 'nullable|string|in:qr,manual,qr_carnet,cedula',
+            'dispositivo' => 'nullable|string|max:150',
             'observaciones' => 'nullable|string',
             'fecha_registro' => 'nullable|string',
         ]);
@@ -245,6 +246,7 @@ class AsistenciaApiController extends Controller
         $sesionId = $request->input('actividad_sesion_id');
         $asistioConConyuge = (bool) $request->input('asistio_con_conyuge', false);
         $metodo = $request->input('metodo', 'qr');
+        $dispositivo = trim((string) $request->input('dispositivo', 'Terminal Móvil'));
         $fechaRegistro = $request->filled('fecha_registro')
             ? Carbon::parse($request->input('fecha_registro'))
             : now();
@@ -293,18 +295,59 @@ class AsistenciaApiController extends Controller
             ], 404);
         }
 
-        // 2. Verificar duplicados
-        $queryExistente = Asistencia::withoutGlobalScopes()
-            ->where('actividad_id', $actividadId)
-            ->where('pastor_id', $pastor->id);
+        // 2 & 3. Verificación atómica contra duplicados y creación dentro de transacción
+        $resultado = DB::transaction(function () use (
+            $actividadId,
+            $sesionId,
+            $pastor,
+            $fechaRegistro,
+            $metodo,
+            $dispositivo,
+            $asistioConConyuge,
+            $request
+        ) {
+            $queryExistente = Asistencia::withoutGlobalScopes()
+                ->where('actividad_id', $actividadId)
+                ->where('pastor_id', $pastor->id);
 
-        if ($sesionId) {
-            $queryExistente->where('actividad_sesion_id', $sesionId);
-        }
+            if ($sesionId) {
+                $queryExistente->where('actividad_sesion_id', $sesionId);
+            } else {
+                $queryExistente->whereNull('actividad_sesion_id');
+            }
 
-        $asistenciaExistente = $queryExistente->first();
+            $asistenciaExistente = $queryExistente->lockForUpdate()->first();
 
-        if ($asistenciaExistente) {
+            if ($asistenciaExistente) {
+                return [
+                    'duplicado' => true,
+                    'asistencia' => $asistenciaExistente,
+                ];
+            }
+
+            $asistencia = Asistencia::create([
+                'actividad_id' => $actividadId,
+                'actividad_sesion_id' => $sesionId,
+                'pastor_id' => $pastor->id,
+                'fecha_registro' => $fechaRegistro,
+                'metodo' => in_array($metodo, ['qr', 'qr_carnet']) ? 'qr_carnet' : 'manual',
+                'dispositivo' => $dispositivo ?: 'Terminal Móvil',
+                'asistio_con_conyuge' => $asistioConConyuge,
+                'nombre_acompanante' => $request->input('nombre_acompanante', $pastor->nombre_conyuge),
+                'kit_entregado' => (bool) $request->input('kit_entregado', false),
+                'comida_entregada' => (bool) $request->input('comida_entregada', false),
+                'observaciones' => $request->input('observaciones'),
+                'registrado_por_user_id' => auth()->id() ?? null,
+            ]);
+
+            return [
+                'duplicado' => false,
+                'asistencia' => $asistencia,
+            ];
+        });
+
+        if ($resultado['duplicado']) {
+            $asistenciaExistente = $resultado['asistencia'];
             return response()->json([
                 'success' => false,
                 'ya_registrado' => true,
@@ -318,20 +361,7 @@ class AsistenciaApiController extends Controller
             ], 200);
         }
 
-        // 3. Crear registro de asistencia
-        $asistencia = Asistencia::create([
-            'actividad_id' => $actividadId,
-            'actividad_sesion_id' => $sesionId,
-            'pastor_id' => $pastor->id,
-            'fecha_registro' => $fechaRegistro,
-            'metodo' => in_array($metodo, ['qr', 'qr_carnet']) ? 'qr_carnet' : 'manual',
-            'asistio_con_conyuge' => $asistioConConyuge,
-            'nombre_acompanante' => $request->input('nombre_acompanante', $pastor->nombre_conyuge),
-            'kit_entregado' => (bool) $request->input('kit_entregado', false),
-            'comida_entregada' => (bool) $request->input('comida_entregada', false),
-            'observaciones' => $request->input('observaciones'),
-            'registrado_por_user_id' => auth()->id() ?? null,
-        ]);
+        $asistencia = $resultado['asistencia'];
 
         // 4. Procesar registro de Cónyuge si está en las instalaciones
         $conyugePastor = null;
@@ -405,6 +435,7 @@ class AsistenciaApiController extends Controller
                     [
                         'fecha_registro' => now(),
                         'metodo' => 'conyuge_vinculado',
+                        'dispositivo' => $dispositivo ?: 'Terminal Móvil',
                         'asistio_con_conyuge' => true,
                         'nombre_acompanante' => "{$pastor->nombres} {$pastor->apellidos}",
                         'kit_entregado' => (bool) $request->input('kit_entregado', false),
@@ -534,6 +565,18 @@ class AsistenciaApiController extends Controller
         $extension = $pastor->extension_nombre ?? $pastor->iglesiasPrincipales->first()?->nombre ?? 'Sede Principal';
         $estadoExtension = $pastor->extension_estado ?? $pastor->estado?->nombre ?? 'Venezuela';
 
+        $rawFoto = $pastor->foto_url;
+        $fotoRelativa = null;
+        if (!empty($rawFoto)) {
+            if (str_contains($rawFoto, '/pastores/')) {
+                $fotoRelativa = '/pastores/' . explode('/pastores/', $rawFoto)[1];
+            } elseif (str_starts_with($rawFoto, 'http://') || str_starts_with($rawFoto, 'https://')) {
+                $fotoRelativa = $rawFoto;
+            } else {
+                $fotoRelativa = str_starts_with($rawFoto, '/') ? $rawFoto : "/{$rawFoto}";
+            }
+        }
+
         return [
             'id' => $pastor->id,
             'codigo' => $pastor->codigo,
@@ -542,7 +585,7 @@ class AsistenciaApiController extends Controller
             'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
             'documento' => $pastor->documento,
             'email' => $pastor->email,
-            'foto' => $pastor->foto_url ? (str_starts_with($pastor->foto_url, 'http') ? $pastor->foto_url : url($pastor->foto_url)) : null,
+            'foto' => $fotoRelativa,
             'nivel_ministerial' => $pastor->nivel_ministerial ?? 'Obrero',
             'cargo_nacional' => $pastor->cargo_nacional,
             'zona' => $pastor->zona,

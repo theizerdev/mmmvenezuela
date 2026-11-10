@@ -169,7 +169,7 @@ export const actividadesActivas = {
 
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::buscarPastor
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:87
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:89
  * @route '/api/v1/pastores/buscar'
  */
 export const buscarPastor = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -184,7 +184,7 @@ buscarPastor.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::buscarPastor
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:87
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:89
  * @route '/api/v1/pastores/buscar'
  */
 buscarPastor.url = (options?: RouteQueryOptions) => {
@@ -193,7 +193,7 @@ buscarPastor.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::buscarPastor
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:87
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:89
  * @route '/api/v1/pastores/buscar'
  */
 buscarPastor.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -202,7 +202,7 @@ buscarPastor.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::buscarPastor
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:87
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:89
  * @route '/api/v1/pastores/buscar'
  */
 buscarPastor.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -212,7 +212,7 @@ buscarPastor.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::buscarPastor
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:87
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:89
  * @route '/api/v1/pastores/buscar'
  */
     const buscarPastorForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -222,7 +222,7 @@ buscarPastor.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::buscarPastor
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:87
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:89
  * @route '/api/v1/pastores/buscar'
  */
         buscarPastorForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -231,7 +231,7 @@ buscarPastor.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::buscarPastor
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:87
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:89
  * @route '/api/v1/pastores/buscar'
  */
         buscarPastorForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -246,8 +246,86 @@ buscarPastor.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     buscarPastor.form = buscarPastorForm
 /**
+* @see \App\Http\Controllers\Api\AsistenciaApiController::padronOffline
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:523
+ * @route '/api/v1/pastores/padron-offline'
+ */
+export const padronOffline = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: padronOffline.url(options),
+    method: 'get',
+})
+
+padronOffline.definition = {
+    methods: ["get","head"],
+    url: '/api/v1/pastores/padron-offline',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\AsistenciaApiController::padronOffline
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:523
+ * @route '/api/v1/pastores/padron-offline'
+ */
+padronOffline.url = (options?: RouteQueryOptions) => {
+    return padronOffline.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\AsistenciaApiController::padronOffline
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:523
+ * @route '/api/v1/pastores/padron-offline'
+ */
+padronOffline.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: padronOffline.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\AsistenciaApiController::padronOffline
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:523
+ * @route '/api/v1/pastores/padron-offline'
+ */
+padronOffline.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: padronOffline.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\AsistenciaApiController::padronOffline
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:523
+ * @route '/api/v1/pastores/padron-offline'
+ */
+    const padronOfflineForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: padronOffline.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\AsistenciaApiController::padronOffline
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:523
+ * @route '/api/v1/pastores/padron-offline'
+ */
+        padronOfflineForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: padronOffline.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\AsistenciaApiController::padronOffline
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:523
+ * @route '/api/v1/pastores/padron-offline'
+ */
+        padronOfflineForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: padronOffline.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    padronOffline.form = padronOfflineForm
+/**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::registrarAsistencia
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:156
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:227
  * @route '/api/v1/asistencias/registrar'
  */
 export const registrarAsistencia = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -262,7 +340,7 @@ registrarAsistencia.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::registrarAsistencia
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:156
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:227
  * @route '/api/v1/asistencias/registrar'
  */
 registrarAsistencia.url = (options?: RouteQueryOptions) => {
@@ -271,7 +349,7 @@ registrarAsistencia.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::registrarAsistencia
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:156
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:227
  * @route '/api/v1/asistencias/registrar'
  */
 registrarAsistencia.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -281,7 +359,7 @@ registrarAsistencia.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
     /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::registrarAsistencia
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:156
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:227
  * @route '/api/v1/asistencias/registrar'
  */
     const registrarAsistenciaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -291,7 +369,7 @@ registrarAsistencia.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
             /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::registrarAsistencia
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:156
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:227
  * @route '/api/v1/asistencias/registrar'
  */
         registrarAsistenciaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -302,7 +380,7 @@ registrarAsistencia.post = (options?: RouteQueryOptions): RouteDefinition<'post'
     registrarAsistencia.form = registrarAsistenciaForm
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::ultimosEscaneos
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:375
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:487
  * @route '/api/v1/actividades/{actividad}/ultimos-escaneos'
  */
 export const ultimosEscaneos = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -317,7 +395,7 @@ ultimosEscaneos.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::ultimosEscaneos
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:375
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:487
  * @route '/api/v1/actividades/{actividad}/ultimos-escaneos'
  */
 ultimosEscaneos.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -345,7 +423,7 @@ ultimosEscaneos.url = (args: { actividad: string | number } | [actividad: string
 
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::ultimosEscaneos
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:375
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:487
  * @route '/api/v1/actividades/{actividad}/ultimos-escaneos'
  */
 ultimosEscaneos.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -354,7 +432,7 @@ ultimosEscaneos.get = (args: { actividad: string | number } | [actividad: string
 })
 /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::ultimosEscaneos
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:375
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:487
  * @route '/api/v1/actividades/{actividad}/ultimos-escaneos'
  */
 ultimosEscaneos.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -364,7 +442,7 @@ ultimosEscaneos.head = (args: { actividad: string | number } | [actividad: strin
 
     /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::ultimosEscaneos
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:375
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:487
  * @route '/api/v1/actividades/{actividad}/ultimos-escaneos'
  */
     const ultimosEscaneosForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -374,7 +452,7 @@ ultimosEscaneos.head = (args: { actividad: string | number } | [actividad: strin
 
             /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::ultimosEscaneos
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:375
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:487
  * @route '/api/v1/actividades/{actividad}/ultimos-escaneos'
  */
         ultimosEscaneosForm.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -383,7 +461,7 @@ ultimosEscaneos.head = (args: { actividad: string | number } | [actividad: strin
         })
             /**
 * @see \App\Http\Controllers\Api\AsistenciaApiController::ultimosEscaneos
- * @see app/Http/Controllers/Api/AsistenciaApiController.php:375
+ * @see app/Http/Controllers/Api/AsistenciaApiController.php:487
  * @route '/api/v1/actividades/{actividad}/ultimos-escaneos'
  */
         ultimosEscaneosForm.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -397,6 +475,6 @@ ultimosEscaneos.head = (args: { actividad: string | number } | [actividad: strin
         })
     
     ultimosEscaneos.form = ultimosEscaneosForm
-const AsistenciaApiController = { actividadesActivas, buscarPastor, registrarAsistencia, ultimosEscaneos }
+const AsistenciaApiController = { actividadesActivas, buscarPastor, padronOffline, registrarAsistencia, ultimosEscaneos }
 
 export default AsistenciaApiController

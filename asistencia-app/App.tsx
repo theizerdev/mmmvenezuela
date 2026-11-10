@@ -20,6 +20,8 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { Header } from './src/components/Header';
 import { ActivitySelector } from './src/components/ActivitySelector';
 import { ServerConfigModal } from './src/components/ServerConfigModal';
+import { SyncSplashLoader } from './src/components/SyncSplashLoader';
+import { DeviceHistoryModal } from './src/components/DeviceHistoryModal';
 import { ScannerScreen } from './src/screens/ScannerScreen';
 import { ManualScreen } from './src/screens/ManualScreen';
 import {
@@ -47,6 +49,8 @@ function MainApp() {
   const [loadingActividades, setLoadingActividades] = useState<boolean>(true);
   const [serverOnline, setServerOnline] = useState<boolean>(true);
   const [configModalVisible, setConfigModalVisible] = useState<boolean>(false);
+  const [deviceHistoryVisible, setDeviceHistoryVisible] = useState<boolean>(false);
+  const [showInitialSync, setShowInitialSync] = useState<boolean>(true);
 
   // Estados de Modo Offline y Cola de Sincronización
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
@@ -236,6 +240,8 @@ function MainApp() {
         actividad={actividadActual}
         onOpenServerConfig={() => setConfigModalVisible(true)}
         onRefresh={cargarActividades}
+        onOpenDeviceHistory={() => setDeviceHistoryVisible(true)}
+        onOpenSyncLoader={() => setShowInitialSync(true)}
         serverOnline={serverOnline}
       />
 
@@ -347,11 +353,27 @@ function MainApp() {
         )}
       </Tabs>
 
-      {/* MODAL DE CONFIGURACIÓN DE IP */}
+      {/* MODAL DE CONFIGURACIÓN DE IP Y DISPOSITIVO */}
       <ServerConfigModal
         visible={configModalVisible}
         onClose={() => setConfigModalVisible(false)}
         onSaved={cargarActividades}
+      />
+
+      {/* MODAL DE HISTÓRICO POR DISPOSITIVO */}
+      <DeviceHistoryModal
+        visible={deviceHistoryVisible}
+        onClose={() => setDeviceHistoryVisible(false)}
+      />
+
+      {/* PANTALLA / MODAL DE SINCRONIZACIÓN INICIAL CON EL SERVIDOR */}
+      <SyncSplashLoader
+        visible={showInitialSync}
+        onComplete={() => {
+          setShowInitialSync(false);
+          cargarActividades();
+        }}
+        onDismiss={() => setShowInitialSync(false)}
       />
     </SafeAreaView>
   );

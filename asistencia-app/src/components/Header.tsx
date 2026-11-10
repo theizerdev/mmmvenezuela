@@ -9,9 +9,11 @@ import {
   Palette,
   CloudOff,
   RefreshCw,
+  History,
 } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Actividad } from '../types';
+import { api } from '../services/api';
 import {
   Button,
   Dialog,
@@ -25,6 +27,8 @@ interface HeaderProps {
   actividad?: Actividad | null;
   onOpenServerConfig?: () => void;
   onRefresh?: () => void;
+  onOpenDeviceHistory?: () => void;
+  onOpenSyncLoader?: () => void;
   serverOnline?: boolean;
 }
 
@@ -32,10 +36,14 @@ export const Header: React.FC<HeaderProps> = ({
   actividad,
   onOpenServerConfig,
   onRefresh,
+  onOpenDeviceHistory,
+  onOpenSyncLoader,
   serverOnline = true,
 }) => {
   const { themeMode, isDark, colors, setThemeMode } = useTheme();
   const [themeDialogOpen, setThemeDialogOpen] = useState(false);
+
+  const deviceName = api.getDeviceName();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.cardBorder }]}>
@@ -59,13 +67,43 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* ACCIONES SUPERIORES */}
         <View style={styles.actionsRow}>
-          {/* BOTÓN SINCRONIZAR / REFRESCAR */}
-          {onRefresh && (
+          {/* PILL DISPOSITIVO / TERMINAL */}
+          {onOpenDeviceHistory && (
+            <Pressable
+              onPress={onOpenDeviceHistory}
+              style={[
+                styles.terminalPill,
+                { backgroundColor: isDark ? '#0f172a' : '#f1f5f9', borderColor: colors.cardBorder },
+              ]}
+              accessibilityLabel="Ver historial de este dispositivo"
+            >
+              <Smartphone size={13} color={colors.primary} />
+              <Text style={[styles.terminalPillText, { color: colors.text }]} numberOfLines={1}>
+                {deviceName}
+              </Text>
+            </Pressable>
+          )}
+
+          {/* BOTÓN HISTÓRICO DISPOSITIVO */}
+          {onOpenDeviceHistory && (
             <Button
               variant="ghost"
               size="icon"
-              onPress={onRefresh}
-              accessibilityLabel="Actualizar actividad"
+              onPress={onOpenDeviceHistory}
+              accessibilityLabel="Histórico de marcajes de este dispositivo"
+              style={styles.actionIconBtn}
+            >
+              <History size={17} color={colors.textSecondary} />
+            </Button>
+          )}
+
+          {/* BOTÓN SINCRONIZAR / REFRESCAR (ABRE SYNC SPLASH LOADER O REFRESH) */}
+          {(onOpenSyncLoader || onRefresh) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onPress={onOpenSyncLoader || onRefresh}
+              accessibilityLabel="Sincronizar plataforma"
               style={styles.actionIconBtn}
             >
               <RefreshCw size={16} color={colors.textSecondary} />
@@ -255,6 +293,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  terminalPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    marginRight: 2,
+    maxWidth: 110,
+  },
+  terminalPillText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
   actionIconBtn: {
     width: 32,

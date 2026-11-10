@@ -7,6 +7,7 @@ import {
   RegistroResponse,
   UltimoEscaneo,
   PendingOfflineAsistencia,
+  DeviceHistoryItem,
 } from '../types';
 
 const STORAGE_API_KEY = '@mmm_asistencia_api_url';
@@ -14,6 +15,8 @@ const STORAGE_CACHE_ACTIVIDADES = '@mmm_asistencia_cache_actividades';
 const STORAGE_CACHE_PADRON = '@mmm_asistencia_cache_padron';
 const STORAGE_CACHE_PREVIAS = '@mmm_asistencia_cache_previas';
 const STORAGE_OFFLINE_QUEUE = '@mmm_asistencia_offline_queue';
+const STORAGE_DEVICE_NAME = '@mmm_asistencia_device_name';
+const STORAGE_DEVICE_HISTORY = '@mmm_asistencia_device_history';
 
 const FALLBACK_ACTIVIDAD_SEED: Actividad[] = [
   {
@@ -102,6 +105,8 @@ class ApiService {
   private padronMemory: Pastor[] = (padronSeed as unknown as Pastor[]) || [];
   private previasMemory: CachedAsistenciaPrevia[] = [];
   private offlineQueueMemory: PendingOfflineAsistencia[] = [];
+  private deviceName: string = 'Terminal Puerta #1';
+  private deviceHistory: DeviceHistoryItem[] = [];
   private isSyncing: boolean = false;
 
   constructor() {
@@ -118,11 +123,20 @@ class ApiService {
         await AsyncStorage.removeItem(STORAGE_API_KEY);
       }
 
-      const [rawPadron, rawPrevias, rawQueue] = await Promise.all([
+      const [rawPadron, rawPrevias, rawQueue, savedDeviceName, rawHistory] = await Promise.all([
         AsyncStorage.getItem(STORAGE_CACHE_PADRON),
         AsyncStorage.getItem(STORAGE_CACHE_PREVIAS),
         AsyncStorage.getItem(STORAGE_OFFLINE_QUEUE),
+        AsyncStorage.getItem(STORAGE_DEVICE_NAME),
+        AsyncStorage.getItem(STORAGE_DEVICE_HISTORY),
       ]);
+
+      if (savedDeviceName) {
+        this.deviceName = savedDeviceName;
+      }
+      if (rawHistory) {
+        this.deviceHistory = JSON.parse(rawHistory);
+      }
 
       if (rawPadron) {
         const parsed: Pastor[] = JSON.parse(rawPadron);
@@ -164,11 +178,66 @@ class ApiService {
     return this.offlineQueueMemory;
   }
 
+  getDeviceName(): string {
+    return this.deviceName;
+  }
+
+  async setDeviceName(name: string): Promise<void> {
+    const clean = (name || '').trim();
+    this.deviceName = clean || 'Terminal Móvil';
+    await AsyncStorage.setItem(STORAGE_DEVICE_NAME, this.deviceName);
+  }
+
+  getDeviceHistory(): DeviceHistoryItem[] {
+    return this.deviceHistory;
+  }
+
+  async clearDeviceHistory(): Promise<void> {
+    this.deviceHistory = [];
+    await AsyncStorage.removeItem(STORAGE_DEVICE_HISTORY);
+  }
+
+  private async addDeviceHistoryEntry(entry: DeviceHistoryItem): Promise<void> {
+    const filtered = this.deviceHistory.filter((h) => h.id !== entry.id);
+    this.deviceHistory = [entry, ...filtered].slice(0, 200);
+    try {
+      await AsyncStorage.setItem(STORAGE_DEVICE_HISTORY, JSON.stringify(this.deviceHistory));
+    } catch (e) {
+      console.warn('Error guardando historial del dispositivo:', e);
+    }
+  }
+
+  private async markDeviceHistoryAsSynced(pastorId: number, hora?: string): Promise<void> {
+    let changed = false;
+    this.deviceHistory = this.deviceHistory.map((h) => {
+      if (h.pastor_id === pastorId && h.estado === 'en_cola_offline') {
+        changed = true;
+        return {
+          ...h,
+          estado: 'sincronizado' as const,
+          hora: hora || h.hora,
+        };
+      }
+      return h;
+    });
+    if (changed) {
+      try {
+        await AsyncStorage.setItem(STORAGE_DEVICE_HISTORY, JSON.stringify(this.deviceHistory));
+      } catch (e) {
+        console.warn('Error actualizando historial del dispositivo:', e);
+      }
+    }
+  }
+
   resolveImageUrl(path?: string | null): string | null {
     if (!path) return null;
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    let clean = path.trim();
+    if (clean.includes('/pastores/')) {
+      clean = '/pastores/' + clean.split('/pastores/')[1];
+    }
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
     const base = this.baseUrl.replace(/\/+$/, '');
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const cleanPath = clean.startsWith('/') ? clean : `/${clean}`;
     return `${base}${cleanPath}`;
   }
 
@@ -546,10 +615,15 @@ class ApiService {
         '/asistencias/registrar',
         {
           method: 'POST',
-          body: JSON.stringify(params),
+          body: JSON.stringify({
+            ...params,
+            dispositivo: this.deviceName,
+          }),
         },
         6000
       );
+
+      const targetPastor = res.pastor || pastorFallback || (params.pastor_id ? this.padronMemory.find(p => p.id === params.pastor_id) : undefined);
 
       if (res.success && params.pastor_id) {
         this.previasMemory.push({
@@ -561,6 +635,26 @@ class ApiService {
           asistio_con_conyuge: params.asistio_con_conyuge,
         });
         await AsyncStorage.setItem(STORAGE_CACHE_PREVIAS, JSON.stringify(this.previasMemory));
+      }
+
+      if (targetPastor) {
+        const now = new Date();
+        const horaStr = res.asistencia?.hora || now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        await this.addDeviceHistoryEntry({
+          id: `dev_${now.getTime()}_${targetPastor.id}`,
+          pastor_id: targetPastor.id,
+          nombre_completo: targetPastor.nombre_completo,
+          documento: targetPastor.documento,
+          codigo: targetPastor.codigo,
+          foto: targetPastor.foto,
+          zona: targetPastor.zona,
+          extension_nombre: targetPastor.extension_nombre || targetPastor.iglesia,
+          sesion: sesionNombre || 'General',
+          hora: horaStr,
+          asistio_con_conyuge: params.asistio_con_conyuge,
+          estado: 'sincronizado',
+          fecha_iso: now.toISOString(),
+        });
       }
 
       return res;
@@ -617,6 +711,23 @@ class ApiService {
       this.offlineQueueMemory = [pendingItem, ...this.offlineQueueMemory];
       await AsyncStorage.setItem(STORAGE_OFFLINE_QUEUE, JSON.stringify(this.offlineQueueMemory));
 
+      // Guardar también en el histórico local de este dispositivo
+      await this.addDeviceHistoryEntry({
+        id: pendingItem.uid,
+        pastor_id: pastor.id,
+        nombre_completo: pastor.nombre_completo,
+        documento: pastor.documento,
+        codigo: pastor.codigo,
+        foto: pastor.foto,
+        zona: pastor.zona,
+        extension_nombre: pastor.extension_nombre || pastor.iglesia,
+        sesion: sesionNombre || 'General',
+        hora: `${horaLegible} (Offline)`,
+        asistio_con_conyuge: params.asistio_con_conyuge,
+        estado: 'en_cola_offline',
+        fecha_iso: now.toISOString(),
+      });
+
       return {
         success: true,
         guardado_offline: true,
@@ -653,8 +764,19 @@ class ApiService {
     try {
       const queueCopy = [...this.offlineQueueMemory].reverse();
 
-      for (let i = 0; i < queueCopy.length; i++) {
-        const item = queueCopy[i];
+      // Desduplicar en memoria por clave única (actividad_id + pastor_id + actividad_sesion_id)
+      const seenKeys = new Set<string>();
+      const uniqueQueue: PendingOfflineAsistencia[] = [];
+      for (const item of queueCopy) {
+        const key = `${item.actividad_id}_${item.pastor_id}_${item.actividad_sesion_id || 'general'}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          uniqueQueue.push(item);
+        }
+      }
+
+      for (let i = 0; i < uniqueQueue.length; i++) {
+        const item = uniqueQueue[i];
         try {
           const res = await this.request<RegistroResponse>(
             '/asistencias/registrar',
@@ -667,6 +789,7 @@ class ApiService {
                 cedula: item.pastor?.documento || item.pastor?.codigo,
                 asistio_con_conyuge: item.asistio_con_conyuge,
                 metodo: item.metodo,
+                dispositivo: this.deviceName,
                 fecha_registro: item.fecha_registro,
               }),
             },
@@ -686,11 +809,13 @@ class ApiService {
               hora: item.hora_legible,
               asistio_con_conyuge: item.asistio_con_conyuge,
             });
+
+            await this.markDeviceHistoryAsSynced(item.pastor_id, item.hora_legible);
           } else {
             remaining.push(item);
           }
         } catch {
-          remaining.push(...queueCopy.slice(i));
+          remaining.push(...uniqueQueue.slice(i));
           break;
         }
       }
@@ -754,6 +879,42 @@ class ApiService {
     return {
       success: true,
       ultimos: pendientesLocales,
+    };
+  }
+
+  async ejecutarSincronizacionCompleta(
+    onProgress?: (paso: string, porcentaje: number) => void
+  ): Promise<{
+    online: boolean;
+    pastoresCount: number;
+    actividadesCount: number;
+    syncedQueueCount: number;
+    pendingQueueCount: number;
+  }> {
+    onProgress?.('Verificando conexión con el servidor central...', 15);
+    const online = await this.testConnection(this.baseUrl);
+
+    onProgress?.('Sincronizando Padrón Nacional de Obreros...', 45);
+    const padronResult = await this.sincronizarPadronOffline();
+
+    onProgress?.('Descargando actividades y sesiones vigentes...', 70);
+    const actResult = await this.getActividadesActivas();
+
+    let syncedQueueCount = 0;
+    if (online && this.offlineQueueMemory.length > 0) {
+      onProgress?.('Sincronizando registros offline acumulados...', 88);
+      const queueRes = await this.sincronizarColaOffline();
+      syncedQueueCount = queueRes.synced;
+    }
+
+    onProgress?.('¡Sincronización completada con éxito!', 100);
+
+    return {
+      online,
+      pastoresCount: padronResult.total,
+      actividadesCount: actResult.actividades?.length || 0,
+      syncedQueueCount,
+      pendingQueueCount: this.offlineQueueMemory.length,
     };
   }
 
