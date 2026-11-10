@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     QrCode,
@@ -142,8 +142,18 @@ export default function ActividadesEscanear({
     totalPresentes: totalPresentesProp,
     pastoresConvocados = [],
 }: Props) {
-    // Modo de operación: Código QR o Reconocimiento Facial
+    // Sub-modo principal del Kiosco: Escanear (Cámara / QR) o Uso Manual (Búsqueda en Padrón)
+    type ModoKiosco = 'escanear' | 'manual';
+    const [modoKiosco, setModoKiosco] = useState<ModoKiosco>('escanear');
+
+    // Modo de escáner: Código QR o Reconocimiento Facial
     const [modo, setModo] = useState<ModoEscaneo>('qr');
+
+    // Estados para la Card de Uso Manual integrada en la pantalla
+    const [filtroTextoManual, setFiltroTextoManual] = useState<string>('');
+    const [filtroZonaManual, setFiltroZonaManual] = useState<string>('todas');
+    const [resultadosServerManual, setResultadosServerManual] = useState<PastorData[]>([]);
+    const [buscandoServerManual, setBuscandoServerManual] = useState<boolean>(false);
 
     // Estados de configuración de sesión y logística
     const [sesionSeleccionada, setSesionSeleccionada] = useState<number | null>(
@@ -241,6 +251,7 @@ export default function ActividadesEscanear({
 
     // Refs
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
     const canvasHiddenRef = useRef<HTMLCanvasElement | null>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const inputGunRef = useRef<HTMLInputElement | null>(null);
@@ -249,6 +260,36 @@ export default function ActividadesEscanear({
     const lastScanTimeRef = useRef<number>(0);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const labeledDescriptorsRef = useRef<faceapi.LabeledFaceDescriptors[]>([]);
+
+    // Detener la cámara por completo (apagando el hardware/luz de la cámara y liberando el stream)
+    const stopCameraStream = useCallback(() => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        if (animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current);
+            animFrameRef.current = null;
+        }
+    }, []);
+
+    // Alternar entre las 2 cards: Escanear (Cámara) vs Uso Manual (Padrón)
+    const handleSwitchModoKiosco = useCallback(
+        (nuevoModo: 'escanear' | 'manual') => {
+            setModoKiosco(nuevoModo);
+            if (nuevoModo === 'manual') {
+                // Al pasar a manual, APAGAR la cámara inmediatamente
+                setCameraActive(false);
+                stopCameraStream();
+            } else {
+                setCameraActive(true);
+            }
+        },
+        [stopCameraStream]
+    );
 
     // Audio Web API
     const getAudioContext = useCallback(() => {
@@ -615,7 +656,10 @@ export default function ActividadesEscanear({
         let active = true;
 
         const startCamera = async () => {
-            if (!cameraActive) return;
+            if (!cameraActive || modoKiosco === 'manual') {
+                stopCameraStream();
+                return;
+            }
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
@@ -625,11 +669,15 @@ export default function ActividadesEscanear({
                     },
                 });
 
-                if (videoRef.current && active) {
+                streamRef.current = stream;
+
+                if (videoRef.current && active && cameraActive && modoKiosco === 'escanear') {
                     videoRef.current.srcObject = stream;
                     videoRef.current.setAttribute('playsinline', 'true');
                     await videoRef.current.play();
                     requestScan();
+                } else if (stream) {
+                    stream.getTracks().forEach((track) => track.stop());
                 }
             } catch (err) {
                 console.warn('Error al acceder a la cámara:', err);
@@ -641,7 +689,7 @@ export default function ActividadesEscanear({
         let unknownCount = 0;
 
         const scanFrame = async () => {
-            if (!active || !cameraActive) return;
+            if (!active || !cameraActive || modoKiosco === 'manual') return;
 
             const video = videoRef.current;
             const canvasHidden = canvasHiddenRef.current;
@@ -727,7 +775,7 @@ export default function ActividadesEscanear({
         };
 
         const requestScan = () => {
-            if (active && cameraActive) {
+            if (active && cameraActive && modoKiosco === 'escanear') {
                 animFrameRef.current = requestAnimationFrame(scanFrame);
             }
         };
@@ -736,12 +784,22 @@ export default function ActividadesEscanear({
 
         return () => {
             active = false;
-            if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+            if (animFrameRef.current) {
+                cancelAnimationFrame(animFrameRef.current);
+                animFrameRef.current = null;
+            }
             if (stream) {
                 stream.getTracks().forEach((track) => track.stop());
             }
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach((track) => track.stop());
+                streamRef.current = null;
+            }
+            if (videoRef.current) {
+                videoRef.current.srcObject = null;
+            }
         };
-    }, [cameraActive, facingMode, modo, modelosCargados, faceMatcher, totalRostrosIndexados, procesarCodigo, isLoading]);
+    }, [cameraActive, modoKiosco, facingMode, modo, modelosCargados, faceMatcher, totalRostrosIndexados, procesarCodigo, isLoading, stopCameraStream]);
 
     // Capturar foto actual desde la cámara para enrolamiento
     const capturarSnapshotDeCamara = () => {
@@ -867,13 +925,77 @@ export default function ActividadesEscanear({
             }
             if (e.key === 'c' || e.key === 'C') setAsistioConConyuge((prev) => !prev);
             else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
-            else if (e.key === 'b' || e.key === 'B') setIsManualModalOpen(true);
-            else if (e.key === 'e' || e.key === 'E') handleAbrirEnrolamiento();
+            else if (e.key === 'b' || e.key === 'B' || e.key === 'm' || e.key === 'M') handleSwitchModoKiosco('manual');
+            else if (e.key === 'e' || e.key === 'E') handleSwitchModoKiosco('escanear');
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [handleSwitchModoKiosco]);
+
+    // Zonas únicas disponibles en los obreros convocados
+    const zonasUnicas = useMemo(() => {
+        const setZ = new Set<string>();
+        pastoresConvocados.forEach((p) => {
+            if (p.zona) setZ.add(String(p.zona));
+        });
+        return Array.from(setZ).sort((a, b) => Number(a) - Number(b));
+    }, [pastoresConvocados]);
+
+    // Filtrado en memoria de pastores para la Card de Uso Manual (búsqueda ultrarrápida instantánea)
+    const pastoresFiltradosLocal = useMemo(() => {
+        let list = pastoresConvocados || [];
+        const term = filtroTextoManual.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const soloNum = filtroTextoManual.replace(/\D/g, '');
+
+        if (filtroZonaManual !== 'todas') {
+            list = list.filter((p) => String(p.zona || '') === filtroZonaManual);
+        }
+
+        if (!term) return list.slice(0, 30);
+
+        return list.filter((p) => {
+            const nombreNorm = (p.nombre_completo || `${p.nombres || ''} ${p.apellidos || ''}`)
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+            const docDigits = (p.documento || '').replace(/\D/g, '');
+            const cod = (p.codigo || '').toLowerCase();
+            const iglesia = (p.iglesia || '').toLowerCase();
+
+            if (soloNum && docDigits.includes(soloNum)) return true;
+            if (cod.includes(term)) return true;
+            if (nombreNorm.includes(term)) return true;
+            if (iglesia.includes(term)) return true;
+            return false;
+        }).slice(0, 35);
+    }, [pastoresConvocados, filtroTextoManual, filtroZonaManual]);
+
+    // Búsqueda en el servidor si no hay coincidencias locales y el término tiene al menos 2 caracteres
+    useEffect(() => {
+        const term = filtroTextoManual.trim();
+        if (term.length >= 2 && pastoresFiltradosLocal.length === 0) {
+            const timer = setTimeout(async () => {
+                setBuscandoServerManual(true);
+                try {
+                    const res = await fetch(`/admin/actividades/asistencias/buscar-pastores?q=${encodeURIComponent(term)}`);
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        setResultadosServerManual(data);
+                    }
+                } catch (err) {
+                    console.error('Error buscando pastores en servidor:', err);
+                } finally {
+                    setBuscandoServerManual(false);
+                }
+            }, 300);
+            return () => clearTimeout(timer);
+        } else {
+            setResultadosServerManual([]);
+        }
+    }, [filtroTextoManual, pastoresFiltradosLocal.length]);
+
+    const pastoresParaMostrar = resultadosServerManual.length > 0 ? resultadosServerManual : pastoresFiltradosLocal;
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -997,26 +1119,61 @@ export default function ActividadesEscanear({
                         </div>
                     </div>
 
-                    {/* CENTRO: SELECTOR DE MODO VIA TABS (SHADCN/UI) */}
+                    {/* CENTRO: SELECTOR DE MODO (ESCANEO QR, BIOMETRÍA Y USO MANUAL) */}
                     <div className="flex items-center order-3 sm:order-2 w-full sm:w-auto justify-center">
-                        <Tabs value={modo} onValueChange={(val) => setModo(val as ModoEscaneo)} className="w-full sm:w-auto">
-                            <TabsList className="bg-slate-950 border border-slate-800 p-1 rounded-xl h-9 sm:h-10 w-full sm:w-auto grid grid-cols-2 sm:flex">
-                                <TabsTrigger
-                                    value="qr"
-                                    className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-slate-400 rounded-lg px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold gap-1.5 sm:gap-2 transition-all"
-                                >
-                                    <QrCode className="size-3.5" />
-                                    <span>Carnet QR</span>
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value="facial"
-                                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400 rounded-lg px-2.5 sm:px-4 text-[11px] sm:text-xs font-bold gap-1.5 sm:gap-2 transition-all"
-                                >
-                                    <ScanFace className="size-3.5" />
-                                    <span>Biometría Facial</span>
-                                </TabsTrigger>
-                            </TabsList>
-                        </Tabs>
+                        <div className="bg-slate-950 border border-slate-800 p-1 rounded-xl h-9 sm:h-10 w-full sm:w-auto grid grid-cols-3 sm:flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setModoKiosco('escanear');
+                                    setModo('qr');
+                                    setCameraActive(true);
+                                }}
+                                className={cn(
+                                    'rounded-lg px-2 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none',
+                                    modoKiosco === 'escanear' && modo === 'qr'
+                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                )}
+                            >
+                                <QrCode className="size-3.5 shrink-0" />
+                                <span>Carnet QR</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setModoKiosco('escanear');
+                                    setModo('facial');
+                                    setCameraActive(true);
+                                }}
+                                className={cn(
+                                    'rounded-lg px-2 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none',
+                                    modoKiosco === 'escanear' && modo === 'facial'
+                                        ? 'bg-purple-600 text-white shadow-sm'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                )}
+                            >
+                                <ScanFace className="size-3.5 shrink-0" />
+                                <span className="hidden sm:inline">Biometría</span>
+                                <span className="sm:hidden">Facial</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchModoKiosco('manual')}
+                                className={cn(
+                                    'rounded-lg px-2 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none',
+                                    modoKiosco === 'manual'
+                                        ? 'bg-emerald-600 text-white shadow-sm'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                )}
+                            >
+                                <Search className="size-3.5 shrink-0" />
+                                <span>Uso Manual</span>
+                                <span className="size-1.5 rounded-full bg-emerald-400 ml-0.5 animate-pulse" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* DERECHA: SESIÓN + TOTAL ASISTENTES + CONTROLES */}
@@ -1165,200 +1322,480 @@ export default function ActividadesEscanear({
 
             {/* CONTENIDO PRINCIPAL: CÁMARA (IZQUIERDA) + HUD TARJETA CREDENCIAL (DERECHA) */}
             <main className="flex-1 p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-[1780px] w-full mx-auto items-stretch">
-                {/* COLUMNA IZQUIERDA: LECTOR ÓPTICO Y CÁMARA BIOMÉTRICA (5 COLS) */}
-                <div className="lg:col-span-5 flex flex-col gap-4">
-                    <Card className="flex-1 flex flex-col justify-between overflow-hidden bg-slate-900/90 border-slate-800 shadow-2xl backdrop-blur-sm relative">
-                        {/* HEADER DEL VISOR */}
-                        <CardHeader className="p-3.5 sm:px-4 sm:py-3 bg-slate-950/80 border-b border-slate-800/80 flex flex-row items-center justify-between space-y-0">
-                            <div className="flex items-center gap-2">
-                                {modo === 'qr' ? (
-                                    <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/30 gap-1.5 px-2.5 py-1">
-                                        <QrCode className="size-3.5" />
-                                        <span className="font-bold">Lector Óptico QR</span>
-                                    </Badge>
+                {/* COLUMNA IZQUIERDA: 2 CARDS (1 PARA ESCANEAR Y 1 PARA USO MANUAL) */}
+                <div className="lg:col-span-5 flex flex-col gap-3.5">
+                    {/* SELECTOR ENTRE LAS 2 CARDS */}
+                    <div className="grid grid-cols-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl gap-1.5 shadow-xl shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => handleSwitchModoKiosco('escanear')}
+                            className={cn(
+                                'flex items-center justify-center gap-2 py-2 px-3 rounded-xl font-extrabold text-xs transition-all cursor-pointer select-none',
+                                modoKiosco === 'escanear'
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                            )}
+                        >
+                            <QrCode className="size-4" />
+                            <span>1. Card Escanear</span>
+                            {cameraActive && modoKiosco === 'escanear' && (
+                                <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                            )}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => handleSwitchModoKiosco('manual')}
+                            className={cn(
+                                'flex items-center justify-center gap-2 py-2 px-3 rounded-xl font-extrabold text-xs transition-all cursor-pointer select-none',
+                                modoKiosco === 'manual'
+                                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                            )}
+                        >
+                            <Search className="size-4" />
+                            <span>2. Card Uso Manual</span>
+                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 px-1.5 py-0 text-[9px] font-mono hidden sm:inline-flex">
+                                CAM OFF
+                            </Badge>
+                        </button>
+                    </div>
+
+                    {/* CARD 1: ESCANEAR (CÁMARA / QR / BIOMETRÍA / PISTOLA USB) */}
+                    {modoKiosco === 'escanear' && (
+                        <Card className="flex-1 flex flex-col justify-between overflow-hidden bg-slate-900/90 border-slate-800 shadow-2xl backdrop-blur-sm relative">
+                            {/* HEADER DEL VISOR */}
+                            <CardHeader className="p-3.5 sm:px-4 sm:py-3 bg-slate-950/80 border-b border-slate-800/80 flex flex-row items-center justify-between space-y-0">
+                                <div className="flex items-center gap-2">
+                                    {modo === 'qr' ? (
+                                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/30 gap-1.5 px-2.5 py-1">
+                                            <QrCode className="size-3.5" />
+                                            <span className="font-bold">Lector Óptico QR</span>
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30 gap-1.5 px-2.5 py-1">
+                                            <ScanFace className="size-3.5" />
+                                            <span className="font-bold">Biometría Dinámica Facial</span>
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setFacingMode((f) => (f === 'user' ? 'environment' : 'user'))}
+                                        className="h-7 px-2 text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg"
+                                        title="Girar entre cámara frontal o trasera"
+                                    >
+                                        Girar
+                                    </Button>
+
+                                    {/* BOTÓN PARA APAGAR / ENCENDER CÁMARA */}
+                                    <Button
+                                        variant={cameraActive ? 'ghost' : 'outline'}
+                                        size="sm"
+                                        onClick={() => {
+                                            if (cameraActive) {
+                                                setCameraActive(false);
+                                                stopCameraStream();
+                                            } else {
+                                                setCameraActive(true);
+                                            }
+                                        }}
+                                        className={cn(
+                                            'h-7 px-2 text-[11px] font-bold rounded-lg gap-1 transition-colors',
+                                            cameraActive
+                                                ? 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                                : 'border-emerald-500/40 text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/60'
+                                        )}
+                                        title={cameraActive ? 'Apagar cámara para ahorrar recursos' : 'Encender cámara para escanear'}
+                                    >
+                                        {cameraActive ? (
+                                            <>
+                                                <CameraOff className="size-3.5 text-slate-400" />
+                                                <span className="hidden sm:inline">Pausar</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Camera className="size-3.5 text-emerald-400" />
+                                                <span className="hidden sm:inline">Encender</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </CardHeader>
+
+                            {/* VISOR DE CÁMARA CON OVERLAYS TÁCTICOS DINÁMICOS */}
+                            <div className="relative aspect-video sm:aspect-4/3 bg-black flex items-center justify-center overflow-hidden flex-1 min-h-[300px]">
+                                {cameraActive ? (
+                                    <>
+                                        <video
+                                            ref={videoRef}
+                                            className="w-full h-full object-cover"
+                                            playsInline
+                                            muted
+                                        />
+                                        {/* Canvas oculto para decodificación jsQR */}
+                                        <canvas ref={canvasHiddenRef} className="hidden" />
+
+                                        {/* Canvas transparente interactivo para tracking biométrico dinámico */}
+                                        <canvas
+                                            ref={overlayCanvasRef}
+                                            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                                        />
+
+                                        {/* RETÍCULA QR CON LÁSER */}
+                                        {modo === 'qr' && (
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div className="size-44 sm:size-60 md:size-72 relative border-2 border-dashed border-cyan-400/50 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(34,211,238,0.15)]">
+                                                    <div className="absolute top-0 left-0 size-5 sm:size-7 border-t-4 border-l-4 border-cyan-400 rounded-tl-xl" />
+                                                    <div className="absolute top-0 right-0 size-5 sm:size-7 border-t-4 border-r-4 border-cyan-400 rounded-tr-xl" />
+                                                    <div className="absolute bottom-0 left-0 size-5 sm:size-7 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl" />
+                                                    <div className="absolute bottom-0 right-0 size-5 sm:size-7 border-b-4 border-r-4 border-cyan-400 rounded-br-xl" />
+
+                                                    <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-pulse" />
+
+                                                    <Badge className="bg-black/80 text-cyan-300 border-cyan-500/40 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest absolute bottom-3 sm:bottom-4 px-2.5 sm:px-3 py-1 backdrop-blur-md">
+                                                        Muestre el Carnet Ministerial
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* BANNER DINÁMICO DE CONFIRMACIÓN EN MÓVIL (PWA Mobile Live Feedback) */}
+                                        {ultimoPastor && (estadoEscaneo === 'success' || estadoEscaneo === 'duplicate' || estadoEscaneo === 'error') && (
+                                            <div className="absolute top-3 left-3 right-3 z-30 lg:hidden animate-in slide-in-from-top-3 duration-300">
+                                                <div className={cn(
+                                                    'p-2.5 sm:p-3 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xl border backdrop-blur-md',
+                                                    estadoEscaneo === 'success' && 'bg-emerald-950/95 border-emerald-500/80 text-white shadow-emerald-950/50',
+                                                    estadoEscaneo === 'duplicate' && 'bg-amber-950/95 border-amber-500/80 text-amber-200 shadow-amber-950/50',
+                                                    estadoEscaneo === 'error' && 'bg-rose-950/95 border-rose-500/80 text-rose-200 shadow-rose-950/50'
+                                                )}>
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        {ultimoPastor.foto ? (
+                                                            <img src={ultimoPastor.foto} alt="" className="size-9 rounded-xl object-cover shrink-0 border border-white/20" />
+                                                        ) : (
+                                                            <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-xs text-white shrink-0">
+                                                                {getInitials(ultimoPastor.nombre_completo)}
+                                                            </div>
+                                                        )}
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-black truncate">{ultimoPastor.nombre_completo}</p>
+                                                            <p className="text-[10px] opacity-90 truncate font-semibold">
+                                                                {mensajeFeedback} • {ultimoPastor.nivel_ministerial || 'Pastor'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <Badge className={cn('text-[10px] shrink-0 font-bold', estadoEscaneo === 'success' ? 'bg-emerald-500 text-slate-950' : estadoEscaneo === 'duplicate' ? 'bg-amber-500 text-slate-950' : 'bg-rose-500 text-white')}>
+                                                        {estadoEscaneo === 'success' ? 'Acreditado' : estadoEscaneo === 'duplicate' ? 'Repetido' : 'Error'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* BANNER DINÁMICO FLOTANTE CUANDO NO COINCIDE EL ROSTRO */}
+                                        {modo === 'facial' && rostroDetectado && estadoBiometrico === 'no_coincide' && (
+                                            <div className="absolute bottom-4 left-4 right-4 z-20 animate-in slide-in-from-bottom-2 duration-200">
+                                                <div className="p-3 rounded-2xl bg-slate-950/90 border border-amber-500/60 backdrop-blur-md flex items-center justify-between gap-3 shadow-2xl">
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                                                            <Sparkles className="size-3.5" /> Rostro en cámara detectado
+                                                        </p>
+                                                        <p className="text-[11px] text-slate-300 truncate">
+                                                            ¿No estás en el padrón local? Vincula tu foto en un clic.
+                                                        </p>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={handleAbrirEnrolamiento}
+                                                        className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shrink-0 gap-1.5 shadow-md"
+                                                    >
+                                                        <UserPlus className="size-3.5" />
+                                                        Vincular Rostro
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 ) : (
-                                    <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30 gap-1.5 px-2.5 py-1">
-                                        <ScanFace className="size-3.5" />
-                                        <span className="font-bold">Biometría Dinámica Facial</span>
-                                    </Badge>
+                                    <div className="text-center p-6 space-y-3 my-auto">
+                                        <div className="size-16 rounded-2xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center mx-auto text-slate-400 shadow-inner">
+                                            <CameraOff className="size-8 text-amber-400" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm text-slate-200 font-extrabold">Cámara Apagada (Ahorro Activo)</p>
+                                            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+                                                El lector de código de barras USB / Bluetooth sigue 100% activo abajo, o encienda la cámara cuando lo requiera.
+                                            </p>
+                                        </div>
+                                        <div className="pt-2 flex justify-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                onClick={() => setCameraActive(true)}
+                                                className="bg-indigo-600 hover:bg-indigo-500 text-xs text-white font-bold rounded-xl gap-1.5 shadow-md cursor-pointer"
+                                            >
+                                                <Camera className="size-3.5" />
+                                                Encender Cámara
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleSwitchModoKiosco('manual')}
+                                                className="border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white text-xs font-bold rounded-xl gap-1.5 cursor-pointer"
+                                            >
+                                                <Search className="size-3.5" />
+                                                Ir a Uso Manual
+                                            </Button>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-1.5">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setFacingMode((f) => (f === 'user' ? 'environment' : 'user'))}
-                                    className="h-7 px-2.5 text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg"
+                            {/* FOOTER DEL VISOR: ENTRADA PARA PISTOLA LECTORA USB */}
+                            <CardFooter className="p-3.5 bg-slate-950 border-t border-slate-800/80 flex flex-col gap-2">
+                                <div className="w-full flex items-center justify-between text-xs text-slate-400">
+                                    <span className="flex items-center gap-1.5 font-bold text-slate-300">
+                                        <Barcode className="size-4 text-indigo-400" />
+                                        Lector USB / Bluetooth
+                                    </span>
+                                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-400 hover:text-slate-200">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoFocusGun}
+                                            onChange={(e) => setAutoFocusGun(e.target.checked)}
+                                            className="rounded border-slate-700 text-indigo-600 focus:ring-0 size-3.5"
+                                        />
+                                        <span>Mantener Foco</span>
+                                    </label>
+                                </div>
+
+                                <form
+                                    className="w-full"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        procesarCodigo(codigoManualInput, 'qr_carnet');
+                                    }}
                                 >
-                                    Girar Cámara
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setCameraActive((c) => !c)}
-                                    className="size-7 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
-                                    title={cameraActive ? 'Pausar cámara' : 'Encender cámara'}
-                                >
-                                    {cameraActive ? <Camera className="size-4 text-emerald-400" /> : <CameraOff className="size-4 text-slate-400" />}
-                                </Button>
-                            </div>
-                        </CardHeader>
+                                    <div className="relative">
+                                        <Input
+                                            ref={inputGunRef}
+                                            placeholder="Escanee con pistola o escriba cédula y presione Enter..."
+                                            value={codigoManualInput}
+                                            onChange={(e) => setCodigoManualInput(e.target.value)}
+                                            className="h-10 bg-slate-900 border-slate-700 text-white text-xs placeholder:text-slate-500 font-mono rounded-xl pr-10 focus-visible:ring-indigo-500"
+                                            disabled={isLoading}
+                                        />
+                                        <Button
+                                            type="submit"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="absolute right-1 top-1 size-8 text-slate-400 hover:text-white"
+                                            disabled={!codigoManualInput.trim() || isLoading}
+                                        >
+                                            <CheckCircle2 className="size-4 text-indigo-400" />
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardFooter>
+                        </Card>
+                    )}
 
-                        {/* VISOR DE CÁMARA CON OVERLAYS TÁCTICOS DINÁMICOS */}
-                        <div className="relative aspect-video sm:aspect-4/3 bg-black flex items-center justify-center overflow-hidden flex-1 min-h-[300px]">
-                            {cameraActive ? (
-                                <>
-                                    <video
-                                        ref={videoRef}
-                                        className="w-full h-full object-cover"
-                                        playsInline
-                                        muted
+                    {/* CARD 2: USO MANUAL (BÚSQUEDA EN PADRÓN & CÉDULA DIRECTA) */}
+                    {modoKiosco === 'manual' && (
+                        <Card className="flex-1 flex flex-col justify-between overflow-hidden bg-slate-900/90 border-slate-800 shadow-2xl backdrop-blur-sm relative">
+                            {/* HEADER CARD 2 */}
+                            <CardHeader className="p-3.5 sm:px-4 sm:py-3 bg-slate-950/80 border-b border-slate-800/80 flex flex-row items-center justify-between space-y-0">
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1.5 px-2.5 py-1">
+                                        <Search className="size-3.5" />
+                                        <span className="font-bold">Acreditación Manual</span>
+                                    </Badge>
+                                    <Badge className="bg-emerald-950/80 text-emerald-300 border-emerald-500/30 text-[10px] font-semibold gap-1 hidden sm:inline-flex">
+                                        <CameraOff className="size-3 text-emerald-400" />
+                                        <span>Cámara 100% Apagada</span>
+                                    </Badge>
+                                </div>
+
+                                <Badge variant="outline" className="border-slate-800 bg-slate-900 text-slate-400 text-xs py-1 px-2.5 font-bold">
+                                    {pastoresConvocados.length} Obreros
+                                </Badge>
+                            </CardHeader>
+
+                            {/* CUERPO DE LA CARD MANUAL */}
+                            <CardContent className="p-3.5 sm:p-4 flex-1 flex flex-col gap-3 overflow-hidden">
+                                {/* BUSCADOR REACTIVO */}
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                                    <Input
+                                        value={filtroTextoManual}
+                                        onChange={(e) => setFiltroTextoManual(e.target.value)}
+                                        placeholder="Buscar por cédula, código, nombres o iglesia..."
+                                        className="h-10 bg-slate-950 border-slate-700 text-white text-xs pl-9 pr-9 rounded-xl placeholder:text-slate-500 font-medium focus-visible:ring-emerald-500"
+                                        autoFocus
                                     />
-                                    {/* Canvas oculto para decodificación jsQR */}
-                                    <canvas ref={canvasHiddenRef} className="hidden" />
+                                    {filtroTextoManual ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFiltroTextoManual('')}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                                        >
+                                            <XCircle className="size-4" />
+                                        </button>
+                                    ) : null}
+                                </div>
 
-                                    {/* Canvas transparente interactivo para tracking biométrico dinámico */}
-                                    <canvas
-                                        ref={overlayCanvasRef}
-                                        className="absolute inset-0 w-full h-full pointer-events-none z-10"
-                                    />
+                                {/* BARRA DE FILTROS RÁPIDOS Y +CÓNYUGE */}
+                                <div className="flex items-center justify-between gap-2 text-xs">
+                                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider shrink-0">Zona:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFiltroZonaManual('todas')}
+                                            className={cn(
+                                                'px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors shrink-0 cursor-pointer',
+                                                filtroZonaManual === 'todas'
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : 'bg-slate-800 text-slate-300 hover:text-white'
+                                            )}
+                                        >
+                                            Todas
+                                        </button>
+                                        {zonasUnicas.slice(0, 8).map((z) => (
+                                            <button
+                                                key={z}
+                                                type="button"
+                                                onClick={() => setFiltroZonaManual(z)}
+                                                className={cn(
+                                                    'px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors shrink-0 cursor-pointer',
+                                                    filtroZonaManual === z
+                                                        ? 'bg-emerald-600 text-white'
+                                                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                                                )}
+                                            >
+                                                Z-{z}
+                                            </button>
+                                        ))}
+                                    </div>
 
-                                    {/* RETÍCULA QR CON LÁSER */}
-                                    {modo === 'qr' && (
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="size-44 sm:size-60 md:size-72 relative border-2 border-dashed border-cyan-400/50 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(34,211,238,0.15)]">
-                                                <div className="absolute top-0 left-0 size-5 sm:size-7 border-t-4 border-l-4 border-cyan-400 rounded-tl-xl" />
-                                                <div className="absolute top-0 right-0 size-5 sm:size-7 border-t-4 border-r-4 border-cyan-400 rounded-tr-xl" />
-                                                <div className="absolute bottom-0 left-0 size-5 sm:size-7 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl" />
-                                                <div className="absolute bottom-0 right-0 size-5 sm:size-7 border-b-4 border-r-4 border-cyan-400 rounded-br-xl" />
-
-                                                <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-pulse" />
-
-                                                <Badge className="bg-black/80 text-cyan-300 border-cyan-500/40 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest absolute bottom-3 sm:bottom-4 px-2.5 sm:px-3 py-1 backdrop-blur-md">
-                                                    Muestre el Carnet Ministerial
-                                                </Badge>
-                                            </div>
-                                        </div>
+                                    {actividad.permite_conyuge && (
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-pink-300 shrink-0 select-none">
+                                            <Switch
+                                                checked={asistioConConyuge}
+                                                onCheckedChange={setAsistioConConyuge}
+                                                className="data-[state=checked]:bg-pink-600 scale-75"
+                                            />
+                                            <span className="text-[11px]">+ Cónyuge</span>
+                                        </label>
                                     )}
+                                </div>
 
-                                    {/* BANNER DINÁMICO DE CONFIRMACIÓN EN MÓVIL (PWA Mobile Live Feedback) */}
-                                    {ultimoPastor && (estadoEscaneo === 'success' || estadoEscaneo === 'duplicate' || estadoEscaneo === 'error') && (
-                                        <div className="absolute top-3 left-3 right-3 z-30 lg:hidden animate-in slide-in-from-top-3 duration-300">
-                                            <div className={cn(
-                                                'p-2.5 sm:p-3 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xl border backdrop-blur-md',
-                                                estadoEscaneo === 'success' && 'bg-emerald-950/95 border-emerald-500/80 text-white shadow-emerald-950/50',
-                                                estadoEscaneo === 'duplicate' && 'bg-amber-950/95 border-amber-500/80 text-amber-200 shadow-amber-950/50',
-                                                estadoEscaneo === 'error' && 'bg-rose-950/95 border-rose-500/80 text-rose-200 shadow-rose-950/50'
-                                            )}>
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                    {ultimoPastor.foto ? (
-                                                        <img src={ultimoPastor.foto} alt="" className="size-9 rounded-xl object-cover shrink-0 border border-white/20" />
-                                                    ) : (
-                                                        <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-xs text-white shrink-0">
-                                                            {getInitials(ultimoPastor.nombre_completo)}
+                                {/* LISTA SCROLLABLE DE PASTORES CON FOTOS Y BOTÓN DIRECTO */}
+                                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[380px] sm:max-h-[440px] custom-scrollbar">
+                                    {buscandoServerManual ? (
+                                        <div className="text-center py-10 space-y-2">
+                                            <RefreshCw className="size-6 text-emerald-400 animate-spin mx-auto" />
+                                            <p className="text-xs text-slate-400 font-medium">Buscando en el padrón nacional...</p>
+                                        </div>
+                                    ) : pastoresParaMostrar.length === 0 ? (
+                                        <div className="text-center py-10 space-y-2">
+                                            <Users className="size-8 text-slate-600 mx-auto" />
+                                            <p className="text-xs text-slate-300 font-medium">
+                                                No se encontraron obreros con "{filtroTextoManual}".
+                                            </p>
+                                            <p className="text-[11px] text-slate-500">
+                                                Puede escribir la cédula exacta abajo y presionar Acreditar.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        pastoresParaMostrar.map((p) => (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => procesarCodigo(p.documento || p.codigo, 'manual')}
+                                                className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-800/60 transition-all flex items-center justify-between gap-3 cursor-pointer group shadow-sm"
+                                            >
+                                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                    <Avatar className="size-10 rounded-xl border border-slate-700/80 shrink-0">
+                                                        {p.foto && <AvatarImage src={p.foto} alt={p.nombre_completo} className="object-cover" />}
+                                                        <AvatarFallback className="rounded-xl bg-emerald-950 text-emerald-200 font-extrabold text-xs">
+                                                            {getInitials(p.nombre_completo)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <p className="text-xs font-extrabold text-white group-hover:text-emerald-300 transition-colors truncate">
+                                                                {p.nombre_completo}
+                                                            </p>
+                                                            {p.zona && (
+                                                                <Badge variant="outline" className="px-1.5 py-0 text-[9px] font-bold border-slate-700 text-slate-400 shrink-0">
+                                                                    Z-{p.zona}
+                                                                </Badge>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                    <div className="min-w-0">
-                                                        <p className="text-xs font-black truncate">{ultimoPastor.nombre_completo}</p>
-                                                        <p className="text-[10px] opacity-90 truncate font-semibold">
-                                                            {mensajeFeedback} • {ultimoPastor.nivel_ministerial || 'Pastor'}
+                                                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                                                            <span className="font-mono text-slate-300 font-semibold">{p.documento}</span>
+                                                            {p.nivel_ministerial ? ` • ${p.nivel_ministerial}` : ''}
+                                                            {p.iglesia ? ` • ${p.iglesia}` : ''}
                                                         </p>
+                                                        {p.nombre_conyuge && asistioConConyuge && (
+                                                            <p className="text-[10px] text-pink-400 font-semibold flex items-center gap-1 mt-0.5 truncate">
+                                                                <Heart className="size-2.5 fill-pink-400 shrink-0" />
+                                                                Esposa: {p.nombre_conyuge}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <Badge className={cn('text-[10px] shrink-0 font-bold', estadoEscaneo === 'success' ? 'bg-emerald-500 text-slate-950' : estadoEscaneo === 'duplicate' ? 'bg-amber-500 text-slate-950' : 'bg-rose-500 text-white')}>
-                                                    {estadoEscaneo === 'success' ? 'Acreditado' : estadoEscaneo === 'duplicate' ? 'Repetido' : 'Error'}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    )}
 
-                                    {/* BANNER DINÁMICO FLOTANTE CUANDO NO COINCIDE EL ROSTRO */}
-                                    {modo === 'facial' && rostroDetectado && estadoBiometrico === 'no_coincide' && (
-                                        <div className="absolute bottom-4 left-4 right-4 z-20 animate-in slide-in-from-bottom-2 duration-200">
-                                            <div className="p-3 rounded-2xl bg-slate-950/90 border border-amber-500/60 backdrop-blur-md flex items-center justify-between gap-3 shadow-2xl">
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                                                        <Sparkles className="size-3.5" /> Rostro en cámara detectado
-                                                    </p>
-                                                    <p className="text-[11px] text-slate-300 truncate">
-                                                        ¿No estás en el padrón local? Vincula tu foto en un clic.
-                                                    </p>
-                                                </div>
                                                 <Button
                                                     size="sm"
-                                                    onClick={handleAbrirEnrolamiento}
-                                                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shrink-0 gap-1.5 shadow-md"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        procesarCodigo(p.documento || p.codigo, 'manual');
+                                                    }}
+                                                    className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs rounded-xl h-8 px-3 shrink-0 gap-1.5 shadow-md shadow-emerald-950 cursor-pointer"
                                                 >
-                                                    <UserPlus className="size-3.5" />
-                                                    Vincular Rostro
+                                                    <Check className="size-3.5" />
+                                                    Acreditar
                                                 </Button>
                                             </div>
-                                        </div>
+                                        ))
                                     )}
-                                </>
-                            ) : (
-                                <div className="text-center p-8 space-y-3">
-                                    <CameraOff className="size-12 text-slate-600 mx-auto" />
-                                    <p className="text-sm text-slate-400 font-medium">La cámara se encuentra pausada</p>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => setCameraActive(true)}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-xs text-white font-bold rounded-xl"
-                                    >
-                                        Reanudar Cámara
-                                    </Button>
                                 </div>
-                            )}
-                        </div>
+                            </CardContent>
 
-                        {/* FOOTER DEL VISOR: ENTRADA PARA PISTOLA LECTORA USB */}
-                        <CardFooter className="p-3.5 bg-slate-950 border-t border-slate-800/80 flex flex-col gap-2">
-                            <div className="w-full flex items-center justify-between text-xs text-slate-400">
-                                <span className="flex items-center gap-1.5 font-bold text-slate-300">
-                                    <Barcode className="size-4 text-indigo-400" />
-                                    Lector USB / Bluetooth
-                                </span>
-                                <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-400 hover:text-slate-200">
-                                    <input
-                                        type="checkbox"
-                                        checked={autoFocusGun}
-                                        onChange={(e) => setAutoFocusGun(e.target.checked)}
-                                        className="rounded border-slate-700 text-indigo-600 focus:ring-0 size-3.5"
-                                    />
-                                    <span>Mantener Foco</span>
-                                </label>
-                            </div>
-
-                            <form
-                                className="w-full"
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    procesarCodigo(codigoManualInput, 'qr_carnet');
-                                }}
-                            >
-                                <div className="relative">
+                            {/* FOOTER CARD 2: INGRESO DIRECTO POR CÉDULA O ENTER */}
+                            <CardFooter className="p-3.5 bg-slate-950 border-t border-slate-800/80 flex flex-col gap-2">
+                                <form
+                                    className="w-full flex items-center gap-2"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const term = filtroTextoManual.trim();
+                                        if (term) {
+                                            procesarCodigo(term, 'manual');
+                                            setFiltroTextoManual('');
+                                        }
+                                    }}
+                                >
                                     <Input
-                                        ref={inputGunRef}
-                                        placeholder="Escanee con pistola o escriba cédula y presione Enter..."
-                                        value={codigoManualInput}
-                                        onChange={(e) => setCodigoManualInput(e.target.value)}
-                                        className="h-10 bg-slate-900 border-slate-700 text-white text-xs placeholder:text-slate-500 font-mono rounded-xl pr-10 focus-visible:ring-indigo-500"
+                                        placeholder="Escriba cédula exacta y presione Enter para acreditar..."
+                                        value={filtroTextoManual}
+                                        onChange={(e) => setFiltroTextoManual(e.target.value)}
+                                        className="h-10 bg-slate-900 border-slate-700 text-white text-xs placeholder:text-slate-500 font-mono rounded-xl flex-1 focus-visible:ring-emerald-500"
                                         disabled={isLoading}
                                     />
                                     <Button
                                         type="submit"
-                                        size="icon"
-                                        variant="ghost"
-                                        className="absolute right-1 top-1 size-8 text-slate-400 hover:text-white"
-                                        disabled={!codigoManualInput.trim() || isLoading}
+                                        disabled={!filtroTextoManual.trim() || isLoading}
+                                        className="h-10 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs px-4 rounded-xl shrink-0 gap-1.5 shadow-md cursor-pointer"
                                     >
-                                        <CheckCircle2 className="size-4 text-indigo-400" />
+                                        <Check className="size-4" />
+                                        <span>Acreditar</span>
                                     </Button>
-                                </div>
-                            </form>
-                        </CardFooter>
-                    </Card>
+                                </form>
+                            </CardFooter>
+                        </Card>
+                    )}
                 </div>
 
                 {/* COLUMNA DERECHA: TARJETA HUD BIOMÉTRICA EJECUTIVA (7 COLS) */}
