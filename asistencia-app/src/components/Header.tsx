@@ -8,6 +8,7 @@ import {
   Check,
   Palette,
   CloudOff,
+  RefreshCw,
 } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Actividad } from '../types';
@@ -23,12 +24,14 @@ import {
 interface HeaderProps {
   actividad?: Actividad | null;
   onOpenServerConfig?: () => void;
+  onRefresh?: () => void;
   serverOnline?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   actividad,
   onOpenServerConfig,
+  onRefresh,
   serverOnline = true,
 }) => {
   const { themeMode, isDark, colors, setThemeMode } = useTheme();
@@ -56,6 +59,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* ACCIONES SUPERIORES */}
         <View style={styles.actionsRow}>
+          {/* BOTÓN SINCRONIZAR / REFRESCAR */}
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onPress={onRefresh}
+              accessibilityLabel="Actualizar actividad"
+              style={styles.actionIconBtn}
+            >
+              <RefreshCw size={16} color={colors.textSecondary} />
+            </Button>
+          )}
+
           {/* BOTÓN SELECTOR DE TEMA */}
           <Button
             variant="ghost"

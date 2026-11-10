@@ -43,14 +43,14 @@ export const TabsTrigger = React.forwardRef<
     styles.trigger,
     isSelected ? styles.triggerActive : null,
     isSelected ? { backgroundColor: colors.primary } : null,
-    style,
+    style as any,
   ]);
 
   return (
     <TabsPrimitive.Trigger
       ref={ref}
       value={value}
-      style={flatStyle}
+      style={flatStyle as any}
       {...props}
     >
       {typeof children === 'string' ? (

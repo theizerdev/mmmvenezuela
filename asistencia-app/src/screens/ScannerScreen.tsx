@@ -32,7 +32,7 @@ import {
 interface ScannerScreenProps {
   actividad: Actividad | null;
   sesion: Sesion | null;
-  onAsistenciaRegistrada: (pastor: Pastor, asistioConConyuge: boolean) => void;
+  onAsistenciaRegistrada: (pastor: Pastor, asistioConConyuge: boolean, totalPresentes?: number) => void;
 }
 
 export const ScannerScreen: React.FC<ScannerScreenProps> = ({
@@ -51,6 +51,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
   const [horaExito, setHoraExito] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [buscando, setBuscando] = useState<boolean>(false);
+  const [scanError, setScanError] = useState<string>('');
 
   // Candado para evitar múltiples lecturas seguidas del mismo código
   const isScanningLockedRef = useRef<boolean>(false);
@@ -63,6 +64,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
     setAsistenciaPrevia(null);
     setExitoRegistro(false);
     setHoraExito('');
+    setScanError('');
     lastScannedDataRef.current = '';
     isScanningLockedRef.current = false;
   };
@@ -82,6 +84,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
       } catch {}
 
       setBuscando(true);
+      setScanError('');
 
       try {
         const res = await api.buscarPastor(data, actividad?.id, sesion?.id);
@@ -106,22 +109,26 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
             } catch {}
           }
         } else {
+          setScanError(res.message || `No se encontró ningún obrero con el código escaneado.`);
           try {
             if (Platform.OS !== 'web') {
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             }
           } catch {}
-          // Permitir reintentar en 2 segundos
+          // Permitir reintentar en 3 segundos
           setTimeout(() => {
+            setScanError('');
             isScanningLockedRef.current = false;
             lastScannedDataRef.current = '';
-          }, 2000);
+          }, 3000);
         }
-      } catch (err) {
+      } catch (err: any) {
+        setScanError(err?.message || 'Error de conexión al verificar el código QR.');
         setTimeout(() => {
+          setScanError('');
           isScanningLockedRef.current = false;
           lastScannedDataRef.current = '';
-        }, 2000);
+        }, 3000);
       } finally {
         setBuscando(false);
       }
@@ -134,18 +141,22 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
 
     setLoading(true);
     try {
-      const res = await api.registrarAsistencia({
-        actividad_id: actividad.id,
-        actividad_sesion_id: sesion?.id,
-        pastor_id: scannedPastor.id,
-        asistio_con_conyuge: asistioConConyuge,
-        metodo: 'qr',
-      });
+      const res = await api.registrarAsistencia(
+        {
+          actividad_id: actividad.id,
+          actividad_sesion_id: sesion?.id,
+          pastor_id: scannedPastor.id,
+          asistio_con_conyuge: asistioConConyuge,
+          metodo: 'qr',
+        },
+        scannedPastor,
+        sesion?.nombre
+      );
 
       if (res.success) {
         setExitoRegistro(true);
         setHoraExito(res.asistencia?.hora || new Date().toLocaleTimeString());
-        onAsistenciaRegistrada(scannedPastor, asistioConConyuge);
+        onAsistenciaRegistrada(scannedPastor, asistioConConyuge, res.total_presentes);
 
         try {
           if (Platform.OS !== 'web') {
@@ -232,6 +243,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
             asistenciaPrevia={asistenciaPrevia}
             exitoRegistro={exitoRegistro}
             horaRegistroExitoso={horaExito}
+            permiteConyuge={actividad?.permite_conyuge ?? true}
           />
         </ScrollView>
       ) : (
@@ -265,10 +277,10 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
 
             {/* MARCO GUÍA DEL QR CON ESQUINAS CIAN (HUD OFICIAL DE ESCANEAR.TSX) */}
             <View style={styles.targetBox}>
-              <View style={[styles.corner, styles.cornerTL, { borderColor: '#22d3ee' }]} />
-              <View style={[styles.corner, styles.cornerTR, { borderColor: '#22d3ee' }]} />
-              <View style={[styles.corner, styles.cornerBL, { borderColor: '#22d3ee' }]} />
-              <View style={[styles.corner, styles.cornerBR, { borderColor: '#22d3ee' }]} />
+              <View style={[styles.corner, styles.cornerTL, { borderColor: scanError ? '#ef4444' : '#22d3ee' }]} />
+              <View style={[styles.corner, styles.cornerTR, { borderColor: scanError ? '#ef4444' : '#22d3ee' }]} />
+              <View style={[styles.corner, styles.cornerBL, { borderColor: scanError ? '#ef4444' : '#22d3ee' }]} />
+              <View style={[styles.corner, styles.cornerBR, { borderColor: scanError ? '#ef4444' : '#22d3ee' }]} />
 
               {buscando && (
                 <View style={styles.searchingOverlay}>
@@ -276,6 +288,13 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
                   <Text style={styles.searchingText}>Identificando obrero...</Text>
                 </View>
               )}
+
+              {scanError ? (
+                <View style={styles.scanErrorOverlay}>
+                  <AlertTriangle size={20} color="#fca5a5" />
+                  <Text style={styles.scanErrorText}>{scanError}</Text>
+                </View>
+              ) : null}
             </View>
 
             {/* INSTRUCCIÓN INFERIOR */}
@@ -391,6 +410,23 @@ const styles = StyleSheet.create({
     color: '#22d3ee',
     fontSize: 12.5,
     fontWeight: '700',
+  },
+  scanErrorOverlay: {
+    backgroundColor: 'rgba(127, 29, 29, 0.92)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: 220,
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.45)',
+  },
+  scanErrorText: {
+    color: '#fecaca',
+    fontSize: 11.5,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   instructionCard: {
     backgroundColor: 'rgba(2, 6, 23, 0.85)',

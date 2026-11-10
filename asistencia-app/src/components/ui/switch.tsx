@@ -22,7 +22,7 @@ export const Switch = React.forwardRef<
       backgroundColor: checked ? trackActive : (isDark ? '#334155' : '#cbd5e1'),
     },
     disabled ? { opacity: 0.5 } : null,
-    style,
+    style as any,
   ]);
 
   const flatThumbStyle = StyleSheet.flatten([
@@ -36,7 +36,7 @@ export const Switch = React.forwardRef<
       checked={checked}
       onCheckedChange={onCheckedChange}
       disabled={disabled}
-      style={flatRootStyle}
+      style={flatRootStyle as any}
       {...props}
     >
       <SwitchPrimitive.Thumb style={flatThumbStyle} />

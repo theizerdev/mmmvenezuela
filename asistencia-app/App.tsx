@@ -13,6 +13,8 @@ import {
   QrCode,
   Search,
   CloudOff,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { Header } from './src/components/Header';
@@ -27,7 +29,7 @@ import {
   TabsContent,
 } from './src/components/ui';
 import { api } from './src/services/api';
-import { Actividad, Sesion, Pastor } from './src/types';
+import { Actividad, Sesion, Pastor, UltimoEscaneo } from './src/types';
 
 type ModoKiosco = 'scan' | 'manual';
 
@@ -41,80 +43,199 @@ function MainApp() {
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [actividadActual, setActividadActual] = useState<Actividad | null>(null);
   const [sesionActual, setSesionActual] = useState<Sesion | null>(null);
+  const [ultimosEscaneos, setUltimosEscaneos] = useState<UltimoEscaneo[]>([]);
   const [loadingActividades, setLoadingActividades] = useState<boolean>(true);
   const [serverOnline, setServerOnline] = useState<boolean>(true);
   const [configModalVisible, setConfigModalVisible] = useState<boolean>(false);
 
-  // Carga de actividades
+  // Estados de Modo Offline y Cola de Sincronización
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [padronOfflineCount, setPadronOfflineCount] = useState<number>(0);
+  const [syncingOffline, setSyncingOffline] = useState<boolean>(false);
+  const [syncNotice, setSyncNotice] = useState<string>('');
+
+  const actualizarContadoresLocales = useCallback(() => {
+    setPendingSyncCount(api.getPendingQueueCount());
+    setPadronOfflineCount(api.getPadronCount());
+  }, []);
+
+  const cargarUltimosEscaneos = useCallback(
+    async (actividadId: number) => {
+      try {
+        const res = await api.getUltimosEscaneos(actividadId);
+        if (res.success && Array.isArray(res.ultimos)) {
+          setUltimosEscaneos(res.ultimos);
+        }
+      } catch {}
+      actualizarContadoresLocales();
+    },
+    [actualizarContadoresLocales]
+  );
+
+  const sincronizarColaPendiente = useCallback(
+    async (actividadId?: number) => {
+      const enCola = api.getPendingQueueCount();
+      if (enCola === 0) return;
+
+      setSyncingOffline(true);
+      try {
+        const res = await api.sincronizarColaOffline();
+        setPendingSyncCount(res.pending);
+
+        if (res.synced > 0) {
+          setServerOnline(true);
+          setSyncNotice(
+            `¡${res.synced} asistencia${res.synced > 1 ? 's' : ''} offline sincronizada${res.synced > 1 ? 's' : ''} con éxito!`
+          );
+          setTimeout(() => setSyncNotice(''), 4500);
+
+          if (typeof res.lastTotalPresentes === 'number') {
+            setActividadActual((prev) =>
+              prev ? { ...prev, total_presentes: res.lastTotalPresentes! } : null
+            );
+          }
+
+          const actId = actividadId || actividadActual?.id;
+          if (actId) {
+            await cargarUltimosEscaneos(actId);
+          }
+        }
+      } catch {} finally {
+        setSyncingOffline(false);
+      }
+    },
+    [actividadActual?.id, cargarUltimosEscaneos]
+  );
+
+  // Carga de actividades + sincronización de padrón offline
   const cargarActividades = useCallback(async () => {
     setLoadingActividades(true);
     try {
       await api.init();
+      actualizarContadoresLocales();
+
+      // Si había asistencias pendientes en cola offline, intentar sincronizarlas primero
+      if (api.getPendingQueueCount() > 0) {
+        await sincronizarColaPendiente();
+      }
+
       const res = await api.getActividadesActivas();
       if (res.success && res.actividades.length > 0) {
-        // Filtrar estrictamente actividades 'en_curso'
         const enCurso = res.actividades.filter((a) => a.estado === 'en_curso');
         setActividades(enCurso);
-        setServerOnline(true);
+        setServerOnline(!res.fromCache);
 
+        const selected = enCurso[0] || null;
         setActividadActual((prev) => {
           const matched = prev ? enCurso.find((a) => a.id === prev.id) : null;
-          const selected = matched || enCurso[0] || null;
-          if (selected) {
-            setSesionActual(selected.sesion_activa || selected.sesiones[0] || null);
+          const target = matched || selected;
+          if (target) {
+            setSesionActual((prevSes) => {
+              if (prevSes && target.sesiones.some((s) => s.id === prevSes.id)) {
+                return prevSes;
+              }
+              return target.sesion_activa || target.sesiones[0] || null;
+            });
           } else {
             setSesionActual(null);
           }
-          return selected;
+          return target;
         });
+
+        if (selected) {
+          cargarUltimosEscaneos(selected.id);
+          if (!res.fromCache) {
+            api.sincronizarPadronOffline(selected.id).then((padronRes) => {
+              if (padronRes.total > 0) {
+                setPadronOfflineCount(padronRes.total);
+              }
+            });
+          }
+        }
       } else {
+        setServerOnline(true);
         setActividades([]);
         setActividadActual(null);
         setSesionActual(null);
+        setUltimosEscaneos([]);
       }
     } catch (err) {
       setServerOnline(false);
+      actualizarContadoresLocales();
       console.warn('Error conectando al backend:', err);
     } finally {
       setLoadingActividades(false);
     }
-  }, []);
+  }, [actualizarContadoresLocales, cargarUltimosEscaneos, sincronizarColaPendiente]);
 
   useEffect(() => {
     cargarActividades();
   }, [cargarActividades]);
 
+  // Monitor automático cada 12 segundos para reconectar y sincronizar cola offline automáticamente
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const pending = api.getPendingQueueCount();
+      if (pending > 0) {
+        await sincronizarColaPendiente(actividadActual?.id);
+      } else if (!serverOnline) {
+        const ok = await api.testConnection(api.getBaseUrl());
+        if (ok) {
+          cargarActividades();
+        }
+      }
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [actividadActual?.id, cargarActividades, serverOnline, sincronizarColaPendiente]);
+
   const handleSelectActividad = (act: Actividad) => {
     setActividadActual(act);
     setSesionActual(act.sesion_activa || act.sesiones[0] || null);
+    cargarUltimosEscaneos(act.id);
+    api.sincronizarPadronOffline(act.id).then((r) => {
+      if (r.total > 0) setPadronOfflineCount(r.total);
+    });
   };
 
   const handleSelectSesion = (ses: Sesion) => {
     setSesionActual(ses);
   };
 
-  const handleAsistenciaRegistrada = (pastor: Pastor, conConyuge: boolean) => {
+  const handleAsistenciaRegistrada = (pastor: Pastor, conConyuge: boolean, totalPresentes?: number) => {
+    actualizarContadoresLocales();
+    if (api.getPendingQueueCount() > 0) {
+      setServerOnline(false);
+    } else {
+      setServerOnline(true);
+    }
+
     setActividadActual((prev) => {
       if (!prev) return null;
+      const nuevoTotal =
+        typeof totalPresentes === 'number'
+          ? totalPresentes
+          : (prev.total_presentes || 0) + (conConyuge ? 2 : 1);
       return {
         ...prev,
-        total_presentes: (prev.total_presentes || 0) + (conConyuge ? 2 : 1),
+        total_presentes: nuevoTotal,
       };
     });
+
+    if (actividadActual?.id) {
+      cargarUltimosEscaneos(actividadActual.id);
+    }
   };
 
   return (
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.bg }]}>
-      <StatusBar
-        style={isDark ? 'light' : 'dark'}
-        backgroundColor={colors.bgSecondary}
-        translucent={false}
-      />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* 1. ENCABEZADO INSTITUCIONAL OFICIAL */}
       <Header
         actividad={actividadActual}
         onOpenServerConfig={() => setConfigModalVisible(true)}
+        onRefresh={cargarActividades}
         serverOnline={serverOnline}
       />
 
@@ -128,7 +249,37 @@ function MainApp() {
         loading={loadingActividades}
       />
 
-      {/* ALERTA SI NO HAY CONEXIÓN CON EL SERVIDOR */}
+      {/* BANNER DE NOTIFICACIÓN CUANDO SE SINCRONIZAN ASISTENCIAS OFFLINE */}
+      {syncNotice ? (
+        <View style={[styles.offlineBanner, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
+          <CheckCircle2 size={15} color={colors.success} />
+          <Text style={[styles.offlineText, { color: colors.success }]}>
+            {syncNotice}
+          </Text>
+        </View>
+      ) : null}
+
+      {/* BANNER DE COLA DE SINCRONIZACIÓN PENDIENTE */}
+      {pendingSyncCount > 0 && (
+        <Pressable
+          style={[styles.offlineBanner, { backgroundColor: colors.warningBg, borderColor: colors.warningBorder }]}
+          onPress={() => sincronizarColaPendiente(actividadActual?.id)}
+          disabled={syncingOffline}
+        >
+          {syncingOffline ? (
+            <ActivityIndicator size="small" color={colors.warning} />
+          ) : (
+            <RefreshCw size={15} color={colors.warning} />
+          )}
+          <Text style={[styles.offlineText, { color: isDark ? '#fde68a' : '#92400e' }]}>
+            {syncingOffline
+              ? `Sincronizando ${pendingSyncCount} asistencia(s) con el servidor...`
+              : `${pendingSyncCount} asistencia(s) guardada(s) en Modo Offline. Se sincronizarán al volver internet (Toque para reintentar).`}
+          </Text>
+        </Pressable>
+      )}
+
+      {/* ALERTA SI ESTÁ OPERANDO SIN CONEXIÓN CON EL SERVIDOR */}
       {!serverOnline && (
         <Pressable
           style={[styles.offlineBanner, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}
@@ -136,7 +287,9 @@ function MainApp() {
         >
           <CloudOff size={15} color={colors.danger} />
           <Text style={[styles.offlineText, { color: isDark ? '#fecdd3' : colors.danger }]}>
-            Sin conexión con {api.getBaseUrl()}. Toque la rueda de configuración para cambiar la IP.
+            {padronOfflineCount > 0
+              ? `Modo Offline activo (${padronOfflineCount} obreros en memoria local). Puede seguir acreditando sin internet.`
+              : `Sin conexión con ${api.getBaseUrl()}. Toque aquí para configurar el servidor.`}
           </Text>
         </Pressable>
       )}
@@ -186,6 +339,7 @@ function MainApp() {
               <ManualScreen
                 actividad={actividadActual}
                 sesion={sesionActual}
+                ultimosEscaneos={ultimosEscaneos}
                 onAsistenciaRegistrada={handleAsistenciaRegistrada}
               />
             </TabsContent>
@@ -239,17 +393,17 @@ const styles = StyleSheet.create({
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     marginHorizontal: 12,
-    marginVertical: 6,
-    borderRadius: 8,
+    marginTop: 6,
+    borderRadius: 10,
     borderWidth: 1,
     gap: 8,
   },
   offlineText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11.5,
+    fontWeight: '700',
     flex: 1,
   },
   tabsRoot: {

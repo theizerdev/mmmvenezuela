@@ -21,58 +21,60 @@ class AsistenciaApiController extends Controller
     {
         $now = now();
 
-        $actividades = Actividad::with(['sesiones' => function ($q) {
-            $q->orderBy('fecha_hora_inicio', 'asc');
-        }])
-        ->where('estado', 'en_curso')
-        ->orderBy('fecha_inicio', 'desc')
-        ->limit(10)
-        ->get()
-        ->map(function ($actividad) use ($now) {
-            // Detectar sesión activa según la hora actual
-            $sesionActiva = $actividad->sesiones
-                ->filter(function ($s) use ($now) {
-                    $inicio = Carbon::parse($s->fecha_hora_inicio)->subHours(2);
-                    $fin = Carbon::parse($s->fecha_hora_fin)->addHours(2);
-                    return $now->between($inicio, $fin);
-                })
-                ->first() ?? $actividad->sesiones->first();
+        $actividades = Actividad::withoutGlobalScopes()
+            ->with(['sesiones' => function ($q) {
+                $q->orderBy('fecha_hora_inicio', 'asc');
+            }])
+            ->where('estado', 'en_curso')
+            ->orderBy('fecha_inicio', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($actividad) use ($now) {
+                // Detectar sesión activa según la hora actual
+                $sesionActiva = $actividad->sesiones
+                    ->filter(function ($s) use ($now) {
+                        $inicio = Carbon::parse($s->fecha_hora_inicio)->subHours(2);
+                        $fin = Carbon::parse($s->fecha_hora_fin)->addHours(2);
+                        return $now->between($inicio, $fin);
+                    })
+                    ->first() ?? $actividad->sesiones->first();
 
-            $totalPresentes = Asistencia::where('actividad_id', $actividad->id)
-                ->distinct('pastor_id')
-                ->count('pastor_id');
+                $totalPresentes = Asistencia::withoutGlobalScopes()
+                    ->where('actividad_id', $actividad->id)
+                    ->distinct('pastor_id')
+                    ->count('pastor_id');
 
-            return [
-                'id' => $actividad->id,
-                'nombre' => $actividad->nombre,
-                'tipo' => $actividad->tipo,
-                'estado' => $actividad->estado,
-                'activa' => $actividad->estado === 'en_curso',
-                'fecha_inicio' => $actividad->fecha_inicio ? Carbon::parse($actividad->fecha_inicio)->format('d/m/Y') : null,
-                'fecha_fin' => $actividad->fecha_fin ? Carbon::parse($actividad->fecha_fin)->format('d/m/Y') : null,
-                'lugar' => $actividad->lugar,
-                'zona' => $actividad->zona,
-                'permite_conyuge' => (bool) $actividad->permite_conyuge,
-                'controla_comida' => (bool) $actividad->controla_comida,
-                'total_presentes' => $totalPresentes,
-                'sesion_activa' => $sesionActiva ? [
-                    'id' => $sesionActiva->id,
-                    'nombre' => $sesionActiva->nombre,
-                    'fecha_hora_inicio' => $sesionActiva->fecha_hora_inicio,
-                    'fecha_hora_fin' => $sesionActiva->fecha_hora_fin,
-                    'es_obligatoria' => (bool) $sesionActiva->es_obligatoria,
-                    'tipo_comida' => $sesionActiva->tipo_comida,
-                ] : null,
-                'sesiones' => $actividad->sesiones->map(fn ($s) => [
-                    'id' => $s->id,
-                    'nombre' => $s->nombre,
-                    'fecha_hora_inicio' => $s->fecha_hora_inicio,
-                    'fecha_hora_fin' => $s->fecha_hora_fin,
-                    'es_obligatoria' => (bool) $s->es_obligatoria,
-                    'tipo_comida' => $s->tipo_comida,
-                ]),
-            ];
-        });
+                return [
+                    'id' => $actividad->id,
+                    'nombre' => $actividad->nombre,
+                    'tipo' => $actividad->tipo,
+                    'estado' => $actividad->estado,
+                    'activa' => $actividad->estado === 'en_curso',
+                    'fecha_inicio' => $actividad->fecha_inicio ? Carbon::parse($actividad->fecha_inicio)->format('d/m/Y') : null,
+                    'fecha_fin' => $actividad->fecha_fin ? Carbon::parse($actividad->fecha_fin)->format('d/m/Y') : null,
+                    'lugar' => $actividad->lugar,
+                    'zona' => $actividad->zona,
+                    'permite_conyuge' => (bool) $actividad->permite_conyuge,
+                    'controla_comida' => (bool) $actividad->controla_comida,
+                    'total_presentes' => $totalPresentes,
+                    'sesion_activa' => $sesionActiva ? [
+                        'id' => $sesionActiva->id,
+                        'nombre' => $sesionActiva->nombre,
+                        'fecha_hora_inicio' => $sesionActiva->fecha_hora_inicio,
+                        'fecha_hora_fin' => $sesionActiva->fecha_hora_fin,
+                        'es_obligatoria' => (bool) $sesionActiva->es_obligatoria,
+                        'tipo_comida' => $sesionActiva->tipo_comida,
+                    ] : null,
+                    'sesiones' => $actividad->sesiones->map(fn ($s) => [
+                        'id' => $s->id,
+                        'nombre' => $s->nombre,
+                        'fecha_hora_inicio' => $s->fecha_hora_inicio,
+                        'fecha_hora_fin' => $s->fecha_hora_fin,
+                        'es_obligatoria' => (bool) $s->es_obligatoria,
+                        'tipo_comida' => $s->tipo_comida,
+                    ]),
+                ];
+            });
 
         return response()->json([
             'success' => true,
@@ -81,43 +83,110 @@ class AsistenciaApiController extends Controller
     }
 
     /**
-     * Búsqueda de pastor por cédula, código o identificador general.
+     * Búsqueda de pastor por cédula, código, QR o nombre/apellido.
      * Retorna datos completos incluyendo la EXTENSIÓN en la que labora y cónyuge.
      */
     public function buscarPastor(Request $request): JsonResponse
     {
+        $pastorId = $request->input('pastor_id');
         $term = trim($request->input('cedula') ?? $request->input('q') ?? '');
         $actividadId = $request->input('actividad_id');
         $sesionId = $request->input('actividad_sesion_id');
 
-        if (empty($term)) {
+        if (empty($term) && empty($pastorId)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Debe ingresar un número de cédula o código.',
+                'message' => 'Debe ingresar un número de cédula, código o nombre del obrero.',
             ], 422);
         }
 
-        $clave = $this->extraerIdentificadorDeQr($term);
-        $cleanClave = str_replace(['.', '-', ' '], '', $clave);
-        $soloNumeros = preg_replace('/\D/', '', $clave);
+        $pastor = null;
+        $resultados = collect();
 
-        $pastor = Pastor::with(['estado', 'municipioModel', 'iglesiasPrincipales'])
-            ->where('codigo', $clave)
-            ->orWhere('documento', $clave)
-            ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave])
-            ->when(!empty($soloNumeros), function ($q) use ($soloNumeros) {
-                $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
-                  ->orWhere('documento', 'like', "%{$soloNumeros}%");
-            })
-            ->orWhere('id', is_numeric($clave) ? (int)$clave : 0)
-            ->first();
+        if (! empty($pastorId)) {
+            $pastor = Pastor::withoutGlobalScopes()
+                ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+                ->find((int) $pastorId);
+        } else {
+            $clave = $this->extraerIdentificadorDeQr($term);
+            $cleanClave = str_replace(['.', '-', ' '], '', $clave);
+            $soloNumeros = preg_replace('/\D/', '', $clave);
+            $tieneLetrasNombre = preg_match('/[a-zA-ZáéíóúÁÉÍÓÚñÑ]{3,}/u', $clave);
 
-        if (!$pastor) {
+            // 1. Intentar coincidencia exacta por código o documento primero
+            $pastor = Pastor::withoutGlobalScopes()
+                ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+                ->where(function ($q) use ($clave, $cleanClave, $soloNumeros) {
+                    $q->where('codigo', $clave)
+                        ->orWhere('documento', $clave)
+                        ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave]);
+
+                    if (! empty($soloNumeros) && strlen($soloNumeros) >= 5) {
+                        $q->orWhereRaw(
+                            "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(documento), '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?",
+                            [$soloNumeros]
+                        );
+                    }
+                })
+                ->first();
+
+            // 2. Si no hubo coincidencia exacta, buscar coincidencias parciales por cédula o por nombre/apellido
+            if (! $pastor) {
+                $queryParcial = Pastor::withoutGlobalScopes()
+                    ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+                    ->where(function ($q) use ($clave, $soloNumeros, $tieneLetrasNombre) {
+                        if (! empty($soloNumeros) && strlen($soloNumeros) >= 4) {
+                            $q->orWhere('documento', 'like', "%{$soloNumeros}%")
+                                ->orWhere('codigo', 'like', "%{$clave}%");
+                        }
+
+                        if ($tieneLetrasNombre) {
+                            $palabras = array_values(array_filter(
+                                preg_split('/\s+/u', trim($clave)),
+                                fn ($w) => mb_strlen($w) >= 2
+                            ));
+
+                            if (count($palabras) > 0) {
+                                $q->orWhere(function ($sub) use ($palabras) {
+                                    foreach ($palabras as $palabra) {
+                                        $sub->where(function ($wQuery) use ($palabra) {
+                                            $wQuery->where('nombres', 'like', "%{$palabra}%")
+                                                ->orWhere('apellidos', 'like', "%{$palabra}%")
+                                                ->orWhereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$palabra}%"]);
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    })
+                    ->orderBy('nombres', 'asc')
+                    ->orderBy('apellidos', 'asc')
+                    ->limit(8)
+                    ->get();
+
+                if ($queryParcial->count() === 1) {
+                    $pastor = $queryParcial->first();
+                } elseif ($queryParcial->count() > 1) {
+                    $resultados = $queryParcial;
+                }
+            }
+        }
+
+        if (! $pastor && $resultados->isEmpty()) {
             return response()->json([
                 'success' => false,
                 'encontrado' => false,
-                'message' => "No se encontró ningún obrero con el documento: {$clave}",
+                'message' => "No se encontró ningún obrero con \"{$term}\"",
             ], 404);
+        }
+
+        if ($resultados->isNotEmpty() && ! $pastor) {
+            return response()->json([
+                'success' => true,
+                'encontrado' => true,
+                'multiple' => true,
+                'resultados' => $resultados->map(fn (Pastor $p) => $this->formatearPastorCompleto($p))->values(),
+            ]);
         }
 
         $pastorData = $this->formatearPastorCompleto($pastor);
@@ -125,7 +194,8 @@ class AsistenciaApiController extends Controller
         // Verificar si ya registró asistencia en la actividad / sesión
         $asistenciaExistente = null;
         if ($actividadId) {
-            $query = Asistencia::where('actividad_id', $actividadId)
+            $query = Asistencia::withoutGlobalScopes()
+                ->where('actividad_id', $actividadId)
                 ->where('pastor_id', $pastor->id);
 
             if ($sesionId) {
@@ -138,6 +208,7 @@ class AsistenciaApiController extends Controller
         return response()->json([
             'success' => true,
             'encontrado' => true,
+            'multiple' => false,
             'pastor' => $pastorData,
             'ya_registrado' => (bool) $asistenciaExistente,
             'asistencia_previa' => $asistenciaExistente ? [
@@ -167,17 +238,22 @@ class AsistenciaApiController extends Controller
             'comida_entregada' => 'nullable|boolean',
             'metodo' => 'nullable|string|in:qr,manual,qr_carnet,cedula',
             'observaciones' => 'nullable|string',
+            'fecha_registro' => 'nullable|string',
         ]);
 
         $actividadId = (int) $request->input('actividad_id');
         $sesionId = $request->input('actividad_sesion_id');
         $asistioConConyuge = (bool) $request->input('asistio_con_conyuge', false);
         $metodo = $request->input('metodo', 'qr');
+        $fechaRegistro = $request->filled('fecha_registro')
+            ? Carbon::parse($request->input('fecha_registro'))
+            : now();
 
         // 1. Identificar al pastor
         $pastor = null;
         if ($request->filled('pastor_id')) {
-            $pastor = Pastor::with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+            $pastor = Pastor::withoutGlobalScopes()
+                ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
                 ->find($request->input('pastor_id'));
         }
 
@@ -194,15 +270,18 @@ class AsistenciaApiController extends Controller
             $cleanClave = str_replace(['.', '-', ' '], '', $clave);
             $soloNumeros = preg_replace('/\D/', '', $clave);
 
-            $pastor = Pastor::with(['estado', 'municipioModel', 'iglesiasPrincipales'])
-                ->where('codigo', $clave)
-                ->orWhere('documento', $clave)
-                ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave])
-                ->when(!empty($soloNumeros), function ($q) use ($soloNumeros) {
-                    $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
-                      ->orWhere('documento', 'like', "%{$soloNumeros}%");
+            $pastor = Pastor::withoutGlobalScopes()
+                ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+                ->where(function ($q) use ($clave, $cleanClave, $soloNumeros) {
+                    $q->where('codigo', $clave)
+                        ->orWhere('documento', $clave)
+                        ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave]);
+
+                    if (!empty($soloNumeros) && strlen($soloNumeros) >= 5) {
+                        $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(documento), '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
+                            ->orWhere('documento', 'like', "%{$soloNumeros}%");
+                    }
                 })
-                ->orWhere('id', is_numeric($clave) ? (int)$clave : 0)
                 ->first();
         }
 
@@ -215,7 +294,8 @@ class AsistenciaApiController extends Controller
         }
 
         // 2. Verificar duplicados
-        $queryExistente = Asistencia::where('actividad_id', $actividadId)
+        $queryExistente = Asistencia::withoutGlobalScopes()
+            ->where('actividad_id', $actividadId)
             ->where('pastor_id', $pastor->id);
 
         if ($sesionId) {
@@ -243,7 +323,7 @@ class AsistenciaApiController extends Controller
             'actividad_id' => $actividadId,
             'actividad_sesion_id' => $sesionId,
             'pastor_id' => $pastor->id,
-            'fecha_registro' => now(),
+            'fecha_registro' => $fechaRegistro,
             'metodo' => in_array($metodo, ['qr', 'qr_carnet']) ? 'qr_carnet' : 'manual',
             'asistio_con_conyuge' => $asistioConConyuge,
             'nombre_acompanante' => $request->input('nombre_acompanante', $pastor->nombre_conyuge),
@@ -337,7 +417,8 @@ class AsistenciaApiController extends Controller
             }
         }
 
-        $totalPresentes = Asistencia::where('actividad_id', $actividadId)
+        $totalPresentes = Asistencia::withoutGlobalScopes()
+            ->where('actividad_id', $actividadId)
             ->distinct('pastor_id')
             ->count('pastor_id');
 
@@ -374,7 +455,8 @@ class AsistenciaApiController extends Controller
      */
     public function ultimosEscaneos(int $actividadId): JsonResponse
     {
-        $ultimos = Asistencia::with(['pastor.estado', 'pastor.iglesiasPrincipales', 'sesion'])
+        $ultimos = Asistencia::withoutGlobalScopes()
+            ->with(['pastor' => fn ($q) => $q->withoutGlobalScopes()->with(['estado', 'iglesiasPrincipales']), 'sesion'])
             ->where('actividad_id', $actividadId)
             ->orderBy('fecha_registro', 'desc')
             ->limit(10)
@@ -400,6 +482,47 @@ class AsistenciaApiController extends Controller
         return response()->json([
             'success' => true,
             'ultimos' => $ultimos,
+        ]);
+    }
+
+    /**
+     * Descarga el padrón nacional de pastores y las asistencias previas
+     * para permitir operación 100% Offline en puerta cuando falle el internet.
+     */
+    public function padronOffline(Request $request): JsonResponse
+    {
+        $actividadId = $request->input('actividad_id');
+
+        $pastores = Pastor::withoutGlobalScopes()
+            ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+            ->orderBy('nombres', 'asc')
+            ->get()
+            ->map(fn (Pastor $p) => $this->formatearPastorCompleto($p))
+            ->values();
+
+        $asistenciasPrevias = [];
+        if ($actividadId) {
+            $asistenciasPrevias = Asistencia::withoutGlobalScopes()
+                ->where('actividad_id', (int) $actividadId)
+                ->get(['id', 'pastor_id', 'actividad_sesion_id', 'fecha_registro', 'asistio_con_conyuge', 'kit_entregado', 'comida_entregada'])
+                ->map(fn ($a) => [
+                    'id' => $a->id,
+                    'pastor_id' => $a->pastor_id,
+                    'actividad_sesion_id' => $a->actividad_sesion_id,
+                    'hora' => $a->fecha_registro?->format('h:i A'),
+                    'asistio_con_conyuge' => (bool) $a->asistio_con_conyuge,
+                    'kit_entregado' => (bool) $a->kit_entregado,
+                    'comida_entregada' => (bool) $a->comida_entregada,
+                ])
+                ->values();
+        }
+
+        return response()->json([
+            'success' => true,
+            'total_pastores' => $pastores->count(),
+            'pastores' => $pastores,
+            'asistencias_previas' => $asistenciasPrevias,
+            'sincronizado_en' => now()->toIso8601String(),
         ]);
     }
 

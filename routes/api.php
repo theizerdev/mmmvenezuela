@@ -18,6 +18,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/actividades/activas', [AsistenciaApiController::class, 'actividadesActivas']);
     Route::get('/actividades', [AsistenciaApiController::class, 'actividadesActivas']);
     Route::get('/pastores/buscar', [AsistenciaApiController::class, 'buscarPastor']);
+    Route::get('/pastores/padron-offline', [AsistenciaApiController::class, 'padronOffline']);
     Route::post('/asistencias/registrar', [AsistenciaApiController::class, 'registrarAsistencia']);
     Route::get('/actividades/{actividad}/ultimos-escaneos', [AsistenciaApiController::class, 'ultimosEscaneos']);
 

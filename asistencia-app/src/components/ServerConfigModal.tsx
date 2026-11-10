@@ -76,7 +76,42 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
         </DialogHeader>
 
         <View style={styles.body}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>DIRECCIÓN URL / IP:</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>ACCESO RÁPIDO:</Text>
+          <View style={styles.presetRow}>
+            <Pressable
+              style={[
+                styles.presetChip,
+                {
+                  borderColor: url === 'https://mmmvenezuela.test' ? colors.primary : colors.cardBorder,
+                  backgroundColor: isDark ? colors.cardDeep : '#f8fafc',
+                },
+              ]}
+              onPress={() => {
+                setUrl('https://mmmvenezuela.test');
+                setTestResult(null);
+              }}
+            >
+              <Text style={[styles.presetText, { color: colors.text }]}>Local (Laragon)</Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.presetChip,
+                {
+                  borderColor: url === 'https://saprcoe.mmmvenezuela.org' ? colors.primary : colors.cardBorder,
+                  backgroundColor: isDark ? colors.cardDeep : '#f8fafc',
+                },
+              ]}
+              onPress={() => {
+                setUrl('https://saprcoe.mmmvenezuela.org');
+                setTestResult(null);
+              }}
+            >
+              <Text style={[styles.presetText, { color: colors.text }]}>Producción (SAPRCOE)</Text>
+            </Pressable>
+          </View>
+
+          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 10 }]}>DIRECCIÓN URL / IP:</Text>
           <Input
             value={url}
             onChangeText={(text) => {
@@ -85,7 +120,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
             }}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="http://192.168.101.102"
+            placeholder="https://saprcoe.mmmvenezuela.org"
             style={[
               testResult === 'success' && { borderColor: colors.success },
               testResult === 'error' && { borderColor: colors.danger },
@@ -155,6 +190,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.8,
     marginBottom: 6,
+  },
+  presetRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  presetChip: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  presetText: {
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   resultBanner: {
     flexDirection: 'row',

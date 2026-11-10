@@ -35,6 +35,7 @@ interface PastorCardProps {
   asistenciaPrevia?: AsistenciaPrevia | null;
   exitoRegistro?: boolean;
   horaRegistroExitoso?: string;
+  permiteConyuge?: boolean;
 }
 
 export const PastorCard: React.FC<PastorCardProps> = ({
@@ -48,6 +49,7 @@ export const PastorCard: React.FC<PastorCardProps> = ({
   asistenciaPrevia,
   exitoRegistro = false,
   horaRegistroExitoso,
+  permiteConyuge = true,
 }) => {
   const { colors, isDark } = useTheme();
 
@@ -163,27 +165,39 @@ export const PastorCard: React.FC<PastorCardProps> = ({
       </View>
 
       {/* 4. SECCIÓN CÓNYUGE MINISTERIAL (RADIX SWITCH CON ESTILO SHADCN) */}
-      <View style={[styles.spouseBox, { backgroundColor: colors.pinkBg, borderColor: colors.pinkBorder }]}>
-        <View style={styles.spouseLeft}>
-          <Heart size={18} color="#ec4899" fill="#ec4899" style={{ marginRight: 10 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.spouseTitle, { color: colors.pinkText }]}>
-              ¿Su cónyuge se encuentra presente?
-            </Text>
-            <Text style={[styles.spouseSubtitle, { color: colors.text }]} numberOfLines={1}>
-              {pastor.nombre_conyuge
-                ? `Acreditar a: ${pastor.nombre_conyuge}`
-                : 'Acreditar cónyuge ministerial acompañante'}
-            </Text>
+      {permiteConyuge && (
+        <View
+          style={[
+            styles.spouseBox,
+            { backgroundColor: colors.pinkBg, borderColor: colors.pinkBorder },
+            (yaRegistrado || exitoRegistro) && { opacity: 0.7 },
+          ]}
+        >
+          <View style={styles.spouseLeft}>
+            <Heart size={18} color="#ec4899" fill="#ec4899" style={{ marginRight: 10 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.spouseTitle, { color: colors.pinkText }]}>
+                ¿Su cónyuge se encuentra presente?
+              </Text>
+              <Text style={[styles.spouseSubtitle, { color: colors.text }]} numberOfLines={1}>
+                {pastor.nombre_conyuge
+                  ? `Acreditar a: ${pastor.nombre_conyuge}`
+                  : 'Acreditar cónyuge ministerial acompañante'}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <Switch
-          checked={asistioConConyuge}
-          onCheckedChange={onToggleConyuge}
-          activeColor="#ec4899"
-        />
-      </View>
+          <Switch
+            checked={yaRegistrado ? !!asistenciaPrevia?.asistio_con_conyuge : asistioConConyuge}
+            onCheckedChange={(val) => {
+              if (!yaRegistrado && !exitoRegistro && !loading) {
+                onToggleConyuge(val);
+              }
+            }}
+            activeColor="#ec4899"
+          />
+        </View>
+      )}
 
       {/* 5. BOTONES DE ACCIÓN SHADCN */}
       <View style={styles.actionsRow}>

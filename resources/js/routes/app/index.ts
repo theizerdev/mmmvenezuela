@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults, validateParameters } from './../../wayfinder'
 /**
  * @see routes/web.php:100
- * @route '/app-presbiterio/{any?}'
+ * @route '/presbitero/{any?}'
  */
 export const presbiterio = (args?: { any?: string | number } | [any: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: presbiterio.url(args, options),
@@ -10,12 +10,12 @@ export const presbiterio = (args?: { any?: string | number } | [any: string | nu
 
 presbiterio.definition = {
     methods: ["get","head"],
-    url: '/app-presbiterio/{any?}',
+    url: '/presbitero/{any?}',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
  * @see routes/web.php:100
- * @route '/app-presbiterio/{any?}'
+ * @route '/presbitero/{any?}'
  */
 presbiterio.url = (args?: { any?: string | number } | [any: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
@@ -46,7 +46,7 @@ presbiterio.url = (args?: { any?: string | number } | [any: string | number ] | 
 
 /**
  * @see routes/web.php:100
- * @route '/app-presbiterio/{any?}'
+ * @route '/presbitero/{any?}'
  */
 presbiterio.get = (args?: { any?: string | number } | [any: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: presbiterio.url(args, options),
@@ -54,7 +54,7 @@ presbiterio.get = (args?: { any?: string | number } | [any: string | number ] | 
 })
 /**
  * @see routes/web.php:100
- * @route '/app-presbiterio/{any?}'
+ * @route '/presbitero/{any?}'
  */
 presbiterio.head = (args?: { any?: string | number } | [any: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: presbiterio.url(args, options),
@@ -63,7 +63,7 @@ presbiterio.head = (args?: { any?: string | number } | [any: string | number ] |
 
     /**
  * @see routes/web.php:100
- * @route '/app-presbiterio/{any?}'
+ * @route '/presbitero/{any?}'
  */
     const presbiterioForm = (args?: { any?: string | number } | [any: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: presbiterio.url(args, options),
@@ -72,7 +72,7 @@ presbiterio.head = (args?: { any?: string | number } | [any: string | number ] |
 
             /**
  * @see routes/web.php:100
- * @route '/app-presbiterio/{any?}'
+ * @route '/presbitero/{any?}'
  */
         presbiterioForm.get = (args?: { any?: string | number } | [any: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: presbiterio.url(args, options),
@@ -80,7 +80,7 @@ presbiterio.head = (args?: { any?: string | number } | [any: string | number ] |
         })
             /**
  * @see routes/web.php:100
- * @route '/app-presbiterio/{any?}'
+ * @route '/presbitero/{any?}'
  */
         presbiterioForm.head = (args?: { any?: string | number } | [any: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: presbiterio.url(args, {

@@ -54,7 +54,7 @@ export interface AsistenciaPrevia {
 }
 
 export interface UltimoEscaneo {
-  id: number;
+  id: number | string;
   pastor_id: number;
   nombre_completo: string;
   documento: string;
@@ -66,15 +66,30 @@ export interface UltimoEscaneo {
   sesion: string;
   hora: string;
   asistio_con_conyuge: boolean;
+  pendiente_sync?: boolean;
+}
+
+export interface PendingOfflineAsistencia {
+  uid: string;
+  actividad_id: number;
+  actividad_sesion_id?: number | null;
+  pastor_id: number;
+  asistio_con_conyuge: boolean;
+  metodo: 'qr' | 'manual';
+  fecha_registro: string;
+  hora_legible: string;
+  sesion_nombre?: string;
+  pastor: Pastor;
 }
 
 export interface RegistroResponse {
   success: boolean;
   message: string;
   ya_registrado?: boolean;
+  guardado_offline?: boolean;
   pastor: Pastor;
   asistencia?: {
-    id: number;
+    id: number | string;
     hora: string;
     asistio_con_conyuge: boolean;
     conyuge_nombre?: string | null;
