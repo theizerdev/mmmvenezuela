@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Activitylog\LogOptions;
@@ -15,10 +16,22 @@ class Empresa extends Model
 
     protected $table = 'empresas';
 
+    /**
+     * Atributos sensibles que no deben exponerse al serializar el modelo a JSON/Inertia.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'jaak_api_key',
+        'google_smtp_password',
+        'mailgun_secret',
+    ];
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
             ->logFillable()
+            ->logExcept(['jaak_api_key', 'google_smtp_password', 'mailgun_secret'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
@@ -118,6 +131,26 @@ class Empresa extends Model
             'mailpit_web_port' => 'integer',
             'mailpit_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Desencripta atributos cifrados de forma segura sin lanzar error 500
+     * si la base de datos fue importada desde otro entorno con distinto APP_KEY.
+     *
+     * @param  string  $value
+     * @return mixed
+     */
+    public function fromEncryptedString($value)
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        try {
+            return static::currentEncrypter()->decrypt($value, false);
+        } catch (DecryptException) {
+            return null;
+        }
     }
 
     /**
