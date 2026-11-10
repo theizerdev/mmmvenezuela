@@ -4,6 +4,7 @@
 /public/fonts-manifest.dev.json
 /public/hot
 /public/pastores
+/public/build
 /public/pastores_cedulas
 /public/storage
 /storage/*.key

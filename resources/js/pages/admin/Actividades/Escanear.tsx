@@ -87,6 +87,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { PastorCarnetModal } from '@/pages/admin/Pastores/Partials/PastorCarnetModal';
 
 interface Sesion {
     id: number;
@@ -224,6 +225,21 @@ export default function ActividadesEscanear({
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [contadorPresentes, setContadorPresentes] = useState<number>(totalPresentesProp);
     const [historial, setHistorial] = useState<EscaneoHistorial[]>(ultimosEscaneosProp);
+    const [imgFotoError, setImgFotoError] = useState<boolean>(false);
+    const [carnetModalOpen, setCarnetModalOpen] = useState<boolean>(false);
+
+    useEffect(() => {
+        setImgFotoError(false);
+    }, [ultimoPastor?.id]);
+
+    const etiquetaConyuge = useMemo(() => {
+        if (!ultimoPastor?.nombre_conyuge) return 'Cónyuge Acreditado(a)';
+        const name = (ultimoPastor.nombre_completo || '').toLowerCase();
+        if (/\bde\s+[a-z]+/i.test(name) || /^(alicia|marina|marivel|marisol|maria|carmen|ana|gloria|rosa|elena|beatriz|yolanda)/i.test(name)) {
+            return 'Esposo Acreditado';
+        }
+        return 'Esposa Acreditada';
+    }, [ultimoPastor]);
 
     // Estados del Reconocimiento Facial Dinámico
     const [modelosCargados, setModelosCargados] = useState<boolean>(false);
@@ -2581,28 +2597,52 @@ export default function ActividadesEscanear({
                                     </div>
                                 </div>
 
-                                {/* TARJETA DE CREDENCIAL DEL PASTOR */}
-                                <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-950 border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                                    {/* FOTO CON AVATAR SHADCN */}
-                                    <Avatar className="size-24 sm:size-36 md:size-44 rounded-2xl border-2 border-indigo-500/40 shrink-0 shadow-xl overflow-hidden">
-                                        {ultimoPastor.foto && (
-                                            <AvatarImage
+                                {/* TARJETA DE CREDENCIAL DEL PASTOR (ESTILO CARNET OFICIAL) */}
+                                <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden">
+                                    {/* FOTO RECTANGULAR PROPORCIÓN CARNET OFICIAL 3:4 (SIN DISTORSIÓN) */}
+                                    <div className="relative w-32 sm:w-40 md:w-44 aspect-[3/4] rounded-2xl border-2 border-indigo-500/50 bg-slate-900 shadow-2xl overflow-hidden shrink-0 group">
+                                        {ultimoPastor.foto && !imgFotoError ? (
+                                            <img
                                                 src={ultimoPastor.foto}
                                                 alt={ultimoPastor.nombre_completo}
-                                                className="object-cover object-top size-full"
+                                                className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                                                onError={() => setImgFotoError(true)}
                                             />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-indigo-950/80 via-slate-900 to-slate-950 p-3 text-center">
+                                                <span className="font-black text-3xl sm:text-4xl tracking-widest text-indigo-300/80 font-mono">
+                                                    {getInitials(ultimoPastor.nombre_completo)}
+                                                </span>
+                                                <span className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
+                                                    Sin Foto
+                                                </span>
+                                            </div>
                                         )}
-                                        <AvatarFallback className="rounded-2xl bg-indigo-950 text-indigo-200 font-extrabold text-2xl sm:text-3xl">
-                                            {getInitials(ultimoPastor.nombre_completo)}
-                                        </AvatarFallback>
-                                    </Avatar>
 
-                                    {/* DATOS MINISTERIALES */}
+                                        {/* Insignia inferior Credencial */}
+                                        <div className="absolute bottom-0 inset-x-0 py-1 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex items-center justify-center">
+                                            <span className="text-[9px] uppercase tracking-wider font-extrabold text-indigo-200 flex items-center gap-1 drop-shadow">
+                                                <BadgeCheck className="size-2.5 text-indigo-400" />
+                                                Foto Carnet
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* DATOS MINISTERIALES ESTILO CARNET */}
                                     <div className="space-y-2.5 sm:space-y-3.5 flex-1 text-center sm:text-left min-w-0 w-full sm:w-auto">
                                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2">
-                                            <Badge className="bg-indigo-600 hover:bg-indigo-600 text-white font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs rounded-lg">
+                                            <Badge className={cn(
+                                                'text-white font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs rounded-lg shadow-sm',
+                                                ultimoPastor.nivel_ministerial?.toLowerCase().includes('ordenado')
+                                                    ? 'bg-indigo-600 hover:bg-indigo-600'
+                                                    : ultimoPastor.nivel_ministerial?.toLowerCase().includes('licenciado')
+                                                    ? 'bg-sky-600 hover:bg-sky-600'
+                                                    : ultimoPastor.nivel_ministerial?.toLowerCase().includes('laico')
+                                                    ? 'bg-purple-600 hover:bg-purple-600'
+                                                    : 'bg-emerald-600 hover:bg-emerald-600'
+                                            )}>
                                                 <BadgeCheck className="size-3 sm:size-3.5 mr-1" />
-                                                {ultimoPastor.nivel_ministerial || 'Pastor'}
+                                                {ultimoPastor.nivel_ministerial || 'Obrero'}
                                             </Badge>
 
                                             {ultimoPastor.codigo && (
@@ -2616,6 +2656,19 @@ export default function ActividadesEscanear({
                                                     Zona {ultimoPastor.zona}
                                                 </Badge>
                                             )}
+
+                                            {/* Botón para ver carnet oficial en modal */}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCarnetModalOpen(true)}
+                                                className="h-6 sm:h-7 px-2 text-[10px] sm:text-[11px] font-bold border-indigo-500/40 text-indigo-300 hover:text-white hover:bg-indigo-950/60 rounded-lg gap-1 cursor-pointer"
+                                                title="Ver carnet oficial en alta definición"
+                                            >
+                                                <QrCode className="size-3 text-indigo-400" />
+                                                Ver Carnet
+                                            </Button>
                                         </div>
 
                                         <div>
@@ -2649,12 +2702,12 @@ export default function ActividadesEscanear({
                                             </div>
                                         </div>
 
-                                        {/* CÓNYUGE ACREDITADA */}
+                                        {/* CÓNYUGE ACREDITADO / ACOMPAÑANTE */}
                                         {ultimoPastor.nombre_conyuge && (
                                             <div className="p-2.5 rounded-xl bg-pink-950/40 border border-pink-500/30 flex items-center justify-center sm:justify-start gap-2 text-xs text-pink-300">
                                                 <Heart className="size-4 fill-pink-400 text-pink-400 shrink-0" />
                                                 <span className="font-semibold">
-                                                    Esposa Acreditada: <strong className="text-white">{ultimoPastor.nombre_conyuge}</strong>
+                                                    {etiquetaConyuge}: <strong className="text-white">{ultimoPastor.nombre_conyuge}</strong>
                                                 </span>
                                             </div>
                                         )}
@@ -3160,6 +3213,15 @@ export default function ActividadesEscanear({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* MODAL DE CARNET OFICIAL COMPLETO */}
+            {ultimoPastor && (
+                <PastorCarnetModal
+                    pastor={ultimoPastor as any}
+                    isOpen={carnetModalOpen}
+                    onClose={() => setCarnetModalOpen(false)}
+                />
+            )}
         </div>
     );
 }
