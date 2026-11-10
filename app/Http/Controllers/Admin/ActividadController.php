@@ -114,6 +114,7 @@ class ActividadController extends Controller
             'sesiones.*.fecha_hora_fin' => 'required|date|after_or_equal:sesiones.*.fecha_hora_inicio',
             'sesiones.*.es_obligatoria' => 'boolean',
             'sesiones.*.tipo_comida' => 'nullable|string|in:ninguna,desayuno,almuerzo,cena',
+            'sesiones.*.is_activa' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
@@ -141,6 +142,7 @@ class ActividadController extends Controller
                         'fecha_hora_fin' => $sesionData['fecha_hora_fin'],
                         'es_obligatoria' => $sesionData['es_obligatoria'] ?? true,
                         'tipo_comida' => $sesionData['tipo_comida'] ?? 'ninguna',
+                        'is_activa' => !empty($sesionData['is_activa']) || $index === 0,
                         'orden' => $index + 1,
                     ]);
                 }
@@ -152,6 +154,7 @@ class ActividadController extends Controller
                     'fecha_hora_fin' => $validated['fecha_fin'],
                     'es_obligatoria' => true,
                     'tipo_comida' => 'ninguna',
+                    'is_activa' => true,
                     'orden' => 1,
                 ]);
             }
@@ -195,6 +198,7 @@ class ActividadController extends Controller
             'sesiones.*.fecha_hora_fin' => 'required|date|after_or_equal:sesiones.*.fecha_hora_inicio',
             'sesiones.*.es_obligatoria' => 'boolean',
             'sesiones.*.tipo_comida' => 'nullable|string|in:ninguna,desayuno,almuerzo,cena',
+            'sesiones.*.is_activa' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
@@ -218,6 +222,8 @@ class ActividadController extends Controller
             if (isset($validated['sesiones'])) {
                 $keptIds = [];
                 foreach ($validated['sesiones'] as $index => $sData) {
+                    $isActiva = !empty($sData['is_activa']);
+
                     if (!empty($sData['id'])) {
                         $sesion = ActividadSesion::where('actividad_id', $actividad->id)->where('id', $sData['id'])->first();
                         if ($sesion) {
@@ -227,6 +233,7 @@ class ActividadController extends Controller
                                 'fecha_hora_fin' => $sData['fecha_hora_fin'],
                                 'es_obligatoria' => $sData['es_obligatoria'] ?? true,
                                 'tipo_comida' => $sData['tipo_comida'] ?? 'ninguna',
+                                'is_activa' => $isActiva,
                                 'orden' => $index + 1,
                             ]);
                             $keptIds[] = $sesion->id;
@@ -241,9 +248,16 @@ class ActividadController extends Controller
                         'fecha_hora_fin' => $sData['fecha_hora_fin'],
                         'es_obligatoria' => $sData['es_obligatoria'] ?? true,
                         'tipo_comida' => $sData['tipo_comida'] ?? 'ninguna',
+                        'is_activa' => $isActiva,
                         'orden' => $index + 1,
                     ]);
                     $keptIds[] = $newSesion->id;
+                }
+
+                // Si ninguna quedó activa, asegurar que al menos la primera quede activa
+                $hasActive = $actividad->sesiones()->whereIn('id', $keptIds)->where('is_activa', true)->exists();
+                if (!$hasActive && !empty($keptIds)) {
+                    $actividad->sesiones()->where('id', $keptIds[0])->update(['is_activa' => true]);
                 }
 
                 // Eliminar sesiones removidas

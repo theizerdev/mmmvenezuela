@@ -66,6 +66,13 @@ Route::middleware(['web'])->group(function () {
 
     Route::post('/admin/actividades/{actividad}/activar-sesion', [AsistenciaController::class, 'activarSesion'])->name('admin.actividades.activar-sesion');
     Route::post('/actividades/{actividad}/activar-sesion', [AsistenciaController::class, 'activarSesion']);
+
+    // Modo Offline del Terminal Web: descarga de padrón local y sincronización por lote
+    Route::get('/admin/actividades/{actividad}/padron-offline', [AsistenciaController::class, 'padronOffline'])->name('admin.actividades.padron-offline');
+    Route::get('/actividades/{actividad}/padron-offline', [AsistenciaController::class, 'padronOffline']);
+
+    Route::post('/admin/actividades/asistencias/sincronizar-lote', [AsistenciaController::class, 'sincronizarLote'])->name('admin.asistencias.sincronizar-lote');
+    Route::post('/actividades/asistencias/sincronizar-lote', [AsistenciaController::class, 'sincronizarLote']);
 });
 
 

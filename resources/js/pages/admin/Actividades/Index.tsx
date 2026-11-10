@@ -37,6 +37,7 @@ interface Sesion {
     fecha_hora_fin: string;
     es_obligatoria: boolean;
     tipo_comida?: string;
+    is_activa?: boolean;
 }
 
 interface ActividadItem extends ActividadData {
@@ -428,6 +429,27 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                             </span>
                                         )}
                                     </div>
+
+                                    {/* Indicador de Culto Activo Oficial */}
+                                    {(() => {
+                                        const sesionActiva = actividad.sesiones?.find((s) => s.is_activa);
+                                        if (sesionActiva) {
+                                            return (
+                                                <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs">
+                                                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block tracking-wider">
+                                                            Culto Activo Oficial
+                                                        </span>
+                                                        <span className="font-semibold text-emerald-900 dark:text-emerald-200 truncate block text-[11px]">
+                                                            {sesionActiva.nombre}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
                                 </div>
 
                                 {/* Acciones en la base de la tarjeta */}

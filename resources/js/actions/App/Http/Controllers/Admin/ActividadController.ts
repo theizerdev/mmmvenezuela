@@ -212,7 +212,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::edit
- * @see app/Http/Controllers/Admin/ActividadController.php:169
+ * @see app/Http/Controllers/Admin/ActividadController.php:172
  * @route '/admin/actividades/{actividad}/edit'
  */
 export const edit = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +227,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::edit
- * @see app/Http/Controllers/Admin/ActividadController.php:169
+ * @see app/Http/Controllers/Admin/ActividadController.php:172
  * @route '/admin/actividades/{actividad}/edit'
  */
 edit.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -255,7 +255,7 @@ edit.url = (args: { actividad: string | number } | [actividad: string | number ]
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::edit
- * @see app/Http/Controllers/Admin/ActividadController.php:169
+ * @see app/Http/Controllers/Admin/ActividadController.php:172
  * @route '/admin/actividades/{actividad}/edit'
  */
 edit.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -264,7 +264,7 @@ edit.get = (args: { actividad: string | number } | [actividad: string | number ]
 })
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::edit
- * @see app/Http/Controllers/Admin/ActividadController.php:169
+ * @see app/Http/Controllers/Admin/ActividadController.php:172
  * @route '/admin/actividades/{actividad}/edit'
  */
 edit.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -274,7 +274,7 @@ edit.head = (args: { actividad: string | number } | [actividad: string | number 
 
     /**
 * @see \App\Http\Controllers\Admin\ActividadController::edit
- * @see app/Http/Controllers/Admin/ActividadController.php:169
+ * @see app/Http/Controllers/Admin/ActividadController.php:172
  * @route '/admin/actividades/{actividad}/edit'
  */
     const editForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -284,7 +284,7 @@ edit.head = (args: { actividad: string | number } | [actividad: string | number 
 
             /**
 * @see \App\Http\Controllers\Admin\ActividadController::edit
- * @see app/Http/Controllers/Admin/ActividadController.php:169
+ * @see app/Http/Controllers/Admin/ActividadController.php:172
  * @route '/admin/actividades/{actividad}/edit'
  */
         editForm.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -293,7 +293,7 @@ edit.head = (args: { actividad: string | number } | [actividad: string | number 
         })
             /**
 * @see \App\Http\Controllers\Admin\ActividadController::edit
- * @see app/Http/Controllers/Admin/ActividadController.php:169
+ * @see app/Http/Controllers/Admin/ActividadController.php:172
  * @route '/admin/actividades/{actividad}/edit'
  */
         editForm.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -309,7 +309,7 @@ edit.head = (args: { actividad: string | number } | [actividad: string | number 
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::update
- * @see app/Http/Controllers/Admin/ActividadController.php:174
+ * @see app/Http/Controllers/Admin/ActividadController.php:177
  * @route '/admin/actividades/{actividad}'
  */
 export const update = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -324,7 +324,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::update
- * @see app/Http/Controllers/Admin/ActividadController.php:174
+ * @see app/Http/Controllers/Admin/ActividadController.php:177
  * @route '/admin/actividades/{actividad}'
  */
 update.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -352,7 +352,7 @@ update.url = (args: { actividad: string | number } | [actividad: string | number
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::update
- * @see app/Http/Controllers/Admin/ActividadController.php:174
+ * @see app/Http/Controllers/Admin/ActividadController.php:177
  * @route '/admin/actividades/{actividad}'
  */
 update.put = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -362,7 +362,7 @@ update.put = (args: { actividad: string | number } | [actividad: string | number
 
     /**
 * @see \App\Http\Controllers\Admin\ActividadController::update
- * @see app/Http/Controllers/Admin/ActividadController.php:174
+ * @see app/Http/Controllers/Admin/ActividadController.php:177
  * @route '/admin/actividades/{actividad}'
  */
     const updateForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -377,7 +377,7 @@ update.put = (args: { actividad: string | number } | [actividad: string | number
 
             /**
 * @see \App\Http\Controllers\Admin\ActividadController::update
- * @see app/Http/Controllers/Admin/ActividadController.php:174
+ * @see app/Http/Controllers/Admin/ActividadController.php:177
  * @route '/admin/actividades/{actividad}'
  */
         updateForm.put = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -393,7 +393,7 @@ update.put = (args: { actividad: string | number } | [actividad: string | number
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::destroy
- * @see app/Http/Controllers/Admin/ActividadController.php:263
+ * @see app/Http/Controllers/Admin/ActividadController.php:277
  * @route '/admin/actividades/{actividad}'
  */
 export const destroy = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -408,7 +408,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::destroy
- * @see app/Http/Controllers/Admin/ActividadController.php:263
+ * @see app/Http/Controllers/Admin/ActividadController.php:277
  * @route '/admin/actividades/{actividad}'
  */
 destroy.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -436,7 +436,7 @@ destroy.url = (args: { actividad: string | number } | [actividad: string | numbe
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::destroy
- * @see app/Http/Controllers/Admin/ActividadController.php:263
+ * @see app/Http/Controllers/Admin/ActividadController.php:277
  * @route '/admin/actividades/{actividad}'
  */
 destroy.delete = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -446,7 +446,7 @@ destroy.delete = (args: { actividad: string | number } | [actividad: string | nu
 
     /**
 * @see \App\Http\Controllers\Admin\ActividadController::destroy
- * @see app/Http/Controllers/Admin/ActividadController.php:263
+ * @see app/Http/Controllers/Admin/ActividadController.php:277
  * @route '/admin/actividades/{actividad}'
  */
     const destroyForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -461,7 +461,7 @@ destroy.delete = (args: { actividad: string | number } | [actividad: string | nu
 
             /**
 * @see \App\Http\Controllers\Admin\ActividadController::destroy
- * @see app/Http/Controllers/Admin/ActividadController.php:263
+ * @see app/Http/Controllers/Admin/ActividadController.php:277
  * @route '/admin/actividades/{actividad}'
  */
         destroyForm.delete = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -477,7 +477,7 @@ destroy.delete = (args: { actividad: string | number } | [actividad: string | nu
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::monitor
- * @see app/Http/Controllers/Admin/ActividadController.php:275
+ * @see app/Http/Controllers/Admin/ActividadController.php:289
  * @route '/admin/actividades/{actividad}/monitor'
  */
 export const monitor = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -492,7 +492,7 @@ monitor.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::monitor
- * @see app/Http/Controllers/Admin/ActividadController.php:275
+ * @see app/Http/Controllers/Admin/ActividadController.php:289
  * @route '/admin/actividades/{actividad}/monitor'
  */
 monitor.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -520,7 +520,7 @@ monitor.url = (args: { actividad: string | number } | [actividad: string | numbe
 
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::monitor
- * @see app/Http/Controllers/Admin/ActividadController.php:275
+ * @see app/Http/Controllers/Admin/ActividadController.php:289
  * @route '/admin/actividades/{actividad}/monitor'
  */
 monitor.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -529,7 +529,7 @@ monitor.get = (args: { actividad: string | number } | [actividad: string | numbe
 })
 /**
 * @see \App\Http\Controllers\Admin\ActividadController::monitor
- * @see app/Http/Controllers/Admin/ActividadController.php:275
+ * @see app/Http/Controllers/Admin/ActividadController.php:289
  * @route '/admin/actividades/{actividad}/monitor'
  */
 monitor.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -539,7 +539,7 @@ monitor.head = (args: { actividad: string | number } | [actividad: string | numb
 
     /**
 * @see \App\Http\Controllers\Admin\ActividadController::monitor
- * @see app/Http/Controllers/Admin/ActividadController.php:275
+ * @see app/Http/Controllers/Admin/ActividadController.php:289
  * @route '/admin/actividades/{actividad}/monitor'
  */
     const monitorForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -549,7 +549,7 @@ monitor.head = (args: { actividad: string | number } | [actividad: string | numb
 
             /**
 * @see \App\Http\Controllers\Admin\ActividadController::monitor
- * @see app/Http/Controllers/Admin/ActividadController.php:275
+ * @see app/Http/Controllers/Admin/ActividadController.php:289
  * @route '/admin/actividades/{actividad}/monitor'
  */
         monitorForm.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -558,7 +558,7 @@ monitor.head = (args: { actividad: string | number } | [actividad: string | numb
         })
             /**
 * @see \App\Http\Controllers\Admin\ActividadController::monitor
- * @see app/Http/Controllers/Admin/ActividadController.php:275
+ * @see app/Http/Controllers/Admin/ActividadController.php:289
  * @route '/admin/actividades/{actividad}/monitor'
  */
         monitorForm.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

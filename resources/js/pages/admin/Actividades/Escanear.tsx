@@ -36,8 +36,23 @@ import {
     CalendarDays,
     Calendar,
     Plus,
+    CloudOff,
+    Wifi,
+    WifiOff,
 } from 'lucide-react';
 import jsQR from 'jsqr';
+import Swal from 'sweetalert2';
+import {
+    PastorOfflineItem,
+    AsistenciaOfflineItem,
+    guardarPadronEnIndexedDB,
+    obtenerPadronDeIndexedDB,
+    guardarAsistenciasPreviasIndexedDB,
+    buscarPastorEnPadron,
+    encolarAsistenciaOffline,
+    obtenerColaOffline,
+    sincronizarColaOfflineWeb,
+} from '@/services/offlineAsistenciaWeb';
 import type * as faceapi from '@vladmandic/face-api';
 
 let faceapiInstance: typeof import('@vladmandic/face-api') | null = null;
@@ -163,8 +178,19 @@ export default function ActividadesEscanear({
 
     // IDs de pastores ya registrados en la sesión activa actual
     const [pastorIdsRegistrados, setPastorIdsRegistrados] = useState<number[]>(pastorIdsRegistradosProp);
+    const pastorIdsRegistradosSet = useMemo(() => new Set(pastorIdsRegistrados), [pastorIdsRegistrados]);
     const [cargandoSesion, setCargandoSesion] = useState<boolean>(false);
     const [cargandoActivarSesion, setCargandoActivarSesion] = useState<boolean>(false);
+
+    // Estados de Modo Offline e IndexedDB
+    const [isOnline, setIsOnline] = useState<boolean>(
+        typeof navigator !== 'undefined' ? navigator.onLine : true
+    );
+    const [padronLocal, setPadronLocal] = useState<PastorOfflineItem[]>([]);
+    const [cargandoPadronLocal, setCargandoPadronLocal] = useState<boolean>(false);
+    const [totalPadronLocal, setTotalPadronLocal] = useState<number>(0);
+    const [colaPendienteCount, setColaPendienteCount] = useState<number>(0);
+    const [sincronizandoOffline, setSincronizandoOffline] = useState<boolean>(false);
 
     // Lista dinámica de sesiones y modal de administración
     const [sesionesList, setSesionesList] = useState<Sesion[]>(actividad.sesiones || []);
@@ -391,7 +417,257 @@ export default function ActividadesEscanear({
         [isMuted, getAudioContext]
     );
 
-    // Procesar registro en el servidor
+    // Descargar o actualizar Padrón en IndexedDB desde el servidor
+    const cargarPadronDesdeServidor = useCallback(async (silencioso = false) => {
+        setCargandoPadronLocal(true);
+        try {
+            const res = await fetch(`/admin/actividades/${actividad.id}/padron-offline`);
+            const data = await res.json();
+            if (data.success && Array.isArray(data.pastores)) {
+                await guardarPadronEnIndexedDB(data.pastores);
+                if (Array.isArray(data.asistencias_previas)) {
+                    await guardarAsistenciasPreviasIndexedDB(actividad.id, data.asistencias_previas);
+                }
+                setPadronLocal(data.pastores);
+                setTotalPadronLocal(data.total_pastores || data.pastores.length);
+                if (data.pastor_ids_registrados && Array.isArray(data.pastor_ids_registrados)) {
+                    setPastorIdsRegistrados(data.pastor_ids_registrados);
+                }
+                if (data.total_presentes !== undefined) {
+                    setContadorPresentes(data.total_presentes);
+                }
+                if (!silencioso) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Padrón Offline Guardado!',
+                        text: `Se descargaron ${data.total_pastores} obreros en el navegador. El terminal funcionará 100% sin conexión.`,
+                        timer: 2800,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end',
+                    });
+                }
+            }
+        } catch (err) {
+            if (!silencioso) {
+                console.error('Error al descargar padrón offline:', err);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin conexión',
+                    text: 'No se pudo contactar al servidor para actualizar el padrón. Se usará el padrón local previo.',
+                });
+            }
+        } finally {
+            setCargandoPadronLocal(false);
+        }
+    }, [actividad.id]);
+
+    // Sincronizar cola de marcajes offline acumulados con el servidor
+    const handleSincronizarCola = useCallback(async (silencioso = false) => {
+        if (sincronizandoOffline) return;
+        setSincronizandoOffline(true);
+        try {
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await sincronizarColaOfflineWeb(actividad.id, csrfToken);
+            if (res.success) {
+                const cola = await obtenerColaOffline(actividad.id);
+                setColaPendienteCount(cola.length);
+
+                if (res.total_presentes !== undefined) {
+                    setContadorPresentes(res.total_presentes);
+                }
+
+                if (res.pastor_ids_acreditados && Array.isArray(res.pastor_ids_acreditados)) {
+                    setPastorIdsRegistrados((prev) => {
+                        const set = new Set(prev);
+                        res.pastor_ids_acreditados!.forEach((id: number) => set.add(id));
+                        return Array.from(set);
+                    });
+                }
+
+                if (res.nuevas_asistencias && Array.isArray(res.nuevas_asistencias)) {
+                    setHistorial((prev) => [...res.nuevas_asistencias!, ...prev.slice(0, 10)]);
+                }
+
+                if (!silencioso || res.sincronizados > 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Sincronización Completada!',
+                        text: res.message || `${res.sincronizados} marcajes offline subidos exitosamente sin duplicados.`,
+                        timer: 3000,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end',
+                    });
+                }
+            } else if (!silencioso) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Atención',
+                    text: res.message || 'No se pudieron sincronizar los marcajes pendientes.',
+                });
+            }
+        } catch (err) {
+            console.error('Error sincronizando cola offline:', err);
+        } finally {
+            setSincronizandoOffline(false);
+        }
+    }, [actividad.id, sincronizandoOffline]);
+
+    // Registro local offline (sin internet)
+    const procesarCodigoOffline = useCallback(
+        async (rawCodigo: string, metodo: 'qr_carnet' | 'cedula' | 'manual' | 'facial' = 'qr_carnet') => {
+            const pastor = buscarPastorEnPadron(rawCodigo, padronLocal);
+
+            if (!pastor) {
+                setEstadoEscaneo('error');
+                setUltimoPastor(null);
+                setMensajeFeedback(`[Offline] No se encontró el carnet o documento "${rawCodigo}" en el padrón local.`);
+                playSound('error');
+                return;
+            }
+
+            // Validar duplicado en la sesión activa
+            if (pastorIdsRegistradosSet.has(pastor.id)) {
+                setEstadoEscaneo('duplicate');
+                setUltimoPastor({
+                    id: pastor.id,
+                    codigo: pastor.codigo || '',
+                    documento: pastor.documento || '',
+                    nombre_completo: pastor.nombre_completo,
+                    nombres: pastor.nombres,
+                    apellidos: pastor.apellidos,
+                    foto: pastor.foto || null,
+                    nivel_ministerial: pastor.nivel_ministerial || '',
+                    cargo_nacional: pastor.cargo_nacional || '',
+                    zona: pastor.zona || '',
+                    distrito: pastor.distrito || '',
+                    nombre_conyuge: pastor.nombre_conyuge || '',
+                    iglesia: pastor.iglesia || '',
+                });
+                setMensajeFeedback(`¡Atención! ${pastor.nombre_completo} ya marcó asistencia previamente (Detectado en Modo Offline).`);
+                playSound('duplicate');
+                return;
+            }
+
+            const now = new Date();
+            const horaStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            const itemOffline: AsistenciaOfflineItem = {
+                temp_id: `off_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                actividad_id: actividad.id,
+                actividad_sesion_id: sesionSeleccionada,
+                pastor_id: pastor.id,
+                codigo_qr: rawCodigo,
+                nombre_completo: pastor.nombre_completo,
+                documento: pastor.documento || '',
+                codigo: pastor.codigo || '',
+                foto: pastor.foto || null,
+                zona: pastor.zona || '',
+                asistio_con_conyuge: asistioConConyuge,
+                metodo: metodo,
+                dispositivo: 'Terminal Web (Modo Offline)',
+                fecha_registro: now.toISOString(),
+                hora_legible: horaStr,
+            };
+
+            await encolarAsistenciaOffline(itemOffline);
+
+            // Actualizar estados locales de forma inmediata
+            setPastorIdsRegistrados((prev) => [...prev, pastor.id]);
+            setContadorPresentes((prev) => prev + 1);
+            setColaPendienteCount((prev) => prev + 1);
+
+            const pastorFormateado: PastorData = {
+                id: pastor.id,
+                codigo: pastor.codigo || '',
+                documento: pastor.documento || '',
+                nombre_completo: pastor.nombre_completo,
+                nombres: pastor.nombres,
+                apellidos: pastor.apellidos,
+                foto: pastor.foto || null,
+                nivel_ministerial: pastor.nivel_ministerial || '',
+                cargo_nacional: pastor.cargo_nacional || '',
+                zona: pastor.zona || '',
+                distrito: pastor.distrito || '',
+                nombre_conyuge: pastor.nombre_conyuge || '',
+                iglesia: pastor.iglesia || '',
+            };
+
+            setEstadoEscaneo('success');
+            setUltimoPastor(pastorFormateado);
+            setMensajeFeedback(`¡Acreditado en Modo Offline! (${horaStr}). Guardado localmente, se sincronizará al regresar la red.`);
+            playSound('success');
+
+            setHistorial((prev) => [
+                {
+                    id: Date.now(),
+                    pastor_id: pastor.id,
+                    nombre_completo: pastor.nombre_completo,
+                    documento: pastor.documento || '',
+                    codigo: pastor.codigo || '',
+                    foto: pastor.foto || null,
+                    zona: pastor.zona || '',
+                    nivel_ministerial: pastor.nivel_ministerial || '',
+                    sesion: 'Offline - En Cola',
+                    hora: horaStr,
+                    asistio_con_conyuge: asistioConConyuge,
+                    kit_entregado: false,
+                    comida_entregada: false,
+                },
+                ...prev.slice(0, 9),
+            ]);
+        },
+        [
+            padronLocal,
+            pastorIdsRegistradosSet,
+            actividad.id,
+            sesionSeleccionada,
+            asistioConConyuge,
+            playSound,
+        ]
+    );
+
+    // Inicializar Padrón de IndexedDB y escuchar eventos de conexión Online/Offline
+    useEffect(() => {
+        const initOffline = async () => {
+            try {
+                const localPadron = await obtenerPadronDeIndexedDB();
+                if (localPadron && localPadron.length > 0) {
+                    setPadronLocal(localPadron);
+                    setTotalPadronLocal(localPadron.length);
+                } else if (navigator.onLine) {
+                    cargarPadronDesdeServidor(true);
+                }
+
+                const cola = await obtenerColaOffline(actividad.id);
+                setColaPendienteCount(cola.length);
+            } catch (e) {
+                console.error('Error inicializando IndexedDB:', e);
+            }
+        };
+
+        initOffline();
+
+        const handleOnline = () => {
+            setIsOnline(true);
+            handleSincronizarCola(true);
+        };
+
+        const handleOffline = () => {
+            setIsOnline(false);
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [actividad.id, cargarPadronDesdeServidor, handleSincronizarCola]);
+
+    // Procesar registro en el servidor (o en IndexedDB si no hay internet)
     const procesarCodigo = useCallback(
         async (rawCodigo: string, metodo: 'qr_carnet' | 'cedula' | 'manual' | 'facial' = 'qr_carnet') => {
             const codigoLimpio = rawCodigo.trim();
@@ -406,6 +682,17 @@ export default function ActividadesEscanear({
             lastScanTimeRef.current = now;
 
             setIsLoading(true);
+
+            // Si el navegador ya detectó que estamos sin conexión, registrar directamente en modo offline
+            if (!navigator.onLine || !isOnline) {
+                await procesarCodigoOffline(codigoLimpio, metodo);
+                setIsLoading(false);
+                setCodigoManualInput('');
+                if (autoFocusGun && inputGunRef.current) {
+                    inputGunRef.current.focus();
+                }
+                return;
+            }
 
             try {
                 const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
@@ -469,9 +756,10 @@ export default function ActividadesEscanear({
                     playSound('error');
                 }
             } catch (err: any) {
-                setEstadoEscaneo('error');
-                setMensajeFeedback('Error de conexión con el servidor. Reintente en un momento.');
-                playSound('error');
+                // Si la red se cae durante el intento, pasar fluidamente a modo offline
+                console.warn('Conexión con el servidor falló. Pasando a Modo Offline...', err);
+                setIsOnline(false);
+                await procesarCodigoOffline(codigoLimpio, metodo);
             } finally {
                 setIsLoading(false);
                 setCodigoManualInput('');
@@ -485,6 +773,8 @@ export default function ActividadesEscanear({
             sesionSeleccionada,
             asistioConConyuge,
             isLoading,
+            isOnline,
+            procesarCodigoOffline,
             playSound,
             autoFocusGun,
         ]
@@ -988,17 +1278,16 @@ export default function ActividadesEscanear({
         return Array.from(setZ).sort((a, b) => Number(a) - Number(b));
     }, [pastoresConvocados]);
 
-    // Conjunto optimizado O(1) de IDs registrados en la sesión activa
-    const pastorIdsRegistradosSet = useMemo(() => new Set(pastorIdsRegistrados), [pastorIdsRegistrados]);
-
     // Conteo en vivo de pendientes y acreditados para la sesión activa
     const conteoPendientes = useMemo(() => {
-        return pastoresConvocados.filter((p) => !pastorIdsRegistradosSet.has(p.id)).length;
-    }, [pastoresConvocados, pastorIdsRegistradosSet]);
+        const base = (padronLocal && padronLocal.length > 0) ? padronLocal : (pastoresConvocados || []);
+        return base.filter((p) => !pastorIdsRegistradosSet.has(p.id)).length;
+    }, [padronLocal, pastoresConvocados, pastorIdsRegistradosSet]);
 
     const conteoAcreditados = useMemo(() => {
-        return pastoresConvocados.filter((p) => pastorIdsRegistradosSet.has(p.id)).length;
-    }, [pastoresConvocados, pastorIdsRegistradosSet]);
+        const base = (padronLocal && padronLocal.length > 0) ? padronLocal : (pastoresConvocados || []);
+        return base.filter((p) => pastorIdsRegistradosSet.has(p.id)).length;
+    }, [padronLocal, pastoresConvocados, pastorIdsRegistradosSet]);
 
     // Objeto de la sesión actualmente seleccionada
     const sesionActualObj = useMemo(() => {
@@ -1103,7 +1392,7 @@ export default function ActividadesEscanear({
 
     // Filtrado en memoria de pastores para la Card de Uso Manual (búsqueda ultrarrápida instantánea)
     const pastoresFiltradosLocal = useMemo(() => {
-        let list = pastoresConvocados || [];
+        let list: (PastorData | PastorOfflineItem)[] = (padronLocal && padronLocal.length > 0) ? padronLocal : (pastoresConvocados || []);
         const term = filtroTextoManual.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const soloNum = filtroTextoManual.replace(/\D/g, '');
 
@@ -1134,12 +1423,12 @@ export default function ActividadesEscanear({
             if (iglesia.includes(term)) return true;
             return false;
         }).slice(0, 40);
-    }, [pastoresConvocados, filtroTextoManual, filtroZonaManual, filtroEstadoManual, pastorIdsRegistradosSet]);
+    }, [padronLocal, pastoresConvocados, filtroTextoManual, filtroZonaManual, filtroEstadoManual, pastorIdsRegistradosSet]);
 
-    // Búsqueda en el servidor si no hay coincidencias locales y el término tiene al menos 2 caracteres
+    // Búsqueda en el servidor si no hay coincidencias locales y el término tiene al menos 2 caracteres (solo si hay conexión)
     useEffect(() => {
         const term = filtroTextoManual.trim();
-        if (term.length >= 2 && pastoresFiltradosLocal.length === 0) {
+        if (isOnline && term.length >= 2 && pastoresFiltradosLocal.length === 0) {
             const timer = setTimeout(async () => {
                 setBuscandoServerManual(true);
                 try {
@@ -1346,6 +1635,70 @@ export default function ActividadesEscanear({
 
                     {/* DERECHA: SESIÓN + TOTAL ASISTENTES + CONTROLES */}
                     <div className="flex items-center gap-1.5 sm:gap-2.5 order-2 sm:order-3">
+                        {/* Indicador de Conexión y Estado Offline */}
+                        <div
+                            className={cn(
+                                'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border transition-all select-none',
+                                isOnline
+                                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                                    : 'bg-amber-950/80 border-amber-500/70 text-amber-300 animate-pulse shadow-md shadow-amber-950'
+                            )}
+                            title={isOnline ? 'Conectado al servidor en tiempo real' : 'Sin conexión a internet. Guardando asistencias en IndexedDB local.'}
+                        >
+                            {isOnline ? (
+                                <>
+                                    <span className="size-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                    <span className="hidden xl:inline text-[11px]">En Línea</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CloudOff className="size-3.5 text-amber-400 shrink-0" />
+                                    <span className="text-[11px]">Modo Offline</span>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Botón de Sincronización de Marcajes Offline Acumulados */}
+                        {colaPendienteCount > 0 && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSincronizarCola(false)}
+                                disabled={sincronizandoOffline || !isOnline}
+                                className={cn(
+                                    'h-8 sm:h-9 px-2.5 bg-amber-500/20 border-amber-500/60 text-amber-200 hover:text-white hover:bg-amber-500/40 rounded-xl text-xs font-black gap-1.5 shadow-md shadow-amber-950/50 cursor-pointer transition-all',
+                                    !sincronizandoOffline && 'animate-bounce'
+                                )}
+                                title={isOnline ? 'Haga clic para sincronizar los marcajes pendientes al servidor' : 'Conéctese a internet para sincronizar los marcajes pendientes'}
+                            >
+                                {sincronizandoOffline ? (
+                                    <RefreshCw className="size-3.5 animate-spin text-amber-300" />
+                                ) : (
+                                    <RefreshCw className="size-3.5 text-amber-300" />
+                                )}
+                                <span>{colaPendienteCount} {colaPendienteCount === 1 ? 'Pendiente' : 'Pendientes'}</span>
+                            </Button>
+                        )}
+
+                        {/* Botón de Padrón Offline */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => cargarPadronDesdeServidor(false)}
+                            disabled={cargandoPadronLocal || !isOnline}
+                            className="h-8 sm:h-9 px-2 sm:px-2.5 bg-slate-900 border-slate-700/80 hover:border-emerald-500/50 text-slate-300 hover:text-white rounded-xl text-xs font-semibold gap-1.5 cursor-pointer shrink-0"
+                            title="Descargar o actualizar el padrón de 899 obreros para uso sin internet"
+                        >
+                            {cargandoPadronLocal ? (
+                                <RefreshCw className="size-3.5 animate-spin text-emerald-400" />
+                            ) : (
+                                <Download className="size-3.5 text-emerald-400" />
+                            )}
+                            <span className="hidden xl:inline text-[11px]">
+                                {totalPadronLocal > 0 ? `Padrón (${totalPadronLocal})` : 'Padrón Offline'}
+                            </span>
+                        </Button>
+
                         {/* Botón de Instalar App PWA Móvil */}
                         {!isPwaInstalled && (
                             <Button
@@ -1432,6 +1785,25 @@ export default function ActividadesEscanear({
                     </div>
                 </div>
             </header>
+
+            {/* AVISO DE MODO OFFLINE / SIN INTERNET */}
+            {!isOnline && (
+                <div className="bg-gradient-to-r from-amber-600/20 via-amber-500/15 to-amber-600/20 border-b border-amber-500/40 px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-200">
+                    <div className="flex items-center gap-2">
+                        <CloudOff className="size-4 text-amber-400 animate-pulse shrink-0" />
+                        <span>
+                            <strong className="text-amber-300 font-extrabold uppercase tracking-wide">Modo Offline Activo:</strong> El terminal continúa escaneando y acreditando sin conexión a internet. Los registros se guardan en la memoria local (IndexedDB) y se protegen contra duplicados.
+                        </span>
+                    </div>
+                    {colaPendienteCount > 0 && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/40 text-amber-300">
+                                {colaPendienteCount} {colaPendienteCount === 1 ? 'marcaje pendiente' : 'marcajes pendientes'}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* BARRA LOGÍSTICA: SWITCHES DE SERVICIO + STATUS BIOMÉTRICO (Scroll horizontal suave en móviles) */}
             <div className="px-2.5 sm:px-6 py-2 bg-slate-900/60 border-b border-slate-800/60 shrink-0">

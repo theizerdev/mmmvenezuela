@@ -106,7 +106,8 @@ class AsistenciaController extends Controller
         $request->validate([
             'actividad_id' => 'required|exists:actividades,id',
             'actividad_sesion_id' => 'nullable|exists:actividad_sesiones,id',
-            'codigo_qr' => 'required|string',
+            'codigo_qr' => 'nullable|string',
+            'pastor_id' => 'nullable|exists:pastores,id',
             'asistio_con_conyuge' => 'nullable|boolean',
             'nombre_acompanante' => 'nullable|string|max:255',
             'kit_entregado' => 'nullable|boolean',
@@ -114,39 +115,56 @@ class AsistenciaController extends Controller
             'metodo' => 'nullable|string|in:qr_carnet,cedula,manual,facial',
             'dispositivo' => 'nullable|string|max:150',
             'observaciones' => 'nullable|string',
+            'fecha_registro' => 'nullable|string',
         ]);
 
-        $rawCodigo = trim($request->input('codigo_qr'));
-        $clave = $this->extraerIdentificadorDeQr($rawCodigo);
+        $pastor = null;
+        if ($request->filled('pastor_id')) {
+            $pastor = Pastor::withoutGlobalScopes()
+                ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+                ->find($request->input('pastor_id'));
+        }
 
-        // Buscar al pastor por código, documento formateado, documento sin puntos o ID
-        $cleanClave = str_replace(['.', '-', ' '], '', $clave);
-        $soloNumeros = preg_replace('/\D/', '', $clave);
+        if (!$pastor) {
+            $rawCodigo = trim($request->input('codigo_qr') ?? '');
+            if (empty($rawCodigo)) {
+                return response()->json([
+                    'success' => false,
+                    'encontrado' => false,
+                    'message' => "Debe suministrar un código QR, cédula o ID del pastor.",
+                ], 422);
+            }
 
-        $pastor = Pastor::withoutGlobalScopes()
-            ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
-            ->where(function ($q) use ($clave, $cleanClave, $soloNumeros) {
-                $q->where('codigo', $clave)
-                    ->orWhere('documento', $clave)
-                    ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave]);
+            $clave = $this->extraerIdentificadorDeQr($rawCodigo);
 
-                if (!empty($soloNumeros)) {
-                    $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
-                      ->orWhere('documento', 'like', "%{$soloNumeros}%");
-                }
+            // Buscar al pastor por código, documento formateado, documento sin puntos o ID
+            $cleanClave = str_replace(['.', '-', ' '], '', $clave);
+            $soloNumeros = preg_replace('/\D/', '', $clave);
 
-                if (is_numeric($clave)) {
-                    $q->orWhere('id', (int) $clave);
-                }
-            })
-            ->first();
+            $pastor = Pastor::withoutGlobalScopes()
+                ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+                ->where(function ($q) use ($clave, $cleanClave, $soloNumeros) {
+                    $q->where('codigo', $clave)
+                        ->orWhere('documento', $clave)
+                        ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave]);
+
+                    if (!empty($soloNumeros)) {
+                        $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
+                          ->orWhere('documento', 'like', "%{$soloNumeros}%");
+                    }
+
+                    if (is_numeric($clave)) {
+                        $q->orWhere('id', (int) $clave);
+                    }
+                })
+                ->first();
+        }
 
         if (!$pastor) {
             return response()->json([
                 'success' => false,
                 'encontrado' => false,
-                'message' => "No se encontró ningún pastor con el código o documento: {$clave}",
-                'codigo_leido' => $clave,
+                'message' => "No se encontró ningún pastor con los datos suministrados.",
             ], 404);
         }
 
@@ -190,7 +208,7 @@ class AsistenciaController extends Controller
                 'actividad_id' => $actividadId,
                 'actividad_sesion_id' => $sesionId,
                 'pastor_id' => $pastor->id,
-                'fecha_registro' => now(),
+                'fecha_registro' => $request->filled('fecha_registro') ? \Carbon\Carbon::parse($request->input('fecha_registro')) : now(),
                 'metodo' => $metodo,
                 'dispositivo' => $dispositivo ?: 'Terminal Web (Escáner)',
                 'asistio_con_conyuge' => $asistioConConyuge,
@@ -785,6 +803,200 @@ class AsistenciaController extends Controller
             'sesiones' => $actividad->sesiones()->orderBy('orden')->get(),
             'total_presentes' => $totalPresentes,
             'pastor_ids_registrados' => $pastorIdsRegistrados,
+        ]);
+    }
+
+    /**
+     * Obtener el padrón completo de obreros y asistencias previas
+     * para almacenamiento en el navegador (IndexedDB / Modo Offline).
+     */
+    public function padronOffline(int $actividadId)
+    {
+        $actividad = Actividad::with('sesiones')->findOrFail($actividadId);
+        $sesionActiva = $actividad->sesion_activa;
+
+        $pastores = Pastor::withoutGlobalScopes()
+            ->where('status', true)
+            ->with(['estado', 'municipioModel', 'iglesiasPrincipales'])
+            ->orderBy('nombres', 'asc')
+            ->get()
+            ->map(function ($p) {
+                return $this->formatearDatosPastor($p);
+            })
+            ->values();
+
+        $asistenciasPrevias = Asistencia::withoutGlobalScopes()
+            ->where('actividad_id', $actividad->id)
+            ->get(['id', 'pastor_id', 'actividad_sesion_id', 'fecha_registro', 'asistio_con_conyuge', 'kit_entregado', 'comida_entregada'])
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'pastor_id' => $a->pastor_id,
+                'actividad_sesion_id' => $a->actividad_sesion_id,
+                'hora' => $a->fecha_registro?->format('h:i A'),
+                'asistio_con_conyuge' => (bool) $a->asistio_con_conyuge,
+                'kit_entregado' => (bool) $a->kit_entregado,
+                'comida_entregada' => (bool) $a->comida_entregada,
+            ])
+            ->values();
+
+        $pastorIdsRegistrados = $asistenciasPrevias
+            ->when($sesionActiva, fn ($c) => $c->where('actividad_sesion_id', $sesionActiva->id))
+            ->pluck('pastor_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'success' => true,
+            'total_pastores' => $pastores->count(),
+            'pastores' => $pastores,
+            'asistencias_previas' => $asistenciasPrevias,
+            'pastor_ids_registrados' => $pastorIdsRegistrados,
+            'total_presentes' => $this->calcularTotalPresentes($actividad->id, $sesionActiva?->id),
+            'sesion_activa' => $sesionActiva ? [
+                'id' => $sesionActiva->id,
+                'nombre' => $sesionActiva->nombre,
+                'fecha_hora_inicio' => $sesionActiva->fecha_hora_inicio,
+                'fecha_hora_fin' => $sesionActiva->fecha_hora_fin,
+                'is_activa' => true,
+            ] : null,
+            'sincronizado_en' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Sincronización en lote de marcajes offline desde el terminal web o app móvil.
+     */
+    public function sincronizarLote(Request $request)
+    {
+        $request->validate([
+            'actividad_id' => 'required|exists:actividades,id',
+            'asistencias' => 'required|array|min:1',
+            'asistencias.*.pastor_id' => 'nullable|integer',
+            'asistencias.*.codigo_qr' => 'nullable|string',
+            'asistencias.*.actividad_sesion_id' => 'nullable|integer',
+            'asistencias.*.asistio_con_conyuge' => 'nullable|boolean',
+            'asistencias.*.metodo' => 'nullable|string',
+            'asistencias.*.dispositivo' => 'nullable|string',
+            'asistencias.*.fecha_registro' => 'nullable|string',
+        ]);
+
+        $actividadId = (int) $request->input('actividad_id');
+        $actividad = Actividad::with('sesiones')->findOrFail($actividadId);
+        $sesionActiva = $actividad->sesion_activa;
+        $items = $request->input('asistencias');
+
+        $sincronizados = 0;
+        $duplicados = 0;
+        $nuevasAsistencias = [];
+
+        DB::transaction(function () use (
+            $actividadId,
+            $sesionActiva,
+            $items,
+            &$sincronizados,
+            &$duplicados,
+            &$nuevasAsistencias
+        ) {
+            foreach ($items as $item) {
+                $pastor = null;
+                if (!empty($item['pastor_id'])) {
+                    $pastor = Pastor::withoutGlobalScopes()->find($item['pastor_id']);
+                }
+
+                if (!$pastor && !empty($item['codigo_qr'])) {
+                    $clave = $this->extraerIdentificadorDeQr(trim($item['codigo_qr']));
+                    $cleanClave = str_replace(['.', '-', ' '], '', $clave);
+                    $soloNumeros = preg_replace('/\D/', '', $clave);
+
+                    $pastor = Pastor::withoutGlobalScopes()
+                        ->where(function ($q) use ($clave, $cleanClave, $soloNumeros) {
+                            $q->where('codigo', $clave)
+                                ->orWhere('documento', $clave)
+                                ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanClave]);
+
+                            if (!empty($soloNumeros)) {
+                                $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
+                                  ->orWhere('documento', 'like', "%{$soloNumeros}%");
+                            }
+                        })
+                        ->first();
+                }
+
+                if (!$pastor) {
+                    continue;
+                }
+
+                $sesionId = !empty($item['actividad_sesion_id']) ? (int) $item['actividad_sesion_id'] : $sesionActiva?->id;
+                $asistioConConyuge = !empty($item['asistio_con_conyuge']);
+                $metodo = $item['metodo'] ?? 'qr_carnet';
+                $dispositivo = $item['dispositivo'] ?? 'Terminal Web (Offline Sincronizado)';
+                $fechaRegistro = !empty($item['fecha_registro'])
+                    ? \Carbon\Carbon::parse($item['fecha_registro'])
+                    : now();
+
+                $queryExistente = Asistencia::withoutGlobalScopes()
+                    ->where('actividad_id', $actividadId)
+                    ->where('pastor_id', $pastor->id);
+
+                if ($sesionId) {
+                    $queryExistente->where('actividad_sesion_id', $sesionId);
+                } else {
+                    $queryExistente->whereNull('actividad_sesion_id');
+                }
+
+                $existente = $queryExistente->first();
+                if ($existente) {
+                    $duplicados++;
+                    continue;
+                }
+
+                $asistencia = Asistencia::create([
+                    'actividad_id' => $actividadId,
+                    'actividad_sesion_id' => $sesionId,
+                    'pastor_id' => $pastor->id,
+                    'fecha_registro' => $fechaRegistro,
+                    'metodo' => $metodo,
+                    'dispositivo' => $dispositivo,
+                    'asistio_con_conyuge' => $asistioConConyuge,
+                    'nombre_acompanante' => $asistioConConyuge ? $pastor->nombre_conyuge : null,
+                    'kit_entregado' => false,
+                    'comida_entregada' => false,
+                    'registrado_por_user_id' => auth()->id(),
+                ]);
+
+                $sincronizados++;
+                $nuevasAsistencias[] = [
+                    'id' => $asistencia->id,
+                    'pastor_id' => $pastor->id,
+                    'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
+                    'documento' => $pastor->documento,
+                    'codigo' => $pastor->codigo,
+                    'foto' => $pastor->foto_url,
+                    'zona' => $pastor->zona,
+                    'sesion' => $asistencia->sesion?->nombre ?? 'General',
+                    'hora' => $fechaRegistro->format('h:i:s A'),
+                    'asistio_con_conyuge' => $asistioConConyuge,
+                ];
+            }
+        });
+
+        $totalPresentes = $this->calcularTotalPresentes($actividadId, $sesionActiva?->id);
+        $pastorIdsRegistrados = Asistencia::where('actividad_id', $actividadId)
+            ->when($sesionActiva, fn ($q) => $q->where('actividad_sesion_id', $sesionActiva->id))
+            ->pluck('pastor_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'success' => true,
+            'message' => "¡Sincronización exitosa! {$sincronizados} asistencias procesadas" . ($duplicados > 0 ? " ({$duplicados} omitidas por ya estar registradas)." : '.'),
+            'sincronizados' => $sincronizados,
+            'duplicados' => $duplicados,
+            'total_presentes' => $totalPresentes,
+            'pastor_ids_registrados' => $pastorIdsRegistrados,
+            'nuevas_asistencias' => $nuevasAsistencias,
         ]);
     }
 }
