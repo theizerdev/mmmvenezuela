@@ -15,7 +15,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import {
   Lock,
-  User as UserIcon,
+  Mail,
   KeyRound,
   Sun,
   Moon,
@@ -69,7 +69,7 @@ function friendlyError(raw?: string | null): string {
     return 'No se pudo conectar con el servidor. Revise su conexión a internet.';
   }
   if (m.includes('credenciales') || m.includes('invalid') || m.includes('incorrect')) {
-    return 'Usuario o contraseña incorrectos. Verifíquelos e intente de nuevo.';
+    return 'Correo electrónico o contraseña incorrectos. Use el mismo correo y contraseña del sistema administrativo.';
   }
   return raw as string;
 }
@@ -242,7 +242,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const handleLogin = async () => {
     if (loading) return;
     if (!usuario.trim() || !password.trim()) {
-      fail('Por favor ingrese su usuario y contraseña institucional.');
+      fail('Por favor ingrese su correo electrónico y contraseña del sistema administrativo.');
       return;
     }
 
@@ -586,7 +586,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
-                        Ingresar con usuario y contraseña
+                        Ingresar con correo y contraseña
                       </Text>
                     </TouchableOpacity>
 
@@ -612,7 +612,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 </View>
               ) : (
                 /* ======================================================== */
-                /* MODO B: CREDENCIALES (USUARIO / CONTRASEÑA)              */
+                /* MODO B: CREDENCIALES (CORREO / CONTRASEÑA)               */
                 /* ======================================================== */
                 <View>
                   <View style={styles.headingBox}>
@@ -628,7 +628,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
-                      Portal ejecutivo de Presbíteros y Supervisión
+                      Usa el correo y contraseña del sistema administrativo
                     </Text>
                     <Badge
                       variant="brand"
@@ -650,22 +650,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   )}
 
                   <Input
-                    label="USUARIO O CÉDULA"
-                    placeholder="Ej. mpaez o V-12345678"
+                    label="CORREO ELECTRÓNICO"
+                    placeholder="correo@ejemplo.com"
                     value={usuario}
                     onChangeText={(t) => {
                       setUsuario(t);
                       if (errorMessage) setErrorMessage(null);
                     }}
+                    keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
                     returnKeyType="next"
                     onSubmitEditing={() => passwordRef.current?.focus()}
                     blurOnSubmit={false}
-                    leftIcon={<UserIcon size={16} color={ui.mutedForeground} />}
+                    leftIcon={<Mail size={16} color={ui.mutedForeground} />}
                   />
 
-                  {/* CONTRASEÑA CON "¿OLVIDASTE TU USUARIO?" INTEGRADO EN LA CABECERA DEL INPUT */}
+                  {/* CONTRASEÑA CON "¿OLVIDASTE TU CORREO?" INTEGRADO EN LA CABECERA DEL INPUT */}
                   <Input
                     ref={passwordRef}
                     label="CONTRASEÑA"
@@ -677,18 +678,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                         }}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         accessibilityRole="button"
-                        accessibilityLabel="Consultar o recuperar usuario con cédula"
+                        accessibilityLabel="Consultar o recuperar correo con cédula"
                       >
                         <Text
                           style={[styles.forgotUserText, { color: ui.brand }]}
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
-                          ¿Olvidaste tu usuario?
+                          ¿Olvidaste tu correo?
                         </Text>
                       </TouchableOpacity>
                     }
-                    placeholder="••••••••••••"
+                    placeholder="Contraseña del sistema administrativo"
                     value={password}
                     onChangeText={(t) => {
                       setPassword(t);

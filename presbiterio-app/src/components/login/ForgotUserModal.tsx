@@ -91,8 +91,9 @@ export const ForgotUserModal: React.FC<ForgotUserModalProps> = ({
   };
 
   const handleUsarUsuario = () => {
-    if (pastor?.usuario) {
-      onSelectUser(pastor.usuario);
+    const loginCredential = pastor?.email || pastor?.usuario;
+    if (loginCredential) {
+      onSelectUser(loginCredential);
       onClose();
     }
   };
@@ -154,14 +155,14 @@ export const ForgotUserModal: React.FC<ForgotUserModalProps> = ({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                ¿Olvidaste tu Usuario?
+                ¿Olvidaste tu Correo?
               </Text>
               <Text
                 style={[styles.description, { color: ui.mutedForeground }]}
                 numberOfLines={2}
                 ellipsizeMode="tail"
               >
-                Ingresa tu cédula para validar tus credenciales de Presbiterio o Supervisión Nacional.
+                Ingresa tu cédula para consultar el correo con el que ingresas al sistema administrativo.
               </Text>
             </View>
 
@@ -334,8 +335,8 @@ export const ForgotUserModal: React.FC<ForgotUserModalProps> = ({
                   ) : null}
                 </View>
 
-                {/* DESTACADO: USUARIO DE ACCESO A LA APP */}
-                {pastor.usuario && (
+                {/* DESTACADO: CORREO DE ACCESO AL SISTEMA ADMINISTRATIVO Y A LA APP */}
+                {(pastor.email || pastor.usuario) && (
                   <View
                     style={[
                       styles.usernameCard,
@@ -352,7 +353,7 @@ export const ForgotUserModal: React.FC<ForgotUserModalProps> = ({
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
-                        USUARIO PARA INGRESAR
+                        CORREO DEL SISTEMA ADMINISTRATIVO
                       </Text>
                     </View>
 
@@ -362,7 +363,7 @@ export const ForgotUserModal: React.FC<ForgotUserModalProps> = ({
                       ellipsizeMode="tail"
                       style={[styles.usernameValue, { color: ui.foreground }]}
                     >
-                      {pastor.usuario}
+                      {pastor.email || pastor.usuario}
                     </Text>
 
                     <Text
@@ -370,13 +371,13 @@ export const ForgotUserModal: React.FC<ForgotUserModalProps> = ({
                       numberOfLines={2}
                       ellipsizeMode="tail"
                     >
-                      Ingresa con este usuario y tu contraseña asignada para visualizar la asistencia de tu zona.
+                      Ingresa con este correo y la misma contraseña que usas en el sistema administrativo.
                     </Text>
                   </View>
                 )}
 
-                {/* BOTÓN USAR ESTE USUARIO */}
-                {pastor.usuario && (
+                {/* BOTÓN USAR ESTE CORREO */}
+                {(pastor.email || pastor.usuario) && (
                   <Button
                     variant="brand"
                     size="default"
@@ -385,7 +386,7 @@ export const ForgotUserModal: React.FC<ForgotUserModalProps> = ({
                     rightIcon={<ArrowRight size={14} color={isDark ? '#000000' : '#FFFFFF'} />}
                     style={{ marginTop: 10 }}
                   >
-                    USAR ESTE USUARIO
+                    USAR ESTE CORREO
                   </Button>
                 )}
               </View>

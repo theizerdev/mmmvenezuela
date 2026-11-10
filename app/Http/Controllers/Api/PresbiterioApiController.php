@@ -16,14 +16,88 @@ use Illuminate\Validation\ValidationException;
 class PresbiterioApiController extends Controller
 {
     /**
-     * Inicio de sesión para Presbíteros y Supervisores Nacionales.
+     * Verifica la contraseña del usuario con la misma lógica del sistema administrativo (Fortify).
+     */
+    private function verifyUserPassword(User $user, string $password): bool
+    {
+        try {
+            if (Hash::check($password, $user->password)) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // Fallback idéntico a FortifyServiceProvider para hashes legacy
+        }
+
+        if (
+            $password === $user->password ||
+            (str_starts_with((string) $user->password, '$') && @password_verify($password, (string) $user->password))
+        ) {
+            $user->password = Hash::make($password);
+            $user->save();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Resuelve la cuenta de usuario administrativo asociada a un registro de Pastor.
+     */
+    private function resolveUserFromPastor(Pastor $pastor): ?User
+    {
+        $user = null;
+
+        if ($pastor->user_id) {
+            $user = User::withoutGlobalScope('multitenancy')->find($pastor->user_id);
+        }
+
+        if (!$user && !empty($pastor->email)) {
+            $emailLower = mb_strtolower(trim($pastor->email));
+            $user = User::withoutGlobalScope('multitenancy')
+                ->whereRaw('LOWER(email) = ?', [$emailLower])
+                ->first();
+        }
+
+        if (!$user && !empty($pastor->telefono_tlf)) {
+            $cleanPhone = preg_replace('/\D/', '', $pastor->telefono_tlf);
+            $user = User::withoutGlobalScope('multitenancy')
+                ->where(function ($q) use ($pastor, $cleanPhone) {
+                    $q->where('telefono', trim($pastor->telefono_tlf));
+                    if (!empty($cleanPhone) && strlen($cleanPhone) >= 7) {
+                        $q->orWhere('telefono', 'like', '%' . substr($cleanPhone, -7) . '%');
+                    }
+                })
+                ->first();
+        }
+
+        if (!$user && !empty($pastor->zona)) {
+            $rawZona = trim((string) $pastor->zona);
+            $digits = preg_replace('/\D/', '', $rawZona);
+            $normZona = $digits !== '' ? (string) (int) $digits : $rawZona;
+
+            $user = User::withoutGlobalScope('multitenancy')
+                ->where(function ($q) use ($rawZona, $normZona) {
+                    $q->where('zona', $normZona)
+                      ->orWhere('zona', $rawZona)
+                      ->orWhere('zona_2', $normZona)
+                      ->orWhere('zona_2', $rawZona);
+                })
+                ->first();
+        }
+
+        return $user;
+    }
+
+    /**
+     * Inicio de sesión para Presbíteros y Supervisores Nacionales (mismo correo y contraseña del sistema administrativo).
      */
     public function login(Request $request): JsonResponse
     {
         $loginValue = $request->input('login')
+            ?? $request->input('email')
             ?? $request->input('usuario')
-            ?? $request->input('username')
-            ?? $request->input('email');
+            ?? $request->input('username');
 
         $request->merge(['login' => $loginValue]);
 
@@ -34,24 +108,42 @@ class PresbiterioApiController extends Controller
         ]);
 
         $login = trim($request->input('login'));
+        $loginLower = mb_strtolower($login);
         $password = $request->input('password');
 
-        // Búsqueda por email o username
-        $user = User::where('email', $login)
-            ->orWhere('username', $login)
-            ->orWhere('telefono', $login)
-            ->first();
+        // 1. Búsqueda directa en tabla users (idéntico al sistema administrativo web: por correo o usuario)
+        $candidateUsers = User::withoutGlobalScope('multitenancy')
+            ->where(function ($q) use ($login, $loginLower) {
+                $q->whereRaw('LOWER(email) = ?', [$loginLower])
+                  ->orWhere('email', $login)
+                  ->orWhereRaw('LOWER(username) = ?', [$loginLower])
+                  ->orWhere('username', $login)
+                  ->orWhere('telefono', $login);
+            })
+            ->get();
 
-        // Búsqueda por cédula del pastor si no se encontró por usuario/email directo
+        $user = null;
+        foreach ($candidateUsers as $candidate) {
+            if ($this->verifyUserPassword($candidate, $password)) {
+                $user = $candidate;
+                break;
+            }
+        }
+
+        // Si hubo coincidencia de usuario pero la contraseña no coincidió aún, conservar el primero para fallback
+        $matchedUserByLogin = $candidateUsers->first();
+
+        // 2. Búsqueda complementaria por registro de Pastor (correo del pastor o cédula)
         if (!$user) {
             $cleanDoc = str_replace(['.', '-', ' '], '', $login);
             $soloNumeros = preg_replace('/\D/', '', $login);
 
             $pastor = Pastor::withoutGlobalScope('multitenancy')
-                ->where(function ($q) use ($login, $cleanDoc, $soloNumeros) {
-                    $q->where('documento', $login)
+                ->where(function ($q) use ($login, $loginLower, $cleanDoc, $soloNumeros) {
+                    $q->whereRaw('LOWER(email) = ?', [$loginLower])
+                      ->orWhere('documento', $login)
                       ->orWhereRaw("REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', '') = ?", [$cleanDoc]);
-                    if (!empty($soloNumeros)) {
+                    if (!empty($soloNumeros) && strlen($soloNumeros) >= 5) {
                         $q->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), ' ', ''), 'V', ''), 'E', '') = ?", [$soloNumeros])
                           ->orWhere('documento', 'like', "%{$soloNumeros}%");
                     }
@@ -59,26 +151,27 @@ class PresbiterioApiController extends Controller
                 ->first();
 
             if ($pastor) {
-                if ($pastor->user_id) {
-                    $user = User::find($pastor->user_id);
-                }
-                if (!$user && $pastor->email) {
-                    $user = User::where('email', $pastor->email)->first();
-                }
-                if (!$user && !empty($pastor->telefono_tlf)) {
-                    $user = User::where('telefono', $pastor->telefono_tlf)->first();
-                }
-                if (!$user && !empty($pastor->zona)) {
-                    $user = User::where('zona', trim($pastor->zona))->first();
+                $resolvedUser = $this->resolveUserFromPastor($pastor);
+                if ($resolvedUser && $this->verifyUserPassword($resolvedUser, $password)) {
+                    $user = $resolvedUser;
+                } elseif (!$matchedUserByLogin && $resolvedUser) {
+                    $matchedUserByLogin = $resolvedUser;
                 }
             }
         }
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Credenciales inválidas. Verifique su usuario y contraseña.',
+                'message' => 'Correo electrónico o contraseña incorrectos. Use el mismo correo y contraseña con los que ingresa al sistema administrativo.',
             ], 401);
+        }
+
+        if ($user->status === 'inactivo' || $user->status === 'suspendido') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Su cuenta en el sistema administrativo se encuentra inactiva o suspendida.',
+            ], 403);
         }
 
         $rolesAutorizados = [
@@ -108,7 +201,7 @@ class PresbiterioApiController extends Controller
         $roles = $user->getRoleNames()->toArray();
 
         $esSupervisor = $user->hasAnyRole(['Supervisor Nacional', 'supervisor-nacional', 'Super Administrador', 'super-admin', 'Junta Nacional']);
-        $esPresbitero = $user->hasAnyRole(['Presbitero', 'presbitero']);
+        $esPresbitero = $user->hasAnyRole(['Presbitero', 'Presbítero', 'presbitero']);
 
         return response()->json([
             'success' => true,
@@ -133,7 +226,7 @@ class PresbiterioApiController extends Controller
     }
 
     /**
-     * Consulta pública de datos de pastor y su usuario institucional a partir de la cédula.
+     * Consulta pública de datos de pastor y su correo administrativo a partir de la cédula.
      */
     public function consultarUsuarioPorCedula(Request $request): JsonResponse
     {
@@ -168,21 +261,8 @@ class PresbiterioApiController extends Controller
             ], 404);
         }
 
-        // Buscar el usuario institucional correspondiente
-        $user = null;
-        if ($pastor->user_id) {
-            $user = User::find($pastor->user_id);
-        }
-        if (!$user && $pastor->email) {
-            $user = User::where('email', $pastor->email)->first();
-        }
-        if (!$user && !empty($pastor->telefono_tlf)) {
-            $user = User::where('telefono', $pastor->telefono_tlf)->first();
-        }
-        if (!$user && !empty($pastor->zona)) {
-            $cleanZona = trim($pastor->zona);
-            $user = User::where('zona', $cleanZona)->first();
-        }
+        // Buscar el usuario institucional en el sistema administrativo
+        $user = $this->resolveUserFromPastor($pastor);
 
         // VALIDACIÓN ESTRICTA: Solo para Presbíteros, Supervisores, Directiva y Oficiales Nacionales
         $rolesAutorizados = [
@@ -237,9 +317,8 @@ class PresbiterioApiController extends Controller
             ], 403);
         }
 
-        $usuario = $user?->username
-            ?? $user?->email
-            ?? ($pastor->email ? explode('@', $pastor->email)[0] : 'V-' . ($soloNumeros ?: $pastor->documento));
+        // Priorizar siempre el correo electrónico del sistema administrativo
+        $correoAdministrativo = $user?->email ?? $pastor->email ?? $user?->username ?? ('V-' . ($soloNumeros ?: $pastor->documento));
 
         $fotoUrl = $pastor->foto_url;
         if ($fotoUrl && !str_starts_with($fotoUrl, 'http')) {
@@ -255,12 +334,12 @@ class PresbiterioApiController extends Controller
                 'apellidos' => $pastor->apellidos,
                 'nombre_completo' => "{$pastor->nombres} {$pastor->apellidos}",
                 'documento' => $pastor->documento,
-                'email' => $pastor->email ?? $user?->email,
+                'email' => $user?->email ?? $pastor->email,
                 'foto' => $fotoUrl,
                 'zona' => $pastor->zona,
                 'distrito' => $pastor->distrito,
                 'cargo_nacional' => $cargoOficial ?? ($pastor->cargo_nacional ?? 'Presbítero'),
-                'usuario' => $usuario,
+                'usuario' => $correoAdministrativo,
                 'user_name' => $user?->name ?? "{$pastor->nombres} {$pastor->apellidos}",
                 'tiene_usuario_activo' => (bool) $user,
             ],
