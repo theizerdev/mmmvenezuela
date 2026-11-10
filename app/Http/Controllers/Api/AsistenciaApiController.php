@@ -29,15 +29,9 @@ class AsistenciaApiController extends Controller
             ->orderBy('fecha_inicio', 'desc')
             ->limit(10)
             ->get()
-            ->map(function ($actividad) use ($now) {
-                // Detectar sesión activa según la hora actual
-                $sesionActiva = $actividad->sesiones
-                    ->filter(function ($s) use ($now) {
-                        $inicio = Carbon::parse($s->fecha_hora_inicio)->subHours(2);
-                        $fin = Carbon::parse($s->fecha_hora_fin)->addHours(2);
-                        return $now->between($inicio, $fin);
-                    })
-                    ->first() ?? $actividad->sesiones->first();
+            ->map(function ($actividad) {
+                // Detectar sesión activa oficial
+                $sesionActiva = $actividad->sesion_activa;
 
                 $totalPresentes = Asistencia::withoutGlobalScopes()
                     ->where('actividad_id', $actividad->id)
@@ -64,6 +58,7 @@ class AsistenciaApiController extends Controller
                         'fecha_hora_fin' => $sesionActiva->fecha_hora_fin,
                         'es_obligatoria' => (bool) $sesionActiva->es_obligatoria,
                         'tipo_comida' => $sesionActiva->tipo_comida,
+                        'is_activa' => (bool) ($sesionActiva->is_activa ?? false),
                     ] : null,
                     'sesiones' => $actividad->sesiones->map(fn ($s) => [
                         'id' => $s->id,
@@ -72,6 +67,7 @@ class AsistenciaApiController extends Controller
                         'fecha_hora_fin' => $s->fecha_hora_fin,
                         'es_obligatoria' => (bool) $s->es_obligatoria,
                         'tipo_comida' => $s->tipo_comida,
+                        'is_activa' => (bool) ($s->is_activa ?? false),
                     ]),
                 ];
             });
@@ -243,7 +239,8 @@ class AsistenciaApiController extends Controller
         ]);
 
         $actividadId = (int) $request->input('actividad_id');
-        $sesionId = $request->input('actividad_sesion_id');
+        $actividad = Actividad::withoutGlobalScopes()->with('sesiones')->find($actividadId);
+        $sesionId = $request->input('actividad_sesion_id') ?: $actividad?->sesion_activa?->id;
         $asistioConConyuge = (bool) $request->input('asistio_con_conyuge', false);
         $metodo = $request->input('metodo', 'qr');
         $dispositivo = trim((string) $request->input('dispositivo', 'Terminal Móvil'));
@@ -532,6 +529,9 @@ class AsistenciaApiController extends Controller
             ->values();
 
         $asistenciasPrevias = [];
+        $actividad = $actividadId ? Actividad::withoutGlobalScopes()->with('sesiones')->find((int) $actividadId) : null;
+        $sesionActiva = $actividad?->sesion_activa;
+
         if ($actividadId) {
             $asistenciasPrevias = Asistencia::withoutGlobalScopes()
                 ->where('actividad_id', (int) $actividadId)
@@ -553,7 +553,42 @@ class AsistenciaApiController extends Controller
             'total_pastores' => $pastores->count(),
             'pastores' => $pastores,
             'asistencias_previas' => $asistenciasPrevias,
+            'sesion_activa' => $sesionActiva ? [
+                'id' => $sesionActiva->id,
+                'nombre' => $sesionActiva->nombre,
+                'fecha_hora_inicio' => $sesionActiva->fecha_hora_inicio,
+                'fecha_hora_fin' => $sesionActiva->fecha_hora_fin,
+                'is_activa' => true,
+            ] : null,
             'sincronizado_en' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Establecer una sesión como la activa oficial de la actividad
+     */
+    public function activarSesion(Request $request, int $actividadId): JsonResponse
+    {
+        $request->validate([
+            'sesion_id' => 'required|exists:actividad_sesiones,id',
+        ]);
+
+        $actividad = Actividad::withoutGlobalScopes()->with('sesiones')->findOrFail($actividadId);
+        $sesionId = (int) $request->input('sesion_id');
+
+        DB::transaction(function () use ($actividad, $sesionId) {
+            $actividad->sesiones()->update(['is_activa' => false]);
+            $actividad->sesiones()->where('id', $sesionId)->update(['is_activa' => true]);
+        });
+
+        $actividad->load('sesiones');
+        $sesionActiva = $actividad->sesiones->firstWhere('id', $sesionId);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Sesión '{$sesionActiva?->nombre}' activada oficialmente.",
+            'sesion_activa' => $sesionActiva,
+            'sesiones' => $actividad->sesiones()->orderBy('orden')->get(),
         ]);
     }
 

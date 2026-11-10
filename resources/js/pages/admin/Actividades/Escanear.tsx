@@ -33,6 +33,9 @@ import {
     Smartphone,
     Download,
     Share2,
+    CalendarDays,
+    Calendar,
+    Plus,
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import type * as faceapi from '@vladmandic/face-api';
@@ -131,6 +134,7 @@ interface Props {
     ultimosEscaneos: EscaneoHistorial[];
     totalPresentes: number;
     pastoresConvocados: PastorData[];
+    pastorIdsRegistrados?: number[];
 }
 
 type ModoEscaneo = 'qr' | 'facial';
@@ -141,6 +145,7 @@ export default function ActividadesEscanear({
     ultimosEscaneos: ultimosEscaneosProp,
     totalPresentes: totalPresentesProp,
     pastoresConvocados = [],
+    pastorIdsRegistrados: pastorIdsRegistradosProp = [],
 }: Props) {
     // Sub-modo principal del Kiosco: Escanear (Cámara / QR) o Uso Manual (Búsqueda en Padrón)
     type ModoKiosco = 'escanear' | 'manual';
@@ -152,8 +157,25 @@ export default function ActividadesEscanear({
     // Estados para la Card de Uso Manual integrada en la pantalla
     const [filtroTextoManual, setFiltroTextoManual] = useState<string>('');
     const [filtroZonaManual, setFiltroZonaManual] = useState<string>('todas');
+    const [filtroEstadoManual, setFiltroEstadoManual] = useState<'pendientes' | 'acreditados' | 'todos'>('pendientes');
     const [resultadosServerManual, setResultadosServerManual] = useState<PastorData[]>([]);
     const [buscandoServerManual, setBuscandoServerManual] = useState<boolean>(false);
+
+    // IDs de pastores ya registrados en la sesión activa actual
+    const [pastorIdsRegistrados, setPastorIdsRegistrados] = useState<number[]>(pastorIdsRegistradosProp);
+    const [cargandoSesion, setCargandoSesion] = useState<boolean>(false);
+    const [cargandoActivarSesion, setCargandoActivarSesion] = useState<boolean>(false);
+
+    // Lista dinámica de sesiones y modal de administración
+    const [sesionesList, setSesionesList] = useState<Sesion[]>(actividad.sesiones || []);
+    const [modalSesionesAbierto, setModalSesionesAbierto] = useState<boolean>(false);
+
+    // Formulario para crear sesión rápida por día
+    const [nuevaSesionNombre, setNuevaSesionNombre] = useState<string>('');
+    const [nuevaSesionInicio, setNuevaSesionInicio] = useState<string>('');
+    const [nuevaSesionFin, setNuevaSesionFin] = useState<string>('');
+    const [nuevaSesionComida, setNuevaSesionComida] = useState<string>('ninguna');
+    const [guardandoNuevaSesion, setGuardandoNuevaSesion] = useState<boolean>(false);
 
     // Estados de configuración de sesión y logística
     const [sesionSeleccionada, setSesionSeleccionada] = useState<number | null>(
@@ -414,6 +436,14 @@ export default function ActividadesEscanear({
                     setContadorPresentes(data.totalPresentes);
                     playSound('success');
 
+                    if (data.pastor_ids_acreditados && Array.isArray(data.pastor_ids_acreditados)) {
+                        setPastorIdsRegistrados((prev) => {
+                            const set = new Set(prev);
+                            data.pastor_ids_acreditados.forEach((id: number) => set.add(id));
+                            return Array.from(set);
+                        });
+                    }
+
                     if (data.asistencias && Array.isArray(data.asistencias)) {
                         setHistorial((prev) => [...data.asistencias, ...prev.slice(0, Math.max(0, 10 - data.asistencias.length))]);
                     } else if (data.asistencia) {
@@ -424,6 +454,14 @@ export default function ActividadesEscanear({
                     setUltimoPastor(data.pastor);
                     setMensajeFeedback(data.message);
                     playSound('duplicate');
+
+                    if (data.pastor?.id) {
+                        setPastorIdsRegistrados((prev) => {
+                            const set = new Set(prev);
+                            set.add(data.pastor.id);
+                            return Array.from(set);
+                        });
+                    }
                 } else {
                     setEstadoEscaneo('error');
                     setUltimoPastor(null);
@@ -859,6 +897,14 @@ export default function ActividadesEscanear({
                 setContadorPresentes(data.totalPresentes);
                 playSound('success');
 
+                if (data.pastor_ids_acreditados && Array.isArray(data.pastor_ids_acreditados)) {
+                    setPastorIdsRegistrados((prev) => {
+                        const set = new Set(prev);
+                        data.pastor_ids_acreditados.forEach((id: number) => set.add(id));
+                        return Array.from(set);
+                    });
+                }
+
                 if (data.asistencias && Array.isArray(data.asistencias)) {
                     setHistorial((prev) => [...data.asistencias, ...prev.slice(0, Math.max(0, 10 - data.asistencias.length))]);
                 } else if (data.asistencia) {
@@ -942,6 +988,119 @@ export default function ActividadesEscanear({
         return Array.from(setZ).sort((a, b) => Number(a) - Number(b));
     }, [pastoresConvocados]);
 
+    // Conjunto optimizado O(1) de IDs registrados en la sesión activa
+    const pastorIdsRegistradosSet = useMemo(() => new Set(pastorIdsRegistrados), [pastorIdsRegistrados]);
+
+    // Conteo en vivo de pendientes y acreditados para la sesión activa
+    const conteoPendientes = useMemo(() => {
+        return pastoresConvocados.filter((p) => !pastorIdsRegistradosSet.has(p.id)).length;
+    }, [pastoresConvocados, pastorIdsRegistradosSet]);
+
+    const conteoAcreditados = useMemo(() => {
+        return pastoresConvocados.filter((p) => pastorIdsRegistradosSet.has(p.id)).length;
+    }, [pastoresConvocados, pastorIdsRegistradosSet]);
+
+    // Objeto de la sesión actualmente seleccionada
+    const sesionActualObj = useMemo(() => {
+        return sesionesList.find((s) => s.id === sesionSeleccionada) ?? null;
+    }, [sesionesList, sesionSeleccionada]);
+
+    // Cambiar dinámicamente de sesión y cargar sus IDs acreditados en vivo
+    const handleCambiarSesion = async (sesionIdNum: number) => {
+        setSesionSeleccionada(sesionIdNum);
+        setCargandoSesion(true);
+        try {
+            const res = await fetch(`/admin/actividades/${actividad.id}/sesion-info?sesion_id=${sesionIdNum}`, {
+                headers: { Accept: 'application/json' },
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPastorIdsRegistrados(data.pastor_ids_registrados || []);
+                setContadorPresentes(data.total_presentes ?? 0);
+                if (data.sesiones && Array.isArray(data.sesiones)) {
+                    setSesionesList(data.sesiones);
+                }
+            }
+        } catch (err) {
+            console.error('Error al cambiar de sesión:', err);
+        } finally {
+            setCargandoSesion(false);
+        }
+    };
+
+    // Establecer una sesión como la Activa Oficial (sincroniza web y móvil simultáneamente)
+    const handleActivarSesionOficial = async (sesionIdNum: number) => {
+        setCargandoActivarSesion(true);
+        try {
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch(`/admin/actividades/${actividad.id}/activar-sesion`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({ sesion_id: sesionIdNum }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setSesionSeleccionada(sesionIdNum);
+                if (data.sesiones && Array.isArray(data.sesiones)) {
+                    setSesionesList(data.sesiones);
+                }
+                setPastorIdsRegistrados(data.pastor_ids_registrados || []);
+                setContadorPresentes(data.total_presentes ?? 0);
+                setMensajeFeedback(data.message);
+                setEstadoEscaneo('success');
+                setModalSesionesAbierto(false);
+            }
+        } catch (err) {
+            console.error('Error al activar sesión oficial:', err);
+        } finally {
+            setCargandoActivarSesion(false);
+        }
+    };
+
+    // Crear una sesión rápida por día desde el terminal
+    const handleCrearSesionRapida = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!nuevaSesionNombre.trim() || !nuevaSesionInicio) return;
+
+        setGuardandoNuevaSesion(true);
+        try {
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch(`/admin/actividades/${actividad.id}/crear-sesion-rapida`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre: nuevaSesionNombre.trim(),
+                    fecha_hora_inicio: nuevaSesionInicio,
+                    fecha_hora_fin: nuevaSesionFin || nuevaSesionInicio,
+                    tipo_comida: nuevaSesionComida,
+                    es_obligatoria: true,
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.sesion) {
+                const updatedList = data.sesiones || [...sesionesList, data.sesion];
+                setSesionesList(updatedList);
+                handleCambiarSesion(data.sesion.id);
+                setNuevaSesionNombre('');
+                setNuevaSesionInicio('');
+                setNuevaSesionFin('');
+                setModalSesionesAbierto(false);
+            }
+        } catch (err) {
+            console.error('Error al crear sesión:', err);
+        } finally {
+            setGuardandoNuevaSesion(false);
+        }
+    };
+
     // Filtrado en memoria de pastores para la Card de Uso Manual (búsqueda ultrarrápida instantánea)
     const pastoresFiltradosLocal = useMemo(() => {
         let list = pastoresConvocados || [];
@@ -952,7 +1111,13 @@ export default function ActividadesEscanear({
             list = list.filter((p) => String(p.zona || '') === filtroZonaManual);
         }
 
-        if (!term) return list.slice(0, 30);
+        if (filtroEstadoManual === 'pendientes') {
+            list = list.filter((p) => !pastorIdsRegistradosSet.has(p.id));
+        } else if (filtroEstadoManual === 'acreditados') {
+            list = list.filter((p) => pastorIdsRegistradosSet.has(p.id));
+        }
+
+        if (!term) return list.slice(0, 35);
 
         return list.filter((p) => {
             const nombreNorm = (p.nombre_completo || `${p.nombres || ''} ${p.apellidos || ''}`)
@@ -968,8 +1133,8 @@ export default function ActividadesEscanear({
             if (nombreNorm.includes(term)) return true;
             if (iglesia.includes(term)) return true;
             return false;
-        }).slice(0, 35);
-    }, [pastoresConvocados, filtroTextoManual, filtroZonaManual]);
+        }).slice(0, 40);
+    }, [pastoresConvocados, filtroTextoManual, filtroZonaManual, filtroEstadoManual, pastorIdsRegistradosSet]);
 
     // Búsqueda en el servidor si no hay coincidencias locales y el término tiene al menos 2 caracteres
     useEffect(() => {
@@ -1019,6 +1184,9 @@ export default function ActividadesEscanear({
             if (data.success) {
                 setHistorial((prev) => prev.filter((item) => item.id !== asistenciaId));
                 setContadorPresentes(data.totalPresentes);
+                if (data.pastor_id_revertido) {
+                    setPastorIdsRegistrados((prev) => prev.filter((id) => id !== data.pastor_id_revertido));
+                }
                 playSound('duplicate');
             }
         } catch (err) {
@@ -1193,24 +1361,41 @@ export default function ActividadesEscanear({
                             </Button>
                         )}
 
-                        {/* Selector de Sesión / Bloque */}
-                        {actividad.sesiones.length > 0 && (
-                            <div className="hidden md:flex items-center">
-                                <Select
-                                    value={sesionSeleccionada ? String(sesionSeleccionada) : undefined}
-                                    onValueChange={(val) => setSesionSeleccionada(Number(val))}
+                        {/* Indicador de Sesión Activa Oficial + Selector / Control */}
+                        {sesionesList.length > 0 && (
+                            <div className="flex items-center gap-1.5">
+                                <div
+                                    onClick={() => setModalSesionesAbierto(true)}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 shadow-sm max-w-[170px] sm:max-w-[260px] cursor-pointer transition-colors"
+                                    title="Sesión activa oficial. Clic para cambiar o activar otro culto."
                                 >
-                                    <SelectTrigger className="h-9 min-w-[150px] bg-slate-800/90 border-slate-700 text-xs font-bold text-white rounded-xl">
-                                        <SelectValue placeholder="Seleccionar Sesión" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-slate-900 border-slate-800 text-white text-xs">
-                                        {actividad.sesiones.map((s) => (
-                                            <SelectItem key={s.id} value={String(s.id)}>
-                                                {s.nombre}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    <span className="size-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                    <div className="min-w-0 flex flex-col leading-tight">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[9px] uppercase font-black text-emerald-400 tracking-wider">
+                                                En Vivo
+                                            </span>
+                                            {cargandoSesion && (
+                                                <RefreshCw className="size-2.5 text-emerald-400 animate-spin" />
+                                            )}
+                                        </div>
+                                        <span className="text-xs font-black text-white truncate">
+                                            {sesionActualObj?.nombre || 'Sesión General'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setModalSesionesAbierto(true)}
+                                    className="h-8 sm:h-9 px-2 sm:px-3 bg-indigo-950/50 border-indigo-500/40 hover:bg-indigo-900/60 text-indigo-300 hover:text-white rounded-xl text-xs font-bold gap-1.5 cursor-pointer shrink-0"
+                                    title="Control central de sesiones y sincronización con app móvil"
+                                >
+                                    <CalendarDays className="size-3.5 text-indigo-400" />
+                                    <span className="hidden sm:inline">Días / Sesiones</span>
+                                    <span className="sm:hidden">Días</span>
+                                </Button>
                             </div>
                         )}
 
@@ -1623,9 +1808,26 @@ export default function ActividadesEscanear({
                             </CardHeader>
 
                             {/* CUERPO DE LA CARD MANUAL */}
-                            <CardContent className="p-3.5 sm:p-4 flex-1 flex flex-col gap-3 overflow-hidden">
+                            <CardContent className="p-3.5 sm:p-4 flex-1 flex flex-col gap-2.5 overflow-hidden">
+                                {/* INDICADOR DE LA SESIÓN / DÍA EN CURSO */}
+                                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800/80 text-xs shrink-0">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <Clock className="size-3.5 text-indigo-400 shrink-0" />
+                                        <span className="text-slate-400 text-[11px] truncate">
+                                            Asistencia para: <strong className="text-white font-bold">{sesionActualObj?.nombre || 'Sesión General'}</strong>
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setModalSesionesAbierto(true)}
+                                        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-bold underline shrink-0 cursor-pointer ml-2"
+                                    >
+                                        Cambiar Día
+                                    </button>
+                                </div>
+
                                 {/* BUSCADOR REACTIVO */}
-                                <div className="relative">
+                                <div className="relative shrink-0">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                                     <Input
                                         value={filtroTextoManual}
@@ -1645,8 +1847,63 @@ export default function ActividadesEscanear({
                                     ) : null}
                                 </div>
 
+                                {/* PESTAÑAS DE FILTRO POR ESTADO: PENDIENTES | ACREDITADOS | TODOS */}
+                                <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800/90 text-xs shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFiltroEstadoManual('pendientes')}
+                                        className={cn(
+                                            'flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                                            filtroEstadoManual === 'pendientes'
+                                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        )}
+                                    >
+                                        <span>Pendientes</span>
+                                        <Badge variant="outline" className={cn(
+                                            'px-1.5 py-0 text-[10px] font-mono font-bold',
+                                            filtroEstadoManual === 'pendientes' ? 'border-amber-400/40 text-amber-300' : 'border-slate-800 text-slate-500'
+                                        )}>
+                                            {conteoPendientes}
+                                        </Badge>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setFiltroEstadoManual('acreditados')}
+                                        className={cn(
+                                            'flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                                            filtroEstadoManual === 'acreditados'
+                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        )}
+                                    >
+                                        <CheckCircle2 className="size-3.5 text-emerald-400" />
+                                        <span>Acreditados</span>
+                                        <Badge variant="outline" className={cn(
+                                            'px-1.5 py-0 text-[10px] font-mono font-bold',
+                                            filtroEstadoManual === 'acreditados' ? 'border-emerald-400/40 text-emerald-300' : 'border-slate-800 text-slate-500'
+                                        )}>
+                                            {conteoAcreditados}
+                                        </Badge>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setFiltroEstadoManual('todos')}
+                                        className={cn(
+                                            'py-1.5 px-2.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer',
+                                            filtroEstadoManual === 'todos'
+                                                ? 'bg-slate-800 text-white border border-slate-700'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        )}
+                                    >
+                                        <span>Todos ({pastoresConvocados.length})</span>
+                                    </button>
+                                </div>
+
                                 {/* BARRA DE FILTROS RÁPIDOS Y +CÓNYUGE */}
-                                <div className="flex items-center justify-between gap-2 text-xs">
+                                <div className="flex items-center justify-between gap-2 text-xs shrink-0">
                                     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider shrink-0">Zona:</span>
                                         <button
@@ -1691,7 +1948,7 @@ export default function ActividadesEscanear({
                                 </div>
 
                                 {/* LISTA SCROLLABLE DE PASTORES CON FOTOS Y BOTÓN DIRECTO */}
-                                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[380px] sm:max-h-[440px] custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[360px] sm:max-h-[420px] custom-scrollbar">
                                     {buscandoServerManual ? (
                                         <div className="text-center py-10 space-y-2">
                                             <RefreshCw className="size-6 text-emerald-400 animate-spin mx-auto" />
@@ -1701,65 +1958,108 @@ export default function ActividadesEscanear({
                                         <div className="text-center py-10 space-y-2">
                                             <Users className="size-8 text-slate-600 mx-auto" />
                                             <p className="text-xs text-slate-300 font-medium">
-                                                No se encontraron obreros con "{filtroTextoManual}".
+                                                {filtroEstadoManual === 'pendientes'
+                                                    ? '¡Excelente! No hay obreros pendientes en este filtro.'
+                                                    : filtroEstadoManual === 'acreditados'
+                                                    ? 'Aún no hay obreros acreditados en esta sesión.'
+                                                    : `No se encontraron obreros con "${filtroTextoManual}".`}
                                             </p>
                                             <p className="text-[11px] text-slate-500">
-                                                Puede escribir la cédula exacta abajo y presionar Acreditar.
+                                                Puede cambiar de pestaña arriba o escribir la cédula abajo.
                                             </p>
                                         </div>
                                     ) : (
-                                        pastoresParaMostrar.map((p) => (
-                                            <div
-                                                key={p.id}
-                                                onClick={() => procesarCodigo(p.documento || p.codigo, 'manual')}
-                                                className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-800/60 transition-all flex items-center justify-between gap-3 cursor-pointer group shadow-sm"
-                                            >
-                                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                                    <Avatar className="size-10 rounded-xl border border-slate-700/80 shrink-0">
-                                                        {p.foto && <AvatarImage src={p.foto} alt={p.nombre_completo} className="object-cover" />}
-                                                        <AvatarFallback className="rounded-xl bg-emerald-950 text-emerald-200 font-extrabold text-xs">
-                                                            {getInitials(p.nombre_completo)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+                                        pastoresParaMostrar.map((p) => {
+                                            const estaAcreditado = pastorIdsRegistradosSet.has(p.id);
 
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <p className="text-xs font-extrabold text-white group-hover:text-emerald-300 transition-colors truncate">
-                                                                {p.nombre_completo}
+                                            return (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        if (!estaAcreditado) {
+                                                            procesarCodigo(p.documento || p.codigo, 'manual');
+                                                        }
+                                                    }}
+                                                    className={cn(
+                                                        'p-2.5 rounded-xl border transition-all flex items-center justify-between gap-3 shadow-sm select-none',
+                                                        estaAcreditado
+                                                            ? 'bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-500/50 cursor-default'
+                                                            : 'bg-slate-950/70 border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-800/60 cursor-pointer group'
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                        <Avatar className={cn(
+                                                            'size-10 rounded-xl border shrink-0',
+                                                            estaAcreditado ? 'border-emerald-500/60 ring-2 ring-emerald-500/20' : 'border-slate-700/80'
+                                                        )}>
+                                                            {p.foto && <AvatarImage src={p.foto} alt={p.nombre_completo} className="object-cover" />}
+                                                            <AvatarFallback className={cn(
+                                                                'rounded-xl font-extrabold text-xs',
+                                                                estaAcreditado ? 'bg-emerald-900 text-emerald-100' : 'bg-slate-800 text-slate-200'
+                                                            )}>
+                                                                {getInitials(p.nombre_completo)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <p className={cn(
+                                                                    'text-xs font-extrabold truncate',
+                                                                    estaAcreditado ? 'text-emerald-300' : 'text-white group-hover:text-emerald-300'
+                                                                )}>
+                                                                    {p.nombre_completo}
+                                                                </p>
+                                                                {estaAcreditado ? (
+                                                                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[9px] font-bold px-1.5 py-0 gap-0.5 shrink-0">
+                                                                        <Check className="size-2.5" />
+                                                                        Acreditado
+                                                                    </Badge>
+                                                                ) : p.zona ? (
+                                                                    <Badge variant="outline" className="px-1.5 py-0 text-[9px] font-bold border-slate-700 text-slate-400 shrink-0">
+                                                                        Z-{p.zona}
+                                                                    </Badge>
+                                                                ) : null}
+                                                            </div>
+                                                            <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                                                                <span className="font-mono text-slate-300 font-semibold">{p.documento}</span>
+                                                                {p.nivel_ministerial ? ` • ${p.nivel_ministerial}` : ''}
+                                                                {p.iglesia ? ` • ${p.iglesia}` : ''}
                                                             </p>
-                                                            {p.zona && (
-                                                                <Badge variant="outline" className="px-1.5 py-0 text-[9px] font-bold border-slate-700 text-slate-400 shrink-0">
-                                                                    Z-{p.zona}
-                                                                </Badge>
+                                                            {p.nombre_conyuge && asistioConConyuge && (
+                                                                <p className="text-[10px] text-pink-400 font-semibold flex items-center gap-1 mt-0.5 truncate">
+                                                                    <Heart className="size-2.5 fill-pink-400 shrink-0" />
+                                                                    Esposa: {p.nombre_conyuge}
+                                                                </p>
                                                             )}
                                                         </div>
-                                                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                                                            <span className="font-mono text-slate-300 font-semibold">{p.documento}</span>
-                                                            {p.nivel_ministerial ? ` • ${p.nivel_ministerial}` : ''}
-                                                            {p.iglesia ? ` • ${p.iglesia}` : ''}
-                                                        </p>
-                                                        {p.nombre_conyuge && asistioConConyuge && (
-                                                            <p className="text-[10px] text-pink-400 font-semibold flex items-center gap-1 mt-0.5 truncate">
-                                                                <Heart className="size-2.5 fill-pink-400 shrink-0" />
-                                                                Esposa: {p.nombre_conyuge}
-                                                            </p>
-                                                        )}
                                                     </div>
-                                                </div>
 
-                                                <Button
-                                                    size="sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        procesarCodigo(p.documento || p.codigo, 'manual');
-                                                    }}
-                                                    className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs rounded-xl h-8 px-3 shrink-0 gap-1.5 shadow-md shadow-emerald-950 cursor-pointer"
-                                                >
-                                                    <Check className="size-3.5" />
-                                                    Acreditar
-                                                </Button>
-                                            </div>
-                                        ))
+                                                    {estaAcreditado ? (
+                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="bg-emerald-500/15 text-emerald-300 border-emerald-500/40 text-[11px] font-extrabold px-2.5 py-1.5 rounded-xl gap-1 shadow-sm"
+                                                            >
+                                                                <CheckCircle2 className="size-3.5 text-emerald-400" />
+                                                                <span>Acreditado</span>
+                                                            </Badge>
+                                                        </div>
+                                                    ) : (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                procesarCodigo(p.documento || p.codigo, 'manual');
+                                                            }}
+                                                            className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs rounded-xl h-8 px-3 shrink-0 gap-1.5 shadow-md shadow-emerald-950 cursor-pointer"
+                                                        >
+                                                            <Check className="size-3.5" />
+                                                            Acreditar
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
                                     )}
                                 </div>
                             </CardContent>
@@ -2309,6 +2609,181 @@ export default function ActividadesEscanear({
                             className="w-full bg-slate-800 hover:bg-slate-700 text-white border-slate-700 font-bold"
                         >
                             Entendido
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL DE GESTIÓN DE DÍAS Y SESIONES DE LA ACTIVIDAD */}
+            <Dialog open={modalSesionesAbierto} onOpenChange={setModalSesionesAbierto}>
+                <DialogContent className="max-w-2xl bg-slate-900 text-white border-slate-800 rounded-2xl shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-black text-white">
+                            <CalendarDays className="size-5 text-indigo-400" />
+                            Días y Sesiones de la Actividad
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400 text-xs">
+                            Control central de sesiones y sincronización de marcaje para todos los terminales y la app móvil.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                        {/* BANNER INFORMATIVO DE CONTROL CENTRAL */}
+                        <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-start gap-2.5 text-xs text-indigo-200">
+                            <Radio className="size-4 text-indigo-400 shrink-0 mt-0.5 animate-pulse" />
+                            <div className="space-y-0.5">
+                                <p className="font-bold text-white">Sincronización Unificada Web y App Móvil:</p>
+                                <p className="text-[11px] text-slate-300 leading-relaxed">
+                                    La sesión marcada como <strong className="text-emerald-400">Activa Oficial</strong> es la que se sincronizará automáticamente en todos los teléfonos con la app móvil y en este terminal. Al iniciar un nuevo culto o día, presione <strong className="text-white">"Activar como Oficial"</strong> para que todos los dispositivos queden sincronizados a ese culto.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* LISTA DE SESIONES EXISTENTES */}
+                        <div className="space-y-2">
+                            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Sesiones Configuradas ({sesionesList.length}):</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {sesionesList.map((s) => {
+                                    const isOfficialActive = !!(s as any).is_activa;
+                                    const isCurrentViewing = s.id === sesionSeleccionada;
+
+                                    return (
+                                        <div
+                                            key={s.id}
+                                            onClick={() => {
+                                                handleCambiarSesion(s.id);
+                                                setModalSesionesAbierto(false);
+                                            }}
+                                            className={cn(
+                                                'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 select-none',
+                                                isOfficialActive
+                                                    ? 'bg-emerald-950/40 border-emerald-500/80 shadow-md shadow-emerald-950/40 ring-1 ring-emerald-500/40'
+                                                    : isCurrentViewing
+                                                    ? 'bg-indigo-950/50 border-indigo-500/60'
+                                                    : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <p className="text-xs font-black text-white">{s.nombre}</p>
+                                                        {isOfficialActive && (
+                                                            <Badge className="bg-emerald-500 text-slate-950 text-[9px] font-black px-1.5 py-0 gap-1 shrink-0">
+                                                                <span className="size-1.5 rounded-full bg-slate-950 animate-ping inline-block" />
+                                                                Activa Oficial
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 mt-1">
+                                                        {s.fecha_hora_inicio ? new Date(s.fecha_hora_inicio).toLocaleString('es-VE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Horario general'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2 mt-1">
+                                                <span className="text-[10px]">{s.tipo_comida && s.tipo_comida !== 'ninguna' ? `Comida: ${s.tipo_comida}` : 'Sin comida'}</span>
+
+                                                {isOfficialActive ? (
+                                                    <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                                                        <Check className="size-3" /> Transmitiendo a todos los dispositivos
+                                                    </span>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        disabled={cargandoActivarSesion}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleActivarSesionOficial(s.id);
+                                                        }}
+                                                        className="h-7 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] rounded-lg gap-1 shadow-sm cursor-pointer"
+                                                    >
+                                                        {cargandoActivarSesion ? <RefreshCw className="size-3 animate-spin" /> : <Radio className="size-3 text-indigo-200" />}
+                                                        <span>Activar como Oficial</span>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* FORMULARIO PARA AGREGAR NUEVO DÍA / SESIÓN */}
+                        <div className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800/90 space-y-3">
+                            <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                <Plus className="size-3.5 text-indigo-400" />
+                                Agregar Nuevo Día o Culto a esta Actividad:
+                            </p>
+
+                            <form onSubmit={handleCrearSesionRapida} className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-semibold text-slate-400">Nombre de la Sesión o Día:</label>
+                                    <Input
+                                        placeholder="Ej: Día 3 (Sáb 14/11) - Culto de Jóvenes"
+                                        value={nuevaSesionNombre}
+                                        onChange={(e) => setNuevaSesionNombre(e.target.value)}
+                                        className="h-9 bg-slate-900 border-slate-700 text-white text-xs rounded-xl"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-semibold text-slate-400">Fecha y Hora de Inicio:</label>
+                                        <Input
+                                            type="datetime-local"
+                                            value={nuevaSesionInicio}
+                                            onChange={(e) => setNuevaSesionInicio(e.target.value)}
+                                            className="h-9 bg-slate-900 border-slate-700 text-white text-xs rounded-xl font-mono"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-semibold text-slate-400">Fecha y Hora de Fin:</label>
+                                        <Input
+                                            type="datetime-local"
+                                            value={nuevaSesionFin}
+                                            onChange={(e) => setNuevaSesionFin(e.target.value)}
+                                            className="h-9 bg-slate-900 border-slate-700 text-white text-xs rounded-xl font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-3 pt-1">
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-[11px] font-semibold text-slate-400">Control de Comida:</label>
+                                        <select
+                                            value={nuevaSesionComida}
+                                            onChange={(e) => setNuevaSesionComida(e.target.value)}
+                                            className="h-8 bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-2"
+                                        >
+                                            <option value="ninguna">Ninguna</option>
+                                            <option value="desayuno">Desayuno</option>
+                                            <option value="almuerzo">Almuerzo</option>
+                                            <option value="cena">Cena</option>
+                                        </select>
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        disabled={guardandoNuevaSesion || !nuevaSesionNombre.trim() || !nuevaSesionInicio}
+                                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs h-8 px-3 rounded-xl gap-1.5 cursor-pointer"
+                                    >
+                                        {guardandoNuevaSesion ? <RefreshCw className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                                        Crear Sesión
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setModalSesionesAbierto(false)}
+                            className="border-slate-700 text-slate-300 hover:text-white"
+                        >
+                            Cerrar
                         </Button>
                     </DialogFooter>
                 </DialogContent>

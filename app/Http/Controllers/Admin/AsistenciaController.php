@@ -24,12 +24,8 @@ class AsistenciaController extends Controller
     {
         $actividad = Actividad::with(['sesiones'])->findOrFail($actividadId);
 
-        // Detectar sesión activa actual según la hora actual
-        $now = now();
-        $sesionActiva = $actividad->sesiones()
-            ->where('fecha_hora_inicio', '<=', $now->copy()->addHours(2))
-            ->where('fecha_hora_fin', '>=', $now->copy()->subHours(2))
-            ->first() ?? $actividad->sesiones()->first();
+        // Detectar sesión activa oficial (establecida por administración o por horario)
+        $sesionActiva = $actividad->sesion_activa;
 
         // Últimos 10 escaneados para mostrar en la cinta de actividad
         $ultimosEscaneos = Asistencia::with(['pastor.estado', 'sesion'])
@@ -53,7 +49,15 @@ class AsistenciaController extends Controller
                 'comida_entregada' => $as->comida_entregada,
             ]);
 
-        $totalPresentes = $this->calcularTotalPresentes($actividad->id);
+        $totalPresentes = $this->calcularTotalPresentes($actividad->id, $sesionActiva?->id);
+
+        // Obtener los IDs de pastores que ya tienen asistencia registrada en la sesión activa
+        $pastorIdsRegistrados = Asistencia::where('actividad_id', $actividad->id)
+            ->when($sesionActiva, fn ($q) => $q->where('actividad_sesion_id', $sesionActiva->id))
+            ->pluck('pastor_id')
+            ->unique()
+            ->values()
+            ->toArray();
 
         $pastoresConvocados = Pastor::where('status', true)
             ->whereNotNull('foto')
@@ -90,6 +94,7 @@ class AsistenciaController extends Controller
             'ultimosEscaneos' => $ultimosEscaneos,
             'totalPresentes' => $totalPresentes,
             'pastoresConvocados' => $pastoresConvocados,
+            'pastorIdsRegistrados' => $pastorIdsRegistrados,
         ]);
     }
 
@@ -146,7 +151,8 @@ class AsistenciaController extends Controller
         }
 
         $actividadId = (int) $request->input('actividad_id');
-        $sesionId = $request->input('actividad_sesion_id');
+        $actividad = Actividad::with('sesiones')->findOrFail($actividadId);
+        $sesionId = $request->input('actividad_sesion_id') ?: $actividad->sesion_activa?->id;
         $asistioConConyuge = (bool) $request->input('asistio_con_conyuge', false);
         $dispositivo = trim((string) $request->input('dispositivo', 'Terminal Web (Escáner)'));
         $metodo = $request->input('metodo', 'qr_carnet');
@@ -209,6 +215,7 @@ class AsistenciaController extends Controller
                 'message' => "¡Atención! {$pastor->nombres} {$pastor->apellidos} ya marcó asistencia previamente a las " . $asistenciaExistente->fecha_registro->format('h:i A'),
                 'pastor' => $this->formatearDatosPastor($pastor),
                 'asistencia' => $asistenciaExistente,
+                'pastor_ids_acreditados' => [$pastor->id],
             ], 200);
         }
 
@@ -287,7 +294,8 @@ class AsistenciaController extends Controller
             }
         }
 
-        $totalPresentes = $this->calcularTotalPresentes($actividadId);
+        $totalPresentes = $this->calcularTotalPresentes($actividadId, $sesionId ? (int) $sesionId : null);
+        $pastorIdsAcreditados = array_values(array_unique(array_filter(array_map(fn ($a) => $a['pastor_id'], $asistenciasList))));
 
         $mensaje = "¡Asistencia registrada con éxito! Bienvenido(a) {$pastor->nombres} {$pastor->apellidos}";
         if ($asistioConConyuge) {
@@ -303,6 +311,7 @@ class AsistenciaController extends Controller
             'asistencia' => $asistenciasList[0],
             'asistencias' => $asistenciasList,
             'totalPresentes' => $totalPresentes,
+            'pastor_ids_acreditados' => $pastorIdsAcreditados,
         ]);
     }
 
@@ -443,7 +452,8 @@ class AsistenciaController extends Controller
                 }
             }
 
-            $totalPresentes = $this->calcularTotalPresentes($validated['actividad_id']);
+            $sesionId = !empty($validated['actividad_sesion_id']) ? (int) $validated['actividad_sesion_id'] : null;
+            $totalPresentes = $this->calcularTotalPresentes($validated['actividad_id'], $sesionId);
         }
 
         $mensajeExito = "¡Rostro enrolado y asistencia confirmada para {$pastor->nombres} {$pastor->apellidos}!";
@@ -458,6 +468,7 @@ class AsistenciaController extends Controller
             'asistencia' => $asistenciasList[0] ?? null,
             'asistencias' => $asistenciasList,
             'totalPresentes' => $totalPresentes,
+            'pastor_ids_acreditados' => array_values(array_unique(array_filter(array_map(fn($a) => $a['pastor_id'] ?? null, $asistenciasList)))),
             'foto_url' => $pastor->foto_url,
         ]);
     }
@@ -513,14 +524,17 @@ class AsistenciaController extends Controller
     {
         $asistencia = Asistencia::findOrFail($id);
         $actividadId = $asistencia->actividad_id;
+        $sesionId = $asistencia->actividad_sesion_id;
+        $pastorId = $asistencia->pastor_id;
         $asistencia->delete();
 
-        $totalPresentes = Asistencia::where('actividad_id', $actividadId)->distinct('pastor_id')->count('pastor_id');
+        $totalPresentes = $this->calcularTotalPresentes($actividadId, $sesionId);
 
         return response()->json([
             'success' => true,
             'message' => 'Asistencia revertida correctamente.',
             'totalPresentes' => $totalPresentes,
+            'pastor_id_revertido' => $pastorId,
         ]);
     }
 
@@ -640,18 +654,24 @@ class AsistenciaController extends Controller
     /**
      * Calcular total real de asistentes presentes (pastores únicos + cónyuges acompañantes)
      */
-    protected function calcularTotalPresentes(int $actividadId): int
+    protected function calcularTotalPresentes(int $actividadId, ?int $sesionId = null): int
     {
-        $pastoresPresentesIds = Asistencia::where('actividad_id', $actividadId)
-            ->pluck('pastor_id')
-            ->unique();
+        $query = Asistencia::where('actividad_id', $actividadId);
+        if ($sesionId) {
+            $query->where('actividad_sesion_id', $sesionId);
+        }
 
+        $pastoresPresentesIds = $query->pluck('pastor_id')->unique();
         $totalPastores = $pastoresPresentesIds->count();
 
         // Contar acompañantes cónyuges cuyos pastores no son registros independientes en la lista anterior
-        $conyugesNoPastores = Asistencia::where('actividad_id', $actividadId)
-            ->where('asistio_con_conyuge', true)
-            ->with('pastor')
+        $conyugesQuery = Asistencia::where('actividad_id', $actividadId)
+            ->where('asistio_con_conyuge', true);
+        if ($sesionId) {
+            $conyugesQuery->where('actividad_sesion_id', $sesionId);
+        }
+
+        $conyugesNoPastores = $conyugesQuery->with('pastor')
             ->get()
             ->filter(function ($as) use ($pastoresPresentesIds) {
                 $pastor = $as->pastor;
@@ -668,5 +688,103 @@ class AsistenciaController extends Controller
             ->count();
 
         return $totalPastores + $conyugesNoPastores;
+    }
+
+    /**
+     * Obtener estadísticas e IDs de pastores registrados para una sesión específica
+     */
+    public function obtenerSesionInfo(Request $request, int $actividadId)
+    {
+        $actividad = Actividad::with('sesiones')->findOrFail($actividadId);
+        $sesionId = $request->input('sesion_id');
+
+        $pastorIdsRegistrados = Asistencia::where('actividad_id', $actividad->id)
+            ->when($sesionId, fn ($q) => $q->where('actividad_sesion_id', $sesionId))
+            ->pluck('pastor_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $totalPresentes = $this->calcularTotalPresentes($actividad->id, $sesionId ? (int) $sesionId : null);
+
+        return response()->json([
+            'success' => true,
+            'sesion_id' => $sesionId ? (int) $sesionId : null,
+            'total_presentes' => $totalPresentes,
+            'pastor_ids_registrados' => $pastorIdsRegistrados,
+            'sesiones' => $actividad->sesiones,
+        ]);
+    }
+
+    /**
+     * Crear una nueva sesión / día rápido desde el escáner
+     */
+    public function crearSesionRapida(Request $request, int $actividadId)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'fecha_hora_inicio' => 'required|date',
+            'fecha_hora_fin' => 'required|date|after_or_equal:fecha_hora_inicio',
+            'tipo_comida' => 'nullable|string|in:ninguna,desayuno,almuerzo,cena',
+            'es_obligatoria' => 'boolean',
+        ]);
+
+        $actividad = Actividad::findOrFail($actividadId);
+        $ultimoOrden = $actividad->sesiones()->max('orden') ?? 0;
+
+        $sesion = $actividad->sesiones()->create([
+            'nombre' => trim($request->input('nombre')),
+            'fecha_hora_inicio' => $request->input('fecha_hora_inicio'),
+            'fecha_hora_fin' => $request->input('fecha_hora_fin'),
+            'tipo_comida' => $request->input('tipo_comida', 'ninguna'),
+            'es_obligatoria' => (bool) $request->input('es_obligatoria', true),
+            'orden' => $ultimoOrden + 1,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Sesión '{$sesion->nombre}' creada exitosamente.",
+            'sesion' => $sesion,
+            'sesiones' => $actividad->sesiones()->orderBy('orden')->get(),
+        ]);
+    }
+
+    /**
+     * Establecer una sesión como la Sesión Activa Oficial de la actividad
+     * para sincronizar todos los terminales web y apps móviles.
+     */
+    public function activarSesion(Request $request, int $actividadId)
+    {
+        $request->validate([
+            'sesion_id' => 'required|exists:actividad_sesiones,id',
+        ]);
+
+        $actividad = Actividad::with('sesiones')->findOrFail($actividadId);
+        $sesionId = (int) $request->input('sesion_id');
+
+        DB::transaction(function () use ($actividad, $sesionId) {
+            $actividad->sesiones()->update(['is_activa' => false]);
+            $actividad->sesiones()->where('id', $sesionId)->update(['is_activa' => true]);
+        });
+
+        $actividad->load('sesiones');
+        $sesionActiva = $actividad->sesiones->firstWhere('id', $sesionId);
+        $totalPresentes = $this->calcularTotalPresentes($actividad->id, $sesionId);
+
+        $pastorIdsRegistrados = Asistencia::where('actividad_id', $actividad->id)
+            ->where('actividad_sesion_id', $sesionId)
+            ->pluck('pastor_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'success' => true,
+            'message' => "La sesión '{$sesionActiva?->nombre}' ha sido activada oficialmente para todos los dispositivos móviles y terminales.",
+            'sesion_activa' => $sesionActiva,
+            'sesiones' => $actividad->sesiones()->orderBy('orden')->get(),
+            'total_presentes' => $totalPresentes,
+            'pastor_ids_registrados' => $pastorIdsRegistrados,
+        ]);
     }
 }

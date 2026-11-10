@@ -97,6 +97,251 @@ escanear.head = (args: { actividad: string | number } | [actividad: string | num
     
     escanear.form = escanearForm
 /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::sesionInfo
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:696
+ * @route '/admin/actividades/{actividad}/sesion-info'
+ */
+export const sesionInfo = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: sesionInfo.url(args, options),
+    method: 'get',
+})
+
+sesionInfo.definition = {
+    methods: ["get","head"],
+    url: '/admin/actividades/{actividad}/sesion-info',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::sesionInfo
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:696
+ * @route '/admin/actividades/{actividad}/sesion-info'
+ */
+sesionInfo.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { actividad: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    actividad: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        actividad: args.actividad,
+                }
+
+    return sesionInfo.definition.url
+            .replace('{actividad}', parsedArgs.actividad.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::sesionInfo
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:696
+ * @route '/admin/actividades/{actividad}/sesion-info'
+ */
+sesionInfo.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: sesionInfo.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::sesionInfo
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:696
+ * @route '/admin/actividades/{actividad}/sesion-info'
+ */
+sesionInfo.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: sesionInfo.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::sesionInfo
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:696
+ * @route '/admin/actividades/{actividad}/sesion-info'
+ */
+    const sesionInfoForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: sesionInfo.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::sesionInfo
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:696
+ * @route '/admin/actividades/{actividad}/sesion-info'
+ */
+        sesionInfoForm.get = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: sesionInfo.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::sesionInfo
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:696
+ * @route '/admin/actividades/{actividad}/sesion-info'
+ */
+        sesionInfoForm.head = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: sesionInfo.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    sesionInfo.form = sesionInfoForm
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::crearSesionRapida
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:722
+ * @route '/admin/actividades/{actividad}/crear-sesion-rapida'
+ */
+export const crearSesionRapida = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearSesionRapida.url(args, options),
+    method: 'post',
+})
+
+crearSesionRapida.definition = {
+    methods: ["post"],
+    url: '/admin/actividades/{actividad}/crear-sesion-rapida',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::crearSesionRapida
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:722
+ * @route '/admin/actividades/{actividad}/crear-sesion-rapida'
+ */
+crearSesionRapida.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { actividad: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    actividad: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        actividad: args.actividad,
+                }
+
+    return crearSesionRapida.definition.url
+            .replace('{actividad}', parsedArgs.actividad.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::crearSesionRapida
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:722
+ * @route '/admin/actividades/{actividad}/crear-sesion-rapida'
+ */
+crearSesionRapida.post = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearSesionRapida.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::crearSesionRapida
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:722
+ * @route '/admin/actividades/{actividad}/crear-sesion-rapida'
+ */
+    const crearSesionRapidaForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearSesionRapida.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::crearSesionRapida
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:722
+ * @route '/admin/actividades/{actividad}/crear-sesion-rapida'
+ */
+        crearSesionRapidaForm.post = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearSesionRapida.url(args, options),
+            method: 'post',
+        })
+    
+    crearSesionRapida.form = crearSesionRapidaForm
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::activarSesion
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:756
+ * @route '/admin/actividades/{actividad}/activar-sesion'
+ */
+export const activarSesion = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: activarSesion.url(args, options),
+    method: 'post',
+})
+
+activarSesion.definition = {
+    methods: ["post"],
+    url: '/admin/actividades/{actividad}/activar-sesion',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::activarSesion
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:756
+ * @route '/admin/actividades/{actividad}/activar-sesion'
+ */
+activarSesion.url = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { actividad: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    actividad: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        actividad: args.actividad,
+                }
+
+    return activarSesion.definition.url
+            .replace('{actividad}', parsedArgs.actividad.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\AsistenciaController::activarSesion
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:756
+ * @route '/admin/actividades/{actividad}/activar-sesion'
+ */
+activarSesion.post = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: activarSesion.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::activarSesion
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:756
+ * @route '/admin/actividades/{actividad}/activar-sesion'
+ */
+    const activarSesionForm = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: activarSesion.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\AsistenciaController::activarSesion
+ * @see app/Http/Controllers/Admin/AsistenciaController.php:756
+ * @route '/admin/actividades/{actividad}/activar-sesion'
+ */
+        activarSesionForm.post = (args: { actividad: string | number } | [actividad: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: activarSesion.url(args, options),
+            method: 'post',
+        })
+    
+    activarSesion.form = activarSesionForm
+/**
 * @see \App\Http\Controllers\Admin\ActividadController::index
  * @see app/Http/Controllers/Admin/ActividadController.php:17
  * @route '/admin/actividades'
@@ -671,6 +916,9 @@ monitor.head = (args: { actividad: string | number } | [actividad: string | numb
     monitor.form = monitorForm
 const actividades = {
     escanear: Object.assign(escanear, escanear),
+sesionInfo: Object.assign(sesionInfo, sesionInfo),
+crearSesionRapida: Object.assign(crearSesionRapida, crearSesionRapida),
+activarSesion: Object.assign(activarSesion, activarSesion),
 index: Object.assign(index, index),
 create: Object.assign(create, create),
 store: Object.assign(store, store),

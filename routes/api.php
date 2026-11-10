@@ -21,6 +21,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/pastores/padron-offline', [AsistenciaApiController::class, 'padronOffline']);
     Route::post('/asistencias/registrar', [AsistenciaApiController::class, 'registrarAsistencia']);
     Route::get('/actividades/{actividad}/ultimos-escaneos', [AsistenciaApiController::class, 'ultimosEscaneos']);
+    Route::post('/actividades/{actividad}/activar-sesion', [AsistenciaApiController::class, 'activarSesion']);
 
     // ----------------------------------------------------------------------
     // 2. AUTENTICACIÓN PARA LIDERAZGO (PRESBÍTEROS Y SUPERVISORES)

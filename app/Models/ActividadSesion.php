@@ -21,12 +21,14 @@ class ActividadSesion extends Model
         'es_obligatoria',
         'tipo_comida',
         'orden',
+        'is_activa',
     ];
 
     protected $casts = [
         'fecha_hora_inicio' => 'datetime',
         'fecha_hora_fin' => 'datetime',
         'es_obligatoria' => 'boolean',
+        'is_activa' => 'boolean',
         'orden' => 'integer',
     ];
 

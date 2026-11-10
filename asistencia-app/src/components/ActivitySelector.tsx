@@ -149,6 +149,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                       </Text>
                       {item.sesiones.map((ses) => {
                         const isSesionActive = isSelected && ses.id === sesionActual?.id;
+                        const isOfficial = !!ses.is_activa;
                         return (
                           <Pressable
                             key={ses.id}
@@ -156,7 +157,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                               styles.sessionRow,
                               {
                                 backgroundColor: isSesionActive ? colors.primary : (isDark ? colors.card : '#ffffff'),
-                                borderColor: isSesionActive ? colors.primary : colors.cardBorder,
+                                borderColor: isSesionActive ? colors.primary : isOfficial ? colors.success : colors.cardBorder,
                               },
                             ]}
                             onPress={() => {
@@ -165,14 +166,24 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                               setDialogOpen(false);
                             }}
                           >
-                            <Text
-                              style={[
-                                styles.sessionText,
-                                { color: isSesionActive ? '#ffffff' : colors.text },
-                              ]}
-                            >
-                              {ses.nombre}
-                            </Text>
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text
+                                style={[
+                                  styles.sessionText,
+                                  { color: isSesionActive ? '#ffffff' : colors.text },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {ses.nombre}
+                              </Text>
+                              {isOfficial && (
+                                <Badge variant="outline">
+                                  <Text style={{ fontSize: 9, fontWeight: '800', color: isSesionActive ? '#ffffff' : colors.success }}>
+                                    ACTIVA
+                                  </Text>
+                                </Badge>
+                              )}
+                            </View>
                             {isSesionActive && <Check size={14} color="#ffffff" />}
                           </Pressable>
                         );

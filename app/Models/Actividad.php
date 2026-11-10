@@ -69,6 +69,32 @@ class Actividad extends Model
     }
 
     /**
+     * Obtener la sesión actualmente activa de la actividad.
+     * Prioridad:
+     * 1. Sesión marcada explícitamente con `is_activa = true`
+     * 2. Sesión dentro del rango de hora actual (+/- 2 horas)
+     * 3. Primera sesión por orden
+     */
+    public function getSesionActivaAttribute(): ?ActividadSesion
+    {
+        $sesiones = $this->relationLoaded('sesiones') ? $this->sesiones : $this->sesiones()->get();
+
+        $marcada = $sesiones->firstWhere('is_activa', true);
+        if ($marcada) {
+            return $marcada;
+        }
+
+        $now = now();
+        $porHorario = $sesiones->filter(function ($s) use ($now) {
+            $inicio = \Carbon\Carbon::parse($s->fecha_hora_inicio)->subHours(2);
+            $fin = \Carbon\Carbon::parse($s->fecha_hora_fin)->addHours(2);
+            return $now->between($inicio, $fin);
+        })->first();
+
+        return $porHorario ?? $sesiones->first();
+    }
+
+    /**
      * Total de pastores únicos que han registrado asistencia a la actividad
      */
     public function totalAsistentesUnicos(): int

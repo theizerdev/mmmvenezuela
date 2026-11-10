@@ -57,6 +57,15 @@ Route::middleware(['web'])->group(function () {
 
     Route::delete('/admin/actividades/asistencias/{asistencia}/revertir', [AsistenciaController::class, 'revertir'])->name('admin.asistencias.revertir');
     Route::delete('/actividades/asistencias/{asistencia}/revertir', [AsistenciaController::class, 'revertir']);
+
+    Route::get('/admin/actividades/{actividad}/sesion-info', [AsistenciaController::class, 'obtenerSesionInfo'])->name('admin.actividades.sesion-info');
+    Route::get('/actividades/{actividad}/sesion-info', [AsistenciaController::class, 'obtenerSesionInfo']);
+
+    Route::post('/admin/actividades/{actividad}/crear-sesion-rapida', [AsistenciaController::class, 'crearSesionRapida'])->name('admin.actividades.crear-sesion-rapida');
+    Route::post('/actividades/{actividad}/crear-sesion-rapida', [AsistenciaController::class, 'crearSesionRapida']);
+
+    Route::post('/admin/actividades/{actividad}/activar-sesion', [AsistenciaController::class, 'activarSesion'])->name('admin.actividades.activar-sesion');
+    Route::post('/actividades/{actividad}/activar-sesion', [AsistenciaController::class, 'activarSesion']);
 });
 
 

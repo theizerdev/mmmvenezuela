@@ -134,12 +134,8 @@ function MainApp() {
           const matched = prev ? enCurso.find((a) => a.id === prev.id) : null;
           const target = matched || selected;
           if (target) {
-            setSesionActual((prevSes) => {
-              if (prevSes && target.sesiones.some((s) => s.id === prevSes.id)) {
-                return prevSes;
-              }
-              return target.sesion_activa || target.sesiones[0] || null;
-            });
+            // Sincronizar automáticamente con la sesión activa oficial establecida por la administración
+            setSesionActual(target.sesion_activa || target.sesiones[0] || null);
           } else {
             setSesionActual(null);
           }
