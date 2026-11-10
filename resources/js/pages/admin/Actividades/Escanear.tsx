@@ -2047,7 +2047,16 @@ export default function ActividadesEscanear({
                                                 )}>
                                                     <div className="flex items-center gap-2.5 min-w-0">
                                                         {ultimoPastor.foto ? (
-                                                            <img src={ultimoPastor.foto} alt="" className="size-9 rounded-xl object-cover shrink-0 border border-white/20" />
+                                                            <div
+                                                                className="size-9 rounded-xl shrink-0 border border-white/20 overflow-hidden"
+                                                                style={{
+                                                                    backgroundColor: '#cbd5e1',
+                                                                    backgroundImage: "url('/image/fondo-foto-carnet.png'), linear-gradient(180deg, #cfd7e1 0%, #dbe1e8 45%, #c2cbd5 100%)",
+                                                                    backgroundSize: 'cover',
+                                                                }}
+                                                            >
+                                                                <img src={ultimoPastor.foto} alt="" className="size-full object-cover object-top" />
+                                                            </div>
                                                         ) : (
                                                             <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-xs text-white shrink-0">
                                                                 {getInitials(ultimoPastor.nombre_completo)}
@@ -2376,11 +2385,18 @@ export default function ActividadesEscanear({
                                                     )}
                                                 >
                                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                                        <Avatar className={cn(
-                                                            'size-10 rounded-xl border shrink-0',
-                                                            estaAcreditado ? 'border-emerald-500/60 ring-2 ring-emerald-500/20' : 'border-slate-700/80'
-                                                        )}>
-                                                            {p.foto && <AvatarImage src={p.foto} alt={p.nombre_completo} className="object-cover" />}
+                                                        <Avatar
+                                                            className={cn(
+                                                                'size-10 rounded-xl border shrink-0 overflow-hidden',
+                                                                estaAcreditado ? 'border-emerald-500/60 ring-2 ring-emerald-500/20' : 'border-slate-700/80'
+                                                            )}
+                                                            style={{
+                                                                backgroundColor: '#cbd5e1',
+                                                                backgroundImage: "url('/image/fondo-foto-carnet.png'), linear-gradient(180deg, #cfd7e1 0%, #dbe1e8 45%, #c2cbd5 100%)",
+                                                                backgroundSize: 'cover',
+                                                            }}
+                                                        >
+                                                            {p.foto && <AvatarImage src={p.foto} alt={p.nombre_completo} className="object-cover object-top" />}
                                                             <AvatarFallback className={cn(
                                                                 'rounded-xl font-extrabold text-xs',
                                                                 estaAcreditado ? 'bg-emerald-900 text-emerald-100' : 'bg-slate-800 text-slate-200'
@@ -2599,8 +2615,17 @@ export default function ActividadesEscanear({
 
                                 {/* TARJETA DE CREDENCIAL DEL PASTOR (ESTILO CARNET OFICIAL) */}
                                 <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden">
-                                    {/* FOTO RECTANGULAR PROPORCIÓN CARNET OFICIAL 3:4 (SIN DISTORSIÓN) */}
-                                    <div className="relative w-32 sm:w-40 md:w-44 aspect-[3/4] rounded-2xl border-2 border-indigo-500/50 bg-slate-900 shadow-2xl overflow-hidden shrink-0 group">
+                                    {/* FOTO RECTANGULAR PROPORCIÓN CARNET OFICIAL 3:4 CON EL FONDO EXACTO DEL CARNET */}
+                                    <div
+                                        className="relative w-32 sm:w-40 md:w-44 aspect-[3/4] rounded-2xl border-2 border-slate-700/60 shadow-2xl overflow-hidden shrink-0 group"
+                                        style={{
+                                            backgroundColor: '#cbd5e1',
+                                            backgroundImage: "url('/image/fondo-foto-carnet.png'), linear-gradient(180deg, #cfd7e1 0%, #dbe1e8 45%, #c2cbd5 100%)",
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center',
+                                            backgroundRepeat: 'no-repeat',
+                                        }}
+                                    >
                                         {ultimoPastor.foto && !imgFotoError ? (
                                             <img
                                                 src={ultimoPastor.foto}
@@ -2609,23 +2634,15 @@ export default function ActividadesEscanear({
                                                 onError={() => setImgFotoError(true)}
                                             />
                                         ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-indigo-950/80 via-slate-900 to-slate-950 p-3 text-center">
-                                                <span className="font-black text-3xl sm:text-4xl tracking-widest text-indigo-300/80 font-mono">
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-200/90 via-slate-300/80 to-slate-400/90 p-3 text-center">
+                                                <span className="font-black text-3xl sm:text-4xl tracking-widest text-slate-700 font-mono">
                                                     {getInitials(ultimoPastor.nombre_completo)}
                                                 </span>
-                                                <span className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
+                                                <span className="text-[10px] text-slate-600 mt-1 uppercase font-bold tracking-wider">
                                                     Sin Foto
                                                 </span>
                                             </div>
                                         )}
-
-                                        {/* Insignia inferior Credencial */}
-                                        <div className="absolute bottom-0 inset-x-0 py-1 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex items-center justify-center">
-                                            <span className="text-[9px] uppercase tracking-wider font-extrabold text-indigo-200 flex items-center gap-1 drop-shadow">
-                                                <BadgeCheck className="size-2.5 text-indigo-400" />
-                                                Foto Carnet
-                                            </span>
-                                        </div>
                                     </div>
 
                                     {/* DATOS MINISTERIALES ESTILO CARNET */}
@@ -2759,8 +2776,15 @@ export default function ActividadesEscanear({
                                 key={as.id}
                                 className="min-w-[220px] sm:min-w-0 p-2 sm:p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2 hover:border-slate-700 transition-colors shadow-sm shrink-0 sm:shrink"
                             >
-                                <Avatar className="size-8 rounded-lg shrink-0">
-                                    {as.foto && <AvatarImage src={as.foto} alt={as.nombre_completo} />}
+                                <Avatar
+                                    className="size-8 rounded-lg shrink-0 overflow-hidden"
+                                    style={{
+                                        backgroundColor: '#cbd5e1',
+                                        backgroundImage: "url('/image/fondo-foto-carnet.png'), linear-gradient(180deg, #cfd7e1 0%, #dbe1e8 45%, #c2cbd5 100%)",
+                                        backgroundSize: 'cover',
+                                    }}
+                                >
+                                    {as.foto && <AvatarImage src={as.foto} alt={as.nombre_completo} className="object-cover object-top" />}
                                     <AvatarFallback className="rounded-lg bg-slate-800 text-slate-300 text-xs font-bold">
                                         {getInitials(as.nombre_completo)}
                                     </AvatarFallback>
@@ -2953,8 +2977,15 @@ export default function ActividadesEscanear({
                                     className="p-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-indigo-950/50 hover:border-indigo-500/40 cursor-pointer transition-all flex items-center justify-between gap-3"
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <Avatar className="size-10 rounded-xl shrink-0">
-                                            {p.foto && <AvatarImage src={p.foto} alt={p.nombre_completo} />}
+                                        <Avatar
+                                            className="size-10 rounded-xl shrink-0 overflow-hidden"
+                                            style={{
+                                                backgroundColor: '#cbd5e1',
+                                                backgroundImage: "url('/image/fondo-foto-carnet.png'), linear-gradient(180deg, #cfd7e1 0%, #dbe1e8 45%, #c2cbd5 100%)",
+                                                backgroundSize: 'cover',
+                                            }}
+                                        >
+                                            {p.foto && <AvatarImage src={p.foto} alt={p.nombre_completo} className="object-cover object-top" />}
                                             <AvatarFallback className="rounded-xl bg-slate-800 text-xs font-bold text-slate-300">
                                                 {getInitials(p.nombre_completo)}
                                             </AvatarFallback>
