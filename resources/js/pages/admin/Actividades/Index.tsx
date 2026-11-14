@@ -17,6 +17,8 @@ import {
     Layers,
     Heart,
     RotateCcw,
+    ChevronRight,
+    FileText,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -29,6 +31,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { ActividadModal, ActividadData } from './Partials/ActividadModal';
+import { SesionAsistentesModal } from './Partials/SesionAsistentesModal';
 
 interface Sesion {
     id: number;
@@ -38,6 +41,7 @@ interface Sesion {
     es_obligatoria: boolean;
     tipo_comida?: string;
     is_activa?: boolean;
+    asistencias_count?: number;
 }
 
 interface ActividadItem extends ActividadData {
@@ -88,6 +92,10 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingActividad, setEditingActividad] = useState<ActividadItem | null>(null);
 
+    // Estado para la ventana modal de detalle de asistentes por servicio / zonas
+    const [detailModalActividad, setDetailModalActividad] = useState<ActividadItem | null>(null);
+    const [detailModalSesionId, setDetailModalSesionId] = useState<number | 'all' | null>(null);
+
     useEffect(() => {
         const timer = setTimeout(() => {
             if (
@@ -128,6 +136,11 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
     const handleOpenEditModal = (actividad: ActividadItem) => {
         setEditingActividad(actividad);
         setIsModalOpen(true);
+    };
+
+    const handleOpenSesionDetalle = (actividad: ActividadItem, sesionId: number | 'all' | null = null) => {
+        setDetailModalActividad(actividad);
+        setDetailModalSesionId(sesionId);
     };
 
     const handleDelete = (actividad: ActividadItem) => {
@@ -402,9 +415,22 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                             </div>
                                         </div>
 
-                                        <div className="p-2.5 rounded-lg bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/30">
-                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider block">
-                                                Sesiones / Cultos
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleOpenSesionDetalle(
+                                                    actividad,
+                                                    actividad.sesiones?.find((s) => s.is_activa)?.id ??
+                                                        actividad.sesiones?.[0]?.id ??
+                                                        'all',
+                                                )
+                                            }
+                                            title="Ver detalle de asistencia por sesiones y zonas"
+                                            className="w-full text-left p-2.5 rounded-lg bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/30 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-purple-100/60 dark:hover:bg-purple-950/50 transition-colors cursor-pointer group/ses"
+                                        >
+                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center justify-between">
+                                                <span>Sesiones / Cultos</span>
+                                                <ChevronRight className="size-3 opacity-60 group-hover/ses:opacity-100 group-hover/ses:translate-x-0.5 transition-all" />
                                             </span>
                                             <div className="flex items-baseline gap-1 mt-0.5">
                                                 <span className="text-base font-extrabold text-purple-900 dark:text-purple-100">
@@ -412,7 +438,7 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                                 </span>
                                                 <span className="text-[10px] text-purple-500">bloques</span>
                                             </div>
-                                        </div>
+                                        </button>
                                     </div>
 
                                     {/* Badges de soporte (Cónyuge / Comida) */}
@@ -430,22 +456,39 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                                         )}
                                     </div>
 
-                                    {/* Indicador de Culto Activo Oficial */}
+                                    {/* Indicador de Culto Activo Oficial (interactivo: abre detalle y PDF por zonas) */}
                                     {(() => {
                                         const sesionActiva = actividad.sesiones?.find((s) => s.is_activa);
                                         if (sesionActiva) {
                                             return (
-                                                <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs">
-                                                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenSesionDetalle(actividad, sesionActiva.id)}
+                                                    title="Presione para ver el detalle de asistentes por zona y exportar PDF"
+                                                    className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/50 transition-all cursor-pointer group/active-culto text-xs"
+                                                >
+                                                    <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                                                     <div className="min-w-0 flex-1">
-                                                        <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block tracking-wider">
-                                                            Culto Activo Oficial
-                                                        </span>
-                                                        <span className="font-semibold text-emerald-900 dark:text-emerald-200 truncate block text-[11px]">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 tracking-wider">
+                                                                Culto Activo Oficial
+                                                            </span>
+                                                            {typeof sesionActiva.asistencias_count === 'number' && (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-200/80 dark:bg-emerald-800/70 text-emerald-900 dark:text-emerald-100">
+                                                                    {sesionActiva.asistencias_count} asist.
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <span className="font-semibold text-emerald-900 dark:text-emerald-200 truncate block text-[11px] mt-0.5">
                                                             {sesionActiva.nombre}
                                                         </span>
                                                     </div>
-                                                </div>
+                                                    <div className="shrink-0 flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-white/80 dark:bg-emerald-950/70 px-2 py-1 rounded-md border border-emerald-200/80 dark:border-emerald-700/60 group-hover/active-culto:bg-emerald-600 group-hover/active-culto:text-white group-hover/active-culto:border-emerald-600 transition-colors">
+                                                        <FileText className="size-3" />
+                                                        <span>Detalle / PDF</span>
+                                                        <ChevronRight className="size-3 group-hover/active-culto:translate-x-0.5 transition-transform" />
+                                                    </div>
+                                                </button>
                                             );
                                         }
                                         return null;
@@ -516,6 +559,18 @@ export default function ActividadesIndex({ actividades, filters, kpis, tiposDisp
                     }}
                     actividad={editingActividad}
                     tiposDisponibles={tiposDisponibles}
+                />
+
+                {/* Ventana Modal de Detalle de Asistentes por Servicio y Zonas */}
+                <SesionAsistentesModal
+                    isOpen={Boolean(detailModalActividad)}
+                    onClose={() => {
+                        setDetailModalActividad(null);
+                        setDetailModalSesionId(null);
+                    }}
+                    actividadId={detailModalActividad?.id ?? null}
+                    actividadNombre={detailModalActividad?.nombre}
+                    initialSesionId={detailModalSesionId}
                 />
             </div>
         </>

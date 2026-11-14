@@ -21,7 +21,9 @@ class ActividadController extends Controller
         $estado = $request->input('estado');
         $zona = $request->input('zona');
 
-        $query = Actividad::with(['sesiones'])
+        $query = Actividad::with([
+            'sesiones' => fn ($q) => $q->withCount('asistencias'),
+        ])
             ->withCount([
                 'asistencias',
                 'asistencias as total_pastores_unicos' => function ($q) {

@@ -8,6 +8,7 @@ use App\Models\ActividadSesion;
 use App\Models\Asistencia;
 use App\Models\Pastor;
 use App\Services\AsistenciaExcelExportService;
+use App\Services\AsistenciaReporteService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -565,58 +566,137 @@ class AsistenciaController extends Controller
     }
 
     /**
-     * Exportar reporte oficial de asistencia en formato PDF
+     * Obtener detalle de asistentes organizado por todas las zonas para una sesión (o actividad completa).
      */
-    public function exportPdf(int $actividadId)
+    public function sesionDetalle(Request $request, int $actividadId, AsistenciaReporteService $reporteService)
+    {
+        $actividad = Actividad::with([
+            'sesiones' => fn ($q) => $q->withCount('asistencias'),
+        ])->findOrFail($actividadId);
+
+        $sesionIdParam = $request->query('sesion_id');
+        $sesion = $this->resolveSesionScope($actividad, $sesionIdParam, defaultToActive: true);
+        $detalle = $reporteService->buildDetallePorZonas($actividad, $sesion);
+
+        return response()->json([
+            'success' => true,
+            'actividad' => [
+                'id' => $actividad->id,
+                'nombre' => $actividad->nombre,
+                'tipo' => $actividad->tipo,
+                'lugar' => $actividad->lugar,
+                'zona' => $actividad->zona,
+                'estado' => $actividad->estado,
+                'permite_conyuge' => (bool) $actividad->permite_conyuge,
+                'fecha_inicio' => $actividad->fecha_inicio?->toIso8601String(),
+                'fecha_fin' => $actividad->fecha_fin?->toIso8601String(),
+            ],
+            'scope' => $sesion ? 'sesion' : 'actividad',
+            'sesion_seleccionada' => $sesion ? [
+                'id' => $sesion->id,
+                'nombre' => $sesion->nombre,
+                'fecha_hora_inicio' => $sesion->fecha_hora_inicio?->toIso8601String(),
+                'fecha_hora_fin' => $sesion->fecha_hora_fin?->toIso8601String(),
+                'es_obligatoria' => (bool) $sesion->es_obligatoria,
+                'is_activa' => (bool) $sesion->is_activa,
+            ] : null,
+            'sesiones' => $actividad->sesiones->map(fn ($s) => [
+                'id' => $s->id,
+                'nombre' => $s->nombre,
+                'fecha_hora_inicio' => $s->fecha_hora_inicio?->toIso8601String(),
+                'fecha_hora_fin' => $s->fecha_hora_fin?->toIso8601String(),
+                'es_obligatoria' => (bool) $s->es_obligatoria,
+                'is_activa' => (bool) $s->is_activa,
+                'asistencias_count' => (int) ($s->asistencias_count ?? 0),
+            ])->values(),
+            ...$detalle,
+        ]);
+    }
+
+    /**
+     * Exportar reporte oficial de asistencia en formato PDF organizado por todas las zonas.
+     */
+    public function exportPdf(Request $request, int $actividadId, AsistenciaReporteService $reporteService)
     {
         $actividad = Actividad::with(['sesiones'])->findOrFail($actividadId);
+        $sesion = $this->resolveSesionScope($actividad, $request->query('sesion_id'), defaultToActive: false);
+        $soloConAsistencia = filter_var($request->query('solo_con_asistencia', false), FILTER_VALIDATE_BOOLEAN);
 
-        // Padrón de pastores convocados
-        $pastoresConvocadosQuery = Pastor::where('status', true);
-        if ($actividad->zona) {
-            $pastoresConvocadosQuery->where('zona', $actividad->zona);
-        }
-        $totalPadron = $pastoresConvocadosQuery->count();
-
-        // Asistencias registradas
-        $asistencias = Asistencia::with(['pastor.estado', 'sesion', 'registradoPor'])
-            ->where('actividad_id', $actividad->id)
-            ->orderBy('fecha_registro', 'asc')
-            ->get();
-
-        $pastorIdsPresentes = $asistencias->pluck('pastor_id')->unique()->filter()->values();
-        $totalPresentes = $pastorIdsPresentes->count();
-        $porcentajeQuorum = $totalPadron > 0 ? round(($totalPresentes / $totalPadron) * 100, 1) : 0;
-
-        $totalConConyuge = $asistencias->where('asistio_con_conyuge', true)->unique('pastor_id')->count();
-        $totalAusentes = max(0, $totalPadron - $totalPresentes);
+        $detalle = $reporteService->buildDetallePorZonas($actividad, $sesion);
 
         // Cargar logo en base64 para DomPDF
         $logoBase64 = null;
         $logoPath = public_path('icons/logo_mmm-a-color-sin-fondo.png');
         if (file_exists($logoPath)) {
-            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+            $logoBase64 = 'data:image/png;base64,' . base64_encode((string) file_get_contents($logoPath));
         }
 
         $pdf = Pdf::loadView('pdf.reporte_asistencia', [
             'actividad' => $actividad,
-            'asistencias' => $asistencias,
-            'totalPadron' => $totalPadron,
-            'totalPresentes' => $totalPresentes,
-            'porcentajeQuorum' => $porcentajeQuorum,
-            'totalConConyuge' => $totalConConyuge,
-            'totalAusentes' => $totalAusentes,
+            'sesion' => $sesion,
+            'metricas' => $detalle['metricas'],
+            'zonas' => $detalle['zonas'],
+            'soloConAsistencia' => $soloConAsistencia,
             'logoBase64' => $logoBase64,
             'fechaEmision' => Carbon::now()->format('d/m/Y h:i A'),
             'fechasActividad' => Carbon::parse($actividad->fecha_inicio)->format('d/m/Y') . ' al ' . Carbon::parse($actividad->fecha_fin)->format('d/m/Y'),
         ]);
 
         $pdf->setPaper('letter', 'landscape');
+        $pdf->render();
+
+        $dompdf = $pdf->getDomPDF();
+        $canvas = $dompdf->getCanvas();
+        $fontMetrics = $dompdf->getFontMetrics();
+        $font = $fontMetrics->getFont('Helvetica', 'normal');
+        $color = [0.39, 0.45, 0.55];
+        $footerY = $canvas->get_height() - 22;
+
+        $canvas->page_text(
+            28,
+            $footerY,
+            'SAPRCOE • MMM Venezuela — Reporte de Asistencia por Zonas',
+            $font,
+            7.2,
+            $color
+        );
+        $canvas->page_text(
+            $canvas->get_width() - 88,
+            $footerY,
+            'Página {PAGE_NUM} de {PAGE_COUNT}',
+            $font,
+            7.4,
+            $color
+        );
 
         $slug = preg_replace('/[^A-Za-z0-9_]/', '_', $actividad->nombre);
-        $filename = "Asistencia_{$slug}_" . Carbon::now()->format('Ymd_His') . ".pdf";
+        $sesionSuffix = $sesion ? '_' . preg_replace('/[^A-Za-z0-9_]/', '_', $sesion->nombre) : '';
+        $filename = "Asistencia_Zonas_{$slug}{$sesionSuffix}_" . Carbon::now()->format('Ymd_His') . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Resolver la sesión objetivo para reportes o consultas de detalle.
+     */
+    protected function resolveSesionScope(Actividad $actividad, mixed $sesionIdParam, bool $defaultToActive): ?ActividadSesion
+    {
+        if ($sesionIdParam === 'all') {
+            return null;
+        }
+
+        if ($sesionIdParam === 'activa') {
+            return $actividad->sesion_activa;
+        }
+
+        if ($sesionIdParam !== null && $sesionIdParam !== '' && is_numeric($sesionIdParam)) {
+            $sesion = $actividad->sesiones->firstWhere('id', (int) $sesionIdParam);
+            abort_if(! $sesion, 404, 'La sesión solicitada no pertenece a esta actividad.');
+
+            return $sesion;
+        }
+
+        return $defaultToActive ? $actividad->sesion_activa : null;
     }
 
     /**
